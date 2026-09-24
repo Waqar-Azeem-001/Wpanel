@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Email verification · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  {% if ok %}
+    <h1>Email verified</h1>
+    <p>Thanks, your email address is confirmed.</p>
+    <a class="btn" href="{% url 'accounts:profile' %}">Continue</a>
+  {% else %}
+    <h1>Verification failed</h1>
+    <p>{{ message }}</p>
+    {% if user.is_authenticated %}
+      <form method="post" action="{% url 'accounts:resend_verification' %}">{% csrf_token %}
+        <button class="btn" type="submit">Send a new link</button>
+      </form>
+    {% else %}
+      <p><a href="{% url 'accounts:login' %}">Sign in</a> to request a new link.</p>
+    {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

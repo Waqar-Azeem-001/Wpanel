@@ -1,0 +1,9 @@
+Hello {{ user.get_short_name }},
+
+Please confirm your email address for your {{ site_name }} account:
+
+{{ link }}
+
+This link expires in 3 days. If you did not create an account, you can ignore this email.
+
+{{ site_name }}

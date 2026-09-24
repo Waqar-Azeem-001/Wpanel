@@ -1,0 +1,281 @@
+"""
+Account business logic. API views and web views both call these functions;
+neither contains account rules of its own.
+"""
+import logging
+
+from django.conf import settings
+from django.contrib.auth import authenticate, password_validation
+from django.contrib.auth.models import Group
+from django.contrib.auth.tokens import default_token_generator
+from django.core import signing
+from django.db import transaction
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from rest_framework import status
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.audit import services as audit
+from apps.core.exceptions import ServiceError
+from apps.notifications import services as notifications
+
+from .models import AccountStatus, User
+from .roles import PRIVILEGED_ROLES, Role, perm
+
+logger = logging.getLogger(__name__)
+
+EMAIL_VERIFICATION_SALT = "accounts.email-verification"
+
+
+# --- Registration & verification ---------------------------------------------
+
+@transaction.atomic
+def register_user(*, email, password, first_name="", last_name="", phone="", request=None):
+    email = User.objects.normalize_email(email).lower()
+    if User.objects.filter(email__iexact=email).exists():
+        raise ServiceError("An account with this email already exists.", code="email_taken")
+    candidate = User(email=email, first_name=first_name, last_name=last_name)
+    password_validation.validate_password(password, user=candidate)
+
+    user = User.objects.create_user(
+        email=email, password=password, first_name=first_name, last_name=last_name, phone=phone
+    )
+    sync_role_membership(user)
+    audit.record("account.registered", actor=user, target=user, request=request)
+    send_verification_email(user)
+    return user
+
+
+def make_email_verification_token(user):
+    return signing.dumps({"uid": user.pk, "email": user.email}, salt=EMAIL_VERIFICATION_SALT)
+
+
+def send_verification_email(user):
+    if user.is_email_verified:
+        return None
+    token = make_email_verification_token(user)
+    link = settings.SITE_URL.rstrip("/") + reverse("accounts:verify_email", args=[token])
+    return notifications.send_email(
+        to_email=user.email,
+        template="verify_email",
+        context={"user": user, "link": link},
+        user=user,
+        event="account.verification",
+    )
+
+
+def verify_email(token, request=None):
+    try:
+        data = signing.loads(token, salt=EMAIL_VERIFICATION_SALT, max_age=settings.EMAIL_VERIFICATION_MAX_AGE)
+    except signing.SignatureExpired:
+        raise ServiceError("This verification link has expired.", code="token_expired")
+    except signing.BadSignature:
+        raise ServiceError("This verification link is invalid.", code="token_invalid")
+
+    user = User.objects.filter(pk=data.get("uid")).first()
+    # A token issued for a previous email address must not verify a new one.
+    if user is None or user.email != data.get("email"):
+        raise ServiceError("This verification link is invalid.", code="token_invalid")
+    if not user.is_email_verified:
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified_at", "updated_at"])
+        audit.record("account.email_verified", actor=user, target=user, request=request)
+    return user
+
+
+# --- Authentication -------------------------------------------------------------
+
+def authenticate_user(*, email, password, request=None):
+    """
+    Return the user for valid credentials, or raise a generic error.
+
+    Failed attempts are audited by the ``user_login_failed`` signal receiver.
+    """
+    user = authenticate(request, username=(email or "").lower(), password=password)
+    if user is None:
+        raise ServiceError(
+            "Invalid email or password.", code="invalid_credentials", status_code=status.HTTP_401_UNAUTHORIZED
+        )
+    return user
+
+
+def record_failed_login(email, request=None):
+    existing = User.objects.filter(email__iexact=email or "").first()
+    reason = "unknown_email"
+    if existing is not None:
+        reason = "inactive_account" if not existing.is_active else "bad_password"
+    audit.record(
+        "auth.login_failed",
+        target=existing,
+        metadata={"email": (email or "")[:254], "reason": reason},
+        request=request,
+    )
+
+
+def record_login(user, *, request=None, channel):
+    audit.record("auth.login", actor=user, target=user, metadata={"channel": channel}, request=request)
+
+
+def issue_tokens(user, *, request=None):
+    """JWT pair for API/mobile clients."""
+    refresh = RefreshToken.for_user(user)
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+    record_login(user, request=request, channel="api")
+    return {"access": str(refresh.access_token), "refresh": str(refresh)}
+
+
+def revoke_refresh_token(user, refresh_token, *, request=None):
+    try:
+        token = RefreshToken(refresh_token)
+    except Exception:
+        raise ServiceError("Invalid refresh token.", code="token_invalid")
+    if str(token.get("user_id")) != str(user.pk):
+        raise ServiceError("Invalid refresh token.", code="token_invalid")
+    token.blacklist()
+    audit.record("auth.logout", actor=user, target=user, metadata={"channel": "api"}, request=request)
+
+
+def revoke_all_tokens(user):
+    """Blacklist every outstanding refresh token (password change/reset, suspension)."""
+    for token in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=token)
+
+
+# --- Passwords ------------------------------------------------------------------
+
+def request_password_reset(email, request=None):
+    """Send a reset link if an active account exists. Never reveals whether it does."""
+    user = User.objects.filter(email__iexact=email or "", status=AccountStatus.ACTIVE).first()
+    if user is None:
+        return None
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    link = settings.SITE_URL.rstrip("/") + reverse("accounts:password_reset_confirm", args=[uid, token])
+    audit.record("auth.password_reset_requested", target=user, request=request)
+    return notifications.send_email(
+        to_email=user.email,
+        template="password_reset",
+        context={"user": user, "link": link, "uid": uid, "token": token},
+        user=user,
+        event="account.password_reset",
+    )
+
+
+def get_user_for_reset(uidb64, token):
+    try:
+        user = User.objects.get(pk=force_str(urlsafe_base64_decode(uidb64)))
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return None
+    if not user.is_active or not default_token_generator.check_token(user, token):
+        return None
+    return user
+
+
+@transaction.atomic
+def reset_password(uidb64, token, new_password, request=None):
+    user = get_user_for_reset(uidb64, token)
+    if user is None:
+        raise ServiceError("This password reset link is invalid or has expired.", code="token_invalid")
+    password_validation.validate_password(new_password, user=user)
+    user.set_password(new_password)
+    user.save(update_fields=["password", "updated_at"])
+    revoke_all_tokens(user)
+    audit.record("auth.password_reset", actor=user, target=user, request=request)
+    return user
+
+
+@transaction.atomic
+def change_password(user, *, old_password, new_password, request=None):
+    if not user.check_password(old_password):
+        raise ServiceError("Current password is incorrect.", code="invalid_password")
+    password_validation.validate_password(new_password, user=user)
+    user.set_password(new_password)
+    user.save(update_fields=["password", "updated_at"])
+    revoke_all_tokens(user)
+    audit.record("auth.password_changed", actor=user, target=user, request=request)
+    return user
+
+
+# --- Profile ----------------------------------------------------------------------
+
+PROFILE_FIELDS = ("first_name", "last_name", "phone")
+
+
+def update_profile(user, *, request=None, **changes):
+    changed = {}
+    for field in PROFILE_FIELDS:
+        if field in changes and getattr(user, field) != changes[field]:
+            setattr(user, field, changes[field])
+            changed[field] = changes[field]
+    if changed:
+        user.save(update_fields=[*changed, "updated_at"])
+        audit.record("account.profile_updated", actor=user, target=user,
+                     metadata={"fields": sorted(changed)}, request=request)
+    return user
+
+
+# --- Administration: status & roles ---------------------------------------------
+
+def _require(actor, codename):
+    if not actor.has_perm(perm(codename)):
+        raise ServiceError("You do not have permission to perform this action.",
+                           code="permission_denied", status_code=status.HTTP_403_FORBIDDEN)
+
+
+@transaction.atomic
+def set_account_status(actor, user, new_status, *, reason="", request=None):
+    _require(actor, "manage_users")
+    if new_status not in AccountStatus.values:
+        raise ServiceError("Unknown account status.", code="invalid_status")
+    if user.pk == actor.pk:
+        raise ServiceError("You cannot change the status of your own account.", code="self_action")
+    if user.role in PRIVILEGED_ROLES and not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can change the status of an admin account.",
+                           code="permission_denied", status_code=status.HTTP_403_FORBIDDEN)
+    previous = user.status
+    if previous == new_status:
+        return user
+    user.status = new_status
+    user.save(update_fields=["status", "updated_at"])
+    if new_status != AccountStatus.ACTIVE:
+        revoke_all_tokens(user)
+    audit.record("account.status_changed", actor=actor, target=user,
+                 metadata={"from": previous, "to": new_status, "reason": reason[:500]}, request=request)
+    return user
+
+
+def sync_role_membership(user):
+    """Make the user's group membership match ``user.role`` (one role per user)."""
+    group = Group.objects.filter(name=Role(user.role).label).first()
+    if group is None:
+        from .roles import sync_roles
+
+        sync_roles()
+        group = Group.objects.get(name=Role(user.role).label)
+    user.groups.set([group])
+
+
+@transaction.atomic
+def assign_role(actor, user, role, *, request=None):
+    _require(actor, "assign_roles")
+    if role not in Role.values:
+        raise ServiceError("Unknown role.", code="invalid_role")
+    if user.pk == actor.pk:
+        raise ServiceError("You cannot change your own role.", code="self_action")
+    if (role in PRIVILEGED_ROLES or user.role in PRIVILEGED_ROLES) and not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can grant or revoke admin roles.",
+                           code="permission_denied", status_code=status.HTTP_403_FORBIDDEN)
+    previous = user.role
+    if previous == role:
+        return user
+    user.role = role
+    user.save(update_fields=["role", "updated_at"])
+    sync_role_membership(user)
+    revoke_all_tokens(user)
+    audit.record("account.role_changed", actor=actor, target=user,
+                 metadata={"from": previous, "to": role}, request=request)
+    return user

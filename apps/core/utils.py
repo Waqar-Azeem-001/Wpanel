@@ -1,0 +1,8 @@
+def client_ip(request):
+    """Client IP. X-Forwarded-For is trusted because Nginx (our proxy) overwrites it."""
+    if request is None:
+        return None
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip() or None
+    return request.META.get("REMOTE_ADDR") or None

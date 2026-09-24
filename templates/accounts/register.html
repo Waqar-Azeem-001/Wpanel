@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Create account · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Create your account</h1>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    <button type="submit" class="btn">Create account</button>
+  </form>
+  <p class="muted">Already have an account? <a href="{% url 'accounts:login' %}">Sign in</a></p>
+</section>
+{% endblock %}

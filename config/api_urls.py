@@ -1,0 +1,35 @@
+"""/api/v1/ routes. Included under the ``v1`` namespace (DRF NamespaceVersioning)."""
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.routers import DefaultRouter
+
+from apps.accounts import api as accounts_api
+from apps.audit.api import AuditEventViewSet
+from apps.core.views import HealthView
+from apps.notifications.api import NotificationViewSet
+
+router = DefaultRouter()
+router.register("users", accounts_api.UserAdminViewSet, basename="user")
+router.register("notifications", NotificationViewSet, basename="notification")
+router.register("audit-events", AuditEventViewSet, basename="audit-event")
+
+auth_patterns = [
+    path("register/", accounts_api.RegisterView.as_view(), name="register"),
+    path("login/", accounts_api.LoginView.as_view(), name="login"),
+    path("refresh/", accounts_api.RefreshView.as_view(), name="refresh"),
+    path("logout/", accounts_api.LogoutView.as_view(), name="logout"),
+    path("verify-email/", accounts_api.VerifyEmailView.as_view(), name="verify-email"),
+    path("resend-verification/", accounts_api.ResendVerificationView.as_view(), name="resend-verification"),
+    path("password-reset/", accounts_api.PasswordResetView.as_view(), name="password-reset"),
+    path("password-reset/confirm/", accounts_api.PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("password-change/", accounts_api.PasswordChangeView.as_view(), name="password-change"),
+]
+
+urlpatterns = [
+    path("health/", HealthView.as_view(), name="health"),
+    path("auth/", include(auth_patterns)),
+    path("me/", accounts_api.MeView.as_view(), name="me"),
+    path("schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("docs/", SpectacularSwaggerView.as_view(url_name="v1:schema"), name="docs"),
+    path("", include(router.urls)),
+]

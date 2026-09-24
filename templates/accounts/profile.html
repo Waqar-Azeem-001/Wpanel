@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Your profile · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Your profile</h1>
+  <dl class="meta">
+    <dt>Email</dt><dd>{{ user.email }}
+      {% if user.is_email_verified %}<span class="badge ok">Verified</span>
+      {% else %}<span class="badge warn">Unverified</span>{% endif %}</dd>
+    <dt>Role</dt><dd>{{ user.get_role_display }}</dd>
+    <dt>Status</dt><dd>{{ user.get_status_display }}</dd>
+  </dl>
+  {% if not user.is_email_verified %}
+    <form method="post" action="{% url 'accounts:resend_verification' %}">{% csrf_token %}
+      <button type="submit" class="btn secondary">Resend verification email</button>
+    </form>
+  {% endif %}
+</section>
+<section class="card">
+  <h2>Details</h2>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    <button type="submit" class="btn">Save</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Security</h2>
+  <a class="btn secondary" href="{% url 'accounts:password_change' %}">Change password</a>
+</section>
+{% endblock %}

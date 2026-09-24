@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: wpanel
+          POSTGRES_USER: wpanel
+          POSTGRES_PASSWORD: wpanel
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wpanel -d wpanel"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://wpanel:wpanel@localhost:5432/wpanel
+      REDIS_URL: redis://localhost:6379/0
+      DJANGO_SECRET_KEY: ci-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+
+      - name: Migrations are complete
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Migrate on PostgreSQL
+        run: python manage.py migrate --noinput
+
+      - name: Production settings deploy check
+        run: python manage.py check --deploy --settings=config.settings.prod --fail-level ERROR
+
+      - name: Test suite on PostgreSQL
+        run: pytest
+
+      - name: Celery worker round trip via Redis
+        run: |
+          celery -A config worker --loglevel=INFO --concurrency=1 > celery.log 2>&1 &
+          python manage.py check_celery --timeout 60
+          python manage.py shell -c "from django.core.cache import cache; cache.set('ci', 'ok', 30); assert cache.get('ci') == 'ok'; print('Redis cache ok')"
+
+      - name: Celery log
+        if: always()
+        run: cat celery.log || true
