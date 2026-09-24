@@ -59,8 +59,8 @@ Everything: the registrar abstraction, domain and DNS models, TLD pricing, and p
 | New behaviour and authorization tested, full suite green | ✅ 227 passing (SQLite) |
 | Migrations created, `makemigrations --check` clean, schema valid | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | ⏳ Runs on push |
-| Commit after verification | ⏳ |
+| CI green on PostgreSQL + Redis | ✅ Run 36049054590 on `e614249`: migrations, 227 tests, Celery/Redis round trip |
+| Commit after verification | ✅ `e614249`, pushed to `main` |
 
 ## Known limitations / deferred
 

@@ -1611,7 +1611,7 @@ If UI changed:
   01 Foundation & Architecture   🟢       70 ✅   ✅        960bd54  ---
   02 Client Management           🟢       98 ✅   ✅        3d257c4  ---
   03 Products & Addons           🟢       150 ✅  ✅        3697eac  ---
-  04 Domain Management           🔵       227 ✅  ✅        ---      ---
+  04 Domain Management           🟢       227 ✅  ✅        e614249  ---
   05 WHM Provisioning            ⬜       ---     ---       ---      ---
   06 Cart & Checkout             ⬜       ---     ---       ---      ---
   07 Billing & Invoices          ⬜       ---     ---       ---      ---
