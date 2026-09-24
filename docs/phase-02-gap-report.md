@@ -77,8 +77,8 @@ There are 28 new tests, bringing the suite to 98.
 | New behaviour and authorization tested, full suite green | ✅ 98 passing (SQLite) |
 | Migrations created, `makemigrations --check` clean, schema valid with 0 warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | ⏳ Runs on push |
-| Commit after verification | ⏳ |
+| CI green on PostgreSQL + Redis | ✅ `.github/workflows/ci.yml` on `3d257c4` (badge confirmed) |
+| Commit after verification | ✅ `3d257c4`, pushed to `main` |
 
 ## Known limitations / deferred
 
