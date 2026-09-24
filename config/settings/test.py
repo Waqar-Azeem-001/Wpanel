@@ -3,6 +3,9 @@ from .base import REST_FRAMEWORK, env
 
 DEBUG = False
 SECRET_KEY = "test-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz"
+# Tests must not depend on whatever a developer's local .env happens to contain -
+# force the deterministic SECRET_KEY-derived fallback (see apps.core.crypto).
+CREDENTIALS_ENCRYPTION_KEY = ""
 
 if not env("DATABASE_URL", default=""):
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
