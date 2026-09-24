@@ -58,8 +58,8 @@ Everything: the catalogue models, pricing, the server-mapping placeholder, and s
 | New behaviour and authorization tested, full suite green | ✅ 150 passing (SQLite) |
 | Migrations created, `makemigrations --check` clean, schema valid | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | ⏳ Runs on push |
-| Commit after verification | ⏳ |
+| CI green on PostgreSQL + Redis | ✅ Run 36045316721 on `3697eac`: migrations, 150 tests, Celery/Redis round trip |
+| Commit after verification | ✅ `3697eac`, pushed to `main` |
 
 ## Known limitations / deferred
 
