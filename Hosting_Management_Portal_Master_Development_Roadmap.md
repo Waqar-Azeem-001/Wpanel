@@ -1612,7 +1612,7 @@ If UI changed:
   02 Client Management           🟢       98 ✅   ✅        3d257c4  ---
   03 Products & Addons           🟢       150 ✅  ✅        3697eac  ---
   04 Domain Management           🟢       227 ✅  ✅        e614249  ---
-  05 WHM Provisioning            🔵       296 ✅  ✅        ---      ---
+  05 WHM Provisioning            🟢       296 ✅  ✅        9c0c517  ---
   06 Cart & Checkout             ⬜       ---     ---       ---      ---
   07 Billing & Invoices          ⬜       ---     ---       ---      ---
   08 Renewals & Upgrades         ⬜       ---     ---       ---      ---

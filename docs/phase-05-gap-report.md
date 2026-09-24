@@ -61,8 +61,8 @@ Everything: the WHM adapter interface, a real WHM API adapter, `HostingAccount`,
 | New behaviour and authorization tested, full suite green | ✅ 296 passing (SQLite) |
 | Migrations created, `makemigrations --check` clean, schema valid | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | ⏳ Runs on push |
-| Commit after verification | ⏳ |
+| CI green on PostgreSQL + Redis | ✅ Run 36052536493 on `9c0c517`: migrations, 296 tests, Celery/Redis round trip |
+| Commit after verification | ✅ `9c0c517`, pushed to `main` |
 
 ## Known limitations / deferred
 
