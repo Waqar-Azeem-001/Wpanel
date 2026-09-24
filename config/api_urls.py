@@ -8,6 +8,7 @@ from apps.audit.api import AuditEventViewSet
 from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
 from apps.domains.api import AvailabilityView, DomainViewSet, TldPricingViewSet
+from apps.hosting.api import HostingAccountViewSet
 from apps.notifications.api import NotificationViewSet
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
 
@@ -22,6 +23,7 @@ router.register("addons", AddonViewSet, basename="addon")
 router.register("servers", ServerViewSet, basename="server")
 router.register("domains", DomainViewSet, basename="domain")
 router.register("tld-pricing", TldPricingViewSet, basename="tld-pricing")
+router.register("hosting-accounts", HostingAccountViewSet, basename="hosting-account")
 
 auth_patterns = [
     path("register/", accounts_api.RegisterView.as_view(), name="register"),

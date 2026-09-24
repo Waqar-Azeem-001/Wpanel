@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from apps.core import crypto
 from apps.core.models import TimeStampedModel
 
 # Resource-limit keys with a known meaning; a non-negative integer, or null for
@@ -59,15 +60,23 @@ class ServerStatus(models.TextChoices):
     OFFLINE = "offline", "Offline"
 
 
+class ServerKind(models.TextChoices):
+    """Selects the provisioning adapter (apps.hosting.adapters) used for this server."""
+
+    MANUAL = "manual", "Manual (no real provisioning - development/testing only)"
+    WHM_API = "whm_api", "WHM API"
+
+
 class Server(TimeStampedModel):
     """
     A hosting server a product can be provisioned on.
 
-    Deliberately minimal for Phase 03 (just enough for Product's "server
-    mapping"): no credentials and no WHM adapter here. Phase 05 (Hosting/WHM
-    Provisioning) extends *this same model* with connection details (encrypted
-    with ``apps.core.crypto``, the pattern already used by
-    ``notifications.EmailProvider``) - it must not create a second server model.
+    Started minimal in Phase 03 (just enough for Product's "server mapping").
+    Phase 05 (Hosting/WHM Provisioning) extends this *same model* - rather than
+    creating a second one - with the connection details a real adapter needs.
+    Credentials are encrypted at rest with ``apps.core.crypto``, the same
+    pattern used by ``notifications.EmailProvider`` and
+    ``domains.RegistrarProvider``.
     """
 
     name = models.CharField(max_length=100, unique=True)
@@ -78,11 +87,25 @@ class Server(TimeStampedModel):
     max_accounts = models.PositiveIntegerField(null=True, blank=True, help_text="Blank means no fixed limit.")
     notes = models.TextField(blank=True)
 
+    # --- Phase 05: provisioning connection -------------------------------------------
+    kind = models.CharField(max_length=20, choices=ServerKind.choices, default=ServerKind.MANUAL)
+    api_port = models.PositiveIntegerField(default=2087, help_text="WHM API port. 2087 is the standard port.")
+    api_username = models.CharField(max_length=100, blank=True, help_text='WHM API username, e.g. "root".')
+    api_token_encrypted = models.TextField(blank=True, editable=False)
+    use_ssl = models.BooleanField(default=True, help_text="Use HTTPS for the WHM API connection.")
+    verify_ssl = models.BooleanField(default=True, help_text="Disable only for a self-signed certificate you trust.")
+
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
+
+    def set_api_token(self, raw):
+        self.api_token_encrypted = crypto.encrypt(raw) if raw else ""
+
+    def get_api_token(self):
+        return crypto.decrypt(self.api_token_encrypted)
 
 
 class CatalogItem(TimeStampedModel):

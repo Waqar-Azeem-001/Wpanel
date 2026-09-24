@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'hosting_customer:list' %}">&larr; My hosting</a></p>
+<div class="page-head">
+  <h1>{{ account.domain }}</h1>
+  <span class="badge status-{{ account.status }}">{{ account.get_status_display }}</span>
+</div>
+<section class="card">
+  <h2>Details</h2>
+  <dl class="meta">
+    <dt>Product</dt><dd>{{ account.product.name }}</dd>
+    <dt>Username</dt><dd>{{ account.username }}</dd>
+    {% if account.status == "active" or account.status == "suspended" %}
+      <dt>Disk used</dt><dd>{% if account.disk_used_mb is not None %}{{ account.disk_used_mb }} MB{% if account.disk_limit_mb %} / {{ account.disk_limit_mb }} MB{% else %} / unlimited{% endif %}{% else %}Not available{% endif %}</dd>
+      <dt>Bandwidth used</dt><dd>{% if account.bandwidth_used_mb is not None %}{{ account.bandwidth_used_mb }} MB{% if account.bandwidth_limit_mb %} / {{ account.bandwidth_limit_mb }} MB{% else %} / unlimited{% endif %}{% else %}Not available{% endif %}</dd>
+    {% endif %}
+  </dl>
+  {% if account.status == "suspended" %}<p class="muted">Suspended: {{ account.suspend_reason }}</p>{% endif %}
+</section>
+{% endblock %}

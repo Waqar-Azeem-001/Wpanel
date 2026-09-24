@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'hosting_staff:list' %}">&larr; All hosting accounts</a></p>
+<div class="page-head">
+  <h1>{{ account.domain }}</h1>
+  <span class="badge status-{{ account.status }}">{{ account.get_status_display }}</span>
+</div>
+<p class="muted">Client: <a href="{% url 'clients_staff:detail' account.client.pk %}">{{ account.client.display_name }}</a></p>
+
+{% if account.last_error %}<div class="errors"><p>{{ account.last_error }}</p></div>{% endif %}
+
+<div class="cols">
+  <section class="card">
+    <h2>Details</h2>
+    <dl class="meta">
+      <dt>Username</dt><dd>{{ account.username }}</dd>
+      <dt>Product</dt><dd>{{ account.product.name }}</dd>
+      <dt>Package</dt><dd>{{ account.package_name|default:"—" }}</dd>
+      <dt>Server</dt><dd>{{ account.server|default:"Not assigned" }}</dd>
+      <dt>Disk</dt><dd>{% if account.disk_used_mb is not None %}{{ account.disk_used_mb }} / {{ account.disk_limit_mb|default:"unlimited" }} MB{% else %}Not synced{% endif %}</dd>
+      <dt>Bandwidth</dt><dd>{% if account.bandwidth_used_mb is not None %}{{ account.bandwidth_used_mb }} / {{ account.bandwidth_limit_mb|default:"unlimited" }} MB{% else %}Not synced{% endif %}</dd>
+      <dt>Last synced</dt><dd>{{ account.last_synced_at|date:"Y-m-d H:i"|default:"Never" }}</dd>
+    </dl>
+
+    {% if can_manage %}
+    {% if assign_server_form %}
+    <h3>Assign a server</h3>
+    <form method="post" action="{% url 'hosting_staff:assign_server' account.pk %}" class="row-form">{% csrf_token %}
+      <div class="field">{{ assign_server_form.server }}</div>
+      <div class="field"><button class="btn secondary" type="submit">Assign</button></div>
+    </form>
+    {% endif %}
+
+    <h3>Actions</h3>
+    <div class="row-actions">
+      {% if account.status == "pending" or account.status == "failed" %}
+        <form method="post" action="{% url 'hosting_staff:complete' account.pk %}">{% csrf_token %}
+          <button class="btn secondary" type="submit">Provision</button>
+        </form>
+        <form method="post" action="{% url 'hosting_staff:cancel' account.pk %}">{% csrf_token %}
+          <button class="btn small danger" type="submit">Cancel request</button>
+        </form>
+      {% endif %}
+      {% if account.status == "active" %}
+        <form method="post" action="{% url 'hosting_staff:suspend' account.pk %}">{% csrf_token %}
+          <button class="btn small secondary" type="submit">Suspend</button>
+        </form>
+        <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}"
+              onsubmit="return confirm('Terminate this hosting account? This cannot be undone.');">{% csrf_token %}
+          <button class="btn small danger" type="submit">Terminate</button>
+        </form>
+        <form method="post" action="{% url 'hosting_staff:sync_status' account.pk %}">{% csrf_token %}
+          <button class="btn small secondary" type="submit">Sync status</button>
+        </form>
+        <form method="post" action="{% url 'hosting_staff:sync_usage' account.pk %}">{% csrf_token %}
+          <button class="btn small secondary" type="submit">Sync usage</button>
+        </form>
+      {% endif %}
+      {% if account.status == "suspended" %}
+        <form method="post" action="{% url 'hosting_staff:unsuspend' account.pk %}">{% csrf_token %}
+          <button class="btn small secondary" type="submit">Unsuspend</button>
+        </form>
+        <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}"
+              onsubmit="return confirm('Terminate this hosting account? This cannot be undone.');">{% csrf_token %}
+          <button class="btn small danger" type="submit">Terminate</button>
+        </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  {% if can_manage and account.status == "active" %}
+  <section class="card">
+    <h2>Change package</h2>
+    <form method="post" action="{% url 'hosting_staff:change_package' account.pk %}">{% csrf_token %}
+      {% include "partials/form.html" with form=change_package_form %}
+      <button class="btn secondary" type="submit">Change</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

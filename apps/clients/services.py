@@ -80,6 +80,17 @@ def contact_role(user, client):
     return contact.role if contact else None
 
 
+def single_contact_client(user):
+    """
+    The one client ``user`` is a contact of, or None if they have zero or more
+    than one. Used where a self-service action needs "the caller's account"
+    without asking them to pick from a list (e.g. requesting a new domain or
+    hosting account) - see apps.domains.views and apps.hosting.views.
+    """
+    clients = list(Client.objects.filter(contacts__user=user)[:2])
+    return clients[0] if len(clients) == 1 else None
+
+
 def client_activity(client):
     """Audit events about the client or recorded in its context."""
     return AuditEvent.objects.filter(

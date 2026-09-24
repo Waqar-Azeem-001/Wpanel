@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}My Hosting · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>My Hosting</h1>
+  <a class="btn secondary" href="{% url 'hosting_customer:request' %}">Request hosting</a>
+</div>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Domain</th><th>Product</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for account in accounts %}
+    <tr>
+      <td><a href="{% url 'hosting_customer:detail' account.pk %}">{{ account.domain }}</a></td>
+      <td>{{ account.product.name }}</td>
+      <td><span class="badge status-{{ account.status }}">{{ account.get_status_display }}</span></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="3" class="muted">You have no hosting accounts yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

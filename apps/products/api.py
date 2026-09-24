@@ -256,10 +256,13 @@ class AddonViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Crea
 
 
 class ServerSerializer(serializers.ModelSerializer):
+    api_token = serializers.CharField(write_only=True, required=False, allow_blank=True,
+                                      help_text="Leave blank to keep the stored value.")
+
     class Meta:
         model = Server
-        fields = ["id", "name", "hostname", "ip_address", "status", "max_accounts", "notes", "created_at",
-                  "updated_at"]
+        fields = ["id", "name", "hostname", "ip_address", "status", "max_accounts", "notes", "kind", "api_port",
+                  "api_username", "api_token", "use_ssl", "verify_ssl", "created_at", "updated_at"]
         read_only_fields = ["id", "status", "created_at", "updated_at"]
 
 

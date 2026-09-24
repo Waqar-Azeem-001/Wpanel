@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
-from apps.clients.models import Client
+from apps.clients.services import single_contact_client
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 
@@ -37,10 +37,6 @@ def _run(request, action, view_name, **redirect_kwargs):
     return redirect(view_name, **redirect_kwargs)
 
 
-def _users_client(user):
-    """The single client the user is a contact of, or None (0 or >1 - caller decides what to do)."""
-    clients = list(Client.objects.filter(contacts__user=user)[:2])
-    return clients[0] if len(clients) == 1 else None
 
 
 # --- Public: availability search -----------------------------------------------------------
@@ -69,7 +65,7 @@ def my_domain_list(request):
 
 @login_required
 def my_domain_register(request):
-    client = _users_client(request.user)
+    client = single_contact_client(request.user)
     if client is None:
         messages.error(request, "We could not determine your account. Contact support.")
         return redirect("domains_customer:list")
@@ -90,7 +86,7 @@ def my_domain_register(request):
 
 @login_required
 def my_domain_transfer(request):
-    client = _users_client(request.user)
+    client = single_contact_client(request.user)
     if client is None:
         messages.error(request, "We could not determine your account. Contact support.")
         return redirect("domains_customer:list")

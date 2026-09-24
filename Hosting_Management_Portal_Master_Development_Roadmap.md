@@ -1612,7 +1612,7 @@ If UI changed:
   02 Client Management           🟢       98 ✅   ✅        3d257c4  ---
   03 Products & Addons           🟢       150 ✅  ✅        3697eac  ---
   04 Domain Management           🟢       227 ✅  ✅        e614249  ---
-  05 WHM Provisioning            ⬜       ---     ---       ---      ---
+  05 WHM Provisioning            🔵       296 ✅  ✅        ---      ---
   06 Cart & Checkout             ⬜       ---     ---       ---      ---
   07 Billing & Invoices          ⬜       ---     ---       ---      ---
   08 Renewals & Upgrades         ⬜       ---     ---       ---      ---
@@ -1695,6 +1695,21 @@ postponed.
 
   Outbound transfer auth-code        Deferred  Registrar-specific; not in the   Real registrar
   retrieval not implemented                    roadmap's explicit op list      adapter
+
+  WHM API adapter needed live      Open      Written to WHM's public docs,    Before launch
+  verification before launch                  never run against a real server
+
+  Hosting provisioning/lifecycle     Open      Staff act manually until        Phase 07/08
+  actions not yet wired to billing              invoices/payment exist
+
+  No customer self-service for       Deferred  No billing/cancellation         Phase 08/12
+  suspend/terminate/change-package             workflow to hang these off yet
+
+  No automatic multi-server           Deferred  Staff pick manually when a       Post-MVP
+  capacity-based selection                     product maps to >1 server
+
+  Hosting usage sync is manual,       Deferred  Needs Celery beat + a verified   Phase 17/18
+  not scheduled                                 live WHM adapter first
   -------------------------------------------------------------------------------------------
 
 **Rule:** If an item is already recorded here, do not rediscover or
@@ -1803,6 +1818,22 @@ Record permanent technical decisions here.
   (TldPricing), separate from         pricing keyed by TLD     
   apps.products.Product               does not fit the         
                                      billing-cycle price shape 
+
+  Server model extended (not          Explicit Phase 03         Active
+  duplicated) with WHM connection     instruction; one place    
+  fields for Phase 05                 for server records        
+
+  Real WHM API adapter written        WHM is one stable,        Active
+  against public docs; domain          documented protocol      
+  registrars got Manual-only          unlike registrars         
+
+  cPanel account passwords are        "Safe credentials" taken  Active
+  generated per-provisioning, emailed literally: nothing to     
+  once, never stored in our DB        leak from our own DB      
+
+  Hosting self-service limited to     Other actions are either  Active
+  view + request; no customer         operationally sensitive   
+  suspend/terminate/change-package    or imply a billing change 
   -----------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

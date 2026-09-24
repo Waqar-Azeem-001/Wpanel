@@ -1,0 +1,11 @@
+Hello,
+
+Your hosting account for {{ account.domain }} is now active.
+
+cPanel username: {{ username }}
+Temporary password: {{ password }}
+
+Please sign in to cPanel and change this password as soon as possible. We do
+not keep a copy of it after this email is sent.
+
+{{ site_name }}

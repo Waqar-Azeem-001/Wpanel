@@ -88,8 +88,28 @@ class AddonPriceForm(PriceForm):
 class ServerForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields.update(_fields(Server, ("name", "hostname", "ip_address", "max_accounts", "notes")))
+        self.fields.update(_fields(Server, (
+            "name", "hostname", "ip_address", "max_accounts", "notes",
+            "kind", "api_port", "api_username", "use_ssl", "verify_ssl",
+        )))
         self.fields["notes"].widget = forms.Textarea(attrs={"rows": 3})
+        # Optional with a model-level default, so a minimal submission (just name/hostname,
+        # as before Phase 05) still works instead of failing validation on a missing choice.
+        self.fields["kind"].required = False
+        self.fields["api_port"].required = False
+        self.fields["api_username"].required = False
+        self.fields["api_token"] = forms.CharField(
+            required=False, widget=forms.PasswordInput(render_value=False),
+            help_text="WHM API token. Leave blank to keep the stored value. Not used by the Manual kind.",
+        )
+
+    def clean_kind(self):
+        from .models import ServerKind
+
+        return self.cleaned_data.get("kind") or ServerKind.MANUAL
+
+    def clean_api_port(self):
+        return self.cleaned_data.get("api_port") or 2087
 
 
 class ServerStatusForm(forms.Form):

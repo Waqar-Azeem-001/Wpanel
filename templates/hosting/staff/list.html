@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Hosting · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Hosting Accounts</h1>
+<form class="filters" method="get">
+  <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}"></div>
+  <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Domain</th><th>Username</th><th>Client</th><th>Product</th><th>Server</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for account in page %}
+    <tr>
+      <td><a href="{% url 'hosting_staff:detail' account.pk %}">{{ account.domain }}</a></td>
+      <td>{{ account.username }}</td>
+      <td>{{ account.client.display_name }}</td>
+      <td>{{ account.product.name }}</td>
+      <td>{{ account.server|default:"—" }}</td>
+      <td><span class="badge status-{{ account.status }}">{{ account.get_status_display }}</span></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="muted">No hosting accounts match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if page.has_other_pages %}
+<nav class="pager">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
+  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

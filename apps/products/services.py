@@ -18,7 +18,8 @@ PRODUCT_FIELDS = (
     "name", "description", "type", "resource_limits", "whm_package_name", "auto_setup", "default_auto_renew",
 )
 ADDON_FIELDS = ("name", "description")
-SERVER_FIELDS = ("name", "hostname", "ip_address", "max_accounts", "notes")
+SERVER_FIELDS = ("name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
+                 "use_ssl", "verify_ssl")
 
 
 def _denied(message="You do not have permission to perform this action."):
@@ -226,9 +227,12 @@ def _require_hosting(actor, codename):
 def create_server(actor, data, *, request=None):
     _require_hosting(actor, "manage_hosting")
     server = Server(**{k: v for k, v in data.items() if k in SERVER_FIELDS})
+    if data.get("api_token"):
+        server.set_api_token(data["api_token"])
     server.full_clean()
     server.save()
-    audit.record("server.created", actor=actor, target=server, request=request)
+    audit.record("server.created", actor=actor, target=server,
+                 metadata={"kind": server.kind, "api_token_set": bool(data.get("api_token"))}, request=request)
     return server
 
 
@@ -236,11 +240,15 @@ def create_server(actor, data, *, request=None):
 def update_server(actor, server, data, *, request=None):
     _require_hosting(actor, "manage_hosting")
     changed = _apply(server, data, SERVER_FIELDS)
-    if not changed:
+    token_changed = bool(data.get("api_token"))
+    if token_changed:
+        server.set_api_token(data["api_token"])
+    if not changed and not token_changed:
         return server
     server.full_clean()
     server.save()
-    audit.record("server.updated", actor=actor, target=server, metadata={"fields": sorted(changed)}, request=request)
+    audit.record("server.updated", actor=actor, target=server,
+                 metadata={"fields": sorted(changed), "api_token_changed": token_changed}, request=request)
     return server
 
 

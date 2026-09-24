@@ -326,6 +326,8 @@ def staff_server_edit(request, pk):
     form = forms.ServerForm(request.POST or None, initial={
         "name": server.name, "hostname": server.hostname, "ip_address": server.ip_address,
         "max_accounts": server.max_accounts, "notes": server.notes,
+        "kind": server.kind, "api_port": server.api_port, "api_username": server.api_username,
+        "use_ssl": server.use_ssl, "verify_ssl": server.verify_ssl,
     })
     if request.method == "POST" and form.is_valid():
         try:
