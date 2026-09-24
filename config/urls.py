@@ -7,4 +7,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include(("config.api_urls", "v1"), namespace="v1")),
     path("account/", include("apps.accounts.urls")),
+    path("account/client/", include("apps.clients.urls_customer")),
+    path("staff/clients/", include("apps.clients.urls_staff")),
 ]

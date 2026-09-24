@@ -1,0 +1,28 @@
+<p class="muted">{{ page.paginator.count }} client{{ page.paginator.count|pluralize }}</p>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Ref</th><th>Client</th><th>Email</th><th>Country</th><th>Status</th><th>Created</th></tr></thead>
+  <tbody>
+  {% for client in page %}
+    <tr>
+      <td><a href="{% url 'clients_staff:detail' client.pk %}">{{ client.reference }}</a></td>
+      <td><a href="{% url 'clients_staff:detail' client.pk %}">{{ client.display_name }}</a>
+        {% if client.company_name %}<br><small class="muted">{{ client.contact_name }}</small>{% endif %}</td>
+      <td>{{ client.email }}</td>
+      <td>{{ client.country|default:"—" }}</td>
+      <td><span class="badge status-{{ client.status }}">{{ client.get_status_display }}</span></td>
+      <td>{{ client.created_at|date:"Y-m-d" }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="muted">No clients match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if page.has_other_pages %}
+<nav class="pager">
+  {% if page.has_previous %}<a href="?{{ query.urlencode }}&page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
+  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?{{ query.urlencode }}&page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}

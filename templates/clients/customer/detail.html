@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Account details · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="page-head">
+    <h1>{{ client.display_name }} <small class="muted">{{ client.reference }}</small></h1>
+    <span class="badge status-{{ client.status }}">{{ client.get_status_display }}</span>
+  </div>
+  <p class="muted">Your role on this account: {{ my_role|capfirst }}. Billing currency: {{ client.currency }}.</p>
+  {% if can_edit %}
+    <form method="post" novalidate class="grid-form">{% csrf_token %}
+      {% include "partials/form.html" %}
+      <div class="actions"><button type="submit" class="btn">Save</button></div>
+    </form>
+  {% else %}
+    <dl class="meta">
+      <dt>Company</dt><dd>{{ client.company_name|default:"—" }}</dd>
+      <dt>Contact</dt><dd>{{ client.contact_name }}</dd>
+      <dt>Email</dt><dd>{{ client.email }}</dd>
+      <dt>Phone</dt><dd>{{ client.phone|default:"—" }}</dd>
+    </dl>
+    <p class="muted">Only owner and billing contacts can change account details.</p>
+  {% endif %}
+</section>
+{% endblock %}

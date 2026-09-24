@@ -70,10 +70,10 @@ There was no existing code to reuse. Phase 01 builds the shared foundation that 
 | Migrations created, `makemigrations --check` clean | ✅ |
 | Dev-server smoke test (health, pages, register → verification email, login → JWT) | ✅ |
 | `check --deploy` with production settings | ✅ (only HSTS preload warning; intentional until domain is final) |
-| Celery/Redis verified against a **real** Redis broker and worker | ⏳ CI job added (`.github/workflows/ci.yml`); runs on first push |
-| Migrations and tests run on **PostgreSQL** | ⏳ Same CI job; runs on first push |
+| Celery/Redis verified against a **real** Redis broker and worker | ✅ CI run 36039580050: worker round trip via Redis 7 |
+| Migrations and tests run on **PostgreSQL** | ✅ CI run 36039580050: migrate + 70 tests on PostgreSQL 17 |
 | Browser check (desktop and mobile, no overflow, no JS errors) | ✅ Headless Chromium at 1366, 768 and 375 px wide: every account page and form flow plus the admin link. No horizontal overflow, no JS/console errors |
 | Documentation updated (roadmap tracker, known work, decisions) | ✅ |
-| Commit after verification | ⏳ Awaiting approval |
+| Commit after verification | ✅ `960bd54`, pushed to `main` |
 
-Phase 01 moves to **🟢 Complete** once the CI job passes on GitHub (PostgreSQL, Redis, Celery worker) after the first push.
+**Phase 01 status: 🟢 Complete** (2026-09-24).

@@ -61,7 +61,8 @@ def register_view(request):
         try:
             user = services.register_user(
                 email=data["email"], password=data["password"],
-                first_name=data["first_name"], last_name=data["last_name"], request=request,
+                first_name=data["first_name"], last_name=data["last_name"],
+                company_name=data["company_name"], request=request,
             )
         except (ServiceError, ValidationError) as exc:
             _apply_error(form, exc, "password")

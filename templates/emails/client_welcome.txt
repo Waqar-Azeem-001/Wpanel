@@ -1,0 +1,11 @@
+Hello {{ user.get_short_name }},
+
+You have been added as a contact on the {{ client.display_name }} account ({{ client.reference }}) at {{ site_name }}.
+
+Set your password to sign in:
+
+{{ link }}
+
+This link expires in 3 hours. You can request a new one at any time from the "Forgot your password?" page.
+
+{{ site_name }}

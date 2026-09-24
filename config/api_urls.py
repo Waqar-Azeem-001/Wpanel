@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts import api as accounts_api
 from apps.audit.api import AuditEventViewSet
+from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
 from apps.notifications.api import NotificationViewSet
 
@@ -12,6 +13,8 @@ router = DefaultRouter()
 router.register("users", accounts_api.UserAdminViewSet, basename="user")
 router.register("notifications", NotificationViewSet, basename="notification")
 router.register("audit-events", AuditEventViewSet, basename="audit-event")
+router.register("clients", ClientViewSet, basename="client")
+router.register("me/clients", MyClientViewSet, basename="my-client")
 
 auth_patterns = [
     path("register/", accounts_api.RegisterView.as_view(), name="register"),

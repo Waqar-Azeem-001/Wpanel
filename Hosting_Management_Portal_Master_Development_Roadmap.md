@@ -1608,8 +1608,8 @@ If UI changed:
 
   Phase                          Status   Tests   Browser   Commit   Deploy
   ------------------------------ -------- ------- --------- -------- --------
-  01 Foundation & Architecture   🔵       70 ✅   ✅        ---      ---
-  02 Client Management           ⬜       ---     ---       ---      ---
+  01 Foundation & Architecture   🟢       70 ✅   ✅        960bd54  ---
+  02 Client Management           🔵       98 ✅   ✅        ---      ---
   03 Products & Addons           ⬜       ---     ---       ---      ---
   04 Domain Management           ⬜       ---     ---       ---      ---
   05 WHM Provisioning            ⬜       ---     ---       ---      ---
@@ -1638,12 +1638,6 @@ postponed.
   -------------------------------------------------------------------------------------------
   Item                               Status    Reason                          Target
   ---------------------------------- --------- ------------------------------- ----------------
-  Verify Celery worker on real       Open      CI job added; runs on first     Phase 01 exit
-  Redis broker                                 push
-
-  Run migrations/tests on            Open      CI job added; runs on first     Phase 01 exit
-  PostgreSQL                                   push
-
   Email open/failure tracking,       Deferred  Phase 01 records sent/failed    Phase 11
   more provider kinds, templates               with SMTP only
 
@@ -1666,6 +1660,15 @@ postponed.
 
   Require verified email before      Deferred  Verification tracked; purchase   Phase 06
   purchase                                     gating belongs to checkout
+
+  Client profile record sections     Deferred  Orders/services/domains/etc.    Phases 04-13
+  (orders, invoices, tickets...)               models do not exist yet
+
+  Customer self-service sub-user     Deferred  Staff manage contacts; needs     Phase 15/16
+  invitations                                  customer-side permission design
+
+  Closing a client suspends users/   Deferred  Service lifecycle rules          Phase 12
+  services                                     belong to cancellation phase
   -------------------------------------------------------------------------------------------
 
 **Rule:** If an item is already recorded here, do not rediscover or
@@ -1730,6 +1733,17 @@ Record permanent technical decisions here.
 
   Emails recorded first, delivered    Retry-safe, auditable   Active
   by Celery after commit              delivery                
+
+  Business records belong to Client;  Agencies/companies have Active
+  users reach clients through         several users; one user 
+  ClientContact (owner/billing/       can manage several      
+  technical)                          accounts                
+
+  Staff accounts cannot be client     Keeps staff and         Active
+  contacts                            customer access apart   
+
+  Self-registration creates a Client  Every customer can      Active
+  owned by the new user               order immediately       
   -----------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

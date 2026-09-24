@@ -12,6 +12,8 @@
     <a class="brand" href="/">{{ SITE_NAME }}</a>
     <nav>
       {% if user.is_authenticated %}
+        {% if perms.accounts.view_clients %}<a href="{% url 'clients_staff:list' %}">Clients</a>{% endif %}
+        {% if user.client_contacts.exists %}<a href="{% url 'clients_customer:list' %}">Account</a>{% endif %}
         <a href="{% url 'accounts:profile' %}">{{ user.get_short_name }}</a>
         {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
         <form method="post" action="{% url 'accounts:logout' %}" class="inline">{% csrf_token %}
@@ -23,7 +25,7 @@
       {% endif %}
     </nav>
   </header>
-  <main class="container">
+  <main class="container {% block container %}{% endblock %}">
     {% if messages %}
       <ul class="messages">{% for m in messages %}<li class="msg msg-{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>
     {% endif %}

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.audit",
     "apps.notifications",
+    "apps.clients",
 ]
 
 MIDDLEWARE = [
@@ -173,6 +174,13 @@ SPECTACULAR_SETTINGS = {
     # API schema/docs are for staff and integrators, not the public.
     "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAdminUser"],
     "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+",
+    # Stable enum names for generated (e.g. mobile) API clients.
+    "ENUM_NAME_OVERRIDES": {
+        "UserRoleEnum": "apps.accounts.roles.Role",
+        "AccountStatusEnum": "apps.accounts.models.AccountStatus",
+        "ClientStatusEnum": "apps.clients.models.ClientStatus",
+        "ContactRoleEnum": "apps.clients.models.ContactRole",
+    },
 }
 
 # --- Celery ------------------------------------------------------------------

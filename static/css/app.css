@@ -37,3 +37,33 @@ form.inline { display: inline; }
 .meta dt { color: var(--muted); } .meta dd { margin: 0; overflow-wrap: anywhere; }
 .badge { font-size: .8rem; padding: 2px 8px; border-radius: 999px; margin-left: 6px; border: 1px solid currentColor; }
 .badge.ok { color: var(--ok); } .badge.warn { color: var(--warn); }
+
+.container.wide { max-width: 1180px; }
+.page-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.page-head h1, .page-head h2 { margin: 0; }
+.filters, .row-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 12px; }
+.filters .field, .row-form .field { margin-bottom: 0; min-width: 140px; }
+.field.grow { flex: 1 1 240px; }
+.field select, .inline-form select { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font: inherit; }
+.field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font: inherit; }
+.inline-form { display: flex; gap: 6px; align-items: center; }
+.inline-form select { width: auto; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table th { color: var(--muted); font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.pager { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
+.cols { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px; }
+.grid-form .errors, .grid-form .actions { grid-column: 1 / -1; }
+.actions { display: flex; gap: 16px; align-items: center; }
+.btn.small { padding: 6px 10px; font-size: .9rem; }
+.btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+.badge.status-active { color: var(--ok); } .badge.status-inactive { color: var(--warn); } .badge.status-closed { color: var(--danger); }
+.timeline { list-style: none; padding: 0; margin: 0; }
+.timeline li { padding: 8px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.notes { white-space: normal; overflow-wrap: anywhere; }
+h3 { font-size: 1rem; }

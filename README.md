@@ -3,7 +3,7 @@
 This is a hosting business management portal, similar to WHMCS. It is built with Django and Django REST Framework, uses PostgreSQL for data, and runs background jobs through Redis and Celery.
 
 - **Roadmap and rules:** [Hosting_Management_Portal_Master_Development_Roadmap.md](Hosting_Management_Portal_Master_Development_Roadmap.md)
-- **Phase 01 audit:** [docs/phase-01-gap-report.md](docs/phase-01-gap-report.md)
+- **Phase reports:** [Phase 01](docs/phase-01-gap-report.md), [Phase 02](docs/phase-02-gap-report.md)
 
 ## Local development (no Docker)
 
@@ -20,6 +20,7 @@ pytest
 ```
 
 - Web portal: http://localhost:8000/account/login/
+- Staff client management: http://localhost:8000/staff/clients/
 - Django admin: http://localhost:8000/admin/
 - API: http://localhost:8000/api/v1/
 - API docs (staff login required): http://localhost:8000/api/v1/docs/
@@ -40,6 +41,7 @@ apps/core/           shared: error format, pagination, permissions, request IDs,
 apps/accounts/       users, roles & permissions, auth services, web + API views
 apps/audit/          append-only audit log (audit.services.record)
 apps/notifications/  email log + delivery task, email provider, in-app notifications
+apps/clients/        client accounts, contacts (owner/billing/technical), staff + customer pages/API
 templates/           web pages and email templates
 deploy/nginx/        reverse proxy config
 ```

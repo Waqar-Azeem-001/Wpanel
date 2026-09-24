@@ -33,7 +33,7 @@ EMAIL_VERIFICATION_SALT = "accounts.email-verification"
 # --- Registration & verification ---------------------------------------------
 
 @transaction.atomic
-def register_user(*, email, password, first_name="", last_name="", phone="", request=None):
+def register_user(*, email, password, first_name="", last_name="", phone="", company_name="", request=None):
     email = User.objects.normalize_email(email).lower()
     if User.objects.filter(email__iexact=email).exists():
         raise ServiceError("An account with this email already exists.", code="email_taken")
@@ -45,6 +45,11 @@ def register_user(*, email, password, first_name="", last_name="", phone="", req
     )
     sync_role_membership(user)
     audit.record("account.registered", actor=user, target=user, request=request)
+    # Every self-registered customer gets their own client account, which later
+    # holds their orders, services, domains and invoices.
+    from apps.clients.services import create_client_for_registration
+
+    create_client_for_registration(user, company_name=company_name, request=request)
     send_verification_email(user)
     return user
 

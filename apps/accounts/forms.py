@@ -9,6 +9,7 @@ class LoginForm(forms.Form):
 class RegisterForm(forms.Form):
     first_name = forms.CharField(max_length=150, required=False)
     last_name = forms.CharField(max_length=150, required=False)
+    company_name = forms.CharField(max_length=200, required=False, label="Company (optional)")
     email = forms.EmailField(widget=forms.EmailInput(attrs={"autocomplete": "email"}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
     password_confirm = forms.CharField(label="Confirm password", widget=forms.PasswordInput(

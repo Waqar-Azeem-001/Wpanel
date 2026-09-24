@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Clients · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Clients</h1>
+  {% if perms.accounts.manage_clients %}<a class="btn" href="{% url 'clients_staff:create' %}">Add client</a>{% endif %}
+</div>
+<form class="filters" method="get" hx-get="{% url 'clients_staff:list' %}" hx-target="#client-table"
+      hx-trigger="input changed delay:300ms from:#id_q, change from:#id_status" hx-push-url="true">
+  <div class="field grow">
+    <label for="id_q">Search</label>
+    <input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}"
+           placeholder="Name, company, email, phone, C000123">
+  </div>
+  <div class="field">
+    <label for="id_status">Status</label>
+    {{ filter_form.status }}
+  </div>
+  <noscript><button class="btn" type="submit">Filter</button></noscript>
+</form>
+<div id="client-table">{% include "clients/staff/_table.html" %}</div>
+{% endblock %}

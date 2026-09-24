@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Your accounts · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Your accounts</h1>
+  {% for client in clients %}
+    <p><a href="{% url 'clients_customer:detail' client.pk %}">{{ client.display_name }}</a>
+      <small class="muted">{{ client.reference }}</small></p>
+  {% empty %}
+    <p class="muted">You are not a contact on any account yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}
