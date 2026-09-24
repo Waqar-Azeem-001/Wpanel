@@ -7,6 +7,7 @@ from apps.accounts import api as accounts_api
 from apps.audit.api import AuditEventViewSet
 from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
+from apps.domains.api import AvailabilityView, DomainViewSet, TldPricingViewSet
 from apps.notifications.api import NotificationViewSet
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
 
@@ -19,6 +20,8 @@ router.register("me/clients", MyClientViewSet, basename="my-client")
 router.register("products", ProductViewSet, basename="product")
 router.register("addons", AddonViewSet, basename="addon")
 router.register("servers", ServerViewSet, basename="server")
+router.register("domains", DomainViewSet, basename="domain")
+router.register("tld-pricing", TldPricingViewSet, basename="tld-pricing")
 
 auth_patterns = [
     path("register/", accounts_api.RegisterView.as_view(), name="register"),
@@ -36,6 +39,7 @@ urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
     path("auth/", include(auth_patterns)),
     path("me/", accounts_api.MeView.as_view(), name="me"),
+    path("domains/availability/", AvailabilityView.as_view(), name="domain-availability"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="v1:schema"), name="docs"),
     path("", include(router.urls)),

@@ -1611,7 +1611,7 @@ If UI changed:
   01 Foundation & Architecture   🟢       70 ✅   ✅        960bd54  ---
   02 Client Management           🟢       98 ✅   ✅        3d257c4  ---
   03 Products & Addons           🟢       150 ✅  ✅        3697eac  ---
-  04 Domain Management           ⬜       ---     ---       ---      ---
+  04 Domain Management           🔵       227 ✅  ✅        ---      ---
   05 WHM Provisioning            ⬜       ---     ---       ---      ---
   06 Cart & Checkout             ⬜       ---     ---       ---      ---
   07 Billing & Invoices          ⬜       ---     ---       ---      ---
@@ -1680,6 +1680,21 @@ postponed.
 
   Staff pricing table row-actions    Deferred  Table scrolls in its own         Phase 18
   cramped at 375px width                       container; no page overflow
+
+  Real registrar adapter needed      Open      Manual adapter is local-only    Before launch
+  before launch                                simulation, no real network calls
+
+  Multi-part TLDs (.co.uk, .com.au)  Deferred  Needs a public-suffix list       Post-MVP
+  not supported
+
+  Domain registration/transfer not   Open      Staff complete manually until   Phase 07/08
+  yet wired to billing                         invoices/payment exist
+
+  No automated expiry/renewal-       Deferred  Owned by proration/notification  Phase 08/11
+  reminder Celery job                          Celery jobs
+
+  Outbound transfer auth-code        Deferred  Registrar-specific; not in the   Real registrar
+  retrieval not implemented                    roadmap's explicit op list      adapter
   -------------------------------------------------------------------------------------------
 
 **Rule:** If an item is already recorded here, do not rediscover or
@@ -1769,6 +1784,25 @@ Record permanent technical decisions here.
 
   Self-registration creates a Client  Every customer can      Active
   owned by the new user               order immediately       
+
+  Domain registration/transfer are    Works without Cart/      Active
+  request-then-complete (contact      Checkout or Billing      
+  requests, staff completes)          existing yet             
+
+  Registrar adapter interface with a  Registrar-specific code  Active
+  Manual (local-only, no real         confined to one layer;   
+  registration) adapter shipped       real registrar swaps in  
+                                     without touching services 
+
+  Self-service domain actions open    None are financial;      Active
+  to any client contact (owner/       technical contacts exist 
+  billing/technical), not just        specifically for this    
+  owner/billing                                                
+
+  Domain-specific TLD pricing model   Register/renew/transfer  Active
+  (TldPricing), separate from         pricing keyed by TLD     
+  apps.products.Product               does not fit the         
+                                     billing-cycle price shape 
   -----------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

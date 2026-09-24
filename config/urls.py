@@ -11,4 +11,7 @@ urlpatterns = [
     path("staff/clients/", include("apps.clients.urls_staff")),
     path("staff/", include("apps.products.urls_staff")),
     path("products/", include("apps.products.urls_public")),
+    path("account/domains/", include("apps.domains.urls_customer")),
+    path("staff/domains/", include("apps.domains.urls_staff")),
+    path("domains/", include("apps.domains.urls_public")),
 ]

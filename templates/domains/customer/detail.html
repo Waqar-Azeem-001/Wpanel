@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ domain.name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'domains_customer:list' %}">&larr; My domains</a></p>
+<div class="page-head">
+  <h1>{{ domain.name }}</h1>
+  <span class="badge status-{{ domain.status }}">{{ domain.get_status_display }}</span>
+</div>
+
+<div class="cols">
+  <section class="card">
+    <h2>Details</h2>
+    <dl class="meta">
+      <dt>Registered</dt><dd>{{ domain.registered_at|date:"Y-m-d"|default:"Not yet" }}</dd>
+      <dt>Expires</dt><dd>{{ domain.expires_at|date:"Y-m-d"|default:"—" }}</dd>
+      <dt>Locked</dt><dd>{{ domain.is_locked|yesno:"Yes,No" }}</dd>
+    </dl>
+    <form method="post" action="{% url 'domains_customer:auto_renew' domain.pk %}">{% csrf_token %}
+      <label><input type="checkbox" name="auto_renew" {% if domain.auto_renew %}checked{% endif %} onchange="this.form.submit()"> Auto-renew</label>
+    </form>
+    {% if can_edit %}
+    <h3>Transfer lock</h3>
+    {% if domain.is_locked %}
+      <form method="post" action="{% url 'domains_customer:unlock' domain.pk %}">{% csrf_token %}
+        <button class="btn secondary" type="submit">Unlock (to transfer away)</button>
+      </form>
+    {% else %}
+      <form method="post" action="{% url 'domains_customer:lock' domain.pk %}">{% csrf_token %}
+        <button class="btn secondary" type="submit">Lock</button>
+      </form>
+    {% endif %}
+    {% endif %}
+  </section>
+
+  {% if can_edit %}
+  <section class="card">
+    <h2>Nameservers</h2>
+    <form method="post" action="{% url 'domains_customer:nameservers' domain.pk %}">{% csrf_token %}
+      {% include "partials/form.html" with form=nameservers_form %}
+      <button class="btn secondary" type="submit">Save</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+
+{% if can_edit %}
+<section class="card">
+  <h2>DNS Zone</h2>
+  <p class="muted">These records only take effect while the domain uses our nameservers.</p>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Type</th><th>Name</th><th>Content</th><th>TTL</th><th>Priority</th><th></th></tr></thead>
+    <tbody>
+    {% for record in domain.dns_records.all %}
+      <tr>
+        <td>{{ record.record_type }}</td>
+        <td>{{ record.name|default:"@" }}</td>
+        <td>{{ record.content }}</td>
+        <td>{{ record.ttl }}</td>
+        <td>{{ record.priority|default:"—" }}</td>
+        <td>
+          <form method="post" action="{% url 'domains_customer:dns_remove' domain.pk record.pk %}">{% csrf_token %}
+            <button class="btn small danger" type="submit">Remove</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="muted">No records yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <h3>Add a record</h3>
+  <form method="post" action="{% url 'domains_customer:dns_add' domain.pk %}" class="row-form">{% csrf_token %}
+    <div class="field"><label for="id_record_type">Type</label>{{ dns_form.record_type }}</div>
+    <div class="field"><label for="id_name">Name</label>{{ dns_form.name }}</div>
+    <div class="field grow"><label for="id_content">Content</label>{{ dns_form.content }}</div>
+    <div class="field"><label for="id_ttl">TTL</label>{{ dns_form.ttl }}</div>
+    <div class="field"><label for="id_priority">Priority</label>{{ dns_form.priority }}</div>
+    <div class="field"><button class="btn" type="submit">Add</button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

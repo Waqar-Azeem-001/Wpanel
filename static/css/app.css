@@ -63,6 +63,8 @@ form.inline { display: inline; }
 .btn.small { padding: 6px 10px; font-size: .9rem; }
 .btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 .badge.status-active { color: var(--ok); } .badge.status-inactive { color: var(--warn); } .badge.status-closed { color: var(--danger); }
+.badge.status-pending_registration, .badge.status-pending_transfer_in { color: var(--warn); }
+.badge.status-expired, .badge.status-cancelled, .badge.status-failed { color: var(--danger); }
 .timeline { list-style: none; padding: 0; margin: 0; }
 .timeline li { padding: 8px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
 .notes { white-space: normal; overflow-wrap: anywhere; }

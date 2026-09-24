@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.clients",
     "apps.products",
+    "apps.domains",
 ]
 
 MIDDLEWARE = [
@@ -185,6 +186,9 @@ SPECTACULAR_SETTINGS = {
         "CatalogStatusEnum": "apps.products.models.CatalogStatus",
         "BillingCycleEnum": "apps.products.models.BillingCycle",
         "ServerStatusEnum": "apps.products.models.ServerStatus",
+        "DomainStatusEnum": "apps.domains.models.DomainStatus",
+        "DnsRecordTypeEnum": "apps.domains.models.DnsRecordType",
+        "RegistrarKindEnum": "apps.domains.models.RegistrarProvider.Kind",
     },
 }
 

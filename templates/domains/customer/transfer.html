@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Transfer a domain · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Transfer a domain to us</h1>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    <button type="submit" class="btn">Request transfer</button>
+  </form>
+  <p class="muted">You'll need the authorization (EPP) code from your current registrar. Make sure the domain is unlocked there first.</p>
+</section>
+{% endblock %}
