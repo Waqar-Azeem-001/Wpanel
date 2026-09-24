@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Hosting Plans · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Hosting Plans</h1>
+<div class="plan-grid">
+  {% for product in products %}
+    <section class="card plan-card">
+      <h2>{{ product.name }}</h2>
+      <p class="muted">{{ product.get_type_display }}</p>
+      {% if product.description %}<p>{{ product.description|linebreaksbr }}</p>{% endif %}
+      {% with lowest=product.prices.all|dictsort:"price"|first %}
+        {% if lowest %}
+          <p class="price">{{ lowest.price }} <span class="muted">/ {{ lowest.get_billing_cycle_display }}</span></p>
+        {% endif %}
+      {% endwith %}
+      <a class="btn" href="{% url 'catalog:product_detail' product.slug %}">View plan</a>
+    </section>
+  {% empty %}
+    <p class="muted">No plans are available yet. Check back soon.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Products · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Products</h1>
+  <div class="actions">
+    <a href="{% url 'catalog_staff:addon_list' %}">Addons</a>
+    <a href="{% url 'catalog_staff:server_list' %}">Servers</a>
+    {% if perms.accounts.manage_products %}<a class="btn" href="{% url 'catalog_staff:product_create' %}">Add product</a>{% endif %}
+  </div>
+</div>
+<form class="filters" method="get">
+  <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}"></div>
+  <div class="field"><label for="id_type">Type</label>{{ filter_form.type }}</div>
+  <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+{% include "products/staff/_product_table.html" %}
+{% endblock %}

@@ -9,4 +9,6 @@ urlpatterns = [
     path("account/", include("apps.accounts.urls")),
     path("account/client/", include("apps.clients.urls_customer")),
     path("staff/clients/", include("apps.clients.urls_staff")),
+    path("staff/", include("apps.products.urls_staff")),
+    path("products/", include("apps.products.urls_public")),
 ]

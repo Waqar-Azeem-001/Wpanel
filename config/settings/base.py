@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.notifications",
     "apps.clients",
+    "apps.products",
 ]
 
 MIDDLEWARE = [
@@ -180,6 +181,10 @@ SPECTACULAR_SETTINGS = {
         "AccountStatusEnum": "apps.accounts.models.AccountStatus",
         "ClientStatusEnum": "apps.clients.models.ClientStatus",
         "ContactRoleEnum": "apps.clients.models.ContactRole",
+        "ProductTypeEnum": "apps.products.models.ProductType",
+        "CatalogStatusEnum": "apps.products.models.CatalogStatus",
+        "BillingCycleEnum": "apps.products.models.BillingCycle",
+        "ServerStatusEnum": "apps.products.models.ServerStatus",
     },
 }
 

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Addons · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Addons</h1>
+  <div class="actions">
+    <a href="{% url 'catalog_staff:product_list' %}">Products</a>
+    {% if perms.accounts.manage_products %}<a class="btn" href="{% url 'catalog_staff:addon_create' %}">Add addon</a>{% endif %}
+  </div>
+</div>
+<form class="filters" method="get">
+  <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}"></div>
+  <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Name</th><th>Status</th><th>Prices</th></tr></thead>
+  <tbody>
+  {% for addon in page %}
+    <tr>
+      <td><a href="{% url 'catalog_staff:addon_detail' addon.slug %}">{{ addon.name }}</a></td>
+      <td><span class="badge status-{{ addon.status }}">{{ addon.get_status_display }}</span></td>
+      <td>{{ addon.prices.count }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="3" class="muted">No addons match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if page.has_other_pages %}
+<nav class="pager">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
+  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

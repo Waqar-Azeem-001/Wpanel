@@ -1610,7 +1610,7 @@ If UI changed:
   ------------------------------ -------- ------- --------- -------- --------
   01 Foundation & Architecture   🟢       70 ✅   ✅        960bd54  ---
   02 Client Management           🟢       98 ✅   ✅        3d257c4  ---
-  03 Products & Addons           ⬜       ---     ---       ---      ---
+  03 Products & Addons           🔵       150 ✅  ✅        ---      ---
   04 Domain Management           ⬜       ---     ---       ---      ---
   05 WHM Provisioning            ⬜       ---     ---       ---      ---
   06 Cart & Checkout             ⬜       ---     ---       ---      ---
@@ -1669,6 +1669,17 @@ postponed.
 
   Closing a client suspends users/   Deferred  Service lifecycle rules          Phase 12
   services                                     belong to cancellation phase
+
+  Server credentials / WHM adapter   Open      Server model intentionally      Phase 05
+                                                minimal in Phase 03
+
+  Multi-currency product pricing     Deferred  Single store currency for MVP    Post-MVP
+
+  Addon-to-product-type              Deferred  Any addon attaches to any        Phase 06
+  compatibility restriction                    product for now
+
+  Staff pricing table row-actions    Deferred  Table scrolls in its own         Phase 18
+  cramped at 375px width                       container; no page overflow
   -------------------------------------------------------------------------------------------
 
 **Rule:** If an item is already recorded here, do not rediscover or
@@ -1733,6 +1744,20 @@ Record permanent technical decisions here.
 
   Emails recorded first, delivered    Retry-safe, auditable   Active
   by Celery after commit              delivery                
+
+  Product/Addon share one            Avoids two visibility    Active
+  CatalogStatus and one PriceEntry   vocabularies and two     
+  shape (ProductPrice/AddonPrice)    pricing calculators      
+
+  Public catalog API/pages are one   Same visibility rule     Active
+  view with staff-vs-public shape,   (staff see all, others   
+  not two separate implementations   see active) as Phase 02  
+
+  Server model created now, minimal  Phase 05 extends the     Active
+  (no credentials); domain-as-       same model rather than   
+  product excluded from Product      creating a second one;   
+  entirely                           domains get their own    
+                                     TLD-keyed pricing model  
 
   Business records belong to Client;  Agencies/companies have Active
   users reach clients through         several users; one user 

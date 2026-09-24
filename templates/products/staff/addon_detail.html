@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ addon.name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'catalog_staff:addon_list' %}">&larr; All addons</a></p>
+<div class="page-head">
+  <h1>{{ addon.name }}</h1>
+  <span class="badge status-{{ addon.status }}">{{ addon.get_status_display }}</span>
+</div>
+
+<div class="cols">
+  <section class="card">
+    <div class="page-head"><h2>Details</h2>
+      {% if can_manage %}<a class="btn secondary" href="{% url 'catalog_staff:addon_edit' addon.slug %}">Edit</a>{% endif %}
+    </div>
+    {% if addon.description %}<p>{{ addon.description|linebreaksbr }}</p>{% else %}<p class="muted">No description.</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Status</h2>
+    {% if can_manage %}
+    <form method="post" action="{% url 'catalog_staff:addon_status' addon.slug %}">{% csrf_token %}
+      <div class="field">{{ status_form.status }}</div>
+      <button class="btn secondary" type="submit">Update status</button>
+    </form>
+    {% else %}<p>{{ addon.get_status_display }}</p>{% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Pricing</h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Cycle</th><th>Price</th><th>Setup fee</th><th>Active</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for entry in addon.prices.all %}
+      <tr>
+        <td>{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %}</td>
+        <td>{{ entry.price }}</td>
+        <td>{{ entry.setup_fee }}</td>
+        <td>{{ entry.is_active|yesno:"Yes,No" }}</td>
+        {% if can_manage %}
+        <td class="row-actions">
+          <form method="post" action="{% url 'catalog_staff:addon_price_toggle' addon.slug entry.pk %}">{% csrf_token %}
+            <button class="btn small secondary" type="submit">{{ entry.is_active|yesno:"Disable,Enable" }}</button>
+          </form>
+          <form method="post" action="{% url 'catalog_staff:addon_price_remove' addon.slug entry.pk %}"
+                onsubmit="return confirm('Remove this price?');">{% csrf_token %}
+            <button class="btn small danger" type="submit">Remove</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted">No prices yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if can_manage %}
+  <h3>Add / update a price</h3>
+  <form method="post" action="{% url 'catalog_staff:addon_price_add' addon.slug %}" class="row-form">{% csrf_token %}
+    <div class="field"><label for="id_billing_cycle">Cycle</label>{{ price_form.billing_cycle }}</div>
+    <div class="field"><label for="id_custom_months">Custom months</label>{{ price_form.custom_months }}</div>
+    <div class="field"><label for="id_price">Price</label>{{ price_form.price }}</div>
+    <div class="field"><label for="id_setup_fee">Setup fee</label>{{ price_form.setup_fee }}</div>
+    <div class="field"><button class="btn" type="submit">Save</button></div>
+  </form>
+  <p class="muted">Use "One-time" for a single non-recurring charge (e.g. a migration fee).</p>
+  {% endif %}
+</section>
+{% endblock %}

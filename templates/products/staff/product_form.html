@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>{{ title }}</h1>
+  <form method="post" novalidate class="grid-form">{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="actions">
+      <button type="submit" class="btn">Save</button>
+      <a href="{% if product %}{% url 'catalog_staff:product_detail' product.slug %}{% else %}{% url 'catalog_staff:product_list' %}{% endif %}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

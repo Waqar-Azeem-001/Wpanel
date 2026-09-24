@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'catalog:product_list' %}">&larr; All plans</a></p>
+<section class="card">
+  <h1>{{ product.name }}</h1>
+  <p class="muted">{{ product.get_type_display }}</p>
+  {% if product.description %}<p>{{ product.description|linebreaksbr }}</p>{% endif %}
+
+  {% if product.resource_limits %}
+  <h2>What's included</h2>
+  <ul class="limits">
+    {% for key, value in product.resource_limits.items %}
+      <li><strong>{{ key|cut:"_"|title }}:</strong> {% if value == None %}Unlimited{% else %}{{ value }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <h2>Pricing</h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Billing cycle</th><th>Price</th><th>Setup fee</th></tr></thead>
+    <tbody>
+    {% for entry in prices %}
+      <tr>
+        <td>{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %}</td>
+        <td>{{ entry.price }}</td>
+        <td>{{ entry.setup_fee }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3" class="muted">Pricing is not published yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted">Ordering opens soon - cart and checkout are being finished (roadmap Phase 06).</p>
+</section>
+{% endblock %}

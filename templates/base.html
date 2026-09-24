@@ -12,6 +12,8 @@
     <a class="brand" href="/">{{ SITE_NAME }}</a>
     <nav>
       {% if user.is_authenticated %}
+        <a href="{% url 'catalog:product_list' %}">Plans</a>
+        {% if perms.accounts.view_products %}<a href="{% url 'catalog_staff:product_list' %}">Products</a>{% endif %}
         {% if perms.accounts.view_clients %}<a href="{% url 'clients_staff:list' %}">Clients</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'clients_customer:list' %}">Account</a>{% endif %}
         <a href="{% url 'accounts:profile' %}">{{ user.get_short_name }}</a>

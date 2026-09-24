@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class HasPortalPermission(BasePermission):
@@ -28,3 +28,20 @@ class HasPortalPermission(BasePermission):
         if not required:
             return False
         return user.has_perms(required)
+
+
+class PublicReadPermission(HasPortalPermission):
+    """
+    Safe methods (GET/HEAD/OPTIONS) are open to everyone, including anonymous
+    users; unsafe methods require the permission(s) in ``required_permissions``,
+    same shape as ``HasPortalPermission``.
+
+    Pair this with a queryset that hides non-public rows (draft/retired, etc.)
+    from users who lack the read permission, since this class does not filter
+    rows itself - it only decides who may call the view at all.
+    """
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return super().has_permission(request, view)
