@@ -872,7 +872,7 @@ Before marking any phase 🟢:
 |---|---|---|---|---|---|---|
 | D0 UI & Navigation Audit | 🟢 | 1220 ✅ | ✅ | prototype crawler: 8 roles, 0 broken (kept as a CI test in D2) | dd1c88a | — |
 | D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | ee8a609 | — |
-| D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | pending | — |
+| D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | da099e8 | — |
 | D3 Client Area Parity | ⬜ | — | — | — | — | — |
 | D4 Staff Area Parity | ⬜ | — | — | — | — | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |

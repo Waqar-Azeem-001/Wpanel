@@ -59,7 +59,7 @@ An entry is shown **exactly** when the person may open it: tested in both direct
 | Email, PDF, redirect, safe-`next` tests | ✅ |
 | Fingerprinted static files and a `collectstatic` test | ✅ |
 | Tracker "Links" column filled for D0–D2 | ✅ |
-| CI green | ✅ (see tracker) |
+| CI green | ✅ run 36180365989 on `da099e8` (first run) |
 
 ## Known limitations (all scheduled)
 
