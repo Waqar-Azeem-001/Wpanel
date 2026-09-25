@@ -73,7 +73,7 @@ Support overview, tickets (customer and staff, web and API), new ticket, departm
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 885 |
 | Migrations, `makemigrations --check`, OpenAPI schema with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green | pending push |
+| CI green on PostgreSQL + Redis | ✅ Run 36133262746 on `e425a85` (first run) |
 
 ## Known limitations / deferred
 

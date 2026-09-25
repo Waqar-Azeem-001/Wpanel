@@ -1617,7 +1617,7 @@ If UI changed:
   07 Billing & Invoices          🟢       622 ✅  ✅        ac37961  ---
   08 Renewals & Upgrades         🟢       729 ✅  ✅        4d00e37  ---
   09 Orders & Lifecycle          🟢       788 ✅  ✅        8d83271  ---
-  10 Support                     🟡       885 ✅  ✅        ---      ---
+  10 Support                     🟢       885 ✅  ✅        e425a85  ---
   11 Notifications & Email       ⬜       ---     ---       ---      ---
   12 Cancellation                ⬜       ---     ---       ---      ---
   13 Affiliates                  ⬜       ---     ---       ---      ---
