@@ -1616,7 +1616,7 @@ If UI changed:
   06 Cart & Checkout             🟢       458 ✅  ✅        23168d7  ---
   07 Billing & Invoices          🟢       622 ✅  ✅        ac37961  ---
   08 Renewals & Upgrades         🟢       729 ✅  ✅        4d00e37  ---
-  09 Orders & Lifecycle          ⬜       ---     ---       ---      ---
+  09 Orders & Lifecycle          🟡       788 ✅  ✅        ---      ---
   10 Support                     ⬜       ---     ---       ---      ---
   11 Notifications & Email       ⬜       ---     ---       ---      ---
   12 Cancellation                ⬜       ---     ---       ---      ---
@@ -1687,8 +1687,8 @@ postponed.
   Multi-part TLDs (.co.uk, .com.au)  Deferred  Needs a public-suffix list       Post-MVP
   not supported
 
-  Domain registration/transfer not   Open      Staff complete manually until   Phase 07/08
-  yet wired to billing                         invoices/payment exist
+  Domain registration/transfer not   Closed    Phase 09: a paid order registers/  Phase 09
+  yet wired to billing                         transfers its domains automatically
 
   Automated renewal invoicing        Closed    Phase 08: nightly job creates    Phase 08
   (expiry job)                                 renewal invoices; reminders/dunning
@@ -1700,8 +1700,9 @@ postponed.
   WHM API adapter needed live      Open      Written to WHM's public docs,    Before launch
   verification before launch                  never run against a real server
 
-  Hosting provisioning/lifecycle     Open      Staff act manually until        Phase 07/08
-  actions not yet wired to billing              invoices/payment exist
+  Hosting provisioning/lifecycle     Closed    Phase 09: a paid order provisions   Phase 09
+  actions not yet wired to billing              hosting and starts its term; order
+                                                suspend/terminate cascade to hosting
 
   No customer self-service for       Deferred  No billing/cancellation         Phase 08/12
   suspend/terminate/change-package             workflow to hang these off yet
@@ -1716,14 +1717,25 @@ postponed.
   for orders (order ends at                     issues the invoice; paying it
   "pending payment")                            marks the order paid
 
-  Order fulfilment: provisioning      Open      Needs a system actor - domain/    Phase 07/09
-  domains/hosting from a paid order             hosting services authorise a user
+  Order fulfilment: provisioning      Closed    Phase 09: SYSTEM actor runs the   Phase 09
+  domains/hosting from a paid order             ordinary services; idempotent,
+                                                resumable, retryable by staff
 
-  Customer "request without paying"   Open      Bypass checkout; keep until       Phase 07/09
-  flows (domain register/transfer,              fulfilment is wired, then retire
-  hosting request) still exist
+  Customer "request without paying"   Closed    Phase 09: retired; creating a        Phase 09
+  flows (domain register/transfer,              hosting account/domain is staff or
+  hosting request)                              system only, in the service layer
 
   Guest (anonymous) carts             Deferred  Cart requires a signed-in user    Post-MVP
+
+  Add-on provisioning; add-ons and    Deferred  Add-ons are recorded against the  Post-MVP
+  custom cycles in staff Add Order              plan, not provisioned separately
+
+  Order suspend/terminate act on      Deferred  Domains are registrations and are  Post-MVP
+  hosting only; refunds do not                  left alone; a refund does not undo
+  cancel fulfilled services                     what was fulfilled
+
+  Staff are not alerted when          Deferred  Visible as "Failed" in the list,   Phase 11
+  fulfilment fails                              the tab counts and the audit trail
 
   No real payment gateway adapter     Open      Only the simulated test gateway   Before launch
   (Stripe is unavailable in                     ships (dev/test only, guarded by
@@ -1742,9 +1754,9 @@ postponed.
   upgrade credit forward); refunds              forfeited and shown as such; a
   do not reverse a renewal/upgrade              refund never undoes a service change
 
-  Hosting terms are recorded by staff Open      Nothing starts a term when an order Phase 09
-  (no automatic start on a paid order)          is paid yet; fulfilment must call
-                                                the same term logic
+  Hosting terms start automatically   Closed    Phase 09 fulfilment starts the term  Phase 09
+  on a paid order (staff can still              with the plan's paid value
+  record one for older accounts)
 
   Downgrades / billing-cycle changes  Deferred  Only upgrades are offered online;   Post-MVP
   online; renewal of EXPIRED domains            staff handle the rest
@@ -1951,6 +1963,22 @@ Record permanent technical decisions here.
   PaymentProvider is DB-configured    Provider credentials never  Active
   and admin-only; test gateway is     in ENV; a no-money gateway
   behind ALLOW_TEST_PAYMENT_GATEWAY   must never run in production
+
+  Every order status change goes      Every transition auditable  Active
+  through lifecycle.transition:       by construction; no status
+  one table of legal moves, audit     is ever written by hand
+  event carries from/to
+
+  Fulfilment runs as the SYSTEM       No second, unchecked path    Active
+  actor through the ordinary          into provisioning; the actor
+  services, after payment commits,    is never reachable from a
+  idempotent per line, claimed        request; a broker outage or
+  under the order row lock            a failed line never undoes a
+                                      payment
+
+  Customers cannot create hosting     One way to buy: through the  Active
+  or domains outside checkout (the    cart, invoice and payment
+  service layer refuses them)
 
   Renewals/upgrades are invoices      One financial record; a     Active
   (apps.renewals): figures frozen on  browser never supplies a

@@ -6,8 +6,6 @@ app_name = "domains_customer"
 
 urlpatterns = [
     path("", views.my_domain_list, name="list"),
-    path("register/", views.my_domain_register, name="register"),
-    path("transfer/", views.my_domain_transfer, name="transfer"),
     path("<int:pk>/", views.my_domain_detail, name="detail"),
     path("<int:pk>/auto-renew/", views.my_domain_auto_renew, name="auto_renew"),
     path("<int:pk>/nameservers/", views.my_domain_nameservers, name="nameservers"),

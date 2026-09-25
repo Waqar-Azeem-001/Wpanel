@@ -3,6 +3,7 @@ from .base import REST_FRAMEWORK, env
 
 DEBUG = False
 ALLOW_TEST_PAYMENT_GATEWAY = True
+ORDER_AUTO_FULFIL = False  # fulfilment tests switch it on explicitly
 SECRET_KEY = "test-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz"
 # Tests must not depend on whatever a developer's local .env happens to contain -
 # force the deterministic SECRET_KEY-derived fallback (see apps.core.crypto).

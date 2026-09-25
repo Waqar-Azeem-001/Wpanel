@@ -65,19 +65,18 @@ def test_stranger_gets_404(api, customer, manager, client_obj, product, make_use
     assert api.get(f"/api/v1/hosting-accounts/{account.pk}/").status_code == 404
 
 
-def test_request_account_by_owner_and_staff(api, manager, owner, client_obj, product):
-    api.force_authenticate(owner)
+def test_request_account_is_staff_only_customers_buy_through_the_cart(api, manager, owner, client_obj, product):
+    api.force_authenticate(owner)  # a customer can no longer create hosting without paying
     response = api.post("/api/v1/hosting-accounts/request_account/", {
         "client_id": client_obj.pk, "product_id": product.pk, "domain": "example.com",
     })
-    assert response.status_code == 201 and response.json()["status"] == "pending"
+    assert response.status_code == 403
 
-    other = client_services.create_client(manager, {"first_name": "B", "email": "b@x.test"})
-    api.force_authenticate(manager)
+    api.force_authenticate(manager)  # staff can, on a client's behalf
     response = api.post("/api/v1/hosting-accounts/request_account/", {
-        "client_id": other.pk, "product_id": product.pk, "domain": "second.com",
+        "client_id": client_obj.pk, "product_id": product.pk, "domain": "second.com",
     })
-    assert response.status_code == 201
+    assert response.status_code == 201 and response.json()["status"] == "pending"
 
 
 def test_request_denied_for_non_contact(api, customer, client_obj, product):

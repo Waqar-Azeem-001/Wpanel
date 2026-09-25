@@ -88,8 +88,8 @@ def search_hosting_accounts(queryset, term):
 
 @transaction.atomic
 def request_hosting(actor, client, product, domain, *, server=None, request=None):
-    if not (actor.has_perm(perm("manage_hosting")) or contact_role(actor, client) is not None):
-        raise _denied()
+    # Customers buy hosting through the cart; only staff (or the system, fulfilling a paid order) create accounts.
+    _require(actor, "manage_hosting")
     if not product.whm_package_name:
         raise ServiceError("This product has no WHM package configured.", code="no_package_configured")
 

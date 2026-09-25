@@ -2,9 +2,15 @@
 {% block title %}Orders · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<h1>Orders</h1>
+<div class="page-head"><h1>Orders</h1>
+  {% if can_manage %}<a class="btn" href="{% url 'orders_staff:new' %}">Add order</a>{% endif %}
+</div>
 {% include "billing/staff/_nav.html" %}
+<nav class="tabs" aria-label="Order groups">
+  {% for tab in tabs %}<a href="?{% if tab.key %}group={{ tab.key }}{% endif %}"{% if tab.key == group %} class="active" aria-current="page"{% endif %}>{{ tab.label }} <span class="count">{{ tab.count }}</span></a>{% endfor %}
+</nav>
 <form class="filters" method="get">
+  {% if group %}<input type="hidden" name="group" value="{{ group }}">{% endif %}
   <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}" placeholder="O000123, client, email, domain, coupon"></div>
   <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
   <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
@@ -28,11 +34,5 @@
   </tbody>
 </table>
 </div>
-{% if page.has_other_pages %}
-<nav class="pager">
-  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
-  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-  {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
-</nav>
-{% endif %}
+{% include "billing/_pager.html" %}
 {% endblock %}

@@ -69,10 +69,19 @@ def test_request_hosting_requires_contact_or_manage_permission(customer, client_
     assert exc.value.code == "permission_denied"
 
 
-def test_request_hosting_any_contact_role_allowed(manager, client_obj, product, make_user):
+def test_customers_cannot_create_hosting_outside_checkout(manager, client_obj, product, make_user):
     tech = make_user("tech@example.com")
     client_services.add_contact(manager, client_obj, email="tech@example.com", role=ContactRole.TECHNICAL)
-    account = services.request_hosting(tech, client_obj, product, "example.com")
+    for actor in (tech, client_obj.contacts.get(role="owner").user):
+        with pytest.raises(ServiceError) as exc:
+            services.request_hosting(actor, client_obj, product, "example.com")
+        assert exc.value.code == "permission_denied"
+
+
+def test_the_system_actor_may_create_hosting_for_a_paid_order(client_obj, product):
+    from apps.core.system import SYSTEM
+
+    account = services.request_hosting(SYSTEM, client_obj, product, "example.com")
     assert account.status == HostingStatus.PENDING
 
 

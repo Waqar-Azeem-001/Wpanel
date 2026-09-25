@@ -104,8 +104,8 @@ def search_domains(queryset, term):
 @transaction.atomic
 def request_registration(actor, client, domain_name, years, nameservers=None, *, request=None):
     domain_name = domain_name.strip().lower()
-    if not (actor.has_perm(perm("manage_domains")) or contact_role(actor, client) is not None):
-        raise _denied()
+    # Customers buy domains through the cart; only staff (or the system, fulfilling a paid order) register them.
+    _require(actor, "manage_domains")
 
     pricing = get_tld_pricing(domain_tld(domain_name))
     if not (pricing.min_years <= years <= pricing.max_years):
@@ -165,8 +165,7 @@ def complete_registration(actor, domain, *, request=None):
 @transaction.atomic
 def request_transfer_in(actor, client, domain_name, auth_code, years=1, *, request=None):
     domain_name = domain_name.strip().lower()
-    if not (actor.has_perm(perm("manage_domains")) or contact_role(actor, client) is not None):
-        raise _denied()
+    _require(actor, "manage_domains")
     if not auth_code:
         raise ServiceError("An authorization code is required.", code="auth_code_required")
 

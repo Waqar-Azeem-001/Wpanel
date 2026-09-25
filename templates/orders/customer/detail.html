@@ -16,6 +16,25 @@
   <p class="muted">Quote your invoice number with your payment. Your services are set up once payment is confirmed.</p>
 </section>
 {% endif %}
+{% if order.status == "paid" or order.status == "processing" or order.status == "provisioning" %}
+<section class="card"><h2>Setting up your order</h2>
+  <p>We have received your payment and are setting up your services now. This usually takes a few minutes; you will get an email when it is done.</p></section>
+{% elif order.status == "failed" %}
+<section class="card"><h2>We are finishing your order</h2>
+  <p>We have received your payment, but part of the setup needs our team's attention. We are on it and will be in touch if we need anything from you.</p></section>
+{% elif order.status == "fraud" %}
+<section class="card"><h2>Your order is under review</h2>
+  <p>We need to complete a routine check before we can set this order up. We will contact you if we need anything.</p></section>
+{% elif order.status == "active" or order.status == "suspended" %}
+<section class="card"><h2>{% if order.status == "active" %}Your services{% else %}Suspended{% endif %}</h2>
+  {% if order.status == "suspended" %}<p>These services are suspended. Please contact us.</p>{% endif %}
+  <ul>
+  {% for item in items %}{% if item.hosting_account %}<li><a href="{% url 'hosting_customer:detail' item.hosting_account_id %}">Hosting for {{ item.hosting_account.domain }}</a></li>{% endif %}
+  {% if item.domain %}<li><a href="{% url 'domains_customer:detail' item.domain_id %}">Domain {{ item.domain.name }}</a></li>{% endif %}{% endfor %}
+  </ul></section>
+{% elif order.status == "terminated" %}
+<section class="card"><h2>Terminated</h2><p>These services have been terminated.</p></section>
+{% endif %}
 {% for invoice in order.invoices.all %}
 <section class="card">
   <h2>Invoice</h2>

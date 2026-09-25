@@ -46,25 +46,6 @@ def my_hosting_list(request):
     return render(request, "hosting/customer/list.html", {"accounts": accounts})
 
 
-@login_required
-def my_hosting_request(request):
-    client = single_contact_client(request.user)
-    if client is None:
-        messages.error(request, "We could not determine your account. Contact support.")
-        return redirect("hosting_customer:list")
-    form = forms.RequestHostingForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            account = services.request_hosting(request.user, client, form.cleaned_data["product"],
-                                               form.cleaned_data["domain"], request=request)
-        except (ServiceError, ValidationError) as exc:
-            _apply_error(form, exc)
-        else:
-            messages.success(request, f"Hosting requested for {account.domain}. Our team will set it up shortly.")
-            return redirect("hosting_customer:detail", pk=account.pk)
-    return render(request, "hosting/customer/request.html", {"form": form})
-
-
 def _own_account(request, pk):
     return get_object_or_404(services.visible_hosting_accounts_for_user(request.user), pk=pk)
 

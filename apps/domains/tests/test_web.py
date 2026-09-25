@@ -64,14 +64,15 @@ def test_customer_domain_pages_require_login(client):
     assert client.get("/account/domains/1/").status_code == 302
 
 
-def test_customer_can_request_registration(client, owner, com_pricing):
-    client.force_login(owner)
-    response = client.post("/account/domains/register/", {"domain": "example.com", "years": 1, "nameservers": ""})
+def test_the_request_without_paying_pages_are_gone(client, owner, com_pricing):
     from apps.domains.models import Domain
 
-    domain = Domain.objects.get(name="example.com")
-    assert response.status_code == 302 and response["Location"] == f"/account/domains/{domain.pk}/"
-    assert domain.status == "pending_registration"
+    client.force_login(owner)
+    assert client.get("/account/domains/register/").status_code == 404
+    assert client.post("/account/domains/register/", {"domain": "example.com", "years": 1}).status_code == 404
+    assert client.get("/account/domains/transfer/").status_code == 404
+    assert not Domain.objects.exists()
+    assert b"/account/domains/register/" not in client.get("/domains/?domain=example.com").content
 
 
 def test_customer_domain_list_and_detail(client, owner, manager, client_obj, com_pricing):

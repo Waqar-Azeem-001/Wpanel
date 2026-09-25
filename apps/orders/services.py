@@ -20,7 +20,7 @@ from apps.core.exceptions import ServiceError
 from apps.notifications import services as notifications
 from apps.products.models import BillingCycle
 
-from . import pricing
+from . import lifecycle, pricing
 from .models import (Cart, CartItem, CartStatus, CouponRedemption, ItemKind, Order, OrderItem, OrderStatus)
 
 
@@ -274,12 +274,14 @@ def cancel_order(actor, order, *, reason="", request=None):
     open_invoices = list(Invoice.objects.select_for_update().filter(
         order=order, status__in=(InvoiceStatus.UNPAID, InvoiceStatus.PARTIALLY_PAID)))
     order = Order.objects.select_for_update().get(pk=order.pk)
-    if order.status != OrderStatus.PENDING_PAYMENT:
+    # Anyone with access may cancel an unpaid order; staff may also close one that failed or was flagged as fraud
+    # (any money already taken is refunded separately, through the invoice).
+    closable = (OrderStatus.PENDING_PAYMENT,) + ((OrderStatus.FRAUD, OrderStatus.FAILED)
+                                                 if actor.has_perm(perm("manage_orders")) else ())
+    if order.status not in closable:
         raise ServiceError("Only an order that is awaiting payment can be cancelled.", code="invalid_status")
-    order.status, order.cancel_reason = OrderStatus.CANCELLED, reason.strip()[:500]
-    order.save(update_fields=["status", "cancel_reason", "updated_at"])
-    audit.record("order.cancelled", actor=actor, target=order, metadata={"reason": order.cancel_reason},
-                 request=request)
+    order = lifecycle.transition(order, OrderStatus.CANCELLED, actor=actor, action="order.cancelled", reason=reason,
+                                 request=request)
     for invoice in open_invoices:
         cancel_invoice_internal(invoice, actor=actor, reason=order.cancel_reason, request=request)
     return order

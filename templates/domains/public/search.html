@@ -24,14 +24,13 @@
         <input type="hidden" name="years" value="{{ result.years }}">
         <button class="btn" type="submit">Add to cart ({{ result.years }} year{{ result.years|pluralize }})</button>
       </form>
-      <p class="muted">Prefer staff to handle it? <a href="{% url 'domains_customer:register' %}?domain={{ result.domain }}&years={{ result.years }}">Request registration</a> without paying now.</p>
     {% else %}
       <p><a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Sign in</a> or
         <a href="{% url 'accounts:register' %}">create an account</a> to order it.</p>
     {% endif %}
   {% else %}
     <h2>{{ result.domain }} is taken</h2>
-    <p class="muted">Already registering it? <a href="{% url 'domains_customer:transfer' %}">Transfer it in</a> instead.</p>
+    <p class="muted">Do you own it? You can <a href="{% url 'orders_customer:cart' %}">transfer it in</a> from your cart.</p>
   {% endif %}
 </section>
 {% endif %}

@@ -1,0 +1,10 @@
+{% autoescape off %}Hello {{ order.billing_name|default:"there" }},
+
+Your order {{ order.reference }} has been set up.
+
+{% for item in items %}- {{ item.description }}{% if item.hosting_account %} (account {{ item.hosting_account.username }}){% endif %}
+{% endfor %}
+Hosting login details are sent in a separate email. You can see everything here: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

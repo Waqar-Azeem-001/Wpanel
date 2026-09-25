@@ -111,15 +111,16 @@ def test_customer_cannot_see_other_clients_domain(api, manager, client_obj, com_
 
 # --- Registration / transfer ------------------------------------------------------------------
 
-def test_register_via_api_by_owner_and_by_staff(api, manager, client_obj, owner, com_pricing):
-    api.force_authenticate(owner)
+def test_register_via_api_is_staff_only_customers_buy_through_the_cart(api, manager, client_obj, owner, com_pricing):
+    api.force_authenticate(owner)  # a customer can no longer create a domain without paying
     response = api.post("/api/v1/domains/register/", {"client_id": client_obj.pk, "domain": "example.com", "years": 1})
-    assert response.status_code == 201 and response.json()["status"] == "pending_registration"
+    assert response.status_code == 403
+    assert api.post("/api/v1/domains/transfer/", {"client_id": client_obj.pk, "domain": "moving.com",
+                                                  "auth_code": "epp", "years": 1}).status_code == 403
 
-    other = client_services.create_client(manager, {"first_name": "B", "email": "b@x.test"})
-    api.force_authenticate(manager)
-    response = api.post("/api/v1/domains/register/", {"client_id": other.pk, "domain": "second.com", "years": 1})
-    assert response.status_code == 201
+    api.force_authenticate(manager)  # staff can, on a client's behalf
+    response = api.post("/api/v1/domains/register/", {"client_id": client_obj.pk, "domain": "second.com", "years": 1})
+    assert response.status_code == 201 and response.json()["status"] == "pending_registration"
 
 
 def test_register_denied_for_non_contact(api, customer, client_obj, com_pricing):

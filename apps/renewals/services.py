@@ -121,6 +121,30 @@ def set_hosting_term(actor, account, *, billing_cycle, custom_months=0, term_sta
     return account
 
 
+def start_hosting_term(account, *, billing_cycle, custom_months=0, term_paid, now=None):
+    """
+    System entry point: begin the first paid term of a freshly provisioned account (called by order
+    fulfilment). Idempotent - an account that already has a term is left alone, so running fulfilment twice
+    can never restart or double a term. ``term_paid`` is what was paid for the plan, excluding tax and setup fees.
+    """
+    months = cycle_months(billing_cycle, custom_months)
+    if months is None:
+        raise ServiceError("This billing cycle has no term to start.", code="term_not_set")
+    account = HostingAccount.objects.select_for_update().get(pk=account.pk)
+    if account.expires_at is not None:
+        return account
+    now = now or timezone.now()
+    account.billing_cycle = billing_cycle
+    account.custom_months = custom_months if billing_cycle == BillingCycle.CUSTOM else 0
+    account.term_start, account.expires_at, account.term_paid = now, add_months(now, months), calc.money(term_paid)
+    account.save(update_fields=["billing_cycle", "custom_months", "term_start", "expires_at", "term_paid",
+                                "updated_at"])
+    audit.record("hosting.term_started", target=account,
+                 metadata={"client_id": account.client_id, "billing_cycle": billing_cycle,
+                           "expires_at": _day(account.expires_at), "term_paid": str(account.term_paid)})
+    return account
+
+
 def require_upgradeable(account):
     """Raise ServiceError unless ``account`` can be offered upgrades at all."""
     if account.status != HostingStatus.ACTIVE:

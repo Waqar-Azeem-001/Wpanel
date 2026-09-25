@@ -63,47 +63,6 @@ def my_domain_list(request):
     return render(request, "domains/customer/list.html", {"domains": domains})
 
 
-@login_required
-def my_domain_register(request):
-    client = single_contact_client(request.user)
-    if client is None:
-        messages.error(request, "We could not determine your account. Contact support.")
-        return redirect("domains_customer:list")
-    initial = {"domain": request.GET.get("domain", ""), "years": request.GET.get("years", 1)}
-    form = forms.RegisterDomainForm(request.POST or None, initial=initial)
-    if request.method == "POST" and form.is_valid():
-        try:
-            domain = services.request_registration(request.user, client, form.cleaned_data["domain"],
-                                                    form.cleaned_data["years"], form.cleaned_data["nameservers"],
-                                                    request=request)
-        except (ServiceError, ValidationError) as exc:
-            _apply_error(form, exc)
-        else:
-            messages.success(request, f"Registration requested for {domain.name}. Our team will complete it shortly.")
-            return redirect("domains_customer:detail", pk=domain.pk)
-    return render(request, "domains/customer/register.html", {"form": form})
-
-
-@login_required
-def my_domain_transfer(request):
-    client = single_contact_client(request.user)
-    if client is None:
-        messages.error(request, "We could not determine your account. Contact support.")
-        return redirect("domains_customer:list")
-    form = forms.TransferDomainForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            domain = services.request_transfer_in(request.user, client, form.cleaned_data["domain"],
-                                                   form.cleaned_data["auth_code"], form.cleaned_data["years"],
-                                                   request=request)
-        except (ServiceError, ValidationError) as exc:
-            _apply_error(form, exc)
-        else:
-            messages.success(request, f"Transfer requested for {domain.name}.")
-            return redirect("domains_customer:detail", pk=domain.pk)
-    return render(request, "domains/customer/transfer.html", {"form": form})
-
-
 def _own_domain(request, pk):
     return get_object_or_404(services.visible_domains_for_user(request.user), pk=pk)
 

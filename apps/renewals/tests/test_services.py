@@ -515,3 +515,32 @@ def test_the_billing_settings_page_field_is_validated(manager):
 
     with pytest.raises(VE):
         invoicing.save_billing_settings(manager, {"renewal_invoice_days": 91})
+
+
+# --- Starting a term (order fulfilment) ---------------------------------------------------------------------------
+
+def test_starting_a_term_is_idempotent_and_never_restarts_an_existing_one(manager, client_obj, starter):
+    from apps.hosting import services as hosting
+
+    fresh = hosting.request_hosting(manager, client_obj, starter, "fresh.com")
+    hosting.complete_provisioning(manager, fresh)
+    started = services.start_hosting_term(fresh, billing_cycle="annual", term_paid=D("90.00"))
+    assert started.billing_cycle == "annual" and started.term_paid == D("90.00")
+    assert started.expires_at == services.add_months(started.term_start, 12)
+    first = (started.term_start, started.expires_at)
+
+    again = services.start_hosting_term(reload(fresh), billing_cycle="monthly", term_paid=D("1.00"))
+    assert (again.term_start, again.expires_at) == first and again.billing_cycle == "annual"  # untouched
+    assert AuditEvent.objects.filter(action="hosting.term_started", target_id=str(fresh.pk)).count() == 1
+
+
+def test_a_term_needs_a_recurring_cycle(manager, client_obj, starter):
+    from apps.hosting import services as hosting
+
+    fresh = hosting.request_hosting(manager, client_obj, starter, "fresh.com")
+    for cycle in ("one_time", "", "nonsense"):
+        with pytest.raises(ServiceError) as exc:
+            services.start_hosting_term(fresh, billing_cycle=cycle, term_paid=D("1"))
+        assert exc.value.code == "term_not_set"
+    custom = services.start_hosting_term(fresh, billing_cycle="custom", custom_months=3, term_paid=D("28.00"))
+    assert custom.custom_months == 3 and custom.expires_at == services.add_months(custom.term_start, 3)

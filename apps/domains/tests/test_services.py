@@ -162,10 +162,21 @@ def test_request_registration_requires_contact_or_manage_permission(customer, cl
     assert exc.value.code == "permission_denied"
 
 
-def test_request_registration_any_contact_role_allowed(manager, client_obj, registrar, com_pricing, make_user):
+def test_customers_cannot_create_a_registration_outside_checkout(manager, client_obj, registrar, com_pricing, make_user):
     tech = make_user("tech@example.com")
     client_services.add_contact(manager, client_obj, email="tech@example.com", role=ContactRole.TECHNICAL)
-    domain = services.request_registration(tech, client_obj, "example.com", 1)
+    for actor in (tech, client_obj.contacts.get(role="owner").user):
+        with pytest.raises(ServiceError) as exc:
+            services.request_registration(actor, client_obj, "example.com", 1)
+        assert exc.value.code == "permission_denied"
+        with pytest.raises(ServiceError):
+            services.request_transfer_in(actor, client_obj, "example.com", "epp", 1)
+
+
+def test_the_system_actor_may_register_for_a_paid_order(client_obj, registrar, com_pricing):
+    from apps.core.system import SYSTEM
+
+    domain = services.request_registration(SYSTEM, client_obj, "example.com", 1)
     assert domain.status == DomainStatus.PENDING_REGISTRATION
 
 

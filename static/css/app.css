@@ -120,3 +120,16 @@ h3 { font-size: 1rem; }
 table.lines input[type="text"], table.lines input[type="number"] { width: 100%; box-sizing: border-box; }
 table.lines td.qty { width: 5rem; } table.lines td.price { width: 9rem; }
 input.short { width: 6rem; }
+
+/* Phase 09: order lifecycle */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0; border-bottom: 1px solid var(--border); }
+.tabs a { padding: 8px 14px; text-decoration: none; border-bottom: 2px solid transparent; }
+.tabs a.active { border-bottom-color: var(--accent); font-weight: 600; }
+.tabs .count { font-size: .8rem; color: var(--muted); }
+.badge.status-done { color: var(--ok); } .badge.status-fraud { color: var(--danger); }
+.badge.status-suspended { color: var(--warn); }
+
+/* Wrap groups of actions (each with its own reason box) instead of overflowing narrow screens. */
+.actions { flex-wrap: wrap; }
+.inline-form { flex-wrap: wrap; max-width: 100%; }
+.inline-form input[type="text"] { min-width: 0; flex: 1 1 10rem; max-width: 100%; }

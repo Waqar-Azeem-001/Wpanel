@@ -125,6 +125,8 @@ class Order(TimeStampedModel):
     payment_method_name = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True, help_text="Customer notes.")
     cancel_reason = models.CharField(max_length=500, blank=True)
+    status_reason = models.CharField(max_length=500, blank=True,
+                                     help_text="Why the order is in a fraud/failed/suspended/terminated state.")
 
     # Billing details as they were when the order was placed (later edits to the
     # client must not rewrite history - invoices will be built from these).
@@ -151,6 +153,12 @@ class Order(TimeStampedModel):
         return f"O{self.pk:06d}" if self.pk else ""
 
 
+class FulfilmentStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    DONE = "done", "Done"
+    FAILED = "failed", "Failed"
+
+
 class OrderItem(TimeStampedModel):
     """One line of an order, with the price/setup fee snapshotted at checkout."""
 
@@ -171,6 +179,15 @@ class OrderItem(TimeStampedModel):
                                      help_text="First payment for this line: unit price plus setup fee.")
     # Carried over from the cart for fulfilment; cleared once the transfer is submitted.
     auth_code_encrypted = models.TextField(blank=True, editable=False)
+
+    # Fulfilment (Phase 09): what this line became once the order was paid.
+    hosting_account = models.ForeignKey("hosting.HostingAccount", null=True, blank=True, on_delete=models.PROTECT,
+                                        related_name="order_items")
+    domain = models.ForeignKey("domains.Domain", null=True, blank=True, on_delete=models.PROTECT,
+                               related_name="order_items")
+    fulfilment_status = models.CharField(max_length=10, choices=FulfilmentStatus.choices,
+                                         default=FulfilmentStatus.PENDING)
+    fulfilment_error = models.CharField(max_length=500, blank=True)
 
     class Meta:
         ordering = ["id"]

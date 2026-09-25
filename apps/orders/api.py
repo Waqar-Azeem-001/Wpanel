@@ -10,8 +10,10 @@ from rest_framework.views import APIView
 from apps.accounts.roles import perm
 from apps.products.models import Addon, BillingCycle, Product
 
-from . import pricing, services
-from .models import CartItem, ItemKind, Order, OrderItem
+from apps.core.exceptions import ServiceError
+
+from . import lifecycle, pricing, services, staff_actions
+from .models import CartItem, FulfilmentStatus, ItemKind, Order, OrderItem, OrderStatus
 
 
 # --- Cart output (computed from the catalogue; a cart stores no prices) ----------------------
@@ -207,24 +209,40 @@ class CartCouponView(APIView):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     domain = serializers.CharField(source="domain_name", read_only=True)
+    fulfilment_status = serializers.ChoiceField(choices=FulfilmentStatus.choices, read_only=True)
+    hosting_account_id = serializers.IntegerField(read_only=True)
+    domain_id = serializers.IntegerField(read_only=True)
+    fulfilment_error = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
         fields = ["id", "kind", "description", "parent", "domain", "billing_cycle", "custom_months", "years",
-                  "unit_price", "setup_fee", "line_total"]
+                  "unit_price", "setup_fee", "line_total", "fulfilment_status", "fulfilment_error",
+                  "hosting_account_id", "domain_id"]
         read_only_fields = fields  # the transfer auth code is never exposed
+
+    def get_fulfilment_error(self, item) -> str:
+        # Why a line failed is an operational detail: staff see it, customers do not.
+        request = self.context.get("request")
+        return item.fulfilment_error if request and request.user.has_perm(perm("view_orders")) else ""
 
 
 class OrderSerializer(serializers.ModelSerializer):
     reference = serializers.CharField(read_only=True)
     client_name = serializers.CharField(source="client.display_name", read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
+    status = serializers.ChoiceField(choices=OrderStatus.choices, read_only=True)
+    status_reason = serializers.SerializerMethodField()
+
+    def get_status_reason(self, order) -> str:
+        request = self.context.get("request")
+        return order.status_reason if request and request.user.has_perm(perm("view_orders")) else ""
 
     class Meta:
         model = Order
-        fields = ["id", "reference", "client", "client_name", "status", "currency", "subtotal", "discount_total",
-                  "tax_name", "tax_rate", "tax_total", "total", "coupon_code", "payment_method_name", "notes",
-                  "cancel_reason", "billing_name", "billing_company", "billing_email", "billing_country",
+        fields = ["id", "reference", "client", "client_name", "status", "status_reason", "currency", "subtotal",
+                  "discount_total", "tax_name", "tax_rate", "tax_total", "total", "coupon_code",
+                  "payment_method_name", "notes", "cancel_reason", "billing_name", "billing_company", "billing_email", "billing_country",
                   "billing_tax_id", "items", "created_at", "updated_at"]
         read_only_fields = fields
 
@@ -240,7 +258,8 @@ class CheckoutView(APIView):
         cart = _open_cart(request, data.get("client_id"))
         order = services.checkout(request.user, cart, payment_method_code=data["payment_method"],
                                   notes=data.get("notes", ""), request=request)
-        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+        return Response(OrderSerializer(order, context={"request": request}).data,
+                        status=status.HTTP_201_CREATED)
 
 
 class CancelOrderSerializer(serializers.Serializer):
@@ -249,13 +268,40 @@ class CancelOrderSerializer(serializers.Serializer):
 
 class OrderFilter(filters.FilterSet):
     search = filters.CharFilter(method="filter_search")
+    group = filters.ChoiceFilter(choices=[(k, k) for k in lifecycle.GROUPS], method="filter_group",
+                                 help_text="pending, active, fraud or cancelled (the staff screens).")
 
     class Meta:
         model = Order
         fields = ["status", "client"]
 
+    def filter_group(self, queryset, name, value):
+        return queryset.filter(status__in=lifecycle.GROUPS[value])
+
     def filter_search(self, queryset, name, value):
         return services.search_orders(queryset, value)
+
+
+class OrderReasonSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=False, allow_blank=True, default="", max_length=500)
+
+
+class TimelineEventSerializer(serializers.Serializer):
+    at = serializers.DateTimeField(source="created_at")
+    action = serializers.CharField()
+    actor = serializers.CharField(source="actor_repr")
+    from_status = serializers.SerializerMethodField()
+    to_status = serializers.SerializerMethodField()
+    reason = serializers.SerializerMethodField()
+
+    def get_from_status(self, event) -> str:
+        return event.metadata.get("from", "")
+
+    def get_to_status(self, event) -> str:
+        return event.metadata.get("to", "")
+
+    def get_reason(self, event) -> str:
+        return event.metadata.get("reason", "")
 
 
 class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -281,4 +327,59 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         serializer.is_valid(raise_exception=True)
         order = services.cancel_order(request.user, self.get_object(),
                                       reason=serializer.validated_data.get("reason", ""), request=request)
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
+
+    def _run(self, request, function, *, with_reason=False):
+        order = self.get_object()
+        kwargs = {"request": request}
+        if with_reason:
+            serializer = OrderReasonSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            kwargs["reason"] = serializer.validated_data["reason"]
+        return Response(OrderSerializer(function(request.user, order, **kwargs), context={"request": request}).data)
+
+    @extend_schema(request=OrderReasonSerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def fraud(self, request, *args, **kwargs):
+        """Hold the order as suspected fraud (``manage_orders``). Nothing is fulfilled while it is held."""
+        return self._run(request, staff_actions.mark_fraud, with_reason=True)
+
+    @extend_schema(request=OrderReasonSerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"], url_path="clear-fraud")
+    def clear_fraud(self, request, *args, **kwargs):
+        """Release a fraud hold (``manage_orders``); a paid order then resumes and is fulfilled."""
+        return self._run(request, staff_actions.clear_fraud, with_reason=True)
+
+    @extend_schema(request=None, responses=OrderSerializer)
+    @action(detail=True, methods=["post"], url_path="retry-fulfilment")
+    def retry_fulfilment(self, request, *args, **kwargs):
+        """Retry a failed fulfilment (``manage_orders``); only what is still outstanding is redone."""
+        return self._run(request, staff_actions.retry_fulfilment)
+
+    @extend_schema(request=OrderReasonSerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def suspend(self, request, *args, **kwargs):
+        """Suspend an active order and its hosting accounts (``manage_orders``)."""
+        return self._run(request, staff_actions.suspend_order, with_reason=True)
+
+    @extend_schema(request=None, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def unsuspend(self, request, *args, **kwargs):
+        """Reactivate a suspended order (``manage_orders``)."""
+        return self._run(request, staff_actions.unsuspend_order)
+
+    @extend_schema(request=OrderReasonSerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def terminate(self, request, *args, **kwargs):
+        """Terminate an order and its hosting accounts (``manage_orders``). Final."""
+        return self._run(request, staff_actions.terminate_order, with_reason=True)
+
+    @extend_schema(responses=TimelineEventSerializer(many=True))
+    @action(detail=True, methods=["get"], filter_backends=[], pagination_class=None)
+    def timeline(self, request, *args, **kwargs):
+        """The order's audit history, oldest first (staff only: it carries internal detail)."""
+        order = self.get_object()  # a stranger's order is a 404 before anything else
+        if not request.user.has_perm(perm("view_orders")):
+            raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
+                               status_code=status.HTTP_403_FORBIDDEN)
+        return Response(TimelineEventSerializer(lifecycle.timeline(order), many=True).data)

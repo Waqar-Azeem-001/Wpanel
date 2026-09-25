@@ -9,25 +9,6 @@ class AvailabilitySearchForm(forms.Form):
     years = forms.IntegerField(min_value=1, initial=1)
 
 
-class RegisterDomainForm(forms.Form):
-    domain = forms.CharField(widget=forms.HiddenInput)
-    years = forms.IntegerField(min_value=1, initial=1)
-    nameservers = forms.CharField(
-        required=False, widget=forms.Textarea(attrs={"rows": 2}),
-        help_text="One per line. Leave blank to use our defaults.",
-    )
-
-    def clean_nameservers(self):
-        raw = self.cleaned_data.get("nameservers", "")
-        return [line.strip() for line in raw.splitlines() if line.strip()]
-
-
-class TransferDomainForm(forms.Form):
-    domain = forms.CharField(label="Domain name")
-    auth_code = forms.CharField(label="Authorization code")
-    years = forms.IntegerField(min_value=1, initial=1)
-
-
 class NameserversForm(forms.Form):
     nameservers = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}), help_text="One per line, 2-13 total.")
 

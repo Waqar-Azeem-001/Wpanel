@@ -1,5 +1,6 @@
 """Server-rendered cart, checkout and order pages (customer and staff). Rules live in ``services``/``pricing``."""
 from django.contrib import messages
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,11 +11,11 @@ from apps.billing.models import PaymentMethod
 from apps.clients.services import single_contact_client
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
-from apps.core.web import ACTION_ERRORS, apply_form_error, run_action
+from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, run_action
 from apps.products.models import Addon, CatalogStatus, Product
 
-from . import forms, pricing, services
-from .models import CartItem, ItemKind, Order
+from . import forms, lifecycle, pricing, services, staff_actions
+from .models import CartItem, ItemKind, Order, OrderStatus
 
 
 def _form_error(form, fallback="Please check what you entered."):
@@ -216,10 +217,11 @@ def order_list(request):
 
 @login_required
 def order_detail(request, pk):
-    order = get_object_or_404(services.visible_orders_for_user(request.user).prefetch_related("items", "payment_method"),
-                              pk=pk)
+    order = get_object_or_404(services.visible_orders_for_user(request.user).prefetch_related(
+        "items", "payment_method"), pk=pk)
     return render(request, "orders/customer/detail.html", {
         "order": order, "payment_method": order.payment_method, "cancel_form": forms.CancelOrderForm(),
+        "items": order.items.select_related("hosting_account", "domain"),
     })
 
 
@@ -243,12 +245,22 @@ def order_cancel(request, pk):
 def staff_order_list(request):
     filter_form = forms.OrderFilterForm(request.GET or None)
     queryset = Order.objects.select_related("client")
+    group = request.GET.get("group", "")
+    if group in lifecycle.GROUPS:
+        queryset = queryset.filter(status__in=lifecycle.GROUPS[group])
+    else:
+        group = ""
     if filter_form.is_valid():
         queryset = services.search_orders(queryset, filter_form.cleaned_data["q"])
         if filter_form.cleaned_data["status"]:
             queryset = queryset.filter(status=filter_form.cleaned_data["status"])
+    counts = {key: Order.objects.filter(status__in=statuses).count() for key, statuses in lifecycle.GROUPS.items()}
+    counts[""] = Order.objects.count()
+    tabs = [{"key": key, "label": label, "count": counts[key]} for key, label in lifecycle.GROUP_LABELS.items()]
     page = Paginator(queryset.order_by("-created_at", "-id"), 25).get_page(request.GET.get("page"))
-    return render(request, "orders/staff/list.html", {"filter_form": filter_form, "page": page})
+    return render(request, "orders/staff/list.html", {
+        "filter_form": filter_form, "page": page, "tabs": tabs, "group": group,
+        "can_manage": request.user.has_perm(perm("manage_orders"))})
 
 
 @portal_permission_required(perm("view_orders"))
@@ -257,7 +269,8 @@ def staff_order_detail(request, pk):
                               pk=pk)
     return render(request, "orders/staff/detail.html", {
         "order": order, "can_manage": request.user.has_perm(perm("manage_orders")),
-        "cancel_form": forms.CancelOrderForm(),
+        "cancel_form": forms.CancelOrderForm(), "reason_form": forms.ReasonForm(),
+        "items": order.items.select_related("hosting_account", "domain"), "timeline": lifecycle.timeline(order),
     })
 
 
@@ -273,3 +286,149 @@ def staff_order_cancel(request, pk):
         return "Order cancelled."
 
     return run_action(request, action, "orders_staff:detail", pk=pk)
+
+
+def _staff_order_action(request, pk, function, message, *, needs_reason=False):
+    order = get_object_or_404(Order, pk=pk)
+    form = forms.ReasonForm(request.POST)
+
+    def action():
+        kwargs = {"request": request}
+        if needs_reason:
+            kwargs["reason"] = form.cleaned_data.get("reason", "") if form.is_valid() else ""
+        function(request.user, order, **kwargs)
+        return message
+
+    return run_action(request, action, "orders_staff:detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_orders"))
+def staff_order_fraud(request, pk):
+    return _staff_order_action(request, pk, staff_actions.mark_fraud, "Order held as fraud.", needs_reason=True)
+
+
+@require_POST
+@portal_permission_required(perm("manage_orders"))
+def staff_order_clear_fraud(request, pk):
+    return _staff_order_action(request, pk, staff_actions.clear_fraud, "Fraud hold released.", needs_reason=True)
+
+
+@require_POST
+@portal_permission_required(perm("manage_orders"))
+def staff_order_retry(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+
+    def action():
+        result = staff_actions.retry_fulfilment(request.user, order, request=request)
+        if result.status == OrderStatus.FAILED:
+            raise ServiceError(f"Some lines still could not be fulfilled: {result.status_reason}")
+        return "Fulfilment completed. The order is active."
+
+    return run_action(request, action, "orders_staff:detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_orders"))
+def staff_order_suspend(request, pk):
+    return _staff_order_action(request, pk, staff_actions.suspend_order, "Order suspended.", needs_reason=True)
+
+
+@require_POST
+@portal_permission_required(perm("manage_orders"))
+def staff_order_unsuspend(request, pk):
+    return _staff_order_action(request, pk, staff_actions.unsuspend_order, "Order reactivated.")
+
+
+@require_POST
+@portal_permission_required(perm("manage_orders"))
+def staff_order_terminate(request, pk):
+    return _staff_order_action(request, pk, staff_actions.terminate_order, "Order terminated.", needs_reason=True)
+
+
+# --- Staff: Add Order (build an order on a client's behalf) ------------------------------------------------
+
+@portal_permission_required(perm("manage_orders"))
+def staff_order_new(request):
+    from apps.clients.models import Client
+    from apps.clients.services import search_clients
+
+    client_id = request.GET.get("client")
+    if not client_id:
+        term = request.GET.get("q", "").strip()
+        clients = search_clients(Client.objects.all(), term).order_by("company_name", "first_name", "id")[:15] \
+            if term else []
+        return render(request, "billing/staff/client_picker.html", {
+            "title": "Orders", "create_url": "orders_staff:new", "clients": clients, "q": term})
+    client = get_object_or_404(Client, pk=client_id)
+    here = f"{reverse('orders_staff:new')}?client={client.pk}"
+    try:
+        cart = services.get_open_cart(request.user, client)
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        return redirect("orders_staff:list")
+
+    if request.method == "POST":
+        do = request.POST.get("action", "")
+
+        def run():
+            if do == "add_hosting":
+                form = forms.StaffAddHostingForm(request.POST)
+                if not form.is_valid():
+                    raise ServiceError(_form_error(form))
+                data = form.cleaned_data
+                services.add_hosting(request.user, client, data["product"], data["domain"], data["cycle"], 0)
+                return "Hosting added."
+            if do == "add_domain":
+                form = forms.StaffAddDomainForm(request.POST)
+                if not form.is_valid():
+                    raise ServiceError(_form_error(form))
+                services.add_domain_registration(request.user, client, form.cleaned_data["domain"],
+                                                 form.cleaned_data["years"])
+                return "Domain added."
+            if do == "add_transfer":
+                form = forms.AddTransferForm(request.POST)
+                if not form.is_valid():
+                    raise ServiceError(_form_error(form))
+                services.add_domain_transfer(request.user, client, form.cleaned_data["domain"],
+                                             form.cleaned_data["auth_code"])
+                return "Transfer added."
+            if do == "coupon":
+                form = forms.CouponCodeForm(request.POST)
+                if not form.is_valid():
+                    raise ServiceError(_form_error(form))
+                services.apply_coupon(request.user, cart, form.cleaned_data["code"])
+                return "Coupon applied."
+            if do == "remove_coupon":
+                services.remove_coupon(request.user, cart)
+                return "Coupon removed."
+            if do == "remove_item":
+                item = get_object_or_404(cart.items.all(), pk=request.POST.get("item") or 0)
+                services.remove_item(request.user, item)
+                return "Removed."
+            if do == "checkout":
+                form = forms.CheckoutForm(request.POST)
+                if not form.is_valid():
+                    raise ServiceError(_form_error(form))
+                order = services.checkout(request.user, cart, payment_method_code=form.cleaned_data["payment_method"],
+                                          notes=form.cleaned_data["notes"], request=request)
+                messages.success(request, f"Order {order.reference} placed for {client.display_name}.")
+                return order
+            raise ServiceError("Choose an action.")
+
+        try:
+            result = run()
+        except ACTION_ERRORS as exc:
+            messages.error(request, error_text(exc))
+        else:
+            if isinstance(result, Order):
+                return redirect("orders_staff:detail", pk=result.pk)
+            messages.success(request, result)
+        return redirect(here)
+
+    priced = pricing.price_cart(cart)
+    return render(request, "orders/staff/new.html", {
+        "client": client, "cart": cart, "priced": priced, "here": here,
+        "hosting_form": forms.StaffAddHostingForm(), "domain_form": forms.StaffAddDomainForm(),
+        "transfer_form": forms.AddTransferForm(), "coupon_form": forms.CouponCodeForm(),
+        "checkout_form": forms.CheckoutForm(), "section": "orders"})

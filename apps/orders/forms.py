@@ -6,7 +6,7 @@ name what it wants (a product, a cycle, a domain), never what it costs.
 from django import forms
 
 from apps.billing.models import PaymentMethod
-from apps.products.models import decode_option
+from apps.products.models import STANDARD_CYCLE_MONTHS, BillingCycle, CatalogStatus, Product, decode_option
 
 from .models import OrderStatus
 
@@ -63,6 +63,28 @@ class CheckoutForm(forms.Form):
 
 class CancelOrderForm(forms.Form):
     reason = forms.CharField(required=False, max_length=500, widget=forms.Textarea(attrs={"rows": 2}))
+
+
+class StaffAddHostingForm(forms.Form):
+    """Staff building an order on a client's behalf: they pick a plan from a list rather than a hidden id."""
+
+    product = forms.ModelChoiceField(queryset=Product.objects.none())
+    cycle = forms.ChoiceField(choices=[(c, BillingCycle(c).label) for c in STANDARD_CYCLE_MONTHS])
+    domain = forms.CharField(label="Domain name", widget=forms.TextInput(attrs={"placeholder": "example.com"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["product"].queryset = Product.objects.filter(status=CatalogStatus.ACTIVE).exclude(
+            whm_package_name="")
+
+
+class StaffAddDomainForm(forms.Form):
+    domain = forms.CharField(label="Domain to register", widget=forms.TextInput(attrs={"placeholder": "example.com"}))
+    years = forms.IntegerField(min_value=1, initial=1)
+
+
+class ReasonForm(forms.Form):
+    reason = forms.CharField(required=False, max_length=500)
 
 
 class OrderFilterForm(forms.Form):

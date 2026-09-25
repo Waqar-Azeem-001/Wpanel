@@ -43,14 +43,14 @@ def test_customer_pages_require_login(client):
     assert client.get("/account/hosting/1/").status_code == 302
 
 
-def test_customer_can_request_hosting(client, owner, product):
-    client.force_login(owner)
-    response = client.post("/account/hosting/request/", {"product": product.pk, "domain": "example.com"})
+def test_the_request_without_paying_page_is_gone(client, owner, product):
     from apps.hosting.models import HostingAccount
 
-    account = HostingAccount.objects.get(domain="example.com")
-    assert response.status_code == 302 and response["Location"] == f"/account/hosting/{account.pk}/"
-    assert account.status == "pending"
+    client.force_login(owner)
+    assert client.get("/account/hosting/request/").status_code == 404
+    assert client.post("/account/hosting/request/", {"product": product.pk, "domain": "example.com"}).status_code == 404
+    assert not HostingAccount.objects.exists()
+    assert b"/account/hosting/request/" not in client.get("/account/hosting/").content
 
 
 def test_customer_list_and_detail(client, owner, manager, client_obj, product):

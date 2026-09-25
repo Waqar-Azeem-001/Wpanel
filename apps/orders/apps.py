@@ -7,4 +7,9 @@ class OrdersConfig(AppConfig):
     label = "orders"
 
     def ready(self):
+        from apps.billing import integrity
+
+        from . import integrity as orders_integrity
         from . import signals  # noqa: F401  (connects the billing receivers)
+
+        integrity.register_check(orders_integrity.verify_all)

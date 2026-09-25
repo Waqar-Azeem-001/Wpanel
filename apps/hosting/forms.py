@@ -1,12 +1,7 @@
 """Plain forms (not ModelForm): validation only. The service layer applies changes."""
 from django import forms
 
-from apps.products.models import CatalogStatus, Product, Server
-
-
-class RequestHostingForm(forms.Form):
-    product = forms.ModelChoiceField(queryset=Product.objects.filter(status=CatalogStatus.ACTIVE))
-    domain = forms.CharField(label="Domain name", widget=forms.TextInput(attrs={"placeholder": "example.com"}))
+from apps.products.models import Product, Server
 
 
 class AssignServerForm(forms.Form):

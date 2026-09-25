@@ -24,8 +24,8 @@ def record(action, *, actor=None, target=None, metadata=None, request=None):
     ``actor`` is the user performing the action (None for system actions).
     ``target`` is any model instance the action applies to.
     """
-    if actor is not None and not getattr(actor, "is_authenticated", False):
-        actor = None
+    if actor is not None and (getattr(actor, "is_system", False) or not getattr(actor, "is_authenticated", False)):
+        actor = None  # the system actor (or nobody) is recorded as a NULL actor, i.e. "system"
     event = AuditEvent(
         action=action,
         actor=actor,
