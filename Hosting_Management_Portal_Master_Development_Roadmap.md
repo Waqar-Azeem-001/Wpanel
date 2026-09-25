@@ -1615,7 +1615,7 @@ If UI changed:
   05 WHM Provisioning            🟢       296 ✅  ✅        9c0c517  ---
   06 Cart & Checkout             🟢       458 ✅  ✅        23168d7  ---
   07 Billing & Invoices          🟢       622 ✅  ✅        ac37961  ---
-  08 Renewals & Upgrades         🟡       729 ✅  ✅        ---      ---
+  08 Renewals & Upgrades         🟢       729 ✅  ✅        4d00e37  ---
   09 Orders & Lifecycle          ⬜       ---     ---       ---      ---
   10 Support                     ⬜       ---     ---       ---      ---
   11 Notifications & Email       ⬜       ---     ---       ---      ---

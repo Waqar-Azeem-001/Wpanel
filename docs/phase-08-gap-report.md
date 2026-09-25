@@ -78,7 +78,7 @@ The paid term of a hosting account, renewal invoices for hosting and domains, up
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 729 |
 | Migrations, `makemigrations --check`, OpenAPI schema with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green | pending push |
+| CI green on PostgreSQL + Redis | ✅ Run 36103918412 on `4d00e37` (first run) |
 
 ## Known limitations / deferred
 
