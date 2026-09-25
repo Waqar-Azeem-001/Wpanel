@@ -14,7 +14,7 @@
         <td>{{ contact.user.email }}{% if contact.user.full_name %}<br><small class="text-secondary">{{ contact.user.full_name }}</small>{% endif %}</td>
         <td>
           {% if can_manage %}
-          <form method="post" action="{% url 'clients_staff:contact_role' client.pk contact.pk %}" class="d-flex gap-2">{% csrf_token %}
+          <form method="post" action="{% url 'clients_staff:contact_role' client.pk contact.pk %}" class="d-flex flex-wrap gap-2">{% csrf_token %}
             <select class="form-select form-select-sm w-auto" name="role" aria-label="Role for {{ contact.user.email }}">
               {% for value, label in role_choices %}<option value="{{ value }}"{% if value == contact.role %} selected{% endif %}>{{ label }}</option>{% endfor %}
             </select>

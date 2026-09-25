@@ -4,26 +4,26 @@
 {% block content %}
 <h1>Billing</h1>
 {% include "billing/staff/_nav.html" %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Choose a client</h2>
   <form class="filters" method="get">
     <div class="field grow"><label for="id_q">Find a client</label><input type="search" name="q" id="id_q" value="{{ q }}" placeholder="Name, company or email" autofocus></div>
-    <div class="field"><button class="btn secondary" type="submit">Search</button></div>
+    <div class="field"><button class="btn btn-outline-primary" type="submit">Search</button></div>
   </form>
   {% if q %}
-  <div class="table-wrap">
+  <div class="table-responsive">
   <table class="table">
     <thead><tr><th>Client</th><th>Email</th><th></th></tr></thead>
     <tbody>
     {% for client in clients %}
       <tr><td>{{ client.display_name }}</td><td>{{ client.email }}</td>
-          <td><a class="btn small" href="{% url create_url %}?client={{ client.pk }}">Continue</a></td></tr>
+          <td><a class="btn btn-primary btn-sm" href="{% url create_url %}?client={{ client.pk }}">Continue</a></td></tr>
     {% empty %}
-      <tr><td colspan="3" class="muted">No clients match.</td></tr>
+      <tr><td colspan="3" class="text-secondary">No clients match.</td></tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
-  {% else %}<p class="muted">Search for the client this document is for.</p>{% endif %}
+  {% else %}<p class="text-secondary">Search for the client this document is for.</p>{% endif %}</div>
 </section>
 {% endblock %}

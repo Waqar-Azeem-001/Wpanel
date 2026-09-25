@@ -11,18 +11,18 @@
     <select name="status" id="id_status"><option value="">All</option>{% for value, label in statuses %}<option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
   <div class="field"><label for="id_event">Message</label>
     <select name="event" id="id_event"><option value="">All</option>{% for value, label in event_choices %}<option value="{{ value }}"{% if value == event %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+  <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
-<div class="table-wrap"><table class="table">
+<div class="table-responsive"><table class="table">
   <thead><tr><th>Date</th><th>To</th><th>Subject</th><th>Message</th><th>Status</th><th>Opened</th></tr></thead>
   <tbody>
   {% for m in page %}
     <tr><td>{{ m.created_at|date:"j M, H:i" }}</td><td>{{ m.to_email }}</td>
-        <td><a href="{% url 'notifications_staff:email' m.pk %}">{{ m.subject|truncatechars:60 }}</a>{% if m.is_sensitive %} <span class="badge">Secret</span>{% endif %}</td>
+        <td><a href="{% url 'notifications_staff:email' m.pk %}">{{ m.subject|truncatechars:60 }}</a>{% if m.is_sensitive %} <span class="badge text-bg-secondary">Secret</span>{% endif %}</td>
         <td>{{ m.event_label|default:m.event|default:"&mdash;" }}</td>
-        <td>{% status_badge m.status m.get_status_display %}{% if m.attempts > 1 %} <small class="muted">{{ m.attempts }} attempts</small>{% endif %}</td>
-        <td>{% if m.is_sensitive %}<span class="muted">not tracked</span>{% elif m.opened_at %}{{ m.opened_at|date:"j M, H:i" }}{% else %}&mdash;{% endif %}</td></tr>
-  {% empty %}<tr><td colspan="6" class="muted">No emails match.</td></tr>{% endfor %}
+        <td>{% status_badge m.status m.get_status_display %}{% if m.attempts > 1 %} <small class="text-secondary">{{ m.attempts }} attempts</small>{% endif %}</td>
+        <td>{% if m.is_sensitive %}<span class="text-secondary">not tracked</span>{% elif m.opened_at %}{{ m.opened_at|date:"j M, H:i" }}{% else %}&mdash;{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="text-secondary">No emails match.</td></tr>{% endfor %}
   </tbody></table></div>
 {% include "components/pager.html" %}
 {% endblock %}

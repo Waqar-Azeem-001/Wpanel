@@ -8,79 +8,79 @@
   <h1>Order {{ order.reference }}</h1>
   {% status_badge order.status order.get_status_display %}
 </div>
-<p class="muted">Client: <a href="{% url 'clients_staff:detail' order.client.pk %}">{{ order.client.display_name }}</a>
+<p class="text-secondary">Client: <a href="{% url 'clients_staff:detail' order.client.pk %}">{{ order.client.display_name }}</a>
   &middot; placed {{ order.created_at|date:"Y-m-d H:i" }}{% if order.placed_by %} by {{ order.placed_by.email }}{% endif %}</p>
-{% if order.status_reason and order.status != "cancelled" %}<div class="errors"><p>{{ order.get_status_display }}: {{ order.status_reason }}</p></div>{% endif %}
+{% if order.status_reason and order.status != "cancelled" %}<div class="alert alert-danger"><p>{{ order.get_status_display }}: {{ order.status_reason }}</p></div>{% endif %}
 
 {% if can_manage %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Actions</h2>
   {% if order.status == "failed" %}
-  <p class="muted">The order was paid but could not be fully set up. Fix the cause (assign a server, check the registrar), then retry: only what is still outstanding is redone.</p>
+  <p class="text-secondary">The order was paid but could not be fully set up. Fix the cause (assign a server, check the registrar), then retry: only what is still outstanding is redone.</p>
   {% endif %}
-  <div class="actions">
+  <div class="d-flex flex-wrap gap-2 align-items-center">
     {% if order.status == "failed" %}
-    <form method="post" action="{% url 'orders_staff:retry' order.pk %}">{% csrf_token %}<button class="btn" type="submit">Retry fulfilment</button></form>
+    <form method="post" action="{% url 'orders_staff:retry' order.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Retry fulfilment</button></form>
     {% endif %}
     {% if order.status == "fraud" %}
     <form method="post" action="{% url 'orders_staff:clear_fraud' order.pk %}" class="inline-form">{% csrf_token %}
       <input type="text" name="reason" placeholder="Why it is safe (audited)" aria-label="Reason" maxlength="500">
-      <button class="btn" type="submit">Release the fraud hold</button></form>
+      <button class="btn btn-primary" type="submit">Release the fraud hold</button></form>
     {% endif %}
     {% if order.status == "pending_payment" or order.status == "paid" or order.status == "failed" %}
     <form method="post" action="{% url 'orders_staff:fraud' order.pk %}" class="inline-form" data-confirm="Hold this order as suspected fraud? Nothing will be fulfilled while it is held.">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
-      <button class="btn small danger" type="submit">Flag as fraud</button></form>
+      <button class="btn btn-sm btn-outline-danger" type="submit">Flag as fraud</button></form>
     {% endif %}
     {% if order.status == "active" %}
     <form method="post" action="{% url 'orders_staff:suspend' order.pk %}" class="inline-form" data-confirm="Suspend this order and its hosting accounts?">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
-      <button class="btn small secondary" type="submit">Suspend</button></form>
+      <button class="btn btn-sm btn-outline-primary" type="submit">Suspend</button></form>
     {% endif %}
     {% if order.status == "suspended" %}
-    <form method="post" action="{% url 'orders_staff:unsuspend' order.pk %}">{% csrf_token %}<button class="btn" type="submit">Reactivate</button></form>
+    <form method="post" action="{% url 'orders_staff:unsuspend' order.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Reactivate</button></form>
     {% endif %}
     {% if order.status == "active" or order.status == "suspended" %}
     <form method="post" action="{% url 'orders_staff:terminate' order.pk %}" class="inline-form" data-confirm="Terminate this order and its hosting accounts? This cannot be undone.">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
-      <button class="btn small danger" type="submit">Terminate</button></form>
+      <button class="btn btn-sm btn-outline-danger" type="submit">Terminate</button></form>
     {% endif %}
     {% if order.status == "pending_payment" or order.status == "failed" or order.status == "fraud" %}
     <form method="post" action="{% url 'orders_staff:cancel' order.pk %}" class="inline-form" data-confirm="Cancel this order?{% if order.status != "pending_payment" %} Any payment already taken must be refunded from its invoice.{% endif %}">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
-      <button class="btn small danger" type="submit">Cancel order</button></form>
+      <button class="btn btn-sm btn-outline-danger" type="submit">Cancel order</button></form>
     {% endif %}
   </div>
-  {% if order.status == "cancelled" or order.status == "terminated" %}<p class="muted">This order is closed.</p>{% endif %}
+  {% if order.status == "cancelled" or order.status == "terminated" %}<p class="text-secondary">This order is closed.</p>{% endif %}</div>
 </section>
 {% endif %}
 
-<div class="cols">
-  <section class="card">
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Items</h2>
-    <div class="table-wrap">
+    <div class="table-responsive">
     <table class="table">
-      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Setup fee</th><th class="num">First payment</th><th>Fulfilment</th></tr></thead>
+      <thead><tr><th>Item</th><th class="text-end">Price</th><th class="text-end">Setup fee</th><th class="text-end">First payment</th><th>Fulfilment</th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr class="{% if item.kind == 'addon' %}addon-row{% endif %}">
-          <td>{{ item.description }}</td><td class="num">{{ item.unit_price }}</td>
-          <td class="num">{{ item.setup_fee }}</td><td class="num">{{ item.line_total }}</td>
+          <td>{{ item.description }}</td><td class="text-end">{{ item.unit_price }}</td>
+          <td class="text-end">{{ item.setup_fee }}</td><td class="text-end">{{ item.line_total }}</td>
           <td>
             {% status_badge item.fulfilment_status item.get_fulfilment_status_display %}
             {% if item.hosting_account %}<br><a href="{% url 'hosting_staff:detail' item.hosting_account_id %}">hosting {{ item.hosting_account.username }}</a>{% endif %}
             {% if item.domain %}<br><a href="{% url 'domains_staff:detail' item.domain_id %}">{{ item.domain.name }}</a>{% endif %}
-            {% if item.fulfilment_error %}<br><small class="error">{{ item.fulfilment_error }}</small>{% endif %}
+            {% if item.fulfilment_error %}<br><small class="text-danger small">{{ item.fulfilment_error }}</small>{% endif %}
           </td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
     </div>
-    {% include "orders/_totals.html" with currency=order.currency subtotal=order.subtotal discount_total=order.discount_total coupon_code=order.coupon_code tax_name=order.tax_name tax_rate=order.tax_rate tax_total=order.tax_total total=order.total %}
-  </section>
+    {% include "orders/_totals.html" with currency=order.currency subtotal=order.subtotal discount_total=order.discount_total coupon_code=order.coupon_code tax_name=order.tax_name tax_rate=order.tax_rate tax_total=order.tax_total total=order.total %}</div>
+</section>
 
-  <section class="card">
+  <section class="card"><div class="card-body">
     <h2>Details</h2>
     <dl class="meta">
       <dt>Payment method</dt><dd>{{ order.payment_method_name|default:"&mdash;" }}</dd>
@@ -90,27 +90,27 @@
       <dt>Tax ID</dt><dd>{{ order.billing_tax_id|default:"&mdash;" }}</dd>
     </dl>
     {% if order.notes %}<h3>Customer notes</h3><p>{{ order.notes|linebreaksbr }}</p>{% endif %}
-    {% if order.status == "cancelled" and order.cancel_reason %}<p class="muted">Cancelled: {{ order.cancel_reason }}</p>{% endif %}
-  </section>
+    {% if order.status == "cancelled" and order.cancel_reason %}<p class="text-secondary">Cancelled: {{ order.cancel_reason }}</p>{% endif %}</div>
+</section>
 </div>
 
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Invoice</h2>
   {% for invoice in order.invoices.all %}
     <p><a href="{% url 'billing_staff:invoice_detail' invoice.pk %}">{{ invoice.reference }}</a>
       {% status_badge invoice.display_status invoice.display_status_label %}
       &middot; {{ invoice.currency }} {{ invoice.total }}, balance {{ invoice.balance_due }}</p>
-  {% empty %}<p class="muted">No invoice (this order predates invoicing).</p>{% endfor %}
+  {% empty %}<p class="text-secondary">No invoice (this order predates invoicing).</p>{% endfor %}</div>
 </section>
 
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>History</h2>
-  <ul class="timeline">
+  <ul class="timeline-feed">
   {% for event in timeline %}
-    <li><span class="muted">{{ event.created_at|date:"Y-m-d H:i" }}</span>
+    <li><span class="text-secondary">{{ event.created_at|date:"Y-m-d H:i" }}</span>
       <strong>{% if event.metadata.from %}{{ event.metadata.from }} &rarr; {{ event.metadata.to }}{% else %}{{ event.action }}{% endif %}</strong>
-      <small class="muted">by {{ event.actor_repr|default:"system" }}{% if event.metadata.reason %} &middot; {{ event.metadata.reason }}{% endif %}</small></li>
-  {% empty %}<li class="muted">No history.</li>{% endfor %}
-  </ul>
+      <small class="text-secondary">by {{ event.actor_repr|default:"system" }}{% if event.metadata.reason %} &middot; {{ event.metadata.reason }}{% endif %}</small></li>
+  {% empty %}<li class="text-secondary">No history.</li>{% endfor %}
+  </ul></div>
 </section>
 {% endblock %}

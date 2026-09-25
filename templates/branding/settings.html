@@ -2,14 +2,14 @@
 {% block title %}Brand · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <h1>Brand</h1>
-<p class="muted">How the portal presents itself: name, logo, favicon, colours, support email, footer and how dates and money are written. Changes apply everywhere at once, including emails and the mobile API.</p>
+<p class="text-secondary">How the portal presents itself: name, logo, favicon, colours, support email, footer and how dates and money are written. Changes apply everywhere at once, including emails and the mobile API.</p>
 <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
-  <section class="card">
+  <section class="card"><div class="card-body">
     <h2>Identity</h2>
     {% if current.has_logo %}<p><img class="brand-logo-preview" src="{% url 'brand_logo' %}?v={{ current.version }}" alt="Current logo"></p>{% endif %}
     {% include "partials/form.html" %}
-    {% if can_manage %}<div class="actions"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
-    {% else %}<p class="muted">You can view these settings but not change them.</p>{% endif %}
-  </section>
+    {% if can_manage %}<div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
+    {% else %}<p class="text-secondary">You can view these settings but not change them.</p>{% endif %}</div>
+</section>
 </form>
 {% endblock %}

@@ -2,14 +2,14 @@
 {% block title %}New ticket · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'support_staff:tickets' %}">&larr; Tickets</a></p>
-<section class="card">
+<section class="card"><div class="card-body">
   <h1>New ticket for {{ client.display_name }}</h1>
-  <p class="muted">Opened on the client's behalf. The client is emailed a confirmation, and can reply from their account.
+  <p class="text-secondary">Opened on the client's behalf. The client is emailed a confirmation, and can reply from their account.
     <a href="{% url 'support_staff:ticket_new' %}">Choose a different client</a></p>
   <form method="post" enctype="multipart/form-data" novalidate class="grid-form">{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions"><button class="btn" type="submit">Open ticket</button>
+    <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Open ticket</button>
       <a href="{% url 'support_staff:tickets' %}">Cancel</a></div>
-  </form>
+  </form></div>
 </section>
 {% endblock %}

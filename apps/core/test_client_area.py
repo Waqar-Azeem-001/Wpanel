@@ -476,20 +476,13 @@ def test_customer_pages_are_translation_ready():
     assert missing == []
 
 
-def test_the_legacy_stylesheet_no_longer_carries_rules_only_the_customer_area_used():
+def test_the_bridge_stylesheet_is_gone_and_nothing_loads_it():
+    """D4e: every screen is on the components; the compatibility sheet from D1 was deleted."""
     from pathlib import Path
 
     from django.conf import settings
 
-    css = (Path(settings.BASE_DIR) / "static" / "css" / "legacy.css").read_text(encoding="utf-8")
-    for gone in (".plan-grid", ".method-option", ".conversation", ".summary-lines", ".totals", ".offers-row", ".event-list"):
-        assert gone not in css, gone
-
-
-def test_a_bootstrap_card_is_not_padded_twice():
-    from pathlib import Path
-
-    from django.conf import settings
-
-    css = (Path(settings.BASE_DIR) / "static" / "css" / "legacy.css").read_text(encoding="utf-8")
-    assert ":not(:has(> .card-body" in css  # the old card padding applies only to the old bare-card markup
+    root = Path(settings.BASE_DIR)
+    assert not (root / "static" / "css" / "legacy.css").exists()
+    offenders = [str(p.relative_to(root)) for p in (root / "templates").rglob("*.html") if "legacy.css" in p.read_text(encoding="utf-8")]
+    assert offenders == []

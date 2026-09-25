@@ -10,9 +10,9 @@
 <form class="filters" method="get">
   <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}"></div>
   <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
-  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+  <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
-<div class="table-wrap">
+<div class="table-responsive">
 <table class="table">
   <thead><tr><th>Domain</th><th>Client</th><th>Status</th><th>Expires</th></tr></thead>
   <tbody>
@@ -24,7 +24,7 @@
       <td>{{ domain.expires_at|date:"Y-m-d"|default:"—" }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="4" class="muted">No domains match.</td></tr>
+    <tr><td colspan="4" class="text-secondary">No domains match.</td></tr>
   {% endfor %}
   </tbody>
 </table>
@@ -32,7 +32,7 @@
 {% if page.has_other_pages %}
 <nav class="pager">
   {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
-  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  <span class="text-secondary">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
   {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
 </nav>
 {% endif %}

@@ -5,12 +5,12 @@
 {% block content %}
 <div class="page-head">
   <h1>Servers</h1>
-  <div class="actions">
+  <div class="d-flex flex-wrap gap-2 align-items-center">
     {% if perms.accounts.view_products %}<a href="{% url 'catalog_staff:product_list' %}">Products</a>{% endif %}
-    {% if perms.accounts.manage_hosting %}<a class="btn" href="{% url 'catalog_staff:server_create' %}">Add server</a>{% endif %}
+    {% if perms.accounts.manage_hosting %}<a class="btn btn-primary" href="{% url 'catalog_staff:server_create' %}">Add server</a>{% endif %}
   </div>
 </div>
-<div class="table-wrap">
+<div class="table-responsive">
 <table class="table">
   <thead><tr><th>Name</th><th>Hostname</th><th>IP</th><th>Status</th><th>Products</th>{% if perms.accounts.manage_hosting %}<th></th>{% endif %}</tr></thead>
   <tbody>
@@ -26,10 +26,10 @@
       {% endif %}
     </tr>
   {% empty %}
-    <tr><td colspan="6" class="muted">No servers yet.</td></tr>
+    <tr><td colspan="6" class="text-secondary">No servers yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
-<p class="muted">Server credentials and WHM connections arrive in Phase 05 (Hosting/WHM Provisioning).</p>
+<p class="text-secondary">Server credentials and WHM connections arrive in Phase 05 (Hosting/WHM Provisioning).</p>
 {% endblock %}

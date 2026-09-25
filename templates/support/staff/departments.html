@@ -4,7 +4,7 @@
 {% block content %}
 <h1>Support</h1>
 {% include "support/staff/_nav.html" %}
-<div class="table-wrap"><table class="table">
+<div class="table-responsive"><table class="table">
   <thead><tr><th>Department</th><th>Description</th><th>Default assignee</th><th>Order</th><th>Active</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
   <tbody>
   {% for d in departments %}
@@ -15,13 +15,13 @@
   {% endfor %}
   </tbody></table></div>
 {% if form %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>{% if edit %}Edit {{ edit.name }}{% else %}Add a department{% endif %}</h2>
   <form method="post" action="{% url 'support_staff:department_save' %}" class="grid-form">{% csrf_token %}
     {% if edit %}<input type="hidden" name="id" value="{{ edit.pk }}">{% endif %}
     {% include "partials/form.html" %}
-    <div class="actions"><button class="btn" type="submit">Save</button>{% if edit %}<a href="{% url 'support_staff:departments' %}">Cancel</a>{% endif %}</div>
-  </form>
+    <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save</button>{% if edit %}<a href="{% url 'support_staff:departments' %}">Cancel</a>{% endif %}</div>
+  </form></div>
 </section>
 {% endif %}
 {% endblock %}

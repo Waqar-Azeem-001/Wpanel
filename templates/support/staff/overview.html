@@ -4,51 +4,51 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Support</h1>
-  {% if can_manage %}<a class="btn" href="{% url 'support_staff:ticket_new' %}">New ticket</a>{% endif %}</div>
+  {% if can_manage %}<a class="btn btn-primary" href="{% url 'support_staff:ticket_new' %}">New ticket</a>{% endif %}</div>
 {% include "support/staff/_nav.html" %}
 
-<div class="stats">
-  <a class="stat" href="{% url 'support_staff:tickets' %}?status=active"><strong>{{ counts.active }}</strong><span>Open tickets</span></a>
-  <a class="stat" href="{% url 'support_staff:tickets' %}?status=open"><strong>{{ counts.awaiting_agent }}</strong><span>Waiting for us</span></a>
-  <a class="stat" href="{% url 'support_staff:tickets' %}?status=active&amp;assigned=none"><strong>{{ counts.unassigned }}</strong><span>Unassigned</span></a>
-  <a class="stat" href="{% url 'support_staff:tickets' %}?status=active&amp;assigned=me"><strong>{{ counts.mine }}</strong><span>Mine</span></a>
-  <a class="stat" href="{% url 'support_staff:tickets' %}?status=active&amp;priority=urgent"><strong>{{ counts.urgent }}</strong><span>Urgent</span></a>
-  <a class="stat" href="{% url 'support_staff:tickets' %}?status=resolved"><strong>{{ counts.resolved_week }}</strong><span>Resolved this week</span></a>
+<div class="stat-tiles">
+  <a class="stat-tile" href="{% url 'support_staff:tickets' %}?status=active"><strong>{{ counts.active }}</strong><span>Open tickets</span></a>
+  <a class="stat-tile" href="{% url 'support_staff:tickets' %}?status=open"><strong>{{ counts.awaiting_agent }}</strong><span>Waiting for us</span></a>
+  <a class="stat-tile" href="{% url 'support_staff:tickets' %}?status=active&amp;assigned=none"><strong>{{ counts.unassigned }}</strong><span>Unassigned</span></a>
+  <a class="stat-tile" href="{% url 'support_staff:tickets' %}?status=active&amp;assigned=me"><strong>{{ counts.mine }}</strong><span>Mine</span></a>
+  <a class="stat-tile" href="{% url 'support_staff:tickets' %}?status=active&amp;priority=urgent"><strong>{{ counts.urgent }}</strong><span>Urgent</span></a>
+  <a class="stat-tile" href="{% url 'support_staff:tickets' %}?status=resolved"><strong>{{ counts.resolved_week }}</strong><span>Resolved this week</span></a>
 </div>
-{% if oldest_waiting %}<p class="muted">Longest wait: <a href="{% url 'support_staff:ticket' oldest_waiting.pk %}">{{ oldest_waiting.reference }}</a> has been waiting {{ oldest_waiting.last_activity_at|timesince }}.</p>{% endif %}
+{% if oldest_waiting %}<p class="text-secondary">Longest wait: <a href="{% url 'support_staff:ticket' oldest_waiting.pk %}">{{ oldest_waiting.reference }}</a> has been waiting {{ oldest_waiting.last_activity_at|timesince }}.</p>{% endif %}
 
-<div class="cols">
-  <section class="card">
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Needs a reply</h2>
-    <div class="table-wrap"><table class="table">
+    <div class="table-responsive"><table class="table">
       <thead><tr><th>Ticket</th><th>Client</th><th>Priority</th><th>Waiting</th></tr></thead>
       <tbody>
       {% for t in needs_attention %}
-        <tr><td><a href="{% url 'support_staff:ticket' t.pk %}">{{ t.reference }}</a><br><small class="muted">{{ t.subject|truncatechars:40 }}</small></td>
-            <td>{{ t.client.display_name }}</td><td><span class="badge priority-{{ t.priority }}">{{ t.get_priority_display }}</span></td>
+        <tr><td><a href="{% url 'support_staff:ticket' t.pk %}">{{ t.reference }}</a><br><small class="text-secondary">{{ t.subject|truncatechars:40 }}</small></td>
+            <td>{{ t.client.display_name }}</td><td>{% status_badge t.priority t.get_priority_display %}</td>
             <td>{{ t.last_activity_at|timesince }}</td></tr>
-      {% empty %}<tr><td colspan="4" class="muted">Nothing is waiting for a reply.</td></tr>{% endfor %}
-      </tbody></table></div>
-  </section>
-  <section class="card">
+      {% empty %}<tr><td colspan="4" class="text-secondary">Nothing is waiting for a reply.</td></tr>{% endfor %}
+      </tbody></table></div></div>
+</section>
+  <section class="card"><div class="card-body">
     <h2>Open by department</h2>
     <table class="table"><tbody>
-    {% for row in by_department %}<tr><td>{{ row.department__name }}</td><td class="num">{{ row.total }}</td></tr>
-    {% empty %}<tr><td class="muted">No open tickets.</td></tr>{% endfor %}
-    </tbody></table>
-  </section>
+    {% for row in by_department %}<tr><td>{{ row.department__name }}</td><td class="text-end">{{ row.total }}</td></tr>
+    {% empty %}<tr><td class="text-secondary">No open tickets.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
 </div>
 
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Recent activity</h2>
-  <div class="table-wrap"><table class="table">
+  <div class="table-responsive"><table class="table">
     <thead><tr><th>Ticket</th><th>Subject</th><th>Client</th><th>Status</th><th>Assigned</th><th>Last activity</th></tr></thead>
     <tbody>
     {% for t in recent %}
       <tr><td><a href="{% url 'support_staff:ticket' t.pk %}">{{ t.reference }}</a></td><td>{{ t.subject|truncatechars:50 }}</td>
           <td>{{ t.client.display_name }}</td><td>{% status_badge t.status t.get_status_display %}</td>
           <td>{{ t.assignee_label }}</td><td>{{ t.last_activity_at|date:"j M, H:i" }}</td></tr>
-    {% empty %}<tr><td colspan="6" class="muted">No tickets yet.</td></tr>{% endfor %}
-    </tbody></table></div>
+    {% empty %}<tr><td colspan="6" class="text-secondary">No tickets yet.</td></tr>{% endfor %}
+    </tbody></table></div></div>
 </section>
 {% endblock %}

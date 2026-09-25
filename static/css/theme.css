@@ -250,6 +250,45 @@ a.stat-tile:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--bo
 .tld-tile span { color: var(--muted); font-size: .85rem; }
 .tld-tile em { display: block; font-style: normal; color: var(--muted); font-size: .72rem; }
 
+/* Page width, form layout and the small layout components the staff screens use (D4e: this replaces the old bridge sheet) */
+.page { max-width: var(--layout-narrow); margin: var(--space-5) auto; padding: 0 var(--space-4); width: 100%; }
+.page.wide { max-width: var(--layout-max); }
+.card-body h2 ~ h2 { margin-top: 1.5rem; }
+main.page > .card, main.page > form > .card, main.page .col-lg-9 > .card { margin-bottom: 1rem; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-weight: 600; font-size: .875rem; margin-bottom: .3rem; }
+.field input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]), .field select, .field textarea {
+  width: 100%; padding: .6rem .85rem; border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--surface); color: var(--text); font: inherit; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); outline: none;
+  box-shadow: 0 0 0 .22rem rgba(var(--brand-primary-rgb), .28); }
+.field input[type=color] { width: 4rem; height: 2.5rem; padding: 2px; }
+.field small { color: var(--muted); }
+.field.grow { flex: 1 1 240px; }
+.filters, .row-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 12px; }
+.filters .field, .row-form .field { margin-bottom: 0; min-width: 140px; }
+.inline-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: 100%; }
+.inline-form select { width: auto; padding: .45rem .6rem; border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--surface); color: var(--text); font: inherit; }
+.inline-form input[type="text"] { min-width: 0; flex: 1 1 10rem; max-width: 100%; padding: .45rem .6rem; border: 1px solid var(--border);
+  border-radius: var(--radius-input); background: var(--surface); color: var(--text); }
+.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px; }
+.grid-form .errors, .grid-form > .d-flex { grid-column: 1 / -1; }
+.split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; margin-bottom: 16px; }
+.split > * { min-width: 0; }
+@media (max-width: 900px) { .split { grid-template-columns: minmax(0, 1fr); } }
+.meta { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 16px; }
+.meta dt { color: var(--muted); font-weight: 400; } .meta dd { margin: 0; overflow-wrap: anywhere; }
+.pager { display: flex; gap: 12px; align-items: center; }
+.limits { margin: 0; padding-left: 20px; }
+.addon-row { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.cart-table .addon-row td:first-child, .table .addon-row td:first-child { padding-left: 28px; }
+table.lines input[type="text"], table.lines input[type="number"] { width: 100%; box-sizing: border-box; }
+table.lines td.qty { width: 5rem; } table.lines td.price { width: 9rem; }
+input.short { width: 6rem; }
+label.check { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+pre.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin: 0; }
+
 /* Error pages */
 .error-page { text-align: center; padding: var(--space-6) 0; }
 .error-page .code { font-size: 4rem; font-weight: 800; color: var(--accent); line-height: 1; }

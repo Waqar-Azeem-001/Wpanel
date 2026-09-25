@@ -3,37 +3,37 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <h1>{% if document %}Edit draft {{ kind }} {{ document.reference }}{% else %}New {{ kind }}{% endif %}</h1>
-<p class="muted">For <a href="{% url 'clients_staff:detail' client.pk %}">{{ client.display_name }}</a>. Tax is added automatically from the tax rules and the client's tax status.</p>
+<p class="text-secondary">For <a href="{% url 'clients_staff:detail' client.pk %}">{{ client.display_name }}</a>. Tax is added automatically from the tax rules and the client's tax status.</p>
 <form method="post" novalidate>{% csrf_token %}
-  <section class="card">
+  <section class="card"><div class="card-body">
     <h2>Lines</h2>
     {{ formset.management_form }}
-    {% if formset.non_form_errors %}<div class="errors">{% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
-    <div class="table-wrap">
+    {% if formset.non_form_errors %}<div class="alert alert-danger">{% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    <div class="table-responsive">
     <table class="table lines">
       <thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Taxable</th></tr></thead>
       <tbody>
       {% for line in formset %}
         <tr>
-          <td><label class="visually-hidden" for="{{ line.description.id_for_label }}">Description, row {{ forloop.counter }}</label>{{ line.description }}{% for e in line.description.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
-          <td class="qty"><label class="visually-hidden" for="{{ line.quantity.id_for_label }}">Quantity, row {{ forloop.counter }}</label>{{ line.quantity }}{% for e in line.quantity.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
-          <td class="price"><label class="visually-hidden" for="{{ line.unit_price.id_for_label }}">Unit price, row {{ forloop.counter }}</label>{{ line.unit_price }}{% for e in line.unit_price.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td><label class="visually-hidden" for="{{ line.description.id_for_label }}">Description, row {{ forloop.counter }}</label>{{ line.description }}{% for e in line.description.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
+          <td class="qty"><label class="visually-hidden" for="{{ line.quantity.id_for_label }}">Quantity, row {{ forloop.counter }}</label>{{ line.quantity }}{% for e in line.quantity.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
+          <td class="price"><label class="visually-hidden" for="{{ line.unit_price.id_for_label }}">Unit price, row {{ forloop.counter }}</label>{{ line.unit_price }}{% for e in line.unit_price.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
           <td><label class="visually-hidden" for="{{ line.taxable.id_for_label }}">Taxable, row {{ forloop.counter }}</label>{{ line.taxable }}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
     </div>
-    <p class="muted">Leave a row blank to skip it. Clear a row's description and price to remove it. Save to get more blank rows.</p>
-  </section>
-  <section class="card">
+    <p class="text-secondary">Leave a row blank to skip it. Clear a row's description and price to remove it. Save to get more blank rows.</p></div>
+</section>
+  <section class="card"><div class="card-body">
     <h2>Discount and notes</h2>
     <div class="grid-form">{% include "partials/form.html" %}</div>
-    <div class="actions">
-      <button type="submit" class="btn">Save draft</button>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <button type="submit" class="btn btn-primary">Save draft</button>
       {% if kind == "quote" %}<a href="{% if document %}{% url 'billing_staff:quote_detail' document.pk %}{% else %}{% url 'billing_staff:quote_list' %}{% endif %}">Cancel</a>
       {% else %}<a href="{% if document %}{% url 'billing_staff:invoice_detail' document.pk %}{% else %}{% url 'billing_staff:invoice_list' %}{% endif %}">Cancel</a>{% endif %}
-    </div>
-  </section>
+    </div></div>
+</section>
 </form>
 {% endblock %}

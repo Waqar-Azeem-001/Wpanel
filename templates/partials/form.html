@@ -1,5 +1,5 @@
 {% load ui %}
-{% if form.non_field_errors %}<div class="alert alert-danger errors" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+{% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
 {% for field in form %}
   {% if field.is_hidden %}{{ field }}{% elif field.name != exclude_field %}
   <div class="field{% if field|is_checkbox %} form-check{% endif %}">
@@ -11,7 +11,7 @@
       {{ field|bs_field }}
     {% endif %}
     {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-    {% if field.errors %}<div id="{{ field.auto_id }}_errors">{% for e in field.errors %}<p class="error">{{ e }}</p>{% endfor %}</div>{% endif %}
+    {% if field.errors %}<div id="{{ field.auto_id }}_errors">{% for e in field.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</div>{% endif %}
   </div>
   {% endif %}
 {% endfor %}

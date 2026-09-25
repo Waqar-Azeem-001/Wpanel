@@ -327,7 +327,7 @@ def test_the_vendored_assets_are_present_with_their_licences():
     for name in ("vendor/bootstrap/css/bootstrap.min.css", "vendor/bootstrap/js/bootstrap.bundle.min.js",
                  "vendor/bootstrap-icons/font/bootstrap-icons.min.css", "vendor/bootstrap-icons/font/fonts/bootstrap-icons.woff2",
                  "vendor/htmx/htmx.min.js", "vendor/bootstrap/LICENSE", "vendor/bootstrap-icons/LICENSE",
-                 "vendor/htmx/LICENSE", "css/theme.css", "css/legacy.css", "js/theme.js", "js/app.js", "img/favicon.svg"):
+                 "vendor/htmx/LICENSE", "css/theme.css", "js/theme.js", "js/app.js", "img/favicon.svg"):
         assert (STATIC / name).is_file(), name
     css = (STATIC / "css/theme.css").read_text(encoding="utf-8")
     assert ":focus-visible" in css and '[data-bs-theme="dark"]' in css and "--brand-primary" in css

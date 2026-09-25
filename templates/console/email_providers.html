@@ -16,7 +16,7 @@
             {% if can_manage %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'console:email_providers' %}?edit={{ p.pk }}">{% trans "Edit" %}</a>{% endif %}</div>
           {% if can_manage %}
           <div class="d-flex flex-wrap gap-2 mt-2">
-            <form method="post" action="{% url 'console:email_provider_test' p.pk %}" class="d-flex gap-2">{% csrf_token %}
+            <form method="post" action="{% url 'console:email_provider_test' p.pk %}" class="d-flex flex-wrap gap-2">{% csrf_token %}
               <input class="form-control form-control-sm" type="email" name="to_email" required placeholder="{% trans 'Send a test to…' %}" aria-label="{% trans 'Send a test to' %}">
               <button class="btn btn-sm btn-outline-primary" type="submit">{% trans "Test" %}</button></form>
             {% if not p.is_active %}<form method="post" action="{% url 'console:email_provider_delete' p.pk %}" data-confirm="{% trans 'Delete this provider?' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Delete" %}</button></form>{% endif %}
@@ -34,7 +34,7 @@
       <form method="post" action="{% url 'console:email_provider_save' %}" novalidate>{% csrf_token %}
         {% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
         {% include "partials/form.html" %}
-        <div class="d-flex gap-2"><button class="btn btn-primary" type="submit">{% trans "Save" %}</button>{% if editing %}<a class="btn btn-outline-secondary" href="{% url 'console:email_providers' %}">{% trans "Cancel" %}</a>{% endif %}</div>
+        <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% trans "Save" %}</button>{% if editing %}<a class="btn btn-outline-secondary" href="{% url 'console:email_providers' %}">{% trans "Cancel" %}</a>{% endif %}</div>
       </form>
     </div></section>
   </div>

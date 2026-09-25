@@ -4,7 +4,7 @@
 {% block content %}
 <p><a href="{% url 'domains_staff:list' %}">&larr; Domains</a></p>
 <h1>TLD Pricing</h1>
-<div class="table-wrap">
+<div class="table-responsive">
 <table class="table">
   <thead><tr><th>TLD</th><th>Register</th><th>Renew</th><th>Transfer</th><th>Years</th><th>Active</th></tr></thead>
   <tbody>
@@ -24,18 +24,18 @@
       </td>
     </tr>
   {% empty %}
-    <tr><td colspan="6" class="muted">No TLDs configured yet.</td></tr>
+    <tr><td colspan="6" class="text-secondary">No TLDs configured yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
 {% if can_manage %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Add / update a TLD</h2>
   <form method="post" action="{% url 'domains_staff:tld_save' %}" class="grid-form">{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions"><button class="btn" type="submit">Save</button></div>
-  </form>
+    <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save</button></div>
+  </form></div>
 </section>
 {% endif %}
 {% endblock %}

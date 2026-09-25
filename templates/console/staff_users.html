@@ -14,7 +14,7 @@
         <td><strong>{{ person.email }}</strong>{% if person.full_name %}<div class="small text-secondary">{{ person.full_name }}</div>{% endif %}</td>
         <td>
           {% if can_assign and person.can_edit %}
-          <form method="post" action="{% url 'console:staff_user_role' person.pk %}" class="d-flex gap-2" data-confirm="{% trans 'Change this person’s role? They will be signed out of the mobile app.' %}">{% csrf_token %}
+          <form method="post" action="{% url 'console:staff_user_role' person.pk %}" class="d-flex flex-wrap gap-2" data-confirm="{% trans 'Change this person’s role? They will be signed out of the mobile app.' %}">{% csrf_token %}
             <select class="form-select form-select-sm w-auto" name="role" aria-label="{% trans 'Role for' %} {{ person.email }}">{% for value, label in role_choices %}{% if value in allowed_roles %}<option value="{{ value }}"{% if value == person.role %} selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select>
             <button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Set" %}</button>
           </form>

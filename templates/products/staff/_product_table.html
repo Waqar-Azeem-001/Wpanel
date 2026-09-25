@@ -1,5 +1,5 @@
 {% load ui %}
-<div class="table-wrap">
+<div class="table-responsive">
 <table class="table">
   <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Prices</th><th>Created</th></tr></thead>
   <tbody>
@@ -12,7 +12,7 @@
       <td>{{ product.created_at|date:"Y-m-d" }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="5" class="muted">No products match.</td></tr>
+    <tr><td colspan="5" class="text-secondary">No products match.</td></tr>
   {% endfor %}
   </tbody>
 </table>
@@ -20,7 +20,7 @@
 {% if page.has_other_pages %}
 <nav class="pager">
   {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
-  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  <span class="text-secondary">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
   {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
 </nav>
 {% endif %}

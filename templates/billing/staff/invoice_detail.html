@@ -8,86 +8,86 @@
   <h1>Invoice {{ invoice.reference }}</h1>
   {% status_badge invoice.display_status invoice.display_status_label %}
 </div>
-<p class="muted">Client: <a href="{% url 'clients_staff:detail' invoice.client.pk %}">{{ invoice.client.display_name }}</a>
+<p class="text-secondary">Client: <a href="{% url 'clients_staff:detail' invoice.client.pk %}">{{ invoice.client.display_name }}</a>
   {% if invoice.order %}&middot; order <a href="{% url 'orders_staff:detail' invoice.order.pk %}">{{ invoice.order.reference }}</a>{% endif %}
   {% if invoice.quote %}&middot; quote <a href="{% url 'billing_staff:quote_detail' invoice.quote.pk %}">{{ invoice.quote.reference }}</a>{% endif %}
   {% if invoice.issue_date %}&middot; issued {{ invoice.issue_date|date:"Y-m-d" }}, due {{ invoice.due_date|date:"Y-m-d" }}{% endif %}
   &middot; <a href="{% url 'billing_staff:invoice_pdf' invoice.pk %}">PDF</a></p>
-{% if invoice.overpaid %}<div class="errors"><p>This invoice holds {{ invoice.currency }} {{ invoice.overpaid }} more than its total (a payment arrived after it was settled or cancelled). Refund the difference.</p></div>{% endif %}
+{% if invoice.overpaid %}<div class="alert alert-danger"><p>This invoice holds {{ invoice.currency }} {{ invoice.overpaid }} more than its total (a payment arrived after it was settled or cancelled). Refund the difference.</p></div>{% endif %}
 
-<div class="cols">
-  <section class="card">
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Lines</h2>
     {% include "billing/_items.html" %}
     {% include "billing/_totals.html" with doc=invoice invoice_totals=True %}
-    {% if invoice.notes %}<h3>Notes</h3><p>{{ invoice.notes|linebreaksbr }}</p>{% endif %}
-  </section>
-  <section class="card">
+    {% if invoice.notes %}<h3>Notes</h3><p>{{ invoice.notes|linebreaksbr }}</p>{% endif %}</div>
+</section>
+  <section class="card"><div class="card-body">
     <h2>Bill to</h2>
     {% include "billing/_billto.html" with doc=invoice %}
-    {% if invoice.payment_method_name %}<p class="muted">Chosen at checkout: {{ invoice.payment_method_name }}</p>{% endif %}
-    {% if invoice.status == "cancelled" and invoice.cancel_reason %}<p class="muted">Cancelled: {{ invoice.cancel_reason }}</p>{% endif %}
+    {% if invoice.payment_method_name %}<p class="text-secondary">Chosen at checkout: {{ invoice.payment_method_name }}</p>{% endif %}
+    {% if invoice.status == "cancelled" and invoice.cancel_reason %}<p class="text-secondary">Cancelled: {{ invoice.cancel_reason }}</p>{% endif %}
     {% if can_manage %}
       {% if invoice.status == "draft" %}
-      <div class="actions">
-        <a class="btn secondary" href="{% url 'billing_staff:invoice_edit' invoice.pk %}">Edit</a>
-        <form method="post" action="{% url 'billing_staff:invoice_issue' invoice.pk %}" data-confirm="Issue this invoice? It can no longer be edited.">{% csrf_token %}<button class="btn" type="submit">Issue invoice</button></form>
-        <form method="post" action="{% url 'billing_staff:invoice_delete' invoice.pk %}" data-confirm="Delete this draft?">{% csrf_token %}<button class="btn small danger" type="submit">Delete draft</button></form>
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a class="btn btn-outline-primary" href="{% url 'billing_staff:invoice_edit' invoice.pk %}">Edit</a>
+        <form method="post" action="{% url 'billing_staff:invoice_issue' invoice.pk %}" data-confirm="Issue this invoice? It can no longer be edited.">{% csrf_token %}<button class="btn btn-primary" type="submit">Issue invoice</button></form>
+        <form method="post" action="{% url 'billing_staff:invoice_delete' invoice.pk %}" data-confirm="Delete this draft?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete draft</button></form>
       </div>
       {% elif invoice.status == "unpaid" %}
       <form method="post" action="{% url 'billing_staff:invoice_cancel' invoice.pk %}" data-confirm="Cancel this invoice?">{% csrf_token %}
         <div class="field"><label for="{{ cancel_form.reason.id_for_label }}">Reason (audited)</label>{{ cancel_form.reason }}</div>
-        <button class="btn small danger" type="submit">Cancel invoice</button>
+        <button class="btn btn-sm btn-outline-danger" type="submit">Cancel invoice</button>
       </form>
       {% endif %}
-    {% endif %}
-  </section>
+    {% endif %}</div>
+</section>
 </div>
 
 {% include "renewals/_invoice_changes.html" with staff=True %}
 
 {% if payment_form %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Record a payment</h2>
   <form method="post" action="{% url 'billing_staff:invoice_record_payment' invoice.pk %}" class="grid-form">{% csrf_token %}
     {% include "partials/form.html" with form=payment_form %}
-    <div class="actions"><button class="btn" type="submit">Record payment</button></div>
-  </form>
+    <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Record payment</button></div>
+  </form></div>
 </section>
 {% endif %}
 
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Payments and refunds</h2>
-  <div class="table-wrap">
+  <div class="table-responsive">
   <table class="table">
-    <thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Reference</th><th>Status</th><th class="num">Amount</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+    <thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Reference</th><th>Status</th><th class="text-end">Amount</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
     <tbody>
     {% for tx in transactions %}
       <tr>
         <td>{{ tx.occurred_at|date:"Y-m-d H:i" }}</td>
         <td>{{ tx.get_type_display }}</td>
         <td>{{ tx.method_name|default:"&mdash;" }}</td>
-        <td>{{ tx.reference|default:tx.external_id|default:"&mdash;" }}{% if tx.failure_reason %}<br><small class="muted">{{ tx.failure_reason }}</small>{% endif %}</td>
+        <td>{{ tx.reference|default:tx.external_id|default:"&mdash;" }}{% if tx.failure_reason %}<br><small class="text-secondary">{{ tx.failure_reason }}</small>{% endif %}</td>
         <td>{% status_badge tx.status tx.get_status_display %}</td>
-        <td class="num">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
+        <td class="text-end">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
         {% if can_manage %}
         <td>
           {% if tx.status == "pending" and tx.type == "payment" and not tx.provider_id %}
-            <form method="post" action="{% url 'billing_staff:transaction_confirm' tx.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="invoice"><button class="btn small" type="submit">Confirm</button></form>
-            <form method="post" action="{% url 'billing_staff:transaction_reject' tx.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="invoice"><button class="btn small danger" type="submit">Reject</button></form>
+            <form method="post" action="{% url 'billing_staff:transaction_confirm' tx.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="invoice"><button class="btn btn-primary btn-sm" type="submit">Confirm</button></form>
+            <form method="post" action="{% url 'billing_staff:transaction_reject' tx.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="invoice"><button class="btn btn-sm btn-outline-danger" type="submit">Reject</button></form>
           {% elif tx.refundable %}
             <form method="post" action="{% url 'billing_staff:transaction_refund' tx.pk %}" class="inline-form" data-confirm="Refund this payment?">{% csrf_token %}<input type="hidden" name="next" value="invoice">
               <input type="number" name="amount" step="0.01" min="0.01" max="{{ tx.refundable }}" placeholder="{{ tx.refundable }}" aria-label="Refund amount" class="short">
-              <button class="btn small secondary" type="submit">Refund</button></form>
+              <button class="btn btn-sm btn-outline-primary" type="submit">Refund</button></form>
           {% endif %}
         </td>
         {% endif %}
       </tr>
     {% empty %}
-      <tr><td colspan="{% if can_manage %}7{% else %}6{% endif %}" class="muted">No payments yet.</td></tr>
+      <tr><td colspan="{% if can_manage %}7{% else %}6{% endif %}" class="text-secondary">No payments yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
-  </div>
+  </div></div>
 </section>
 {% endblock %}

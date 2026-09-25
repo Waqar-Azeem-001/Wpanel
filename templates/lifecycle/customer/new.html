@@ -19,7 +19,7 @@
   {% endif %}
   <form method="post" novalidate>{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="d-flex gap-2"><button class="btn btn-danger" type="submit">{% trans "Send cancellation request" %}</button>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-danger" type="submit">{% trans "Send cancellation request" %}</button>
       <a class="btn btn-outline-secondary" href="{% if kind == 'hosting' %}{% url 'hosting_customer:detail' service.pk %}{% else %}{% url 'domains_customer:detail' service.pk %}{% endif %}">{% trans "Keep it" %}</a></div>
   </form>
 </div></section>

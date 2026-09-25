@@ -4,21 +4,21 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Orders</h1>
-  {% if can_manage %}<a class="btn" href="{% url 'orders_staff:new' %}">Add order</a>{% endif %}
+  {% if can_manage %}<a class="btn btn-primary" href="{% url 'orders_staff:new' %}">Add order</a>{% endif %}
 </div>
 {% include "billing/staff/_nav.html" %}
-<nav class="tabs" aria-label="Order groups">
-  {% for tab in tabs %}<a href="?{% if tab.key %}group={{ tab.key }}{% endif %}"{% if tab.key == group %} class="active" aria-current="page"{% endif %}>{{ tab.label }} <span class="count">{{ tab.count }}</span></a>{% endfor %}
-</nav>
+<nav aria-label="Order groups"><ul class="nav nav-tabs mb-3 tab-scroll">
+  {% for tab in tabs %}<li class="nav-item"><a class="nav-link{% if tab.key == group %} active{% endif %}" href="?{% if tab.key %}group={{ tab.key }}{% endif %}"{% if tab.key == group %} aria-current="page"{% endif %}>{{ tab.label }} <span class="count">{{ tab.count }}</span></a></li>{% endfor %}
+</ul></nav>
 <form class="filters" method="get">
   {% if group %}<input type="hidden" name="group" value="{{ group }}">{% endif %}
   <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}" placeholder="O000123, client, email, domain, coupon"></div>
   <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
-  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+  <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
-<div class="table-wrap">
+<div class="table-responsive">
 <table class="table">
-  <thead><tr><th>Order</th><th>Client</th><th>Date</th><th>Status</th><th>Payment method</th><th class="num">Total</th></tr></thead>
+  <thead><tr><th>Order</th><th>Client</th><th>Date</th><th>Status</th><th>Payment method</th><th class="text-end">Total</th></tr></thead>
   <tbody>
   {% for order in page %}
     <tr>
@@ -27,10 +27,10 @@
       <td>{{ order.created_at|date:"Y-m-d" }}</td>
       <td>{% status_badge order.status order.get_status_display %}</td>
       <td>{{ order.payment_method_name|default:"&mdash;" }}</td>
-      <td class="num">{{ order.currency }} {{ order.total }}</td>
+      <td class="text-end">{{ order.currency }} {{ order.total }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="6" class="muted">No orders match.</td></tr>
+    <tr><td colspan="6" class="text-secondary">No orders match.</td></tr>
   {% endfor %}
   </tbody>
 </table>

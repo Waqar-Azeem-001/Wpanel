@@ -5,12 +5,12 @@
 {% block content %}
 <h1>Support</h1>
 {% include "support/staff/_nav.html" %}
-<p class="muted">The public <a href="{% url 'help:index' %}">help centre</a> shows published articles in active categories.</p>
-<div class="cols">
-  <section class="card">
+<p class="text-secondary">The public <a href="{% url 'help:index' %}">help centre</a> shows published articles in active categories.</p>
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Categories</h2>
     <table class="table"><tbody>
-    {% for c in categories %}<tr><td>{{ c.name }}{% if not c.is_active %} <small class="muted">(hidden)</small>{% endif %}</td>
+    {% for c in categories %}<tr><td>{{ c.name }}{% if not c.is_active %} <small class="text-secondary">(hidden)</small>{% endif %}</td>
       {% if can_manage %}<td><a href="?category={{ c.pk }}">Edit</a></td>{% endif %}</tr>{% endfor %}
     </tbody></table>
     {% if category_form %}
@@ -18,32 +18,32 @@
     <form method="post" action="{% url 'support_staff:kb_category_save' %}" class="grid-form">{% csrf_token %}
       {% if edit_category %}<input type="hidden" name="id" value="{{ edit_category.pk }}">{% endif %}
       {% include "partials/form.html" with form=category_form %}
-      <div class="actions"><button class="btn secondary" type="submit">Save category</button></div>
+      <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-outline-primary" type="submit">Save category</button></div>
     </form>
-    {% endif %}
-  </section>
-  <section class="card">
+    {% endif %}</div>
+</section>
+  <section class="card"><div class="card-body">
     <h2>Articles</h2>
-    <div class="table-wrap"><table class="table">
+    <div class="table-responsive"><table class="table">
       <thead><tr><th>Title</th><th>Category</th><th>Status</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
       <tbody>
       {% for a in articles %}
         <tr><td>{{ a.title }}</td><td>{{ a.category.name }}</td>
             <td>{% if a.is_published %}{% status_badge "done" "Published" %}{% else %}{% status_badge "draft" "Draft" %}{% endif %}</td>
             {% if can_manage %}<td><a href="?article={{ a.pk }}">Edit</a>
-              <form method="post" action="{% url 'support_staff:kb_article_delete' a.pk %}" class="inline-form" data-confirm="Delete this article?">{% csrf_token %}<button class="btn small danger" type="submit">Delete</button></form></td>{% endif %}</tr>
-      {% empty %}<tr><td colspan="4" class="muted">No articles yet.</td></tr>{% endfor %}
-      </tbody></table></div>
-  </section>
+              <form method="post" action="{% url 'support_staff:kb_article_delete' a.pk %}" class="inline-form" data-confirm="Delete this article?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form></td>{% endif %}</tr>
+      {% empty %}<tr><td colspan="4" class="text-secondary">No articles yet.</td></tr>{% endfor %}
+      </tbody></table></div></div>
+</section>
 </div>
 {% if article_form %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>{% if edit_article %}Edit {{ edit_article.title }}{% else %}Write an article{% endif %}</h2>
   <form method="post" action="{% url 'support_staff:kb_article_save' %}" class="grid-form">{% csrf_token %}
     {% if edit_article %}<input type="hidden" name="id" value="{{ edit_article.pk }}">{% endif %}
     {% include "partials/form.html" with form=article_form %}
-    <div class="actions"><button class="btn" type="submit">Save article</button>{% if edit_article %}<a href="{% url 'support_staff:kb' %}">Cancel</a>{% endif %}</div>
-  </form>
+    <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save article</button>{% if edit_article %}<a href="{% url 'support_staff:kb' %}">Cancel</a>{% endif %}</div>
+  </form></div>
 </section>
 {% endif %}
 {% endblock %}

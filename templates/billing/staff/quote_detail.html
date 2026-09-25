@@ -8,31 +8,31 @@
   <h1>Quote {{ quote.reference }}</h1>
   {% status_badge quote.status quote.display_status_label %}
 </div>
-<p class="muted">Client: <a href="{% url 'clients_staff:detail' quote.client.pk %}">{{ quote.client.display_name }}</a>
+<p class="text-secondary">Client: <a href="{% url 'clients_staff:detail' quote.client.pk %}">{{ quote.client.display_name }}</a>
   {% if quote.valid_until %}&middot; valid until {{ quote.valid_until|date:"Y-m-d" }}{% endif %}
   &middot; <a href="{% url 'billing_staff:quote_pdf' quote.pk %}">PDF</a>
   {% for invoice in invoices %}&middot; invoice <a href="{% url 'billing_staff:invoice_detail' invoice.pk %}">{{ invoice.reference }}</a>{% endfor %}</p>
-<div class="cols">
-  <section class="card">
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Lines</h2>
     {% include "billing/_items.html" %}
     {% include "billing/_totals.html" with doc=quote %}
-    {% if quote.notes %}<h3>Notes</h3><p>{{ quote.notes|linebreaksbr }}</p>{% endif %}
-  </section>
-  <section class="card">
+    {% if quote.notes %}<h3>Notes</h3><p>{{ quote.notes|linebreaksbr }}</p>{% endif %}</div>
+</section>
+  <section class="card"><div class="card-body">
     <h2>Quote for</h2>
     {% include "billing/_billto.html" with doc=quote %}
     {% if can_manage %}
       {% if quote.status == "draft" %}
-      <div class="actions">
-        <a class="btn secondary" href="{% url 'billing_staff:quote_edit' quote.pk %}">Edit</a>
-        <form method="post" action="{% url 'billing_staff:quote_send' quote.pk %}" data-confirm="Send this quote to the client?">{% csrf_token %}<button class="btn" type="submit">Send to client</button></form>
-        <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn small danger" type="submit">Cancel quote</button></form>
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a class="btn btn-outline-primary" href="{% url 'billing_staff:quote_edit' quote.pk %}">Edit</a>
+        <form method="post" action="{% url 'billing_staff:quote_send' quote.pk %}" data-confirm="Send this quote to the client?">{% csrf_token %}<button class="btn btn-primary" type="submit">Send to client</button></form>
+        <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Cancel quote</button></form>
       </div>
       {% elif quote.status == "sent" %}
-      <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn small danger" type="submit">Cancel quote</button></form>
+      <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Cancel quote</button></form>
       {% endif %}
-    {% endif %}
-  </section>
+    {% endif %}</div>
+</section>
 </div>
 {% endblock %}

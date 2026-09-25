@@ -11,17 +11,17 @@
     <select name="status" id="id_status"><option value="open"{% if status == "open" %} selected{% endif %}>Open</option><option value="all"{% if status == "all" %} selected{% endif %}>All</option>{% for value, label in statuses %}<option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
   <div class="field"><label for="id_kind">Service</label>
     <select name="kind" id="id_kind"><option value="">All</option><option value="hosting"{% if kind == "hosting" %} selected{% endif %}>Hosting</option><option value="domain"{% if kind == "domain" %} selected{% endif %}>Domains</option></select></div>
-  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+  <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
-<div class="table-wrap"><table class="table">
+<div class="table-responsive"><table class="table">
   <thead><tr><th>Request</th><th>Service</th><th>Client</th><th>Reason</th><th>When</th><th>Status</th><th>Sent</th></tr></thead>
   <tbody>
   {% for cr in page %}
-    <tr><td><a href="{% url 'lifecycle_staff:cancellation' cr.pk %}">{{ cr.code }}</a></td><td>{{ cr.service_name }} <small class="muted">{{ cr.kind }}</small></td>
+    <tr><td><a href="{% url 'lifecycle_staff:cancellation' cr.pk %}">{{ cr.code }}</a></td><td>{{ cr.service_name }} <small class="text-secondary">{{ cr.kind }}</small></td>
         <td>{{ cr.client.display_name }}</td><td>{{ cr.get_reason_code_display }}</td><td>{{ cr.get_timing_display }}</td>
         <td>{% status_badge cr.status cr.get_status_display %}{% if cr.needs_attention %} {% status_badge "failed" "Needs attention" %}{% endif %}</td>
         <td>{{ cr.created_at|date:"j M" }}</td></tr>
-  {% empty %}<tr><td colspan="7" class="muted">No cancellation requests match.</td></tr>{% endfor %}
+  {% empty %}<tr><td colspan="7" class="text-secondary">No cancellation requests match.</td></tr>{% endfor %}
   </tbody></table></div>
 {% include "components/pager.html" %}
 {% endblock %}

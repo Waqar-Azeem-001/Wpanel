@@ -3,7 +3,7 @@
 {% block title %}{% trans "Notifications" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{% trans "Notifications" %}</h1>
-  <span class="d-flex gap-2"><a class="btn btn-outline-primary" href="{% url 'notifications:preferences' %}">{% trans "Preferences" %}</a>
+  <span class="d-flex flex-wrap gap-2"><a class="btn btn-outline-primary" href="{% url 'notifications:preferences' %}">{% trans "Preferences" %}</a>
     {% if unread %}<form method="post" action="{% url 'notifications:mark_all_read' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Mark all as read" %}</button></form>{% endif %}</span></div>
 <ul class="nav nav-tabs mb-3" aria-label="Filter">
   <li class="nav-item"><a class="nav-link{% if show != "unread" %} active{% endif %}" href="?show=all"{% if show != "unread" %} aria-current="page"{% endif %}>{% trans "All" %}</a></li>

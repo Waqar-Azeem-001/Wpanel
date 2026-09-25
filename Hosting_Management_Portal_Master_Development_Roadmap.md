@@ -858,7 +858,7 @@ Before marking any phase 🟢:
 | 12 Cancellation | 🟢 | 1046 ✅ | ✅ | D2 crawl: 0 broken | d3f9b82 | — |
 | 13 Affiliates | 🟢 | 1134 ✅ | ✅ | D2 crawl: 0 broken | a2e8989 | — |
 | 14 Reports | 🟢 | 1197 ✅ | ✅ | D2 crawl: 0 broken | f1246ba | — |
-| 15 Admin Operations | ⬜ | — | — | — | — | — |
+| 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4) | 1661 ✅ | ✅ | crawler green | 7e5f35b | — |
 | 16 Security | ⬜ | — | — | — | — | — |
 | 17 Reliability | ⬜ | — | — | — | — | — |
 | 18 Testing & Readiness | ⬜ | — | — | — | — | — |
@@ -875,12 +875,12 @@ Before marking any phase 🟢:
 | D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | da099e8 | — |
 | D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | 03ba01b | — |
 | D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | ef7a6ce | — |
-| D4 Staff Area Parity (stages D4a dashboard, search, audit log; D4b client profile tabs; D4c lists and bulk actions; D4d staff, email provider, registrar screens) | 🟡 | 1661 ✅ | ✅ | crawler green (dashboard widgets followed via hx-get) | aab5715, 11a26c6, 4ea073a (D4a-c) | — |
+| D4 Staff Area Parity + Phase 15 screens (D4a dashboard, search, audit log; D4b client profile tabs; D4c lists and bulk actions; D4d staff, email provider, registrar; D4e re-skin, legacy.css deleted) | 🟢 | 1668 ✅ | ✅ | crawler green (dashboard widgets followed via hx-get) | aab5715, 11a26c6, 4ea073a, 7e5f35b (D4a-d) | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
 ## Recommended order
 
-D0 ✅ → D1 ✅ → D2 → D3 → (14 Reports: done) → D4 + 15 Admin Operations → 16 Security → 17 Reliability → D5 → 18 → 19
+D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → 16 Security → 17 Reliability → D5 → 18 → 19
 
 ------------------------------------------------------------------------
 
@@ -1066,20 +1066,15 @@ Use this section whenever something is discovered but intentionally postponed.
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–14 and D0–D3 are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The project stays **local** until the owner asks to deploy.
+Phases 01–15 and D0–D4 (including D3b) are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The project stays **local** until the owner asks to deploy. See also `docs/d3b-modern-look.md` and `docs/d4-staff-area.md`.
 
-## Start: Phase D4 with Phase 15 — Staff Area Parity and Admin Operations
+## Start: Phase 16 — Security Hardening
 
-**Do not start coding before Rule 1 inspection.** Then, per Section 11 and the D0 mapping ("Staff area" tables):
+**Do not start coding before Rule 1 inspection.** Scope is the Phase 16 section above: RBAC review, MFA (TOTP) mandatory for staff and optional for customers, secure sessions, CSRF, rate limiting, account lockout beyond throttling, password policy, credential protection, server-side billing validation, audit of security changes.
 
-1. **Staff dashboard** at `/staff/` (`home` keeps its name) with the Section 11.2 widgets, each linking to its list, loaded with HTMX; **global search** (clients, invoices, domains, tickets, orders) in the top bar.
-2. **Client profile as tabs**, each its own URL (Summary, Profile, Contacts, Products/Services, Domains, Billable Items, Invoices, Quotes, Transactions, Tickets, Emails, Cancellations, Affiliate, Notes, Log).
-3. **Standard list pattern** (search, filters, bulk-action bar, "Showing X–Y of Z", HTMX, filters kept in the URL) applied to every staff list; the confirmation modal on destructive actions (`data-confirm`).
-4. **Phase 15 screens that still need Django admin:** staff users and roles, payment providers, registrar provider, email provider, audit/activity log viewer, Utilities menu (Activity Log, Audit Log, Email Message Log, Job Queue, WHOIS). Provider credentials stay encrypted in the database (Rule on credentials).
-5. Re-skin the remaining staff templates onto the components and **delete the rest of `static/css/legacy.css`**; wrap strings for translation as each page is touched.
-6. Every new page: registry entry with permission, crawler and coverage floor green, browser check at 375 / 768 / 1280 px, no URL name renamed, moved paths added to `RETIRED`.
+Carry-overs from D4 that belong here: Staff online / failed-login widgets, restricting invoices and quotes to owner/billing contacts, customer sub-user invitation permission design. Payments stay manual (no gateway). Everything stays local until the owner approves a deployment.
 
-Then Phase 16 (Security), 17 (Reliability), D5 (Visual QA), 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
+Then Phase 17 (Reliability, including the job-queue page, WHOIS and automation status), D5 (Visual QA), 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
 
 ------------------------------------------------------------------------
 

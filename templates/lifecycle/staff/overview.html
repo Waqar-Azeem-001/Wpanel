@@ -4,27 +4,27 @@
 {% block content %}
 <h1>Service lifecycle</h1>
 {% include "lifecycle/staff/_nav.html" %}
-{% if needing_attention %}<div class="errors"><p>{{ needing_attention }} approved cancellation{{ needing_attention|pluralize }} could not be carried out. <a href="{% url 'lifecycle_staff:cancellations' %}">Review</a>.</p></div>{% endif %}
-<div class="stats">
-  <div class="stat"><strong>{{ pending_cancellations }}</strong><span><a href="{% url 'lifecycle_staff:cancellations' %}?status=pending">Cancellations to review</a></span></div>
-  <div class="stat"><strong>{{ scheduled_cancellations }}</strong><span>Scheduled to end</span></div>
-  <div class="stat"><strong>{{ counts.renewal_due }}</strong><span>Renewal due</span></div>
-  <div class="stat"><strong>{{ counts.overdue }}</strong><span>Overdue</span></div>
-  <div class="stat"><strong>{{ counts.grace }}</strong><span>In grace period</span></div>
-  <div class="stat"><strong>{{ counts.suspended }}</strong><span>Suspended</span></div>
+{% if needing_attention %}<div class="alert alert-danger"><p>{{ needing_attention }} approved cancellation{{ needing_attention|pluralize }} could not be carried out. <a href="{% url 'lifecycle_staff:cancellations' %}">Review</a>.</p></div>{% endif %}
+<div class="stat-tiles">
+  <div class="stat-tile"><strong>{{ pending_cancellations }}</strong><span><a href="{% url 'lifecycle_staff:cancellations' %}?status=pending">Cancellations to review</a></span></div>
+  <div class="stat-tile"><strong>{{ scheduled_cancellations }}</strong><span>Scheduled to end</span></div>
+  <div class="stat-tile"><strong>{{ counts.renewal_due }}</strong><span>Renewal due</span></div>
+  <div class="stat-tile"><strong>{{ counts.overdue }}</strong><span>Overdue</span></div>
+  <div class="stat-tile"><strong>{{ counts.grace }}</strong><span>In grace period</span></div>
+  <div class="stat-tile"><strong>{{ counts.suspended }}</strong><span>Suspended</span></div>
 </div>
-<p class="muted">Counted from the paid-through date. Unpaid accounts get a final notice {{ config.grace_after_days }} days after they expire,
+<p class="text-secondary">Counted from the paid-through date. Unpaid accounts get a final notice {{ config.grace_after_days }} days after they expire,
   {% if config.auto_suspend %}are suspended after {{ config.suspend_after_days }} days{% else %}are <strong>not</strong> suspended automatically{% endif %}{% if config.auto_terminate %} and terminated after {{ config.terminate_after_days }} days{% else %}; termination is always by hand{% endif %}.
   {% if can_settings %}<a href="{% url 'lifecycle_staff:settings' %}">Change the timings</a>.{% endif %}</p>
 {% for stage, accounts in rows.items %}{% if accounts %}
-<section class="card">
-  <h2>{{ stage.label }} <small class="muted">({{ accounts|length }})</small></h2>
-  <div class="table-wrap"><table class="table">
+<section class="card"><div class="card-body">
+  <h2>{{ stage.label }} <small class="text-secondary">({{ accounts|length }})</small></h2>
+  <div class="table-responsive"><table class="table">
     <thead><tr><th>Hosting</th><th>Client</th><th>Plan</th><th>Paid through</th></tr></thead>
     <tbody>{% for account in accounts %}
       <tr><td><a href="{% url 'hosting_staff:detail' account.pk %}">{{ account.domain }}</a></td><td>{{ account.client.display_name }}</td>
           <td>{{ account.product.name }}</td><td>{{ account.expires_at|date:"j M Y" }}</td></tr>{% endfor %}
-    </tbody></table></div>
+    </tbody></table></div></div>
 </section>
 {% endif %}{% endfor %}
 {% endblock %}

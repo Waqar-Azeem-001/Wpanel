@@ -5,10 +5,10 @@
 {% block content %}
 <p><a href="{% url 'lifecycle_staff:cancellations' %}">&larr; Cancellations</a></p>
 <div class="page-head"><h1>Cancel {{ cr.service_name }}</h1>{% status_badge cr.status cr.get_status_display %}</div>
-{% if cr.needs_attention %}<div class="errors"><p>Could not be carried out: {{ cr.last_error }}</p></div>{% endif %}
-{% if cr.refund_error %}<div class="errors"><p>The service ended but the refund failed: {{ cr.refund_error }} Refund it from the invoice.</p></div>{% endif %}
-<div class="cols">
-  <section class="card">
+{% if cr.needs_attention %}<div class="alert alert-danger"><p>Could not be carried out: {{ cr.last_error }}</p></div>{% endif %}
+{% if cr.refund_error %}<div class="alert alert-danger"><p>The service ended but the refund failed: {{ cr.refund_error }} Refund it from the invoice.</p></div>{% endif %}
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Request</h2>
     <dl class="meta">
       <dt>Client</dt><dd><a href="{% url 'clients_staff:detail' cr.client_id %}">{{ cr.client.display_name }}</a></dd>
@@ -22,32 +22,32 @@
       {% if cr.review_note %}<dt>Note to customer</dt><dd>{{ cr.review_note }}</dd>{% endif %}
       {% if cr.effective_at %}<dt>Ends</dt><dd>{{ cr.effective_at|date:"j M Y H:i" }}</dd>{% endif %}
       {% if cr.refund_amount %}<dt>Refund</dt><dd>{{ cr.refund_amount }}{% if cr.refund_transaction_id %} &mdash; <a href="{% url 'billing_staff:invoice_detail' cr.refund_transaction.invoice_id %}">recorded</a>{% else %} (not yet given){% endif %}</dd>{% endif %}
-    </dl>
-  </section>
-  <section class="card">
+    </dl></div>
+</section>
+  <section class="card"><div class="card-body">
     {% if approve_form %}
     <h2>Approve</h2>
-    <p class="muted">Approving cancels any unpaid renewal invoice for this service{% if cr.kind == "domain" %} and turns off auto-renew{% endif %}.
+    <p class="text-secondary">Approving cancels any unpaid renewal invoice for this service{% if cr.kind == "domain" %} and turns off auto-renew{% endif %}.
       {% if cr.kind == "hosting" %}An immediate cancellation ends the account now.{% endif %}</p>
-    {% if cr.kind == "hosting" and suggested %}<p class="muted">Unused part of the paid term (excl. tax): <strong>{{ suggested }}</strong> &mdash; a suggestion, not a promise.</p>{% endif %}
+    {% if cr.kind == "hosting" and suggested %}<p class="text-secondary">Unused part of the paid term (excl. tax): <strong>{{ suggested }}</strong> &mdash; a suggestion, not a promise.</p>{% endif %}
     <form method="post" action="{% url 'lifecycle_staff:approve' cr.pk %}">{% csrf_token %}
       {% include "partials/form.html" with form=approve_form %}
-      <div class="actions"><button class="btn" type="submit">Approve</button></div>
+      <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Approve</button></div>
     </form>
     <h2>Decline</h2>
     <form method="post" action="{% url 'lifecycle_staff:reject' cr.pk %}">{% csrf_token %}
       {% include "partials/form.html" with form=reject_form %}
-      <div class="actions"><button class="btn secondary" type="submit">Decline</button></div>
+      <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-outline-primary" type="submit">Decline</button></div>
     </form>
-    {% elif cr.status == "pending" and not can_act %}<p class="muted">You can view this request but not act on it.</p>
+    {% elif cr.status == "pending" and not can_act %}<p class="text-secondary">You can view this request but not act on it.</p>
     {% elif cr.status == "approved" and can_act %}
     <h2>Scheduled</h2>
     <p>The service ends {{ cr.effective_at|date:"j M Y H:i" }}.</p>
-    <form method="post" action="{% url 'lifecycle_staff:retry' cr.pk %}">{% csrf_token %}<button class="btn" type="submit">Carry out now</button></form>
+    <form method="post" action="{% url 'lifecycle_staff:retry' cr.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Carry out now</button></form>
     {% endif %}
     {% if cr.status == "pending" or cr.status == "approved" %}{% if can_act %}
-    <form method="post" action="{% url 'lifecycle_staff:withdraw' cr.pk %}">{% csrf_token %}<button class="btn secondary" type="submit">Withdraw the request</button></form>
-    {% endif %}{% endif %}
-  </section>
+    <form method="post" action="{% url 'lifecycle_staff:withdraw' cr.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Withdraw the request</button></form>
+    {% endif %}{% endif %}</div>
+</section>
 </div>
 {% endblock %}

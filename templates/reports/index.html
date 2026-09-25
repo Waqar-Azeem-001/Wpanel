@@ -4,21 +4,21 @@
 {% block content %}
 <h1>Reports</h1>
 {% if headline %}
-<div class="stats">
+<div class="stat-tiles">
   {% for label, value, slug in headline %}
-  <div class="stat"><strong>{{ value }}</strong><span><a href="{% url 'reports_staff:report' slug %}">{{ label }}</a></span></div>
+  <div class="stat-tile"><strong>{{ value }}</strong><span><a href="{% url 'reports_staff:report' slug %}">{{ label }}</a></span></div>
   {% endfor %}
 </div>
 {% endif %}
 {% for title, reports in groups %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>{{ title }}</h2>
-  <ul class="records">
-    {% for report in reports %}<li><a href="{% url 'reports_staff:report' report.slug %}">{{ report.title }}</a> <small class="muted">{{ report.description }}</small></li>{% endfor %}
-  </ul>
+  <ul class="ps-3">
+    {% for report in reports %}<li><a href="{% url 'reports_staff:report' report.slug %}">{{ report.title }}</a> <small class="text-secondary">{{ report.description }}</small></li>{% endfor %}
+  </ul></div>
 </section>
 {% empty %}
-<p class="muted">There are no reports you can view.</p>
+<p class="text-secondary">There are no reports you can view.</p>
 {% endfor %}
-<p class="muted">Every report can be downloaded as CSV, XLSX or PDF. Downloads are recorded in the audit log.</p>
+<p class="text-secondary">Every report can be downloaded as CSV, XLSX or PDF. Downloads are recorded in the audit log.</p>
 {% endblock %}

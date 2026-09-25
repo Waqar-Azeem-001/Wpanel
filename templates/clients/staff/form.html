@@ -8,7 +8,7 @@
   {% if not client %}<h1 class="h4">{{ title }}</h1>{% else %}<h2 class="h5">{{ title }}</h2>{% endif %}
   <form method="post" novalidate class="grid-form">{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
       <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
       <a href="{% if client %}{% url 'clients_staff:detail' client.pk %}{% else %}{% url 'clients_staff:list' %}{% endif %}">{% trans "Cancel" %}</a>
     </div>

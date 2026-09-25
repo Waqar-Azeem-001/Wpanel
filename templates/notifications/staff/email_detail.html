@@ -5,13 +5,13 @@
 {% block content %}
 <p><a href="{% url 'notifications_staff:emails' %}">&larr; Email log</a></p>
 <div class="page-head"><h1>{{ message.subject }}</h1>{% status_badge message.status message.get_status_display %}</div>
-<div class="cols">
-  <section class="card">
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Message</h2>
     <pre class="email-body">{{ message.body_text }}</pre>
-    {% if message.is_sensitive %}<p class="muted">This email contained a secret (a password or one-time link). It is stored encrypted only until delivered and then removed, so it is not shown here.</p>{% endif %}
-  </section>
-  <section class="card">
+    {% if message.is_sensitive %}<p class="text-secondary">This email contained a secret (a password or one-time link). It is stored encrypted only until delivered and then removed, so it is not shown here.</p>{% endif %}</div>
+</section>
+  <section class="card"><div class="card-body">
     <h2>Delivery</h2>
     <dl class="meta">
       <dt>To</dt><dd>{{ message.to_email }}</dd>
@@ -21,11 +21,11 @@
       <dt>Attempts</dt><dd>{{ message.attempts }}</dd>
       <dt>Opened</dt><dd>{% if message.is_sensitive %}not tracked{% elif message.opened_at %}{{ message.opened_at|date:"j M Y H:i" }} ({{ message.open_count }} time{{ message.open_count|pluralize }}){% else %}not (yet){% endif %}</dd>
     </dl>
-    {% if message.last_error %}<div class="errors"><p>{{ message.last_error }}</p></div>{% endif %}
-    {% if secret_removed and message.status != "sent" %}<p class="muted">The secret in this email has been removed, so it cannot be sent again. Ask the customer to request a new one.</p>{% endif %}
+    {% if message.last_error %}<div class="alert alert-danger"><p>{{ message.last_error }}</p></div>{% endif %}
+    {% if secret_removed and message.status != "sent" %}<p class="text-secondary">The secret in this email has been removed, so it cannot be sent again. Ask the customer to request a new one.</p>{% endif %}
     {% if can_resend %}
-    <form method="post" action="{% url 'notifications_staff:resend' message.pk %}">{% csrf_token %}<button class="btn" type="submit">Send again</button></form>
-    {% endif %}
-  </section>
+    <form method="post" action="{% url 'notifications_staff:resend' message.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Send again</button></form>
+    {% endif %}</div>
+</section>
 </div>
 {% endblock %}

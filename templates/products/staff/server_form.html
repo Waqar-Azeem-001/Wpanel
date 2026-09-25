@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h1>{{ title }}</h1>
   <form method="post" novalidate class="grid-form">{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions">
-      <button type="submit" class="btn">Save</button>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <button type="submit" class="btn btn-primary">Save</button>
       <a href="{% url 'catalog_staff:server_list' %}">Cancel</a>
     </div>
-  </form>
+  </form></div>
 </section>
 {% if status_form %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Status</h2>
   <form method="post" action="{% url 'catalog_staff:server_status' server.pk %}">{% csrf_token %}
     <div class="field"><label class="visually-hidden" for="{{ status_form.status.id_for_label }}">Status</label>{{ status_form.status }}</div>
-    <button class="btn secondary" type="submit">Update status</button>
-  </form>
+    <button class="btn btn-outline-primary" type="submit">Update status</button>
+  </form></div>
 </section>
 {% endif %}
 {% endblock %}

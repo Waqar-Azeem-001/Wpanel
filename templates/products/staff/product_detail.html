@@ -9,10 +9,10 @@
   {% status_badge product.status product.get_status_display %}
 </div>
 
-<div class="cols">
-  <section class="card">
+<div class="split">
+  <section class="card"><div class="card-body">
     <div class="page-head"><h2>Details</h2>
-      {% if can_manage %}<a class="btn secondary" href="{% url 'catalog_staff:product_edit' product.slug %}">Edit</a>{% endif %}
+      {% if can_manage %}<a class="btn btn-outline-primary" href="{% url 'catalog_staff:product_edit' product.slug %}">Edit</a>{% endif %}
     </div>
     <dl class="meta">
       <dt>Type</dt><dd>{{ product.get_type_display }}</dd>
@@ -26,15 +26,15 @@
         {% else %}—{% endif %}
       </dd>
     </dl>
-    {% if product.description %}<h3>Description</h3><p>{{ product.description|linebreaksbr }}</p>{% endif %}
-  </section>
+    {% if product.description %}<h3>Description</h3><p>{{ product.description|linebreaksbr }}</p>{% endif %}</div>
+</section>
 
-  <section class="card">
+  <section class="card"><div class="card-body">
     <h2>Status</h2>
     {% if can_manage %}
     <form method="post" action="{% url 'catalog_staff:product_status' product.slug %}">{% csrf_token %}
       <div class="field"><label class="visually-hidden" for="{{ status_form.status.id_for_label }}">Status</label>{{ status_form.status }}</div>
-      <button class="btn secondary" type="submit">Update status</button>
+      <button class="btn btn-outline-primary" type="submit">Update status</button>
     </form>
     {% else %}<p>{{ product.get_status_display }}</p>{% endif %}
 
@@ -42,15 +42,15 @@
     <h2>Servers</h2>
     <form method="post" action="{% url 'catalog_staff:product_servers' product.slug %}">{% csrf_token %}
       {{ servers_form.servers }}
-      <button class="btn secondary" type="submit">Save mapping</button>
+      <button class="btn btn-outline-primary" type="submit">Save mapping</button>
     </form>
-    {% endif %}
-  </section>
+    {% endif %}</div>
+</section>
 </div>
 
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Pricing</h2>
-  <div class="table-wrap">
+  <div class="table-responsive">
   <table class="table">
     <thead><tr><th>Cycle</th><th>Price</th><th>Setup fee</th><th>Active</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
     <tbody>
@@ -61,18 +61,18 @@
         <td>{{ entry.setup_fee }}</td>
         <td>{{ entry.is_active|yesno:"Yes,No" }}</td>
         {% if can_manage %}
-        <td class="row-actions">
+        <td class="d-flex flex-wrap gap-2">
           <form method="post" action="{% url 'catalog_staff:product_price_toggle' product.slug entry.pk %}">{% csrf_token %}
-            <button class="btn small secondary" type="submit">{{ entry.is_active|yesno:"Disable,Enable" }}</button>
+            <button class="btn btn-sm btn-outline-primary" type="submit">{{ entry.is_active|yesno:"Disable,Enable" }}</button>
           </form>
           <form method="post" action="{% url 'catalog_staff:product_price_remove' product.slug entry.pk %}" data-confirm="Remove this price?">{% csrf_token %}
-            <button class="btn small danger" type="submit">Remove</button>
+            <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
           </form>
         </td>
         {% endif %}
       </tr>
     {% empty %}
-      <tr><td colspan="5" class="muted">No prices yet.</td></tr>
+      <tr><td colspan="5" class="text-secondary">No prices yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -84,8 +84,8 @@
     <div class="field"><label for="id_custom_months">Custom months</label>{{ price_form.custom_months }}</div>
     <div class="field"><label for="id_price">Price</label>{{ price_form.price }}</div>
     <div class="field"><label for="id_setup_fee">Setup fee</label>{{ price_form.setup_fee }}</div>
-    <div class="field"><button class="btn" type="submit">Save</button></div>
+    <div class="field"><button class="btn btn-primary" type="submit">Save</button></div>
   </form>
-  {% endif %}
+  {% endif %}</div>
 </section>
 {% endblock %}

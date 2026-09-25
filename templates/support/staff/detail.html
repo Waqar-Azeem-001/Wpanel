@@ -6,52 +6,52 @@
 <p><a href="{% url 'support_staff:tickets' %}">&larr; Tickets</a></p>
 <div class="page-head"><h1>{{ ticket.subject }}</h1>
   {% status_badge ticket.status ticket.get_status_display %}</div>
-<p class="muted">{{ ticket.reference }} &middot; <a href="{% url 'clients_staff:detail' ticket.client.pk %}">{{ ticket.client.display_name }}</a>
+<p class="text-secondary">{{ ticket.reference }} &middot; <a href="{% url 'clients_staff:detail' ticket.client.pk %}">{{ ticket.client.display_name }}</a>
   &middot; opened {{ ticket.created_at|date:"j M Y H:i" }}{% if ticket.opened_by %} by {{ ticket.opened_by.email }}{% endif %}</p>
 
-<div class="cols">
+<div class="split">
   <div>
     {% include "support/_conversation.html" with staff=True %}
 
     {% if can_manage %}
-    <section class="card">
+    <section class="card"><div class="card-body">
       <h2>{% if ticket.status == "closed" %}Closed - reopen to reply{% else %}Reply{% endif %}</h2>
       <form method="post" enctype="multipart/form-data" novalidate class="grid-form">{% csrf_token %}
         <div class="field"><label for="id_canned">Predefined reply</label>
-          <div class="row-form">{{ reply_form.canned }} <button class="btn small secondary" type="submit" name="insert" value="1" formnovalidate>Insert</button></div></div>
+          <div class="row-form">{{ reply_form.canned }} <button class="btn btn-sm btn-outline-primary" type="submit" name="insert" value="1" formnovalidate>Insert</button></div></div>
         {% include "partials/form.html" with form=reply_form exclude_field="canned" %}
-        <div class="actions"><button class="btn" type="submit" name="send" value="1">Send</button></div>
-      </form>
-    </section>
+        <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit" name="send" value="1">Send</button></div>
+      </form></div>
+</section>
     {% endif %}
   </div>
 
   <aside>
-    <section class="card">
+    <section class="card"><div class="card-body">
       <h2>Details</h2>
       <dl class="meta">
         <dt>Department</dt><dd>{{ ticket.department.name }}</dd>
-        <dt>Priority</dt><dd><span class="badge priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span></dd>
+        <dt>Priority</dt><dd>{% status_badge ticket.priority ticket.get_priority_display %}</dd>
         <dt>Assigned to</dt><dd>{{ ticket.assignee_label }}</dd>
         {% if ticket.hosting_account %}<dt>Hosting</dt><dd><a href="{% url 'hosting_staff:detail' ticket.hosting_account_id %}">{{ ticket.hosting_account.domain }}</a></dd>{% endif %}
         {% if ticket.domain %}<dt>Domain</dt><dd><a href="{% url 'domains_staff:detail' ticket.domain_id %}">{{ ticket.domain.name }}</a></dd>{% endif %}
         <dt>Last customer reply</dt><dd>{{ ticket.last_customer_reply_at|date:"j M, H:i"|default:"&mdash;" }}</dd>
         <dt>Last staff reply</dt><dd>{{ ticket.last_staff_reply_at|date:"j M, H:i"|default:"&mdash;" }}</dd>
-      </dl>
-    </section>
+      </dl></div>
+</section>
     {% if can_manage %}
-    <section class="card">
+    <section class="card"><div class="card-body">
       <h2>Manage</h2>
-      <form method="post" action="{% url 'support_staff:take' ticket.pk %}">{% csrf_token %}<button class="btn small" type="submit">Assign to me</button></form>
+      <form method="post" action="{% url 'support_staff:take' ticket.pk %}">{% csrf_token %}<button class="btn btn-primary btn-sm" type="submit">Assign to me</button></form>
       <form method="post" action="{% url 'support_staff:assign' ticket.pk %}" class="row-form">{% csrf_token %}
-        <div class="field"><label for="id_agent">Assign to</label>{{ assign_form.agent }}</div><div class="field"><button class="btn small secondary" type="submit">Set</button></div></form>
+        <div class="field"><label for="id_agent">Assign to</label>{{ assign_form.agent }}</div><div class="field"><button class="btn btn-sm btn-outline-primary" type="submit">Set</button></div></form>
       <form method="post" action="{% url 'support_staff:status' ticket.pk %}" class="row-form">{% csrf_token %}
-        <div class="field"><label for="id_status">Status</label>{{ status_form.status }}</div><div class="field"><button class="btn small secondary" type="submit">Set</button></div></form>
+        <div class="field"><label for="id_status">Status</label>{{ status_form.status }}</div><div class="field"><button class="btn btn-sm btn-outline-primary" type="submit">Set</button></div></form>
       <form method="post" action="{% url 'support_staff:priority' ticket.pk %}" class="row-form">{% csrf_token %}
-        <div class="field"><label for="id_priority">Priority</label>{{ priority_form.priority }}</div><div class="field"><button class="btn small secondary" type="submit">Set</button></div></form>
+        <div class="field"><label for="id_priority">Priority</label>{{ priority_form.priority }}</div><div class="field"><button class="btn btn-sm btn-outline-primary" type="submit">Set</button></div></form>
       <form method="post" action="{% url 'support_staff:department' ticket.pk %}" class="row-form">{% csrf_token %}
-        <div class="field"><label for="id_department">Department</label>{{ department_form.department }}</div><div class="field"><button class="btn small secondary" type="submit">Move</button></div></form>
-    </section>
+        <div class="field"><label for="id_department">Department</label>{{ department_form.department }}</div><div class="field"><button class="btn btn-sm btn-outline-primary" type="submit">Move</button></div></form></div>
+</section>
     {% endif %}
   </aside>
 </div>

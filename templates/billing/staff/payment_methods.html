@@ -4,7 +4,7 @@
 {% block content %}
 <h1>Billing</h1>
 {% include "billing/staff/_nav.html" %}
-<div class="table-wrap">
+<div class="table-responsive">
 <table class="table">
   <thead><tr><th>Name</th><th>Code</th><th>Instructions</th><th>Online gateway</th><th>Order</th><th>Active</th></tr></thead>
   <tbody>
@@ -24,19 +24,19 @@
       </td>
     </tr>
   {% empty %}
-    <tr><td colspan="6" class="muted">No payment methods yet. Customers cannot check out until one is active.</td></tr>
+    <tr><td colspan="6" class="text-secondary">No payment methods yet. Customers cannot check out until one is active.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
 {% if can_manage %}
-<section class="card">
+<section class="card"><div class="card-body">
   <h2>Add / update a payment method</h2>
-  <p class="muted">Saving with an existing code updates that method.</p>
+  <p class="text-secondary">Saving with an existing code updates that method.</p>
   <form method="post" action="{% url 'billing_staff:payment_method_save' %}" class="grid-form">{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions"><button class="btn" type="submit">Save</button></div>
-  </form>
+    <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save</button></div>
+  </form></div>
 </section>
 {% endif %}
 {% endblock %}

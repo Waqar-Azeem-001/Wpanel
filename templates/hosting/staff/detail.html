@@ -9,12 +9,12 @@
   <h1>{{ account.domain }}</h1>
   {% status_badge account.status account.get_status_display %}
 </div>
-<p class="muted">Client: <a href="{% url 'clients_staff:detail' account.client.pk %}">{{ account.client.display_name }}</a></p>
+<p class="text-secondary">Client: <a href="{% url 'clients_staff:detail' account.client.pk %}">{{ account.client.display_name }}</a></p>
 
-{% if account.last_error %}<div class="errors"><p>{{ account.last_error }}</p></div>{% endif %}
+{% if account.last_error %}<div class="alert alert-danger"><p>{{ account.last_error }}</p></div>{% endif %}
 
-<div class="cols">
-  <section class="card">
+<div class="split">
+  <section class="card"><div class="card-body">
     <h2>Details</h2>
     <dl class="meta">
       <dt>Username</dt><dd>{{ account.username }}</dd>
@@ -31,54 +31,54 @@
     <h3>Assign a server</h3>
     <form method="post" action="{% url 'hosting_staff:assign_server' account.pk %}" class="row-form">{% csrf_token %}
       <div class="field">{{ assign_server_form.server }}</div>
-      <div class="field"><button class="btn secondary" type="submit">Assign</button></div>
+      <div class="field"><button class="btn btn-outline-primary" type="submit">Assign</button></div>
     </form>
     {% endif %}
 
     <h3>Actions</h3>
-    <div class="row-actions">
+    <div class="d-flex flex-wrap gap-2">
       {% if account.status == "pending" or account.status == "failed" %}
         <form method="post" action="{% url 'hosting_staff:complete' account.pk %}">{% csrf_token %}
-          <button class="btn secondary" type="submit">Provision</button>
+          <button class="btn btn-outline-primary" type="submit">Provision</button>
         </form>
         <form method="post" action="{% url 'hosting_staff:cancel' account.pk %}">{% csrf_token %}
-          <button class="btn small danger" type="submit">Cancel request</button>
+          <button class="btn btn-sm btn-outline-danger" type="submit">Cancel request</button>
         </form>
       {% endif %}
       {% if account.status == "active" %}
         <form method="post" action="{% url 'hosting_staff:suspend' account.pk %}">{% csrf_token %}
-          <button class="btn small secondary" type="submit">Suspend</button>
+          <button class="btn btn-sm btn-outline-primary" type="submit">Suspend</button>
         </form>
         <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}" data-confirm="Terminate this hosting account? This cannot be undone.">{% csrf_token %}
-          <button class="btn small danger" type="submit">Terminate</button>
+          <button class="btn btn-sm btn-outline-danger" type="submit">Terminate</button>
         </form>
         <form method="post" action="{% url 'hosting_staff:sync_status' account.pk %}">{% csrf_token %}
-          <button class="btn small secondary" type="submit">Sync status</button>
+          <button class="btn btn-sm btn-outline-primary" type="submit">Sync status</button>
         </form>
         <form method="post" action="{% url 'hosting_staff:sync_usage' account.pk %}">{% csrf_token %}
-          <button class="btn small secondary" type="submit">Sync usage</button>
+          <button class="btn btn-sm btn-outline-primary" type="submit">Sync usage</button>
         </form>
       {% endif %}
       {% if account.status == "suspended" %}
         <form method="post" action="{% url 'hosting_staff:unsuspend' account.pk %}">{% csrf_token %}
-          <button class="btn small secondary" type="submit">Unsuspend</button>
+          <button class="btn btn-sm btn-outline-primary" type="submit">Unsuspend</button>
         </form>
         <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}" data-confirm="Terminate this hosting account? This cannot be undone.">{% csrf_token %}
-          <button class="btn small danger" type="submit">Terminate</button>
+          <button class="btn btn-sm btn-outline-danger" type="submit">Terminate</button>
         </form>
       {% endif %}
     </div>
-    {% endif %}
-  </section>
+    {% endif %}</div>
+</section>
 
   {% if can_manage and account.status == "active" %}
-  <section class="card">
+  <section class="card"><div class="card-body">
     <h2>Change package</h2>
     <form method="post" action="{% url 'hosting_staff:change_package' account.pk %}">{% csrf_token %}
       {% include "partials/form.html" with form=change_package_form %}
-      <button class="btn secondary" type="submit">Change</button>
-    </form>
-  </section>
+      <button class="btn btn-outline-primary" type="submit">Change</button>
+    </form></div>
+</section>
   {% endif %}
 </div>
 {% include "renewals/_term_card.html" with staff=True %}

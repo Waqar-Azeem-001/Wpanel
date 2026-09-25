@@ -18,7 +18,7 @@
   {% if staff and can_manage and change.status == "failed" %}
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <form method="post" action="{% url 'renewals_staff:retry' change.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Retry applying" %}</button></form>
-    <form method="post" action="{% url 'renewals_staff:dismiss' change.pk %}" class="d-flex gap-2" data-confirm="{% trans 'Mark this as handled by hand?' %}">{% csrf_token %}
+    <form method="post" action="{% url 'renewals_staff:dismiss' change.pk %}" class="d-flex flex-wrap gap-2" data-confirm="{% trans 'Mark this as handled by hand?' %}">{% csrf_token %}
       <input class="form-control" type="text" name="note" placeholder="What was done (e.g. refunded)" aria-label="Note" maxlength="500">
       <button class="btn btn-outline-secondary" type="submit">{% trans "Mark handled" %}</button></form>
   </div>

@@ -1,7 +1,7 @@
-<nav class="subnav">
-  <a href="{% url 'support_staff:overview' %}"{% if section == "overview" %} class="active"{% endif %}>Overview</a>
-  <a href="{% url 'support_staff:tickets' %}"{% if section == "tickets" %} class="active"{% endif %}>Tickets</a>
-  <a href="{% url 'support_staff:departments' %}"{% if section == "departments" %} class="active"{% endif %}>Departments</a>
-  <a href="{% url 'support_staff:replies' %}"{% if section == "replies" %} class="active"{% endif %}>Predefined replies</a>
-  <a href="{% url 'support_staff:kb' %}"{% if section == "kb" %} class="active"{% endif %}>Knowledgebase</a>
-</nav>
+<nav><ul class="nav nav-tabs mb-3 tab-scroll">
+  <li class="nav-item"><a class="nav-link{% if section == "overview" %} active{% endif %}" href="{% url 'support_staff:overview' %}"{% if section == "overview" %} aria-current="page"{% endif %}>Overview</a></li>
+  <li class="nav-item"><a class="nav-link{% if section == "tickets" %} active{% endif %}" href="{% url 'support_staff:tickets' %}"{% if section == "tickets" %} aria-current="page"{% endif %}>Tickets</a></li>
+  <li class="nav-item"><a class="nav-link{% if section == "departments" %} active{% endif %}" href="{% url 'support_staff:departments' %}"{% if section == "departments" %} aria-current="page"{% endif %}>Departments</a></li>
+  <li class="nav-item"><a class="nav-link{% if section == "replies" %} active{% endif %}" href="{% url 'support_staff:replies' %}"{% if section == "replies" %} aria-current="page"{% endif %}>Predefined replies</a></li>
+  <li class="nav-item"><a class="nav-link{% if section == "kb" %} active{% endif %}" href="{% url 'support_staff:kb' %}"{% if section == "kb" %} aria-current="page"{% endif %}>Knowledgebase</a></li>
+</ul></nav>

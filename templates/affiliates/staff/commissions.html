@@ -10,21 +10,21 @@
   <div class="field"><label for="id_status">Status</label>
     <select name="status" id="id_status"><option value="">All</option>{% for value, label in statuses %}<option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
   <div class="field"><label class="check"><input type="checkbox" name="review" value="1"{% if review %} checked{% endif %}> Refunded after payout</label></div>
-  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+  <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
-<div class="table-wrap"><table class="table">
-  <thead><tr><th>Commission</th><th>Affiliate</th><th>Invoice</th><th>Status</th><th class="num">Sale</th><th class="num">Amount</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+<div class="table-responsive"><table class="table">
+  <thead><tr><th>Commission</th><th>Affiliate</th><th>Invoice</th><th>Status</th><th class="text-end">Sale</th><th class="text-end">Amount</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
   <tbody>{% for c in page %}
-    <tr><td>{{ c.code }}<br><small class="muted">{{ c.created_at|date:"j M Y" }}</small></td>
+    <tr><td>{{ c.code }}<br><small class="text-secondary">{{ c.created_at|date:"j M Y" }}</small></td>
         <td><a href="{% url 'affiliates_staff:affiliate' c.affiliate_id %}">{{ c.affiliate.code }}</a></td>
         <td><a href="{% url 'billing_staff:invoice_detail' c.invoice_id %}">{{ c.invoice.number|default:c.invoice_id }}</a></td>
-        <td>{% status_badge c.status c.get_status_display %}{% if c.status == "pending" %} <small class="muted">until {{ c.eligible_at|date:"j M" }}</small>{% endif %}{% if c.needs_review %} {% status_badge "failed" "Refunded after payout" %}{% endif %}{% if c.note %}<br><small class="muted">{{ c.note }}</small>{% endif %}</td>
-        <td class="num">{{ c.base_amount }}</td>
-        <td class="num">{{ c.currency }} {{ c.amount }}{% if c.amount != c.original_amount %}<br><small class="muted">was {{ c.original_amount }}</small>{% endif %}</td>
+        <td>{% status_badge c.status c.get_status_display %}{% if c.status == "pending" %} <small class="text-secondary">until {{ c.eligible_at|date:"j M" }}</small>{% endif %}{% if c.needs_review %} {% status_badge "failed" "Refunded after payout" %}{% endif %}{% if c.note %}<br><small class="text-secondary">{{ c.note }}</small>{% endif %}</td>
+        <td class="text-end">{{ c.base_amount }}</td>
+        <td class="text-end">{{ c.currency }} {{ c.amount }}{% if c.amount != c.original_amount %}<br><small class="text-secondary">was {{ c.original_amount }}</small>{% endif %}</td>
         {% if can_manage %}<td>
-          {% if c.status == "pending" %}<form method="post" action="{% url 'affiliates_staff:commission_approve' c.pk %}" class="inline-form">{% csrf_token %}<button class="btn small" type="submit">Approve now</button></form>{% endif %}
-          {% if c.status == "pending" or c.status == "approved" %}<form method="post" action="{% url 'affiliates_staff:commission_reject' c.pk %}" class="inline-form">{% csrf_token %}<input type="text" name="note" placeholder="Reason" required aria-label="Reason for rejecting" maxlength="500"><button class="btn small danger" type="submit">Reject</button></form>{% endif %}
+          {% if c.status == "pending" %}<form method="post" action="{% url 'affiliates_staff:commission_approve' c.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary btn-sm" type="submit">Approve now</button></form>{% endif %}
+          {% if c.status == "pending" or c.status == "approved" %}<form method="post" action="{% url 'affiliates_staff:commission_reject' c.pk %}" class="inline-form">{% csrf_token %}<input type="text" name="note" placeholder="Reason" required aria-label="Reason for rejecting" maxlength="500"><button class="btn btn-sm btn-outline-danger" type="submit">Reject</button></form>{% endif %}
         </td>{% endif %}</tr>
-  {% empty %}<tr><td colspan="7" class="muted">No commissions match.</td></tr>{% endfor %}</tbody></table></div>
+  {% empty %}<tr><td colspan="7" class="text-secondary">No commissions match.</td></tr>{% endfor %}</tbody></table></div>
 {% include "components/pager.html" %}
 {% endblock %}

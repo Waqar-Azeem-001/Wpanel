@@ -143,7 +143,7 @@ def test_the_font_is_vendored_with_its_licence_and_the_stylesheet_points_at_real
 
 
 def test_the_stylesheets_load_nothing_from_the_internet():
-    for name in ("theme.css", "legacy.css"):
+    for name in ("theme.css",):
         assert not re.search(r"https?://", (STATIC / "css" / name).read_text(encoding="utf-8")), name
 
 

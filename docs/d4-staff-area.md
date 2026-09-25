@@ -1,6 +1,6 @@
-# Phase D4 Report: Staff Area Parity and Admin Operations (in progress)
+# Phase D4 Report: Staff Area Parity and Admin Operations (Phase 15 screens included)
 
-D4 is large, so it is built and verified in stages, each committed with green CI. **Stage status:**
+D4 was large, so it was built and verified in stages, each committed with green CI. **Stage status (all done):**
 
 | Stage | Content | State |
 |---|---|---|
@@ -8,7 +8,7 @@ D4 is large, so it is built and verified in stages, each committed with green CI
 | **D4b** | Client profile as tabs (each its own URL) | ✅ report below |
 | **D4c** | Standard list pattern ("Showing X–Y of Z", bulk-action bar), confirmation modal on destructive actions | ✅ report below |
 | **D4d** | Phase 15 screens: staff users and roles, email provider, registrar | ✅ report below |
-| D4e | Re-skin the remaining staff templates and delete `static/css/legacy.css` | planned |
+| **D4e** | Re-skin the remaining staff templates and delete `static/css/legacy.css` | ✅ report below |
 
 ## D4a: what was built
 
@@ -68,11 +68,18 @@ New services (rules and audit in one place, like every other module) and three S
 - **Utilities > Job queue and WHOIS** stay hidden: there is no job-run history yet (Phase 17) and no WHOIS integration.
 - Tests: **+36** (`apps/core/test_setup.py`; 1661 on PostgreSQL), **ten mutation checks** (password stored in clear, a blank password wiping the stored one, two active providers, the test email echoing the password, an active provider deletable, an admin creating admins, create without the permission, customers editable as staff, registrar credentials in clear, a used registrar deletable) all caught. Browser: the three screens at 1440 px, no errors or overflow.
 
+## D4e: every screen on the components; the bridge stylesheet deleted
+
+- **61 templates** re-skinned by a checked script plus hand fixes: every button is a Bootstrap button (primary, outline, small, danger), muted text, right-aligned numbers, responsive tables, alert boxes, stat tiles, timelines, badges; the five section menus and three period selectors are **Bootstrap tabs with the current one marked**; every card has a `card-body` (Bootstrap pads the body, not the card); ticket priority uses the status badge.
+- **`static/css/legacy.css` is deleted** (and no template loads it). What the staff screens still need is now named, documented components in `theme.css` ("Page width, form layout and small layout components": `.field`, `.filters`, `.row-form`, `.grid-form`, `.inline-form`, `.split`, `.meta`, and a few table helpers), written once on the design tokens.
+- Guards (`apps/core/test_reskin.py`, 8 tests, 7 mutation checks all caught): no template uses a class name from the old sheet, every `btn` is a Bootstrap button, **no bare card**, every component still used is defined, the deleted sheet stays deleted, the section menus are tabs with a current item, priority is a status badge, no fixed-width inline styles.
+- Browser sweep: **192 staff pages** (every page reachable from the staff menus plus detail pages) at 375, 768, 1280 and 1440 px: no JavaScript errors, no failed requests; one 8 px overflow on the hosting page at 375 px (an action row that did not wrap) was found and fixed. Screenshots of invoice, order, hosting, clients, brand and setup pages reviewed by eye.
+
 ## Deliberately not built (Rule 5.2: hidden until real)
 
 - **Automation widget (last run of each scheduled job)** and **Staff online**: there is no job-run history or presence tracking yet (Phase 17 and 16). The scheduled jobs exist; their history does not.
 - **System health for Redis, Celery workers and WHM reachability**: needs the reliability work in Phase 17; the widget shows what can be checked now.
 
-## Tests
+## Tests (D4a)
 
 **+57 (`apps/core/test_console.py`): 1574 on PostgreSQL**. Front door per role; dashboard for staff only; exactly the right widgets per role (page and endpoint); no-script fallback; shortcuts by permission; billing figures against the ledger, the income period, refunds; order and support tiles against their lists; failures with working links; domains soon-to-expire (including already-expired); health with a missing provider and with a broken dependency; activity; **a read writes nothing**; search by every kind, every hit opens for the searcher, only permitted areas, short/odd/hostile terms, limit versus total, see-all link; audit log permission, filters, paging, redaction, odd terms; menus per role. **Nine mutation checks** (a widget ignoring its permission, search ignoring a permission, income forgetting refunds or the period, the audit log without its permission, health leaking an exception, staff sent to the profile, no minimum search length, the domain widget dropping overdue ones) all caught. Four older tests that encoded the old front door and the old menu were updated. Browser: dashboard at 1280 and 375 px, all eight widgets load, no JavaScript or network errors, no horizontal overflow at 1200 / 1280 / 1366 / 1440 px for agent, manager and admin.
