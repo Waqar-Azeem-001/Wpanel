@@ -35,3 +35,10 @@
   });
   modalElement.addEventListener("hidden.bs.modal", function () { pending = null; });
 })();
+
+/* "Select all" on a list with bulk actions: one box in the header ticks every row of that form. */
+document.addEventListener("change", function (event) {
+  var box = event.target;
+  if (!box.matches || !box.matches("[data-select-all]") || !box.form) { return; }
+  box.form.querySelectorAll("input[name=ids]").forEach(function (row) { row.checked = box.checked; });
+});

@@ -65,8 +65,7 @@
           <form method="post" action="{% url 'catalog_staff:product_price_toggle' product.slug entry.pk %}">{% csrf_token %}
             <button class="btn small secondary" type="submit">{{ entry.is_active|yesno:"Disable,Enable" }}</button>
           </form>
-          <form method="post" action="{% url 'catalog_staff:product_price_remove' product.slug entry.pk %}"
-                onsubmit="return confirm('Remove this price?');">{% csrf_token %}
+          <form method="post" action="{% url 'catalog_staff:product_price_remove' product.slug entry.pk %}" data-confirm="Remove this price?">{% csrf_token %}
             <button class="btn small danger" type="submit">Remove</button>
           </form>
         </td>

@@ -6,7 +6,7 @@ D4 is large, so it is built and verified in stages, each committed with green CI
 |---|---|---|
 | **D4a** | Staff dashboard with widgets, global search, audit log viewer, staff front door | ✅ this report |
 | **D4b** | Client profile as tabs (each its own URL) | ✅ report below |
-| D4c | Standard list pattern (search, filters, bulk-action bar, "Showing X–Y of Z"), confirmation modal on destructive actions | planned |
+| **D4c** | Standard list pattern ("Showing X–Y of Z", bulk-action bar), confirmation modal on destructive actions | ✅ report below |
 | D4d | Phase 15 screens: staff users and roles, payment/registrar/email providers, Utilities menu (job queue, WHOIS) | planned |
 | D4e | Re-skin the remaining staff templates and delete `static/css/legacy.css` | planned |
 
@@ -41,6 +41,15 @@ The one long profile page is now a **header** (name, reference, status, quick ac
 - Nothing moved that a URL depended on: `detail`, `edit`, `contact_add`, `contact_role`, `contact_remove`, `status` keep their names and paths; `tab` is new.
 - Wide tab bars scroll sideways on a phone and wrap on a desktop.
 - Tests: **+30** (`apps/core/test_client_profile.py`); three older tests that looked for records on the profile page now look at the right tab; **eight mutation checks** (permission ignored, invoices not scoped to the client, counts not scoped, any staff adding contacts, contact changes returning to the wrong page, the summary treated as a tab, notes edit link for everyone, paging removed) all caught. Browser: profile, invoices, contacts, log, notes and edit at 1440 and 375 px, no errors or overflow.
+
+## D4c: the standard list (Section 11.4)
+
+- **"Showing X-Y of Z"** appears under **every paged list** (staff and customer) from the shared pager, and follows the filters and the page; previous/next appear only when there is more than one page and keep the filters.
+- **Bulk actions** (`apps/core/bulk.py`): a "With selected" bar with a select-all box, on **Tickets** (assign to me, mark resolved, close, set priority; `manage_support`) and **Invoices** (issue drafts, cancel unpaid ones with one reason; `manage_billing`). A bulk action is only a loop over the ordinary service call, so it has the same permission checks, rules and audit trail as doing it one by one; **one record failing never stops the others** and the outcome says how many were done and why the rest were not; ids that match nothing are ignored; at most 200 ticked rows; junk ids are dropped; the return address is the filtered list but never another site. The bar is shown only to people who may use it, and the form asks first in the modal.
+- **Confirmation modal everywhere:** the last nine browser `confirm()` boxes (terminate hosting, cancel/suspend/fraud/terminate an order, cancel/issue an invoice or quote, remove a price, delete a KB article, delete a billable item, renew a domain) now use the accessible modal; a test forbids the old form.
+- Priority badges use the status colours (urgent red, high amber).
+- Tests: **+21** (`apps/core/test_lists.py`); **eight mutation checks** (one failure stopping the rest, an open redirect, no id cap, missing permissions on either bulk view, the summary line removed, the browser confirm back, the bar shown to readers) all caught. Browser: select-all ticks every row, the modal appears, confirming applies the change and shows "6 ticket(s) re-prioritised".
+- Not done in D4c (recorded): bulk actions on orders, domains, hosting, commissions and failed emails (each needs its own careful per-record rule; the mechanism is ready); saved filters; column chooser; CSV export from lists (reports already export).
 
 ## Deliberately not built (Rule 5.2: hidden until real)
 

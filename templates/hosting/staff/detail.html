@@ -49,8 +49,7 @@
         <form method="post" action="{% url 'hosting_staff:suspend' account.pk %}">{% csrf_token %}
           <button class="btn small secondary" type="submit">Suspend</button>
         </form>
-        <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}"
-              onsubmit="return confirm('Terminate this hosting account? This cannot be undone.');">{% csrf_token %}
+        <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}" data-confirm="Terminate this hosting account? This cannot be undone.">{% csrf_token %}
           <button class="btn small danger" type="submit">Terminate</button>
         </form>
         <form method="post" action="{% url 'hosting_staff:sync_status' account.pk %}">{% csrf_token %}
@@ -64,8 +63,7 @@
         <form method="post" action="{% url 'hosting_staff:unsuspend' account.pk %}">{% csrf_token %}
           <button class="btn small secondary" type="submit">Unsuspend</button>
         </form>
-        <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}"
-              onsubmit="return confirm('Terminate this hosting account? This cannot be undone.');">{% csrf_token %}
+        <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}" data-confirm="Terminate this hosting account? This cannot be undone.">{% csrf_token %}
           <button class="btn small danger" type="submit">Terminate</button>
         </form>
       {% endif %}

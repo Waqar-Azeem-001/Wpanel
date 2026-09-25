@@ -17,6 +17,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.roles import perm
 from apps.clients.models import Client
 from apps.clients.services import search_clients
+from apps.core import bulk
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, query_id, run_action
@@ -143,6 +144,25 @@ def invoice_detail(request, pk):
         "invoice": invoice, "items": invoice.items.all(), "transactions": txs, "can_manage": can_manage,
         "payment_form": payment_form, "cancel_form": forms.CancelForm(), "refund_form": forms.RefundForm(),
         "reject_form": forms.RejectForm(), "section": "invoices"})
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
+def invoice_bulk(request):
+    """"With selected": issue the ticked drafts, or cancel the ticked unpaid invoices (with one reason for all)."""
+    do = request.POST.get("do", "")
+    reason = request.POST.get("reason", "").strip()[:300]
+    actions = {
+        "issue": ("invoice(s) issued", lambda i: invoicing.issue_invoice(request.user, i, request=request)),
+        "cancel": ("invoice(s) cancelled", lambda i: invoicing.cancel_invoice(request.user, i, reason=reason, request=request)),
+    }
+    if do not in actions:
+        messages.error(request, "Choose what to do with the selected invoices.")
+    else:
+        verb, action = actions[do]
+        bulk.run(request, Invoice.objects.all(), bulk.selected_ids(request), action, verb=verb,
+                 label=lambda i: i.number or f"Draft #{i.pk}")
+    return bulk.back_to(request, "billing_staff:invoice_list")
 
 
 @require_POST

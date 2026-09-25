@@ -31,11 +31,11 @@
       {% if invoice.status == "draft" %}
       <div class="actions">
         <a class="btn secondary" href="{% url 'billing_staff:invoice_edit' invoice.pk %}">Edit</a>
-        <form method="post" action="{% url 'billing_staff:invoice_issue' invoice.pk %}" onsubmit="return confirm('Issue this invoice? It can no longer be edited.');">{% csrf_token %}<button class="btn" type="submit">Issue invoice</button></form>
-        <form method="post" action="{% url 'billing_staff:invoice_delete' invoice.pk %}" onsubmit="return confirm('Delete this draft?');">{% csrf_token %}<button class="btn small danger" type="submit">Delete draft</button></form>
+        <form method="post" action="{% url 'billing_staff:invoice_issue' invoice.pk %}" data-confirm="Issue this invoice? It can no longer be edited.">{% csrf_token %}<button class="btn" type="submit">Issue invoice</button></form>
+        <form method="post" action="{% url 'billing_staff:invoice_delete' invoice.pk %}" data-confirm="Delete this draft?">{% csrf_token %}<button class="btn small danger" type="submit">Delete draft</button></form>
       </div>
       {% elif invoice.status == "unpaid" %}
-      <form method="post" action="{% url 'billing_staff:invoice_cancel' invoice.pk %}" onsubmit="return confirm('Cancel this invoice?');">{% csrf_token %}
+      <form method="post" action="{% url 'billing_staff:invoice_cancel' invoice.pk %}" data-confirm="Cancel this invoice?">{% csrf_token %}
         <div class="field"><label for="{{ cancel_form.reason.id_for_label }}">Reason (audited)</label>{{ cancel_form.reason }}</div>
         <button class="btn small danger" type="submit">Cancel invoice</button>
       </form>
@@ -76,7 +76,7 @@
             <form method="post" action="{% url 'billing_staff:transaction_confirm' tx.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="invoice"><button class="btn small" type="submit">Confirm</button></form>
             <form method="post" action="{% url 'billing_staff:transaction_reject' tx.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="invoice"><button class="btn small danger" type="submit">Reject</button></form>
           {% elif tx.refundable %}
-            <form method="post" action="{% url 'billing_staff:transaction_refund' tx.pk %}" class="inline-form" onsubmit="return confirm('Refund this payment?');">{% csrf_token %}<input type="hidden" name="next" value="invoice">
+            <form method="post" action="{% url 'billing_staff:transaction_refund' tx.pk %}" class="inline-form" data-confirm="Refund this payment?">{% csrf_token %}<input type="hidden" name="next" value="invoice">
               <input type="number" name="amount" step="0.01" min="0.01" max="{{ tx.refundable }}" placeholder="{{ tx.refundable }}" aria-label="Refund amount" class="short">
               <button class="btn small secondary" type="submit">Refund</button></form>
           {% endif %}

@@ -1,7 +1,14 @@
-{% if page.has_other_pages %}
-<nav class="pager">
-  {% if page.has_previous %}<a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
-  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-  {% if page.has_next %}<a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
-</nav>
+{% load i18n %}
+{# Every paged list: "Showing X-Y of Z" whenever there is anything to show, and previous/next when there is more than one page. #}
+{% if page.paginator.count %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 list-summary">
+  <span class="text-secondary small">{% blocktrans with first=page.start_index last=page.end_index total=page.paginator.count %}Showing {{ first }}–{{ last }} of {{ total }}{% endblocktrans %}</span>
+  {% if page.has_other_pages %}
+  <nav class="pager" aria-label="{% trans 'Pages' %}">
+    {% if page.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}page={{ page.previous_page_number }}">&larr; {% trans "Previous" %}</a>{% endif %}
+    <span class="text-secondary small">{% blocktrans with number=page.number pages=page.paginator.num_pages %}Page {{ number }} of {{ pages }}{% endblocktrans %}</span>
+    {% if page.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}page={{ page.next_page_number }}">{% trans "Next" %} &rarr;</a>{% endif %}
+  </nav>
+  {% endif %}
+</div>
 {% endif %}

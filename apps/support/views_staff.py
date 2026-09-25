@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.roles import perm
 from apps.clients.models import Client
 from apps.clients.services import search_clients
+from apps.core import bulk
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, query_id, run_action
@@ -52,6 +53,28 @@ def ticket_list(request):
     page = Paginator(tickets.order_by("-last_activity_at", "-id"), 25).get_page(request.GET.get("page"))
     return render(request, "support/staff/list.html", {"form": form, "page": page, "section": "tickets",
                                                        "can_manage": _can_manage(request)})
+
+
+@require_POST
+@portal_permission_required(MANAGE)
+def ticket_bulk(request):
+    """"With selected": assign to me, mark resolved, close, or set the priority of every ticked ticket."""
+    do = request.POST.get("do", "")
+    actor = request.user
+    actions = {
+        "assign_me": ("assigned to you", lambda t: services.assign(actor, t, actor, request=request)),
+        "resolve": ("marked resolved", lambda t: services.set_status(actor, t, "resolved", request=request)),
+        "close": ("closed", lambda t: services.set_status(actor, t, "closed", request=request)),
+        "priority": ("re-prioritised", lambda t: services.set_priority(actor, t, request.POST.get("priority", ""),
+                                                                       request=request)),
+    }
+    if do not in actions:
+        messages.error(request, "Choose what to do with the selected tickets.")
+    else:
+        verb, action = actions[do]
+        bulk.run(request, Ticket.objects.all(), bulk.selected_ids(request), action, verb=f"ticket(s) {verb}",
+                 label=lambda t: t.reference)
+    return bulk.back_to(request, "support_staff:tickets")
 
 
 @portal_permission_required(MANAGE)

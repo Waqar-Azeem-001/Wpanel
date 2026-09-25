@@ -20,7 +20,7 @@
       <td>
         {% if not item.invoice_id %}
         <form method="post" action="{% url 'billing_staff:billable_invoice' item.client_id %}" class="inline-form">{% csrf_token %}<button class="btn small" type="submit" title="Invoice all of this client's uninvoiced charges">Invoice client</button></form>
-        <form method="post" action="{% url 'billing_staff:billable_delete' item.pk %}" class="inline-form" onsubmit="return confirm('Delete this charge?');">{% csrf_token %}<button class="btn small danger" type="submit">Delete</button></form>
+        <form method="post" action="{% url 'billing_staff:billable_delete' item.pk %}" class="inline-form" data-confirm="Delete this charge?">{% csrf_token %}<button class="btn small danger" type="submit">Delete</button></form>
         {% endif %}
       </td>
       {% endif %}

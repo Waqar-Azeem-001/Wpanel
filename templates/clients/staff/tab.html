@@ -27,6 +27,5 @@
   {% endfor %}
   </tbody>
 </table></div></div>
-{% if page.paginator.count %}<p class="text-secondary small mt-2">{% blocktrans with first=page.start_index last=page.end_index total=page.paginator.count %}Showing {{ first }}–{{ last }} of {{ total }}{% endblocktrans %}</p>{% endif %}
 {% include "components/pager.html" %}
 {% endblock %}

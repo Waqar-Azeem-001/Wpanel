@@ -26,11 +26,11 @@
       {% if quote.status == "draft" %}
       <div class="actions">
         <a class="btn secondary" href="{% url 'billing_staff:quote_edit' quote.pk %}">Edit</a>
-        <form method="post" action="{% url 'billing_staff:quote_send' quote.pk %}" onsubmit="return confirm('Send this quote to the client?');">{% csrf_token %}<button class="btn" type="submit">Send to client</button></form>
-        <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" onsubmit="return confirm('Cancel this quote?');">{% csrf_token %}<button class="btn small danger" type="submit">Cancel quote</button></form>
+        <form method="post" action="{% url 'billing_staff:quote_send' quote.pk %}" data-confirm="Send this quote to the client?">{% csrf_token %}<button class="btn" type="submit">Send to client</button></form>
+        <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn small danger" type="submit">Cancel quote</button></form>
       </div>
       {% elif quote.status == "sent" %}
-      <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" onsubmit="return confirm('Cancel this quote?');">{% csrf_token %}<button class="btn small danger" type="submit">Cancel quote</button></form>
+      <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn small danger" type="submit">Cancel quote</button></form>
       {% endif %}
     {% endif %}
   </section>

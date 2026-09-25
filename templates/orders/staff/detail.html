@@ -28,12 +28,12 @@
       <button class="btn" type="submit">Release the fraud hold</button></form>
     {% endif %}
     {% if order.status == "pending_payment" or order.status == "paid" or order.status == "failed" %}
-    <form method="post" action="{% url 'orders_staff:fraud' order.pk %}" class="inline-form" onsubmit="return confirm('Hold this order as suspected fraud? Nothing will be fulfilled while it is held.');">{% csrf_token %}
+    <form method="post" action="{% url 'orders_staff:fraud' order.pk %}" class="inline-form" data-confirm="Hold this order as suspected fraud? Nothing will be fulfilled while it is held.">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
       <button class="btn small danger" type="submit">Flag as fraud</button></form>
     {% endif %}
     {% if order.status == "active" %}
-    <form method="post" action="{% url 'orders_staff:suspend' order.pk %}" class="inline-form" onsubmit="return confirm('Suspend this order and its hosting accounts?');">{% csrf_token %}
+    <form method="post" action="{% url 'orders_staff:suspend' order.pk %}" class="inline-form" data-confirm="Suspend this order and its hosting accounts?">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
       <button class="btn small secondary" type="submit">Suspend</button></form>
     {% endif %}
@@ -41,12 +41,12 @@
     <form method="post" action="{% url 'orders_staff:unsuspend' order.pk %}">{% csrf_token %}<button class="btn" type="submit">Reactivate</button></form>
     {% endif %}
     {% if order.status == "active" or order.status == "suspended" %}
-    <form method="post" action="{% url 'orders_staff:terminate' order.pk %}" class="inline-form" onsubmit="return confirm('Terminate this order and its hosting accounts? This cannot be undone.');">{% csrf_token %}
+    <form method="post" action="{% url 'orders_staff:terminate' order.pk %}" class="inline-form" data-confirm="Terminate this order and its hosting accounts? This cannot be undone.">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
       <button class="btn small danger" type="submit">Terminate</button></form>
     {% endif %}
     {% if order.status == "pending_payment" or order.status == "failed" or order.status == "fraud" %}
-    <form method="post" action="{% url 'orders_staff:cancel' order.pk %}" class="inline-form" onsubmit="return confirm('Cancel this order?{% if order.status != "pending_payment" %} Any payment already taken must be refunded from its invoice.{% endif %}');">{% csrf_token %}
+    <form method="post" action="{% url 'orders_staff:cancel' order.pk %}" class="inline-form" data-confirm="Cancel this order?{% if order.status != "pending_payment" %} Any payment already taken must be refunded from its invoice.{% endif %}">{% csrf_token %}
       <input type="text" name="reason" placeholder="Reason (audited)" aria-label="Reason" maxlength="500">
       <button class="btn small danger" type="submit">Cancel order</button></form>
     {% endif %}
