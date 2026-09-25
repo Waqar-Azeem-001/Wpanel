@@ -150,7 +150,7 @@ Unlinked pages: `/e/o/<token>.gif` (tracking pixel, by design). Pages that no ro
 | Every screen mapped to Sections 10 and 11 (exists / partial / missing) | ✅ |
 | BROKEN items either fixed with regression tests or scheduled with an owner phase | ✅ (4 fixed; 3 scheduled) |
 | The four "Proposed" decisions in Section 27 confirmed or adjusted | ✅ confirmed as Active, with the path-prefix adjustment above |
-| Full suite green on SQLite and PostgreSQL; CI green | see below |
+| Full suite green on SQLite and PostgreSQL; CI green | ✅ 1220 on PostgreSQL (1206 + 14 skipped on SQLite); CI run 36168031028 on `dd1c88a` (first run) |
 
 ## Fixed in this phase (regression tests)
 
