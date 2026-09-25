@@ -1,0 +1,6 @@
+<nav class="subnav">
+  <a href="{% url 'billing_staff:payment_methods' %}"{% if section == "payment_methods" %} class="active"{% endif %}>Payment methods</a>
+  <a href="{% url 'billing_staff:tax_rules' %}"{% if section == "tax_rules" %} class="active"{% endif %}>Tax rules</a>
+  <a href="{% url 'billing_staff:coupons' %}"{% if section == "coupons" %} class="active"{% endif %}>Coupons</a>
+  <a href="{% url 'orders_staff:list' %}">Orders</a>
+</nav>

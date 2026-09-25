@@ -19,10 +19,15 @@
       <dt>Transfer</dt><dd>{{ result.pricing.transfer_price }}</dd>
     </dl>
     {% if user.is_authenticated %}
-      <a class="btn" href="{% url 'domains_customer:register' %}?domain={{ result.domain }}&years={{ result.years }}">Register this domain</a>
+      <form method="post" action="{% url 'orders_customer:cart_add_domain' %}">{% csrf_token %}
+        <input type="hidden" name="domain" value="{{ result.domain }}">
+        <input type="hidden" name="years" value="{{ result.years }}">
+        <button class="btn" type="submit">Add to cart ({{ result.years }} year{{ result.years|pluralize }})</button>
+      </form>
+      <p class="muted">Prefer staff to handle it? <a href="{% url 'domains_customer:register' %}?domain={{ result.domain }}&years={{ result.years }}">Request registration</a> without paying now.</p>
     {% else %}
-      <p><a href="{% url 'accounts:login' %}?next={% url 'domains_customer:register' %}">Sign in</a> or
-        <a href="{% url 'accounts:register' %}">create an account</a> to register it.</p>
+      <p><a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Sign in</a> or
+        <a href="{% url 'accounts:register' %}">create an account</a> to order it.</p>
     {% endif %}
   {% else %}
     <h2>{{ result.domain }} is taken</h2>

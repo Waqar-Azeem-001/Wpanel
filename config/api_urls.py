@@ -5,11 +5,13 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts import api as accounts_api
 from apps.audit.api import AuditEventViewSet
+from apps.billing.api import CouponViewSet, PaymentMethodViewSet, TaxRuleViewSet
 from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
 from apps.domains.api import AvailabilityView, DomainViewSet, TldPricingViewSet
 from apps.hosting.api import HostingAccountViewSet
 from apps.notifications.api import NotificationViewSet
+from apps.orders import api as orders_api
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
 
 router = DefaultRouter()
@@ -24,6 +26,10 @@ router.register("servers", ServerViewSet, basename="server")
 router.register("domains", DomainViewSet, basename="domain")
 router.register("tld-pricing", TldPricingViewSet, basename="tld-pricing")
 router.register("hosting-accounts", HostingAccountViewSet, basename="hosting-account")
+router.register("payment-methods", PaymentMethodViewSet, basename="payment-method")
+router.register("tax-rules", TaxRuleViewSet, basename="tax-rule")
+router.register("coupons", CouponViewSet, basename="coupon")
+router.register("orders", orders_api.OrderViewSet, basename="order")
 
 auth_patterns = [
     path("register/", accounts_api.RegisterView.as_view(), name="register"),
@@ -42,6 +48,11 @@ urlpatterns = [
     path("auth/", include(auth_patterns)),
     path("me/", accounts_api.MeView.as_view(), name="me"),
     path("domains/availability/", AvailabilityView.as_view(), name="domain-availability"),
+    path("cart/", orders_api.CartView.as_view(), name="cart"),
+    path("cart/items/", orders_api.CartItemsView.as_view(), name="cart-items"),
+    path("cart/items/<int:pk>/", orders_api.CartItemDetailView.as_view(), name="cart-item"),
+    path("cart/coupon/", orders_api.CartCouponView.as_view(), name="cart-coupon"),
+    path("cart/checkout/", orders_api.CheckoutView.as_view(), name="cart-checkout"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="v1:schema"), name="docs"),
     path("", include(router.urls)),

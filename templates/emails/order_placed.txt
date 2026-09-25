@@ -1,0 +1,19 @@
+{% autoescape off %}Hello {{ order.billing_name|default:"there" }},
+
+Thank you for your order {{ order.reference }}.
+
+{% for item in items %}- {{ item.description }}: {{ order.currency }} {{ item.line_total }}
+{% endfor %}
+Subtotal: {{ order.currency }} {{ order.subtotal }}
+{% if order.discount_total %}Discount ({{ order.coupon_code }}): -{{ order.currency }} {{ order.discount_total }}
+{% endif %}{% if order.tax_name %}{{ order.tax_name }} ({{ order.tax_rate }}%): {{ order.currency }} {{ order.tax_total }}
+{% endif %}Total due: {{ order.currency }} {{ order.total }}
+
+Payment method: {{ order.payment_method_name }}
+{% if method.instructions %}
+{{ method.instructions }}
+{% endif %}
+Please quote {{ order.reference }} with your payment. Your services are set up once payment is confirmed.
+
+{{ site_name }}
+{% endautoescape %}

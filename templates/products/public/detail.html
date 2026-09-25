@@ -33,6 +33,28 @@
     </tbody>
   </table>
   </div>
-  <p class="muted">Ordering opens soon - cart and checkout are being finished (roadmap Phase 06).</p>
+  {% if prices %}
+  <h2>Order this plan</h2>
+  {% if user.is_authenticated %}
+  <form method="post" action="{% url 'orders_customer:cart_add_hosting' %}" class="row-form">{% csrf_token %}
+    <input type="hidden" name="product" value="{{ product.pk }}">
+    <div class="field">
+      <label for="order-cycle">Billing cycle</label>
+      <select name="cycle" id="order-cycle">
+        {% for entry in prices %}<option value="{{ entry.option_value }}">{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %} &ndash; {{ entry.price }}{% if entry.setup_fee != 0 %} (+{{ entry.setup_fee }} setup){% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field grow">
+      <label for="order-domain">Domain name</label>
+      <input type="text" name="domain" id="order-domain" placeholder="example.com" required>
+    </div>
+    <div class="field"><button class="btn" type="submit">Add to cart</button></div>
+  </form>
+  <p class="muted">Don't have a domain yet? <a href="{% url 'domains_public:search' %}">Search for one</a> and add it to the same cart.</p>
+  {% else %}
+  <p><a class="btn" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Sign in</a> or
+    <a href="{% url 'accounts:register' %}">create an account</a> to order.</p>
+  {% endif %}
+  {% endif %}
 </section>
 {% endblock %}

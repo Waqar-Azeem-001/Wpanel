@@ -1,0 +1,10 @@
+<table class="totals">
+  <tr><th>Subtotal</th><td>{{ currency }} {{ subtotal }}</td></tr>
+  {% if discount_total and discount_total != 0 %}
+  <tr><th>Discount{% if coupon_code %} ({{ coupon_code }}){% endif %}</th><td>&minus; {{ currency }} {{ discount_total }}</td></tr>
+  {% endif %}
+  {% if tax_name %}
+  <tr><th>{{ tax_name }} ({{ tax_rate }}%)</th><td>{{ currency }} {{ tax_total }}</td></tr>
+  {% endif %}
+  <tr class="grand"><th>Total due now</th><td>{{ currency }} {{ total }}</td></tr>
+</table>

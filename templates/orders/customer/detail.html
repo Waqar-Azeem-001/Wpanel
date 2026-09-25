@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.reference }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'orders_customer:list' %}">&larr; My orders</a></p>
+<div class="page-head">
+  <h1>Order {{ order.reference }}</h1>
+  <span class="badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+</div>
+
+{% if order.status == "pending_payment" %}
+<section class="card">
+  <h2>Awaiting payment</h2>
+  <p>Payment method: <strong>{{ order.payment_method_name }}</strong></p>
+  {% if payment_method and payment_method.instructions %}<p>{{ payment_method.instructions|linebreaksbr }}</p>{% endif %}
+  <p class="muted">Quote order {{ order.reference }} with your payment. Your services are set up once payment is confirmed.</p>
+</section>
+{% endif %}
+
+<div class="cols">
+  <section class="card">
+    <h2>Items</h2>
+    <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Setup fee</th><th class="num">First payment</th></tr></thead>
+      <tbody>
+      {% for item in order.items.all %}
+        <tr class="{% if item.kind == 'addon' %}addon-row{% endif %}">
+          <td>{{ item.description }}</td><td class="num">{{ item.unit_price }}</td>
+          <td class="num">{{ item.setup_fee }}</td><td class="num">{{ item.line_total }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% include "orders/_totals.html" with currency=order.currency subtotal=order.subtotal discount_total=order.discount_total coupon_code=order.coupon_code tax_name=order.tax_name tax_rate=order.tax_rate tax_total=order.tax_total total=order.total %}
+  </section>
+
+  <section class="card">
+    <h2>Billing details</h2>
+    <dl class="meta">
+      <dt>Name</dt><dd>{{ order.billing_name|default:"&mdash;" }}</dd>
+      <dt>Company</dt><dd>{{ order.billing_company|default:"&mdash;" }}</dd>
+      <dt>Email</dt><dd>{{ order.billing_email }}</dd>
+      <dt>Country</dt><dd>{{ order.billing_country|default:"&mdash;" }}</dd>
+      <dt>Tax ID</dt><dd>{{ order.billing_tax_id|default:"&mdash;" }}</dd>
+      <dt>Placed</dt><dd>{{ order.created_at|date:"Y-m-d H:i" }}</dd>
+    </dl>
+    {% if order.status == "pending_payment" %}
+    <form method="post" action="{% url 'orders_customer:cancel' order.pk %}"
+          onsubmit="return confirm('Cancel this order?');">{% csrf_token %}
+      <button class="btn small danger" type="submit">Cancel order</button>
+    </form>
+    {% endif %}
+    {% if order.status == "cancelled" and order.cancel_reason %}<p class="muted">Reason: {{ order.cancel_reason }}</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

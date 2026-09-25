@@ -1613,7 +1613,7 @@ If UI changed:
   03 Products & Addons           🟢       150 ✅  ✅        3697eac  ---
   04 Domain Management           🟢       227 ✅  ✅        e614249  ---
   05 WHM Provisioning            🟢       296 ✅  ✅        9c0c517  ---
-  06 Cart & Checkout             ⬜       ---     ---       ---      ---
+  06 Cart & Checkout             🔵       455 ✅  ✅        ---      ---
   07 Billing & Invoices          ⬜       ---     ---       ---      ---
   08 Renewals & Upgrades         ⬜       ---     ---       ---      ---
   09 Orders & Lifecycle          ⬜       ---     ---       ---      ---
@@ -1710,6 +1710,34 @@ postponed.
 
   Hosting usage sync is manual,       Deferred  Needs Celery beat + a verified   Phase 17/18
   not scheduled                                 live WHM adapter first
+
+  Payment, invoices, transactions     Open      Roadmap puts these in Phase 07;   Phase 07
+  for orders (order ends at           by design Phase 06 ends at a pending order
+  "pending payment")
+
+  Order fulfilment: provisioning      Open      Needs a system actor - domain/    Phase 07/09
+  domains/hosting from a paid order             hosting services authorise a user
+
+  Customer "request without paying"   Open      Bypass checkout; keep until       Phase 07/09
+  flows (domain register/transfer,              fulfilment is wired, then retire
+  hosting request) still exist
+
+  Guest (anonymous) carts             Deferred  Cart requires a signed-in user    Post-MVP
+
+  Coupons apply to first payment      Deferred  No per-product limits or          Phase 08
+  only                                          recurring discounts yet
+
+  Tax: one rule per country,          Deferred  No tax-exempt clients, tax-       Phase 07
+  order-level, exclusive                        inclusive pricing or state rules
+
+  Unpaid orders hold domain names     Deferred  No automatic order expiry yet     Phase 08/17
+  until cancelled
+
+  Terms-of-service acceptance at      Deferred  No ToS page/versioning yet        Phase 15
+  checkout
+
+  Web cart needs exactly one client;  Deferred  API takes client_id; staff "Add   Phase 09/15
+  no client chooser                             Order" screen is Phase 09
   -------------------------------------------------------------------------------------------
 
 **Rule:** If an item is already recorded here, do not rediscover or
@@ -1834,6 +1862,32 @@ Record permanent technical decisions here.
   Hosting self-service limited to     Other actions are either  Active
   view + request; no customer         operationally sensitive   
   suspend/terminate/change-package    or imply a billing change 
+
+  A cart stores selections, never     Roadmap section 23:       Active
+  prices; one pricing engine          never trust browser       
+  (orders.pricing) computes every     prices/totals; one place  
+  figure, orders snapshot it          for billing calculations  
+
+  Phase 06 ends at an Order awaiting  Follows the roadmap's own Active
+  payment; payments/invoices are      phase definitions (07 =   
+  Phase 07, lifecycle is Phase 09     invoices/transactions)    
+
+  apps.billing holds configuration    Phase 07 extends it, no   Active
+  (payment methods, tax, coupons);    second billing app;       
+  apps.orders holds carts and orders  transactional vs rules    
+
+  Payment methods (customer-facing)   Gateways are live-         Active
+  are separate from payment gateways  configured providers      
+  (attached in Phase 07)              (final roadmap principle) 
+
+  Order created once with the full    Phases 07/09 add          Active
+  lifecycle vocabulary; Phase 06      transitions to this model,
+  uses pending_payment/cancelled only never a second Order      
+
+  Checkout recomputes under row       Correct money, no double   Active
+  locks, is atomic and double-submit  redemption of a coupon,   
+  safe; unpaid orders reserve domain  no name sold twice        
+  names until paid or cancelled                                 
   -----------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

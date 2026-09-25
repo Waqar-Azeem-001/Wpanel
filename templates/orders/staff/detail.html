@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.reference }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'orders_staff:list' %}">&larr; All orders</a></p>
+<div class="page-head">
+  <h1>Order {{ order.reference }}</h1>
+  <span class="badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+</div>
+<p class="muted">Client: <a href="{% url 'clients_staff:detail' order.client.pk %}">{{ order.client.display_name }}</a>
+  &middot; placed {{ order.created_at|date:"Y-m-d H:i" }}{% if order.placed_by %} by {{ order.placed_by.email }}{% endif %}</p>
+
+<div class="cols">
+  <section class="card">
+    <h2>Items</h2>
+    <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Setup fee</th><th class="num">First payment</th></tr></thead>
+      <tbody>
+      {% for item in order.items.all %}
+        <tr class="{% if item.kind == 'addon' %}addon-row{% endif %}">
+          <td>{{ item.description }}</td><td class="num">{{ item.unit_price }}</td>
+          <td class="num">{{ item.setup_fee }}</td><td class="num">{{ item.line_total }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% include "orders/_totals.html" with currency=order.currency subtotal=order.subtotal discount_total=order.discount_total coupon_code=order.coupon_code tax_name=order.tax_name tax_rate=order.tax_rate tax_total=order.tax_total total=order.total %}
+  </section>
+
+  <section class="card">
+    <h2>Details</h2>
+    <dl class="meta">
+      <dt>Payment method</dt><dd>{{ order.payment_method_name|default:"&mdash;" }}</dd>
+      <dt>Bill to</dt><dd>{{ order.billing_name }}{% if order.billing_company %}<br>{{ order.billing_company }}{% endif %}<br>{{ order.billing_email }}</dd>
+      <dt>Address</dt><dd>{% if order.billing_address_line1 %}{{ order.billing_address_line1 }}{% if order.billing_address_line2 %}, {{ order.billing_address_line2 }}{% endif %}<br>{{ order.billing_city }} {{ order.billing_state }} {{ order.billing_postcode }}{% else %}&mdash;{% endif %}</dd>
+      <dt>Country</dt><dd>{{ order.billing_country|default:"&mdash;" }}</dd>
+      <dt>Tax ID</dt><dd>{{ order.billing_tax_id|default:"&mdash;" }}</dd>
+    </dl>
+    {% if order.notes %}<h3>Customer notes</h3><p>{{ order.notes|linebreaksbr }}</p>{% endif %}
+    {% if can_manage and order.status == "pending_payment" %}
+    <form method="post" action="{% url 'orders_staff:cancel' order.pk %}" onsubmit="return confirm('Cancel this order?');">{% csrf_token %}
+      <div class="field"><label for="id_reason">Reason (audited)</label>{{ cancel_form.reason }}</div>
+      <button class="btn small danger" type="submit">Cancel order</button>
+    </form>
+    {% endif %}
+    {% if order.status == "cancelled" and order.cancel_reason %}<p class="muted">Cancelled: {{ order.cancel_reason }}</p>{% endif %}
+  </section>
+</div>
+<p class="muted">Invoices, payment recording and fulfilment for this order arrive with the billing and order-lifecycle phases.</p>
+{% endblock %}

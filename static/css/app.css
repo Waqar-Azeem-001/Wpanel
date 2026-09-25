@@ -81,3 +81,33 @@ h3 { font-size: 1rem; }
 .badge.status-pending { color: var(--warn); }
 .badge.status-suspended { color: var(--warn); }
 .badge.status-terminated { color: var(--danger); }
+
+.num, .table td.num, .table th.num { text-align: right; white-space: nowrap; }
+.card h2 ~ h2 { margin-top: 24px; }
+.cart-table .addon-row td:first-child, .table .addon-row td:first-child { padding-left: 28px; }
+.addon-row { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.offers-row td { background: var(--bg); }
+.row-form.offer { margin: 6px 0 0; }
+.offer-name { min-width: 120px; font-weight: 600; }
+.totals { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.totals th { text-align: left; font-weight: 500; color: var(--muted); padding: 4px 0; }
+.totals td { text-align: right; padding: 4px 0; }
+.totals .grand th, .totals .grand td { font-weight: 700; color: var(--text); border-top: 1px solid var(--border); padding-top: 8px; }
+.btn.block { display: block; text-align: center; margin: 12px 0; }
+.summary-lines { list-style: none; margin: 0 0 8px; padding: 0; }
+.summary-lines li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.method-option { display: flex; gap: 10px; align-items: flex-start; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.method-option input { margin-top: 4px; }
+.subnav { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.subnav a.active { font-weight: 700; text-decoration: none; color: var(--text); }
+.badge.status-pending_payment { color: var(--warn); }
+.badge.status-paid, .badge.status-processing, .badge.status-provisioning { color: var(--ok); }
+.badge.status-fraud { color: var(--danger); }
+
+/* Grid children default to min-width:auto, so a wide table would stretch its card past the viewport;
+   let the table scroll inside its own .table-wrap instead. */
+.cols > * { min-width: 0; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+/* Two-column pages: never squeeze the side card below a readable width; stack earlier instead. */
+.cols { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }

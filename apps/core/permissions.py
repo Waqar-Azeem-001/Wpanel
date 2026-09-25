@@ -30,6 +30,22 @@ class HasPortalPermission(BasePermission):
         return user.has_perms(required)
 
 
+class AuthenticatedReadPermission(HasPortalPermission):
+    """
+    Safe methods are open to any signed-in user; unsafe methods require the
+    permission(s) in ``required_permissions`` (same shape as
+    ``HasPortalPermission``). Like ``PublicReadPermission`` but not anonymous -
+    for data customers may see once signed in (e.g. payment methods) that
+    must not be public.
+    """
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            user = request.user
+            return bool(user and user.is_authenticated and user.is_active)
+        return super().has_permission(request, view)
+
+
 class PublicReadPermission(HasPortalPermission):
     """
     Safe methods (GET/HEAD/OPTIONS) are open to everyone, including anonymous

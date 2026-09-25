@@ -45,6 +45,24 @@ class BillingCycle(models.TextChoices):
     ONE_TIME = "one_time", "One-time"
 
 
+def encode_option(billing_cycle, custom_months=0):
+    """A price row as a single form/API value: 'annual', 'one_time' or 'custom:4'."""
+    return f"custom:{custom_months}" if billing_cycle == BillingCycle.CUSTOM else billing_cycle
+
+
+def decode_option(value):
+    """Inverse of ``encode_option``: (billing_cycle, custom_months). Raises ValueError if malformed."""
+    value = (value or "").strip()
+    if value.startswith("custom:"):
+        months = int(value.split(":", 1)[1])
+        if months < 1:
+            raise ValueError("Invalid duration.")
+        return BillingCycle.CUSTOM, months
+    if value not in BillingCycle.values or value == BillingCycle.CUSTOM:
+        raise ValueError("Invalid billing cycle.")
+    return value, 0
+
+
 STANDARD_CYCLE_MONTHS = {
     BillingCycle.MONTHLY: 1,
     BillingCycle.QUARTERLY: 3,
@@ -177,6 +195,10 @@ class PriceEntry(TimeStampedModel):
             raise ValidationError({"custom_months": "Required (and > 0) when billing cycle is Custom."})
         if self.billing_cycle != BillingCycle.CUSTOM and self.custom_months:
             raise ValidationError({"custom_months": "Only used when billing cycle is Custom."})
+
+    @property
+    def option_value(self):
+        return encode_option(self.billing_cycle, self.custom_months)
 
     @property
     def months(self):

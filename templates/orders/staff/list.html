@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Orders · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Orders</h1>
+{% include "billing/staff/_nav.html" %}
+<form class="filters" method="get">
+  <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}" placeholder="O000123, client, email, domain, coupon"></div>
+  <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Order</th><th>Client</th><th>Date</th><th>Status</th><th>Payment method</th><th class="num">Total</th></tr></thead>
+  <tbody>
+  {% for order in page %}
+    <tr>
+      <td><a href="{% url 'orders_staff:detail' order.pk %}">{{ order.reference }}</a></td>
+      <td>{{ order.client.display_name }}</td>
+      <td>{{ order.created_at|date:"Y-m-d" }}</td>
+      <td><span class="badge status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+      <td>{{ order.payment_method_name|default:"&mdash;" }}</td>
+      <td class="num">{{ order.currency }} {{ order.total }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="muted">No orders match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if page.has_other_pages %}
+<nav class="pager">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
+  <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

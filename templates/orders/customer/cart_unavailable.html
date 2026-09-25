@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Cart · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Your cart</h1>
+  <p>Ordering is available to customer accounts. If you expected to be able to order, please contact support so we can link your login to your account.</p>
+  <a class="btn secondary" href="{% url 'accounts:profile' %}">Back to your profile</a>
+</section>
+{% endblock %}

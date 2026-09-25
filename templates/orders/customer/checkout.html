@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Checkout · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'orders_customer:cart' %}">&larr; Back to cart</a></p>
+<h1>Checkout</h1>
+
+<div class="cols">
+  <div>
+    <section class="card">
+      <h2>Billing details</h2>
+      <p class="muted">These are copied onto your order. To change them, update your account first &mdash; your cart is kept.</p>
+      <dl class="meta">
+        <dt>Name</dt><dd>{{ client.contact_name|default:"&mdash;" }}</dd>
+        <dt>Company</dt><dd>{{ client.company_name|default:"&mdash;" }}</dd>
+        <dt>Email</dt><dd>{{ client.email }}</dd>
+        <dt>Address</dt><dd>{% if client.address_line1 %}{{ client.address_line1 }}{% if client.address_line2 %}, {{ client.address_line2 }}{% endif %}, {{ client.city }} {{ client.postcode }}{% else %}&mdash;{% endif %}</dd>
+        <dt>Country</dt><dd>{{ client.country|default:"&mdash;" }}</dd>
+        <dt>Tax ID</dt><dd>{{ client.tax_id|default:"&mdash;" }}</dd>
+      </dl>
+      <a class="btn small secondary" href="{% url 'clients_customer:detail' client.pk %}">Edit billing details</a>
+    </section>
+
+    <form method="post" novalidate>{% csrf_token %}
+    <section class="card">
+      <h2>Payment method</h2>
+      {% if form.non_field_errors %}<div class="errors">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+      {% for error in form.payment_method.errors %}<p class="error">{{ error }}</p>{% endfor %}
+      {% for method in methods %}
+        <label class="method-option">
+          <input type="radio" name="payment_method" value="{{ method.code }}"{% if form.payment_method.value == method.code %} checked{% endif %}>
+          <span><strong>{{ method.name }}</strong>{% if method.instructions %}<br><small class="muted">{{ method.instructions|linebreaksbr }}</small>{% endif %}</span>
+        </label>
+      {% empty %}
+        <p class="error">No payment methods are available right now. Please contact support.</p>
+      {% endfor %}
+      <div class="field">
+        <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+        {{ form.notes }}
+      </div>
+      <button class="btn" type="submit"{% if not methods %} disabled{% endif %}>Place order</button>
+    </section>
+    </form>
+  </div>
+
+  <section class="card">
+    <h2>Order summary</h2>
+    <ul class="summary-lines">
+      {% for line in priced.lines %}<li><span>{{ line.description }}</span><span>{{ line.total }}</span></li>{% endfor %}
+    </ul>
+    {% include "orders/_totals.html" with currency=priced.currency subtotal=priced.subtotal discount_total=priced.discount_total coupon_code=priced.coupon.code tax_name=priced.tax_rule.name tax_rate=priced.tax_rate tax_total=priced.tax_total total=priced.total %}
+    {% if not priced.is_valid %}<p class="error">Something in your cart needs attention. <a href="{% url 'orders_customer:cart' %}">Review your cart</a>.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

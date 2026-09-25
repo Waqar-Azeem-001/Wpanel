@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Tax rules · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Billing</h1>
+{% include "billing/staff/_nav.html" %}
+<p class="muted">Tax is added on top of prices. The rule matching the client's country is used; otherwise the default rule (blank country); with neither, no tax is charged.</p>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Country</th><th>Name</th><th>Rate</th><th>Active</th></tr></thead>
+  <tbody>
+  {% for rule in rules %}
+    <tr>
+      <td>{{ rule.country|default:"Default (all other countries)" }}</td>
+      <td>{{ rule.name }}</td>
+      <td>{{ rule.rate }}%</td>
+      <td>
+        {% if can_manage %}
+        <form method="post" action="{% url 'billing_staff:tax_rule_status' rule.pk %}">{% csrf_token %}
+          <label><input type="checkbox" name="is_active" {% if rule.is_active %}checked{% endif %} onchange="this.form.submit()"> </label>
+        </form>
+        {% else %}{{ rule.is_active|yesno:"Yes,No" }}{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="muted">No tax rules - no tax is charged.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if can_manage %}
+<section class="card">
+  <h2>Add / update a tax rule</h2>
+  <p class="muted">Saving with an existing country updates that rule.</p>
+  <form method="post" action="{% url 'billing_staff:tax_rule_save' %}" class="grid-form">{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="actions"><button class="btn" type="submit">Save</button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

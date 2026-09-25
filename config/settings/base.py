@@ -23,6 +23,8 @@ CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 
 SITE_NAME = env("SITE_NAME", default="Wpanel")
 SITE_URL = env("SITE_URL", default="http://localhost:8000")
+# All catalog prices and orders are in this one currency (multi-currency is a deferred item).
+STORE_CURRENCY = env("STORE_CURRENCY", default="USD")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -45,6 +47,8 @@ INSTALLED_APPS = [
     "apps.products",
     "apps.domains",
     "apps.hosting",
+    "apps.billing",
+    "apps.orders",
 ]
 
 MIDDLEWARE = [
@@ -71,6 +75,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.site",
+                "apps.orders.context_processors.cart_summary",
             ],
         },
     },
@@ -192,6 +197,10 @@ SPECTACULAR_SETTINGS = {
         "DnsRecordTypeEnum": "apps.domains.models.DnsRecordType",
         "RegistrarKindEnum": "apps.domains.models.RegistrarProvider.Kind",
         "HostingStatusEnum": "apps.hosting.models.HostingStatus",
+        "DiscountTypeEnum": "apps.billing.models.DiscountType",
+        "OrderStatusEnum": "apps.orders.models.OrderStatus",
+        "CartItemKindEnum": "apps.orders.models.ItemKind",
+        "CartStatusEnum": "apps.orders.models.CartStatus",
     },
 }
 

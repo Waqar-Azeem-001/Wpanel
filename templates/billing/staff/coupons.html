@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Coupons · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Billing</h1>
+{% include "billing/staff/_nav.html" %}
+<p class="muted">Discounts apply to the first payment of an order.</p>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Code</th><th>Discount</th><th>Valid</th><th>Limits</th><th>Active</th></tr></thead>
+  <tbody>
+  {% for coupon in coupons %}
+    <tr>
+      <td>{{ coupon.code }}{% if coupon.description %}<br><small class="muted">{{ coupon.description }}</small>{% endif %}</td>
+      <td>{% if coupon.discount_type == "percent" %}{{ coupon.value }}%{% else %}{{ coupon.value }} off{% endif %}</td>
+      <td>{{ coupon.valid_from|date:"Y-m-d"|default:"any time" }} &rarr; {{ coupon.valid_until|date:"Y-m-d"|default:"no end" }}</td>
+      <td>
+        {% if coupon.max_redemptions %}max {{ coupon.max_redemptions }}{% else %}unlimited{% endif %}{% if coupon.one_per_client %}, once per client{% endif %}{% if coupon.min_subtotal %}, min {{ coupon.min_subtotal }}{% endif %}
+      </td>
+      <td>
+        {% if can_manage %}
+        <form method="post" action="{% url 'billing_staff:coupon_status' coupon.pk %}">{% csrf_token %}
+          <label><input type="checkbox" name="is_active" {% if coupon.is_active %}checked{% endif %} onchange="this.form.submit()"> </label>
+        </form>
+        {% else %}{{ coupon.is_active|yesno:"Yes,No" }}{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="muted">No coupons yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if can_manage %}
+<section class="card">
+  <h2>Add / update a coupon</h2>
+  <p class="muted">Saving with an existing code updates that coupon.</p>
+  <form method="post" action="{% url 'billing_staff:coupon_save' %}" class="grid-form">{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="actions"><button class="btn" type="submit">Save</button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
