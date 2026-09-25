@@ -1756,10 +1756,15 @@ postponed.
   Staff are not alerted when          Closed    Team alert on a failed order      Phase 11
   fulfilment fails                              (Phase 11)
 
-  No real payment gateway adapter     Open      Only the simulated test gateway   Before launch
-  (Stripe is unavailable in                     ships (dev/test only, guarded by
-  Pakistan; choice is a business                ALLOW_TEST_PAYMENT_GATEWAY). A
-  decision)                                     real one = one adapter class
+  No real payment gateway adapter     Decided   2026-09-25: for now payments are Until a gateway
+  (Stripe is unavailable in                     manual (COD / bank / wallet):     is chosen
+  Pakistan)                                     each method = an account with
+                                                instructions; staff record the
+                                                amount, account, transaction ID
+                                                and date received. The test
+                                                gateway stays dev-only
+                                                (ALLOW_TEST_PAYMENT_GATEWAY). A
+                                                real one = one adapter class
 
   Invoices/quotes visible to any      Deferred  Restrict financial documents to   Phase 15/16
   contact of the client                         owner/billing contacts

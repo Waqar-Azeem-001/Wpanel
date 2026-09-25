@@ -249,3 +249,20 @@ def test_payment_methods_can_be_linked_to_a_gateway(api, manager, provider, bank
     cleared = api.put(f"/api/v1/payment-methods/{bank.code}/", {"code": bank.code, "name": "Renamed",
                                                                 "provider": None})
     assert cleared.json()["provider"] is None
+
+
+def test_record_payment_accepts_the_time_received_and_refuses_the_future(api, manager, client_obj, bank):
+    import datetime
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    invoice = issued(manager, client_obj)
+    api.force_authenticate(manager)
+    url = f"/api/v1/invoices/{invoice.pk}/record-payment/"
+    when = timezone.now() - timedelta(days=1)
+    ok = api.post(url, {"amount": "20.00", "method": "bank-transfer", "reference": "TXN-9", "received_at": when.isoformat()})
+    assert ok.status_code == 201 and ok.json()["reference"] == "TXN-9" and ok.json()["method_name"] == bank.name
+    assert ok.json()["occurred_at"].startswith(when.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H"))
+    future = api.post(url, {"amount": "5.00", "received_at": (timezone.now() + timedelta(days=3)).isoformat()})
+    assert future.status_code == 400 and future.json()["error"]["code"] == "payment_date_invalid"

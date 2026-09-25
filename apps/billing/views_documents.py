@@ -4,12 +4,14 @@ settings. Views only translate requests into calls to ``invoicing`` /
 ``payments`` (which enforce every rule) and render the result.
 """
 import uuid
+from datetime import datetime, time
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
@@ -190,8 +192,12 @@ def invoice_record_payment(request, pk):
             raise ServiceError("Enter a valid payment: " + "; ".join(
                 f"{form.fields[f].label or f}: {e[0]}" for f, e in form.errors.items()))
         data = form.cleaned_data
+        received = data["received_on"]
+        # A date, not a moment: today means now; an earlier day is recorded at midday on it.
+        occurred_at = (timezone.make_aware(datetime.combine(received, time(12, 0)))
+                       if received and received != timezone.localdate() else None)
         payments.record_payment(request.user, invoice, amount=data["amount"], method=data["method"],
-                                reference=data["reference"], note=data["note"],
+                                reference=data["reference"], note=data["note"], occurred_at=occurred_at,
                                 idempotency_key=data["idempotency_key"], request=request)
         return "Payment recorded."
 

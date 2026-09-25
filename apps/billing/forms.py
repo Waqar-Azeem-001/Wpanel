@@ -115,9 +115,12 @@ class NewDocumentForm(forms.Form):
 
 
 class RecordPaymentForm(forms.Form):
-    amount = forms.DecimalField(min_value=Decimal("0.01"), max_digits=12, decimal_places=2)
-    method = forms.ModelChoiceField(queryset=None, required=False, empty_label="Other / manual")
-    reference = forms.CharField(required=False, max_length=200)
+    amount = forms.DecimalField(label="Amount received", min_value=Decimal("0.01"), max_digits=12, decimal_places=2)
+    method = forms.ModelChoiceField(label="Received via / into account", queryset=None, required=False,
+                                    empty_label="Other / manual")
+    reference = forms.CharField(label="Transaction ID / reference", required=False, max_length=200)
+    received_on = forms.DateField(label="Date received", required=False, widget=forms.DateInput(attrs={"type": "date"}),
+                                  help_text="Leave blank for today.")
     note = forms.CharField(required=False, max_length=500)
     idempotency_key = forms.CharField(required=False, max_length=100, widget=forms.HiddenInput)
 

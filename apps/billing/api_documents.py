@@ -155,7 +155,10 @@ class RecordPaymentSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     method = serializers.SlugField(required=False, allow_blank=True, default="",
                                    help_text="Payment method code. Blank = manual.")
-    reference = serializers.CharField(required=False, allow_blank=True, default="", max_length=200)
+    reference = serializers.CharField(required=False, allow_blank=True, default="", max_length=200,
+                                      help_text="The transaction ID or bank reference.")
+    received_at = serializers.DateTimeField(required=False, allow_null=True, default=None,
+                                            help_text="When the money arrived. Blank = now; never in the future.")
     note = serializers.CharField(required=False, allow_blank=True, default="", max_length=500)
     idempotency_key = serializers.CharField(required=False, allow_blank=True, default="", max_length=100,
                                             help_text="Or send an Idempotency-Key header.")
@@ -326,7 +329,7 @@ class InvoiceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cr
         key = data["idempotency_key"] or request.headers.get("Idempotency-Key", "")
         tx = payments.record_payment(request.user, self.get_object(), amount=data["amount"],
                                      method=_method(data["method"]), reference=data["reference"], note=data["note"],
-                                     idempotency_key=key, request=request)
+                                     occurred_at=data["received_at"], idempotency_key=key, request=request)
         return Response(TransactionSerializer(tx).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(request=PaySerializer, responses={200: PayResultSerializer, 201: PayResultSerializer})

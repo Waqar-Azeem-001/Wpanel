@@ -376,3 +376,27 @@ def test_full_lifecycle_verifies_clean(manager, owner, taxed_invoice, bank, card
     assert integrity.verify_all() == []
     Invoice.objects.filter(pk=taxed_invoice.pk).update(amount_paid=D("1.00"))  # tamper
     assert any("amount paid" in p for p in integrity.verify_all())
+
+
+def test_a_manual_payment_records_the_account_the_transaction_and_the_date_received(manager, invoice, bank):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    received = timezone.now() - timedelta(days=3)
+    tx = payments.record_payment(manager, invoice, amount="60.00", method=bank, reference="TXN-778812",
+                                 note="Deposited at the branch", occurred_at=received)
+    assert (tx.method_name, tx.reference, tx.occurred_at, tx.status) == (
+        bank.name, "TXN-778812", received, TransactionStatus.SUCCEEDED)
+    assert tx.recorded_by == manager and reload(invoice).amount_paid == D("60.00")
+    assert AuditEvent.objects.filter(action="payment.recorded").exists()
+
+
+def test_the_date_received_cannot_be_in_the_future(manager, invoice):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    with pytest.raises(ServiceError) as exc:
+        payments.record_payment(manager, invoice, amount="10.00", occurred_at=timezone.now() + timedelta(days=2))
+    assert exc.value.code == "payment_date_invalid" and not Transaction.objects.exists()

@@ -8,6 +8,7 @@ sequence of payments, refunds or redelivered webhooks can leave the two out of
 step. Every function locks in the same order (invoice first, then transaction).
 """
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
@@ -149,6 +150,8 @@ def record_payment(actor, invoice, *, amount, method=None, reference="", note=""
     """
     _require_manage(actor)
     amount = _amount(amount)
+    if occurred_at is not None and occurred_at > timezone.now() + timedelta(minutes=5):
+        raise ServiceError("The date received cannot be in the future.", code="payment_date_invalid")
     invoice = _lock_invoice(invoice.pk)
     key = (idempotency_key or "").strip()[:100]
     if key:

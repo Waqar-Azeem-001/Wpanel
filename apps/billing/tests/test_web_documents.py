@@ -341,3 +341,22 @@ def test_tax_exempt_is_a_staff_setting(client, manager, client_obj, owner):
     assert b'name="tax_exempt"' in edit.content
     client.force_login(owner)
     assert b"tax_exempt" not in client.get("/account/client/").content
+
+
+def test_staff_record_the_date_received_from_the_page(client, manager, client_obj, bank):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    invoice = issued(manager, client_obj)
+    client.force_login(manager)
+    page = client.get(f"/staff/billing/invoices/{invoice.pk}/").content
+    assert b"Transaction ID / reference" in page and b"Date received" in page and b"Received via / into account" in page
+    url = f"/staff/billing/invoices/{invoice.pk}/payment/"
+    earlier = timezone.localdate() - timedelta(days=2)
+    client.post(url, {"amount": "10.00", "method": bank.pk, "reference": "TXN-1", "received_on": earlier.isoformat()})
+    tomorrow = timezone.localdate() + timedelta(days=1)
+    client.post(url, {"amount": "10.00", "method": bank.pk, "reference": "TXN-2", "received_on": tomorrow.isoformat()})
+    client.post(url, {"amount": "10.00", "method": bank.pk, "reference": "TXN-3", "received_on": timezone.localdate().isoformat()})
+    dates = {t.reference: timezone.localtime(t.occurred_at).date() for t in invoice.transactions.all()}
+    assert dates == {"TXN-1": earlier, "TXN-3": timezone.localdate()}  # the future date was refused
