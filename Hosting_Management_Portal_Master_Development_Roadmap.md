@@ -1614,7 +1614,7 @@ If UI changed:
   04 Domain Management           🟢       227 ✅  ✅        e614249  ---
   05 WHM Provisioning            🟢       296 ✅  ✅        9c0c517  ---
   06 Cart & Checkout             🟢       458 ✅  ✅        23168d7  ---
-  07 Billing & Invoices          🟡       622 ✅  ✅        ---      ---
+  07 Billing & Invoices          🟢       622 ✅  ✅        ac37961  ---
   08 Renewals & Upgrades         ⬜       ---     ---       ---      ---
   09 Orders & Lifecycle          ⬜       ---     ---       ---      ---
   10 Support                     ⬜       ---     ---       ---      ---

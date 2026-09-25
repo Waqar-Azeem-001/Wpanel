@@ -82,7 +82,7 @@ Invoices (with lines, discount, tax, due dates, gap-free numbering), transaction
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 622 |
 | Migrations, `makemigrations --check`, OpenAPI schema with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green | pending push |
+| CI green on PostgreSQL + Redis | ✅ Run 36100938261 on `ac37961` (first run, no fixes needed - the local PostgreSQL run caught nothing new because it was done before pushing) |
 
 ## Known limitations / deferred
 
