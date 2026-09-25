@@ -81,8 +81,8 @@ The cart, the pricing engine (discounts and tax), checkout, orders, payment-meth
 | Authorization tested; full suite green | ✅ 458 passing on SQLite and on real PostgreSQL 17.5 |
 | Migrations created, `makemigrations --check` clean, OpenAPI schema valid with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | ⏳ First run (`c5470b8`) failed on the two PostgreSQL-only defects above; fixed, re-running |
-| Commit after verification | ⏳ |
+| CI green on PostgreSQL + Redis | ✅ Run 36097669311 on `23168d7`: migrations, 458 tests, Celery/Redis round trip (the first run, on `c5470b8`, failed on the two PostgreSQL-only defects above) |
+| Commit after verification | ✅ `c5470b8`, fixes in `23168d7`, pushed to `main` |
 
 ## A change to how I verify
 

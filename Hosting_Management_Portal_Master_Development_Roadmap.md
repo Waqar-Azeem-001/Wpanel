@@ -1613,7 +1613,7 @@ If UI changed:
   03 Products & Addons           🟢       150 ✅  ✅        3697eac  ---
   04 Domain Management           🟢       227 ✅  ✅        e614249  ---
   05 WHM Provisioning            🟢       296 ✅  ✅        9c0c517  ---
-  06 Cart & Checkout             🔵       458 ✅  ✅        ---      ---
+  06 Cart & Checkout             🟢       458 ✅  ✅        23168d7  ---
   07 Billing & Invoices          ⬜       ---     ---       ---      ---
   08 Renewals & Upgrades         ⬜       ---     ---       ---      ---
   09 Orders & Lifecycle          ⬜       ---     ---       ---      ---
