@@ -10,7 +10,7 @@ from apps.clients.models import Client
 from apps.clients.services import search_clients
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
-from apps.core.web import ACTION_ERRORS, apply_form_error, run_action
+from apps.core.web import ACTION_ERRORS, apply_form_error, query_id, run_action
 
 from . import forms, kb, lifecycle, services
 from .models import CannedReply, Department, KBArticle, KBCategory, Ticket
@@ -56,8 +56,8 @@ def ticket_list(request):
 
 @portal_permission_required(MANAGE)
 def ticket_new(request):
-    client_id = request.GET.get("client")
-    if not client_id:
+    client_id = query_id(request, "client")
+    if client_id is None:
         term = request.GET.get("q", "").strip()
         clients = search_clients(Client.objects.all(), term).order_by("company_name", "first_name", "id")[:15] if term else []
         return render(request, "billing/staff/client_picker.html", {

@@ -26,6 +26,13 @@ def apply_form_error(form, exc):
         form.add_error(None, exc.message)
 
 
+def query_id(request, name):
+    """A positive whole number from the query string, or None. Missing or junk ("abc", "-1", a 30-digit number) counts as
+    "not given": a hostile or mistyped link must never become a server error."""
+    raw = (request.GET.get(name) or "").strip()
+    return int(raw) if raw.isdigit() and len(raw) <= 9 else None
+
+
 def run_action(request, action, view_name, **redirect_kwargs):
     """
     Run a POST action (``action`` takes no args and returns a success message or

@@ -11,7 +11,7 @@ from apps.billing.models import PaymentMethod
 from apps.clients.services import single_contact_client
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
-from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, run_action
+from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, query_id, run_action
 from apps.products.models import Addon, CatalogStatus, Product
 
 from . import forms, lifecycle, pricing, services, staff_actions
@@ -353,8 +353,8 @@ def staff_order_new(request):
     from apps.clients.models import Client
     from apps.clients.services import search_clients
 
-    client_id = request.GET.get("client")
-    if not client_id:
+    client_id = query_id(request, "client")
+    if client_id is None:
         term = request.GET.get("q", "").strip()
         clients = search_clients(Client.objects.all(), term).order_by("company_name", "first_name", "id")[:15] \
             if term else []

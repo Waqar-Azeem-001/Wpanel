@@ -19,7 +19,7 @@ from apps.clients.models import Client
 from apps.clients.services import search_clients
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
-from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, run_action
+from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, query_id, run_action
 
 from . import forms, invoicing, payments, pdf
 from .models import (BillableItem, BillingSettings, Invoice, InvoiceStatus, Quote, QuoteStatus, Transaction,
@@ -111,7 +111,10 @@ def _document_page(request, *, kind, client, document=None):
 
 @portal_permission_required(perm("manage_billing"))
 def invoice_create(request):
-    client = get_object_or_404(Client, pk=request.GET.get("client") or 0)
+    client_id = query_id(request, "client")
+    if client_id is None:  # typed or bookmarked without a client: choose one first
+        return redirect("billing_staff:invoice_new")
+    client = get_object_or_404(Client, pk=client_id)
     return _document_page(request, kind="invoice", client=client)
 
 
@@ -288,7 +291,10 @@ def quote_new(request):
 
 @portal_permission_required(perm("manage_billing"))
 def quote_create(request):
-    client = get_object_or_404(Client, pk=request.GET.get("client") or 0)
+    client_id = query_id(request, "client")
+    if client_id is None:
+        return redirect("billing_staff:quote_new")
+    client = get_object_or_404(Client, pk=client_id)
     return _document_page(request, kind="quote", client=client)
 
 

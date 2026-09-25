@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.conf import settings
+from django.urls import reverse
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db import transaction
 from django.db.models import Count, F, Q, Value
@@ -94,7 +95,7 @@ def html_from_text(text):
 def _with_open_pixel(body_html, token):
     if not settings.EMAIL_OPEN_TRACKING:
         return body_html
-    pixel = (f'<img src="{settings.SITE_URL.rstrip("/")}/e/o/{token}.gif" width="1" height="1" alt="" '
+    pixel = (f'<img src="{settings.SITE_URL.rstrip("/")}{reverse("email_open_pixel", args=[token])}" width="1" height="1" alt="" '
              'style="display:none">')
     return body_html + pixel
 
@@ -188,7 +189,7 @@ def _alert_email_failing(message):
         if not recent.exists():
             notify_team("email.failed", "manage_settings", title="Emails are failing to send",
                         body=f"'{message.subject}' to {message.to_email} failed after {message.attempts} attempts: "
-                             f"{message.last_error[:150]}", link="/staff/notifications/emails/?status=failed")
+                             f"{message.last_error[:150]}", link=reverse("notifications_staff:emails") + "?status=failed")
     except Exception:  # noqa: BLE001 - an alert must never make a delivery failure worse
         logger.exception("Could not raise the email-failure alert")
 

@@ -89,7 +89,9 @@ class PaymentProviderAdmin(admin.ModelAdmin):
     def webhook_url(self, obj):
         if not obj.pk:
             return "Save the provider first."
-        return f"{settings.SITE_URL.rstrip('/')}/api/v1/webhooks/payments/{obj.pk}/"
+        from django.urls import reverse
+
+        return settings.SITE_URL.rstrip("/") + reverse("v1:payment-webhook", args=[obj.pk])
 
     def get_fields(self, request, obj=None):
         return [*super().get_fields(request, obj)]
