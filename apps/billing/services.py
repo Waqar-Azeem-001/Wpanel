@@ -47,11 +47,13 @@ def tax_rule_for_country(country):
 def save_payment_method(actor, code, *, name, instructions="", sort_order=0, request=None):
     """Create or update a payment method (upsert by code)."""
     _require(actor, "manage_billing")
-    method, created = PaymentMethod.objects.get_or_create(
-        code=code, defaults={"name": name, "instructions": instructions, "sort_order": sort_order},
-    )
-    if not created:
-        method.name, method.instructions, method.sort_order = name, instructions, sort_order
+    # Look up, then validate, then write - never get_or_create-then-validate, which would INSERT
+    # unvalidated input first (PostgreSQL rejects an over-long value with a raw database error).
+    method = PaymentMethod.objects.filter(code=code).first()
+    created = method is None
+    if created:
+        method = PaymentMethod(code=code)
+    method.name, method.instructions, method.sort_order = name, instructions, sort_order
     method.full_clean()
     method.save()
     audit.record("payment_method.created" if created else "payment_method.updated", actor=actor, target=method,
@@ -77,9 +79,11 @@ def save_tax_rule(actor, country, *, name, rate, request=None):
     """Create or update the tax rule for a country (blank country = the default rule)."""
     _require(actor, "manage_billing")
     country = (country or "").strip().upper()
-    rule, created = TaxRule.objects.get_or_create(country=country, defaults={"name": name, "rate": rate})
-    if not created:
-        rule.name, rule.rate = name, rate
+    rule = TaxRule.objects.filter(country=country).first()  # validate before writing, as above
+    created = rule is None
+    if created:
+        rule = TaxRule(country=country)
+    rule.name, rule.rate = name, rate
     rule.full_clean()
     rule.save()
     audit.record("tax_rule.created" if created else "tax_rule.updated", actor=actor, target=rule,

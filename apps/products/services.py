@@ -89,12 +89,14 @@ def set_price(actor, item, *, billing_cycle, price, custom_months=0, setup_fee=0
     """Create or replace the price for a billing cycle (upsert, keeps history clean)."""
     _require(actor, "manage_products")
     model, fk = _price_model_and_fk(item)
-    entry, created = model.objects.get_or_create(
-        **{fk: item, "billing_cycle": billing_cycle, "custom_months": custom_months},
-        defaults={"price": price, "setup_fee": setup_fee},
-    )
-    if not created:
-        entry.price, entry.setup_fee = price, setup_fee
+    # Look up, validate, then write. (get_or_create-then-validate would INSERT unvalidated input first,
+    # and PostgreSQL rejects an out-of-range value with a raw database error instead of a validation error.)
+    key = {fk: item, "billing_cycle": billing_cycle, "custom_months": custom_months}
+    entry = model.objects.filter(**key).first()
+    created = entry is None
+    if created:
+        entry = model(**key)
+    entry.price, entry.setup_fee = price, setup_fee
     entry.full_clean()
     entry.save()
     kind = "product" if fk == "product" else "addon"

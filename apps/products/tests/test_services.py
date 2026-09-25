@@ -209,3 +209,10 @@ def test_search_catalog_matches_name_description_slug(manager):
     assert services.search_catalog(Product.objects.all(), "nvme").count() == 1
     assert services.search_catalog(Product.objects.all(), "business").count() == 1
     assert services.search_catalog(Product.objects.all(), "").count() == 2
+
+
+def test_set_price_with_a_malformed_cycle_is_a_validation_error_not_a_database_error(manager, product):
+    """Regression: validate before writing - PostgreSQL rejects an over-long value at INSERT with a raw DB error."""
+    with pytest.raises(ValidationError):
+        services.set_price(manager, product, billing_cycle="x" * 40, price="1.00")
+    assert product.prices.count() == 0

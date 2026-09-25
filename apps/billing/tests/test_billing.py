@@ -226,3 +226,12 @@ def test_invalid_input_is_reported_not_saved(client, manager):
     response = client.post("/staff/billing/coupons/save/", {"code": "X", "discount_type": "percent", "value": "150"},
                            follow=True)
     assert b"cannot exceed 100" in response.content and not Coupon.objects.exists()
+
+
+def test_overlong_input_is_a_validation_error_not_a_database_error(manager):
+    """Regression: upserts must validate before writing (PostgreSQL rejects over-long values at INSERT)."""
+    with pytest.raises(ValidationError):
+        services.save_payment_method(manager, "x" * 80, name="Too long")
+    with pytest.raises(ValidationError):
+        services.save_payment_method(manager, "ok", name="n" * 500)
+    assert PaymentMethod.objects.count() == 0

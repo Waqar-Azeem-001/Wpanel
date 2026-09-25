@@ -394,14 +394,15 @@ def visible_tlds_for_user(user):
 def set_tld_pricing(actor, tld, *, register_price, renew_price, transfer_price, redemption_price=0,
                     min_years=1, max_years=10, request=None):
     _require(actor, "manage_domains")
-    pricing, created = TldPricing.objects.get_or_create(tld=tld, defaults={
-        "register_price": register_price, "renew_price": renew_price, "transfer_price": transfer_price,
-        "redemption_price": redemption_price, "min_years": min_years, "max_years": max_years,
-    })
-    if not created:
-        pricing.register_price, pricing.renew_price = register_price, renew_price
-        pricing.transfer_price, pricing.redemption_price = transfer_price, redemption_price
-        pricing.min_years, pricing.max_years = min_years, max_years
+    # Look up, validate, then write. (get_or_create-then-validate would INSERT unvalidated input first,
+    # and PostgreSQL rejects an over-long value with a raw database error instead of a validation error.)
+    pricing = TldPricing.objects.filter(tld=tld).first()
+    created = pricing is None
+    if created:
+        pricing = TldPricing(tld=tld)
+    pricing.register_price, pricing.renew_price = register_price, renew_price
+    pricing.transfer_price, pricing.redemption_price = transfer_price, redemption_price
+    pricing.min_years, pricing.max_years = min_years, max_years
     pricing.full_clean()
     pricing.save()
     audit.record("tld_pricing.added" if created else "tld_pricing.changed", actor=actor, target=pricing,

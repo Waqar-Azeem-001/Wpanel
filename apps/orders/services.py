@@ -164,7 +164,7 @@ def remove_coupon(actor, cart):
 
 def _billing_snapshot(client):
     return {
-        "billing_name": client.contact_name, "billing_company": client.company_name,
+        "billing_name": client.contact_name[:300], "billing_company": client.company_name,
         "billing_email": client.email, "billing_phone": client.phone,
         "billing_address_line1": client.address_line1, "billing_address_line2": client.address_line2,
         "billing_city": client.city, "billing_state": client.state, "billing_postcode": client.postcode,
@@ -196,7 +196,9 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
     pricing.price_cart(cart, strict=True, verify_availability=True)
 
     with transaction.atomic():
-        cart = Cart.objects.select_for_update().select_related("client", "coupon").get(pk=cart.pk)
+        # Lock only the cart row itself: PostgreSQL refuses FOR UPDATE across the nullable side of a join
+        # (the cart's optional coupon), and SQLite silently ignores locking, so this can't be caught locally.
+        cart = Cart.objects.select_for_update().get(pk=cart.pk)
         _require_open(cart)  # a concurrent double-submit finds it already closed
         if cart.coupon_id:  # serialise redemptions of the same code
             cart.coupon = Coupon.objects.select_for_update().get(pk=cart.coupon_id)
@@ -217,7 +219,8 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
         for line in priced.lines:  # cart order guarantees a hosting line precedes its add-ons
             item = line.item
             created[item.pk] = OrderItem.objects.create(
-                order=order, kind=item.kind, description=line.description, product=item.product, addon=item.addon,
+                order=order, kind=item.kind, description=line.description[:255], product=item.product,
+                addon=item.addon,
                 parent=created.get(item.parent_id), domain_name=item.domain_name, billing_cycle=item.billing_cycle,
                 custom_months=item.custom_months, years=item.years, unit_price=line.unit_price,
                 setup_fee=line.setup_fee, line_total=line.total, auth_code_encrypted=item.auth_code_encrypted,

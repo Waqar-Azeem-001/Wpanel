@@ -55,11 +55,13 @@ The cart, the pricing engine (discounts and tax), checkout, orders, payment-meth
 2. **An empty POST body skipped validation.** `request.POST or None` treats an empty body as "no form submitted", so a checkout with nothing chosen showed no error. Checkout now binds the form on every POST; covered by a test.
 3. **Mobile horizontal overflow on the order pages (found by the browser check).** CSS-grid children default to `min-width: auto`, so the items table stretched its card past a 375px screen. Fixed globally so wide tables scroll inside their own card.
 4. **Two cosmetic layout faults (found by looking at the screenshots):** numbers left-aligned under right-aligned headers (a CSS specificity slip), and a side card so narrow on tablets that "Bank transfer" wrapped letter by letter. Both fixed.
-5. **A test-isolation lesson repeated:** the new tests initially tripped over a leftover flash message in the shared test-client cookie jar; the assertion now checks the order link rather than the text.
+5. **Checkout was completely broken on PostgreSQL (found by CI, then reproduced and confirmed locally).** Checkout locked the cart with `select_for_update().select_related("client", "coupon")`; the coupon is an optional foreign key, and PostgreSQL refuses `FOR UPDATE` across the nullable side of a join (`FeatureNotSupported`). SQLite silently ignores row locking, so all 455 local tests passed while every real checkout would have failed. It now locks the cart row alone. I confirmed the diagnosis by putting the old code back against a real PostgreSQL 17.5 and watching it fail with exactly that error.
+6. **Upserts validated *after* inserting (found on PostgreSQL).** The two new billing upserts, and - as latent defects - `domains.set_tld_pricing` (Phase 04) and `products.set_price` (Phase 03), used `get_or_create()` followed by `full_clean()`. `get_or_create` INSERTs the unvalidated input first: SQLite accepts an over-long value and validation then rejects it, but PostgreSQL rejects it at the INSERT with a raw database error (a 500, not a friendly 400). All four now look up, validate, then write; each has a regression test. Two smaller length guards were added for the same reason (an order line description and the billing name are truncated to their column sizes).
+7. **A test-isolation lesson repeated:** the new tests initially tripped over a leftover flash message in the shared test-client cookie jar; the assertion now checks the order link rather than the text.
 
 ## TEST PLAN
 
-**158 new tests, 455 in total** (the suite before this phase was 297 - my Phase 05 report said 296, an off-by-one). All pass on SQLite locally; PostgreSQL/Redis by CI as before.
+**161 new tests, 458 in total** (the suite before this phase was 297 - my Phase 05 report said 296, an off-by-one). All pass on SQLite **and, new this phase, against a real local PostgreSQL 17.5** (see below); CI runs PostgreSQL + Redis as before.
 
 - **Pricing engine (46):** every price per billing cycle including a configured custom term; unknown and disabled cycles; hidden/retired plans and plans without a WHM package; add-on cycle rules (same cycle, one-time, orphaned, from another cart); domain price × years, term limits, unsupported TLDs, taken domains, and that availability is only re-verified when asked (not on every cart view); transfers (flat price, code required, code stored encrypted, existing domain rejected, one year only); duplicates; totals; percentage and fixed coupons (capped at the subtotal); the order of operations (discount, then tax on the discounted amount); half-up rounding with worked figures; tax by country → default → none, and inactive rules; non-strict vs strict; every coupon rule (unknown, case-insensitive, expired, not yet valid, inactive, minimum, usage limit counting only non-cancelled orders, once per client) and a coupon that lapses after being applied being flagged rather than silently kept.
 - **Cart and checkout (29):** who may shop (non-contact denied; any contact role and staff with `manage_orders` allowed; Support Agent denied); one open cart per user and client; `resolve_client` (ambiguity is an error, a stranger's client looks missing); nobody can touch another user's cart; the order's figures equal the pricing engine's, to the cent; add-ons stay attached to their hosting line; the cart closes and the coupon redemption is recorded; billing details are snapshotted and survive later client edits; audit, notification and email content; the auth code stays encrypted; empty cart, missing/inactive payment method, repeated checkout, a closed cart, a plan retired after adding, a domain taken after adding, a price changed after adding (the order carries the *new* price), an expired coupon, a single-use coupon contested by two carts, and **a failure part-way through leaving no order, no items, no redemption and the cart still open**; domain reservation and release; cancellation rules and permissions; visibility and search.
@@ -76,11 +78,15 @@ The cart, the pricing engine (discounts and tax), checkout, orders, payment-meth
 | Prices, totals, discounts, tax, duration and credit are never taken from the browser | ✅ tested at the service, API and page level |
 | One pricing engine; orders snapshot its output | ✅ |
 | Checkout atomic and safe against a double submit | ✅ tested, including a mid-checkout failure |
-| Authorization tested; full suite green | ✅ 455 passing (SQLite) |
+| Authorization tested; full suite green | ✅ 458 passing on SQLite and on real PostgreSQL 17.5 |
 | Migrations created, `makemigrations --check` clean, OpenAPI schema valid with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | ⏳ Runs on push |
+| CI green on PostgreSQL + Redis | ⏳ First run (`c5470b8`) failed on the two PostgreSQL-only defects above; fixed, re-running |
 | Commit after verification | ⏳ |
+
+## A change to how I verify
+
+This phase showed that SQLite hides real PostgreSQL failures, and CI logs can't be read without authentication, so guessing from a red CI run isn't good enough. I set up a portable PostgreSQL 17.5 (kept outside the repository) and ran the entire suite against it - that is how the two defects above were reproduced and the fixes proven. From now on each phase is run against PostgreSQL locally *before* pushing. The recipe is saved in my project notes.
 
 ## Known limitations / deferred
 

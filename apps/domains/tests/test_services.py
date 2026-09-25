@@ -383,3 +383,10 @@ def test_visible_tlds_for_user(manager, customer, registrar):
     services.set_tld_pricing_active(manager, hidden, False)
     assert set(services.visible_tlds_for_user(manager)) == {active, hidden}
     assert set(services.visible_tlds_for_user(customer)) == {active}
+
+
+def test_set_tld_pricing_with_an_overlong_tld_is_a_validation_error_not_a_database_error(manager, registrar):
+    """Regression: validate before writing - PostgreSQL rejects an over-long value at INSERT with a raw DB error."""
+    with pytest.raises(ValidationError):
+        services.set_tld_pricing(manager, "." + "x" * 40, register_price="1", renew_price="1", transfer_price="1")
+    assert TldPricing.objects.count() == 0
