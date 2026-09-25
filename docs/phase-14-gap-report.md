@@ -75,7 +75,7 @@ Everything on the roadmap's Phase 14 list: **Sales** (daily performance, orders,
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 1197 |
 | Migrations (none needed, `makemigrations --check`), OpenAPI with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | pending at time of writing |
+| CI green on PostgreSQL + Redis | ✅ Run 36160185921 on `f1246ba` (first run) |
 
 ## Known limitations / deferred
 

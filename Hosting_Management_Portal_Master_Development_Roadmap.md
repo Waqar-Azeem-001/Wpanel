@@ -1621,7 +1621,7 @@ If UI changed:
   11 Notifications & Email       🟢       945 ✅  ✅        7d4026a  ---
   12 Cancellation                🟢       1046 ✅ ✅        d3f9b82  ---
   13 Affiliates                  🟢       1134 ✅ ✅        a2e8989  ---
-  14 Reports                     🟡       1197 ✅ ✅        ---      ---
+  14 Reports                     🟢       1197 ✅ ✅        f1246ba  ---
   15 Admin Operations            ⬜       ---     ---       ---      ---
   16 Security                    ⬜       ---     ---       ---      ---
   17 Reliability                 ⬜       ---     ---       ---      ---
