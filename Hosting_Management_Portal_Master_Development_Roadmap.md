@@ -871,7 +871,7 @@ Before marking any phase 🟢:
 | Phase | Status | Tests | Browser | Links | Commit | Deploy |
 |---|---|---|---|---|---|---|
 | D0 UI & Navigation Audit | 🟢 | 1220 ✅ | ✅ | prototype crawler: 8 roles, 0 broken | dd1c88a | — |
-| D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | see git log | — |
+| D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | ee8a609 | — |
 | D2 Link Integrity Harness | ⬜ | — | — | — | — | — |
 | D3 Client Area Parity | ⬜ | — | — | — | — | — |
 | D4 Staff Area Parity | ⬜ | — | — | — | — | — |

@@ -72,7 +72,7 @@ Navbar (three variants) · status badge tag · stat tile (whole tile is a link) 
 | No runtime CDN; assets vendored with licences | ✅ tested |
 | Menu entries appear only if permitted and all open | ✅ tested for six visitor kinds |
 | Whole suite and the link-integrity tests green; browser check at 375 / 768 / 1280 px | ✅ |
-| CI green | see tracker |
+| CI green | ✅ run 36174340011 on `ee8a609` (first run) |
 
 ## Known limitations (all scheduled)
 
