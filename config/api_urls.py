@@ -13,6 +13,7 @@ from apps.core.views import HealthView
 from apps.domains.api import AvailabilityView, DomainViewSet, TldPricingViewSet
 from apps.hosting.api import HostingAccountViewSet
 from apps.lifecycle import api as lifecycle_api
+from apps.reports import api as reports_api
 from apps.notifications.api import EmailMessageViewSet, NotificationViewSet, PreferencesView
 from apps.orders import api as orders_api
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
@@ -73,6 +74,8 @@ urlpatterns = [
     path("hosting-accounts/<int:pk>/term/", renewals_api.HostingTermView.as_view(), name="hosting-term"),
     path("domains/<int:pk>/renewal-invoice/", renewals_api.DomainRenewalView.as_view(), name="domain-renewal"),
     path("notification-preferences/", PreferencesView.as_view(), name="notification-preferences"),
+    path("reports/", reports_api.ReportListView.as_view(), name="reports"),
+    path("reports/<slug:slug>/", reports_api.ReportView.as_view(), name="report"),
     path("affiliate/", affiliates_api.AffiliateMeView.as_view(), name="affiliate-me"),
     path("affiliate-settings/", affiliates_api.AffiliateSettingsView.as_view(), name="affiliate-settings"),
     path("affiliate-report/", affiliates_api.ReportView.as_view(), name="affiliate-report"),

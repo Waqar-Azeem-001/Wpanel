@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ definition.title }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'reports_staff:index' %}">&larr; Reports</a></p>
+<h1>{{ definition.title }}</h1>
+<p class="muted">{{ definition.description }}</p>
+{% if definition.uses %}
+<form class="filters" method="get">
+  {% if "range" in definition.uses %}
+  <div class="field"><label for="id_from">From</label><input type="date" name="from" id="id_from" value="{{ params.start|date:'Y-m-d' }}"></div>
+  <div class="field"><label for="id_to">To</label><input type="date" name="to" id="id_to" value="{{ params.end|date:'Y-m-d' }}"></div>
+  {% endif %}
+  {% if "group" in definition.uses %}
+  <div class="field"><label for="id_group">Group by</label>
+    <select name="group" id="id_group">{% for value, label in groups %}<option value="{{ value }}"{% if value == params.group %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  {% endif %}
+  {% if "days" in definition.uses %}
+  <div class="field"><label for="id_days">Within (days)</label><input type="number" name="days" id="id_days" min="1" max="365" value="{{ params.days }}"></div>
+  {% endif %}
+  {% if "scope" in definition.uses %}
+  <div class="field"><label for="id_scope">Services</label>
+    <select name="scope" id="id_scope">{% for value, label in scopes %}<option value="{{ value }}"{% if value == params.scope %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  {% endif %}
+  <div class="field"><button class="btn secondary" type="submit">Run</button></div>
+</form>
+{% endif %}
+{% if result %}
+{% if summary %}
+<div class="stats">{% for label, value in summary %}<div class="stat"><strong>{{ value }}</strong><span>{{ label }}</span></div>{% endfor %}</div>
+{% endif %}
+<p class="actions">
+  Download:
+  {% for fmt in formats %}<a class="btn small secondary" href="?{{ export_query }}&amp;export={{ fmt }}">{{ fmt|upper }}</a>{% endfor %}
+</p>
+<div class="table-wrap"><table class="table">
+  <thead><tr>{% for label, right in columns %}<th{% if right %} class="num"{% endif %}>{{ label }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in table %}<tr>{% for cell, right in row %}<td{% if right %} class="num"{% endif %}>{{ cell }}</td>{% endfor %}</tr>
+  {% empty %}<tr><td colspan="{{ columns|length }}" class="muted">Nothing to show for these dates.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% if cut %}<p class="muted">Showing the first {{ table|length }} of {{ total_rows }} rows. Download the report to get every row.</p>{% endif %}
+{% for note in result.notes %}<p class="muted">{{ note }}</p>{% endfor %}
+{% endif %}
+{% endblock %}

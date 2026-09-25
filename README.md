@@ -3,7 +3,7 @@
 This is a hosting business management portal, similar to WHMCS. It is built with Django and Django REST Framework, uses PostgreSQL for data, and runs background jobs through Redis and Celery.
 
 - **Roadmap and rules:** [Hosting_Management_Portal_Master_Development_Roadmap.md](Hosting_Management_Portal_Master_Development_Roadmap.md)
-- **Phase reports:** [Phase 01](docs/phase-01-gap-report.md), [Phase 02](docs/phase-02-gap-report.md), [Phase 03](docs/phase-03-gap-report.md), [Phase 04](docs/phase-04-gap-report.md), [Phase 05](docs/phase-05-gap-report.md), [Phase 06](docs/phase-06-gap-report.md), [Phase 07](docs/phase-07-gap-report.md), [Phase 08](docs/phase-08-gap-report.md), [Phase 09](docs/phase-09-gap-report.md), [Phase 10](docs/phase-10-gap-report.md), [Phase 11](docs/phase-11-gap-report.md), [Phase 12](docs/phase-12-gap-report.md), [Phase 13](docs/phase-13-gap-report.md)
+- **Phase reports:** [Phase 01](docs/phase-01-gap-report.md), [Phase 02](docs/phase-02-gap-report.md), [Phase 03](docs/phase-03-gap-report.md), [Phase 04](docs/phase-04-gap-report.md), [Phase 05](docs/phase-05-gap-report.md), [Phase 06](docs/phase-06-gap-report.md), [Phase 07](docs/phase-07-gap-report.md), [Phase 08](docs/phase-08-gap-report.md), [Phase 09](docs/phase-09-gap-report.md), [Phase 10](docs/phase-10-gap-report.md), [Phase 11](docs/phase-11-gap-report.md), [Phase 12](docs/phase-12-gap-report.md), [Phase 13](docs/phase-13-gap-report.md), [Phase 14](docs/phase-14-gap-report.md)
 
 ## Local development (no Docker)
 

@@ -19,6 +19,7 @@
         {% if perms.accounts.view_clients %}<a href="{% url 'clients_staff:list' %}">Clients</a>{% endif %}
         {% if perms.accounts.view_domains %}<a href="{% url 'domains_staff:list' %}">Domain Admin</a>{% endif %}
         {% if perms.accounts.view_hosting %}<a href="{% url 'hosting_staff:list' %}">Hosting Admin</a>{% endif %}
+        {% if perms.accounts.view_reports %}<a href="{% url 'reports_staff:index' %}">Reports</a>{% endif %}
         {% if perms.accounts.view_affiliates %}<a href="{% url 'affiliates_staff:overview' %}">Affiliates</a>{% endif %}
         {% if perms.accounts.view_hosting or perms.accounts.view_domains %}<a href="{% url 'lifecycle_staff:overview' %}">Lifecycle</a>{% endif %}
         {% if perms.accounts.view_orders %}<a href="{% url 'orders_staff:list' %}">Orders</a>{% endif %}

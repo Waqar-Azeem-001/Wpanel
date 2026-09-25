@@ -1621,7 +1621,7 @@ If UI changed:
   11 Notifications & Email       🟢       945 ✅  ✅        7d4026a  ---
   12 Cancellation                🟢       1046 ✅ ✅        d3f9b82  ---
   13 Affiliates                  🟢       1134 ✅ ✅        a2e8989  ---
-  14 Reports                     ⬜       ---     ---       ---      ---
+  14 Reports                     🟡       1197 ✅ ✅        ---      ---
   15 Admin Operations            ⬜       ---     ---       ---      ---
   16 Security                    ⬜       ---     ---       ---      ---
   17 Reliability                 ⬜       ---     ---       ---      ---
@@ -1833,6 +1833,14 @@ postponed.
   Affiliate fraud beyond hold period  Deferred  The portal keeps no address or       Phase 16
   and rejection (e.g. a second                  device data, by design; staff review
   account through one's own link)               referrals and can reject
+
+  Reports: no charts, scheduled or   Deferred  Tables, headline figures and         Phase 15
+  emailed reports, saved views, or              on-demand CSV/XLSX/PDF only
+  currency conversion
+
+  Reports: no chargeback/dispute      Deferred  "Refunds and failed payments" is   Post-MVP
+  data; "cancelled services" covers             the closest; hand-made terminations
+  portal cancellations only                     are in the audit log
 
   Terms-of-service acceptance at      Deferred  No ToS page/versioning yet        Phase 15
   checkout
@@ -2062,6 +2070,15 @@ Record permanent technical decisions here.
   frozen; refunds lower unpaid ones,  after payout is flagged, never
   flag paid ones; attribution is      silently reversed; credit is
   decided once at sign-up             decided once, at sign-up
+
+  Reports read the permanent        A report can never disagree   Active
+  records (money from successful    with the ledger; exports are
+  transactions, never stored        audited and formula-safe (a name
+  totals); every export is audited  starting with = is stored as
+  and neutralises spreadsheet       text); a report needs its area
+  formulas; a report needs         permission as well as
+  view_reports and its area's      view_reports
+  permission
 
   A service's lifecycle stage is      Like "overdue": reproducible   Active
   derived from its status and         from permanent records; the

@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "apps.renewals",
     "apps.lifecycle",
     "apps.affiliates",
+    "apps.reports",
     "apps.support",
 ]
 
