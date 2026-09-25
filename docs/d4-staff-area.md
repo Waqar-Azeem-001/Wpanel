@@ -7,7 +7,7 @@ D4 is large, so it is built and verified in stages, each committed with green CI
 | **D4a** | Staff dashboard with widgets, global search, audit log viewer, staff front door | ✅ this report |
 | **D4b** | Client profile as tabs (each its own URL) | ✅ report below |
 | **D4c** | Standard list pattern ("Showing X–Y of Z", bulk-action bar), confirmation modal on destructive actions | ✅ report below |
-| D4d | Phase 15 screens: staff users and roles, payment/registrar/email providers, Utilities menu (job queue, WHOIS) | planned |
+| **D4d** | Phase 15 screens: staff users and roles, email provider, registrar | ✅ report below |
 | D4e | Re-skin the remaining staff templates and delete `static/css/legacy.css` | planned |
 
 ## D4a: what was built
@@ -50,6 +50,23 @@ The one long profile page is now a **header** (name, reference, status, quick ac
 - Priority badges use the status colours (urgent red, high amber).
 - Tests: **+21** (`apps/core/test_lists.py`); **eight mutation checks** (one failure stopping the rest, an open redirect, no id cap, missing permissions on either bulk view, the summary line removed, the browser confirm back, the bar shown to readers) all caught. Browser: select-all ticks every row, the modal appears, confirming applies the change and shows "6 ticket(s) re-prioritised".
 - Not done in D4c (recorded): bulk actions on orders, domains, hosting, commissions and failed emails (each needs its own careful per-record rule; the mechanism is ready); saved filters; column chooser; CSV export from lists (reports already export).
+
+## D4d: the screens that used to need the Django admin (Phase 15)
+
+New services (rules and audit in one place, like every other module) and three Setup screens. Django admin is no longer needed for staff accounts, the email provider, the registrar or the audit log.
+
+| Screen | What it does | Who |
+|---|---|---|
+| **Setup > Staff & Roles** (`/staff/setup/staff/`) | List staff with role, status, last sign-in; **add** a member of staff (an email with a one-time link to set their own password: nobody ever sees a password); change a role; suspend and reactivate with an audited reason | look: `view_users` (managers too); add / role: `manage_users` + `assign_roles` (admin, super admin); suspend: `manage_users`. Only a Super Admin can create or change an admin; nobody can change their own role or status |
+| **Setup > Email Provider** (`/staff/setup/email/`) | Add, edit and delete the outgoing mail server; **only one is in use** (switching on one switches the others off in the same transaction); **Send a test email** through any provider and see the real result | `view_providers` / `manage_providers` (admin, super admin) |
+| **Setup > Domain Registrar** (`/staff/setup/registrar/`) | The same for the registrar; credentials are a JSON object in the adapter's own shape; the manual registrar is the only kind today | same |
+
+- **Secrets:** the SMTP password and registrar credentials are **encrypted**, are never shown again (edit forms leave them blank; blank keeps the stored value) and never reach the audit log, the pages or a test-email failure message (tested: a failure that mentions the password is reduced to the error's class name).
+- **Validation before writing:** both providers are validated (STARTTLS and SSL cannot both be on, JSON must be an object, ports in range) and nothing is saved on a refusal; the active provider cannot be deleted; a registrar that has registered domains cannot be deleted.
+- New event `account.staff_welcome` (essential, sensitive: stored encrypted until delivered, then wiped) with its email template.
+- **Payment providers (gateways) are deliberately not built**: payments are manual until the owner chooses a gateway (decision recorded 2026-09-25); payment *methods* already have their screen.
+- **Utilities > Job queue and WHOIS** stay hidden: there is no job-run history yet (Phase 17) and no WHOIS integration.
+- Tests: **+36** (`apps/core/test_setup.py`; 1661 on PostgreSQL), **ten mutation checks** (password stored in clear, a blank password wiping the stored one, two active providers, the test email echoing the password, an active provider deletable, an admin creating admins, create without the permission, customers editable as staff, registrar credentials in clear, a used registrar deletable) all caught. Browser: the three screens at 1440 px, no errors or overflow.
 
 ## Deliberately not built (Rule 5.2: hidden until real)
 

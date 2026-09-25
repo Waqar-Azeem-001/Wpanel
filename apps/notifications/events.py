@@ -54,6 +54,8 @@ EVENTS = _events(
     # --- Account & security ----------------------------------------------------------------------------
     Event("client.welcome", "Welcome, with a link to set your password", C.ACCOUNT, "client_welcome", essential=True,
           sensitive=True),
+    Event("account.staff_welcome", "Welcome to the team, with a link to set your password", C.ACCOUNT, "staff_welcome",
+          essential=True, sensitive=True),
     Event("account.verification", "Verify your email address", C.ACCOUNT, "verify_email", essential=True,
           sensitive=True),
     Event("account.password_reset", "Reset your password", C.ACCOUNT, "password_reset", essential=True,

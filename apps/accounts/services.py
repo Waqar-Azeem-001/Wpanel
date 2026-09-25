@@ -23,7 +23,7 @@ from apps.core.exceptions import ServiceError
 from apps.notifications import services as notifications
 
 from .models import AccountStatus, User
-from .roles import PRIVILEGED_ROLES, Role, perm
+from .roles import PRIVILEGED_ROLES, STAFF_ROLES, Role, perm
 
 logger = logging.getLogger(__name__)
 
@@ -254,6 +254,40 @@ def set_account_status(actor, user, new_status, *, reason="", request=None):
         revoke_all_tokens(user)
     audit.record("account.status_changed", actor=actor, target=user,
                  metadata={"from": previous, "to": new_status, "reason": reason[:500]}, request=request)
+    return user
+
+
+@transaction.atomic
+def create_staff_user(actor, *, email, first_name="", last_name="", role, request=None):
+    """
+    Add a member of staff (needs ``manage_users`` and ``assign_roles``; admin roles only by a Super Admin). The new person
+    has no password: they receive an email with a one-time link to set one.
+    """
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    _require(actor, "manage_users")
+    _require(actor, "assign_roles")
+    email = (email or "").strip().lower()
+    try:
+        validate_email(email)
+    except ValidationError:
+        raise ServiceError("Enter a valid email address.", code="invalid_email")
+    if role not in STAFF_ROLES:
+        raise ServiceError("Choose a staff role.", code="invalid_role")
+    if role in PRIVILEGED_ROLES and not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can create admin accounts.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+    if User.objects.filter(email__iexact=email).exists():
+        raise ServiceError("Someone with that email address already has an account.", code="email_taken")
+    user = User.objects.create_user(email=email, password=None, first_name=first_name.strip(), last_name=last_name.strip(),
+                                    role=role)
+    sync_role_membership(user)
+    audit.record("account.staff_created", actor=actor, target=user, metadata={"role": role}, request=request)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    link = settings.SITE_URL.rstrip("/") + reverse("accounts:password_reset_confirm",
+                                                    args=[uid, default_token_generator.make_token(user)])
+    notifications.dispatch("account.staff_welcome", user=user, context={"link": link, "role": Role(role).label})
     return user
 
 

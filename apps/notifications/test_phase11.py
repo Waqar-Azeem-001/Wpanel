@@ -77,7 +77,7 @@ def test_every_registered_email_has_its_templates():
 
 
 def test_the_catalogue_is_consistent():
-    assert events.sensitive_templates() == {"client_welcome", "verify_email", "password_reset", "hosting_welcome"}
+    assert events.sensitive_templates() == {"client_welcome", "verify_email", "password_reset", "hosting_welcome", "staff_welcome"}
     for event in events.EVENTS.values():
         assert event.category in events.CATEGORY_LABELS
         if event.essential:  # a message people cannot switch off is never in a category they can control...

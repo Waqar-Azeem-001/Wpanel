@@ -404,3 +404,89 @@ def purge_sensitive(*, now=None):
                                                                         EmailMessage.Status.QUEUED),
                                         created_at__lt=cutoff).exclude(sensitive_body="")
     return stale.update(sensitive_body="", body_text=SENSITIVE_PLACEHOLDER)
+
+
+# --- The email provider (Setup > Email Provider) ---------------------------------------------------------------------
+
+PROVIDER_FIELDS = ("name", "kind", "host", "port", "username", "use_tls", "use_ssl", "timeout", "from_email")
+
+
+def _require_providers(actor, codename="manage_providers"):
+    if not actor.has_perm(perm(codename)):
+        raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
+                           status_code=http.HTTP_403_FORBIDDEN)
+
+
+@transaction.atomic
+def save_email_provider(actor, provider, data, *, password=None, request=None):
+    """
+    Create or change an email provider (``provider=None`` creates). The password is optional: blank keeps the stored one;
+    it is encrypted and never shown again. Making a provider active switches every other one off, in the same transaction
+    (only one may be active). Everything is validated before anything is written.
+    """
+    from apps.audit import services as audit
+
+    _require_providers(actor)
+    created = provider is None
+    provider = provider or EmailProvider()
+    before = {f: getattr(provider, f) for f in PROVIDER_FIELDS} if not created else {}
+    for field in PROVIDER_FIELDS:
+        if field in data:
+            setattr(provider, field, data[field])
+    make_active = bool(data.get("is_active", provider.is_active))
+    if password:
+        provider.set_password(password)
+    provider.full_clean(exclude=["is_active"])
+    if make_active:
+        EmailProvider.objects.exclude(pk=provider.pk).filter(is_active=True).update(is_active=False)
+    provider.is_active = make_active
+    provider.save()
+    changed = sorted(f for f in PROVIDER_FIELDS if getattr(provider, f) != before.get(f))
+    audit.record("email_provider.created" if created else "email_provider.updated", actor=actor, target=provider,
+                 metadata={"fields": changed, "password_changed": bool(password), "active": provider.is_active},
+                 request=request)
+    return provider
+
+
+@transaction.atomic
+def delete_email_provider(actor, provider, *, request=None):
+    from apps.audit import services as audit
+
+    _require_providers(actor)
+    if provider.is_active:
+        raise ServiceError("Switch to another provider (or none) before deleting the active one.", code="provider_active")
+    audit.record("email_provider.deleted", actor=actor, target=provider, metadata={"name": provider.name}, request=request)
+    provider.delete()
+
+
+def send_test_email(actor, provider, to_email, *, request=None):
+    """
+    Send one short message through ``provider`` (active or not) to prove its settings work. Returns ``(ok, detail)``; a
+    failure is a result to show, not an exception. The message is not stored, and no password ever appears in the result.
+    """
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    from apps.audit import services as audit
+    from apps.branding import services as branding
+
+    _require_providers(actor)
+    try:
+        validate_email(to_email or "")
+    except ValidationError:
+        raise ServiceError("Enter a valid email address to send the test to.", code="invalid_email")
+    name = branding.get().name
+    try:
+        connection = get_connection("django.core.mail.backends.smtp.EmailBackend", host=provider.host, port=provider.port,
+                                    username=provider.username or None, password=provider.get_password() or None,
+                                    use_tls=provider.use_tls, use_ssl=provider.use_ssl, timeout=provider.timeout)
+        sent = EmailMultiAlternatives(f"{name}: test email", f"This is a test message from {name}. If you can read it, "
+                                      "your email provider settings work.", provider.from_email, [to_email],
+                                      connection=connection).send()
+        ok, detail = bool(sent), "Sent." if sent else "The server accepted no message."
+    except Exception as exc:  # noqa: BLE001 - the point is to report why sending failed
+        ok, detail = False, f"{type(exc).__name__}: {str(exc)[:200]}"
+        if provider.get_password() and provider.get_password() in detail:
+            detail = type(exc).__name__  # never echo a credential
+    audit.record("email_provider.tested", actor=actor, target=provider, metadata={"ok": ok, "to": to_email}, request=request)
+    return ok, detail

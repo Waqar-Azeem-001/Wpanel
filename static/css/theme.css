@@ -163,6 +163,7 @@ a { text-underline-offset: 3px; }
 .nav-tabs .nav-link { border: 0; border-bottom: 3px solid transparent; color: var(--muted); font-weight: 600; padding: .6rem 1rem; border-radius: 0; }
 .nav-tabs .nav-link:hover { color: var(--accent); border-bottom-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 .table .w-1 { width: 1%; }
+.form-select.w-auto { min-width: 9rem; padding-right: 2rem; }
 .bulk-bar { padding: .75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
 .tab-scroll { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
 @media (min-width: 768px) { .tab-scroll { flex-wrap: wrap; overflow: visible; } }

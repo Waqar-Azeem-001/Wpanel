@@ -875,7 +875,7 @@ Before marking any phase 🟢:
 | D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | da099e8 | — |
 | D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | 03ba01b | — |
 | D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | ef7a6ce | — |
-| D4 Staff Area Parity (stages D4a dashboard, search, audit log; D4b client profile tabs; D4c lists and bulk actions) | 🟡 | 1625 ✅ | ✅ | crawler green (dashboard widgets followed via hx-get) | aab5715, 11a26c6 (D4a, D4b) | — |
+| D4 Staff Area Parity (stages D4a dashboard, search, audit log; D4b client profile tabs; D4c lists and bulk actions; D4d staff, email provider, registrar screens) | 🟡 | 1661 ✅ | ✅ | crawler green (dashboard widgets followed via hx-get) | aab5715, 11a26c6, 4ea073a (D4a-c) | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
 ## Recommended order

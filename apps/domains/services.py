@@ -439,3 +439,48 @@ def set_tld_pricing_active(actor, pricing, is_active, *, request=None):
     audit.record("tld_pricing.status_changed", actor=actor, target=pricing, metadata={"is_active": is_active},
                  request=request)
     return pricing
+
+
+# --- The registrar provider (Setup > Registrar) ---------------------------------------------------------------------------
+
+@transaction.atomic
+def save_registrar_provider(actor, provider, data, *, credentials=None, request=None):
+    """
+    Create or change a registrar connection (``provider=None`` creates). ``credentials`` is a dict (the adapter's own shape);
+    ``None`` keeps what is stored. It is encrypted and never shown again. Making one active switches the others off.
+    """
+    if not actor.has_perm(perm("manage_providers")):
+        raise _denied()
+    created = provider is None
+    provider = provider or RegistrarProvider()
+    before = {f: getattr(provider, f) for f in ("name", "kind", "sandbox")} if not created else {}
+    for field in ("name", "kind", "sandbox"):
+        if field in data:
+            setattr(provider, field, data[field])
+    if credentials is not None:
+        if not isinstance(credentials, dict):
+            raise ServiceError("Credentials must be a JSON object.", code="invalid_credentials")
+        provider.set_credentials(credentials)
+    make_active = bool(data.get("is_active", provider.is_active))
+    provider.full_clean(exclude=["is_active"])
+    if make_active:
+        RegistrarProvider.objects.exclude(pk=provider.pk).filter(is_active=True).update(is_active=False)
+    provider.is_active = make_active
+    provider.save()
+    changed = sorted(f for f in ("name", "kind", "sandbox") if getattr(provider, f) != before.get(f))
+    audit.record("registrar_provider.created" if created else "registrar_provider.updated", actor=actor, target=provider,
+                 metadata={"fields": changed, "credentials_changed": credentials is not None, "active": provider.is_active},
+                 request=request)
+    return provider
+
+
+@transaction.atomic
+def delete_registrar_provider(actor, provider, *, request=None):
+    if not actor.has_perm(perm("manage_providers")):
+        raise _denied()
+    if provider.is_active:
+        raise ServiceError("Switch to another registrar (or none) before deleting the active one.", code="provider_active")
+    if Domain.objects.filter(registrar=provider).exists():
+        raise ServiceError("Domains are registered through this registrar, so it cannot be deleted.", code="provider_in_use")
+    audit.record("registrar_provider.deleted", actor=actor, target=provider, metadata={"name": provider.name}, request=request)
+    provider.delete()

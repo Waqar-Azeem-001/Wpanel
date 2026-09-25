@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Email provider" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Email provider" %}</h1></div>
+<p class="text-secondary">{% trans "The mail server every message is sent through. Only one can be in use. Its password is encrypted and is never shown again; leave it blank when editing to keep it." %}</p>
+{% if not providers %}<div class="alert alert-warning" role="alert">{% trans "No email provider is set up, so no email (invoices, password links, ticket replies) can be delivered." %}</div>{% endif %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <section class="card"><div class="card-header">{% trans "Providers" %}</div>
+      <ul class="list-group list-group-flush">
+        {% for p in providers %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between align-items-center"><span><strong>{{ p.name }}</strong> {% if p.is_active %}<span class="badge text-bg-success">{% trans "In use" %}</span>{% endif %}<div class="small text-secondary">{{ p.host }}:{{ p.port }} · {{ p.from_email }}</div></span>
+            {% if can_manage %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'console:email_providers' %}?edit={{ p.pk }}">{% trans "Edit" %}</a>{% endif %}</div>
+          {% if can_manage %}
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            <form method="post" action="{% url 'console:email_provider_test' p.pk %}" class="d-flex gap-2">{% csrf_token %}
+              <input class="form-control form-control-sm" type="email" name="to_email" required placeholder="{% trans 'Send a test to…' %}" aria-label="{% trans 'Send a test to' %}">
+              <button class="btn btn-sm btn-outline-primary" type="submit">{% trans "Test" %}</button></form>
+            {% if not p.is_active %}<form method="post" action="{% url 'console:email_provider_delete' p.pk %}" data-confirm="{% trans 'Delete this provider?' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Delete" %}</button></form>{% endif %}
+          </div>
+          {% endif %}
+        </li>
+        {% empty %}<li class="list-group-item text-secondary">{% trans "None yet." %}</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+  {% if can_manage %}
+  <div class="col-lg-6">
+    <section class="card"><div class="card-body">
+      <h2 class="h5">{% if editing %}{% trans "Edit" %} {{ editing.name }}{% else %}{% trans "Add a provider" %}{% endif %}</h2>
+      <form method="post" action="{% url 'console:email_provider_save' %}" novalidate>{% csrf_token %}
+        {% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
+        {% include "partials/form.html" %}
+        <div class="d-flex gap-2"><button class="btn btn-primary" type="submit">{% trans "Save" %}</button>{% if editing %}<a class="btn btn-outline-secondary" href="{% url 'console:email_providers' %}">{% trans "Cancel" %}</a>{% endif %}</div>
+      </form>
+    </div></section>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

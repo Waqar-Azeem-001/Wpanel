@@ -167,6 +167,12 @@ ITEMS = [
          parent="staff.setup", permission="view_settings", divider_before=True),
     item("staff.setup.affiliates", _("Affiliate Settings"), "affiliates_staff:settings", areas=STAFF,
          position="setup", parent="staff.setup", permission="view_settings"),
+    item("staff.setup.staff", _("Staff & Roles"), "console:staff_users", areas=STAFF, position="setup",
+         parent="staff.setup", permission="view_users", divider_before=True),
+    item("staff.setup.email", _("Email Provider"), "console:email_providers", areas=STAFF, position="setup",
+         parent="staff.setup", permission="view_providers"),
+    item("staff.setup.registrar", _("Domain Registrar"), "console:registrars", areas=STAFF, position="setup",
+         parent="staff.setup", permission="view_providers"),
     item("staff.setup.brand", _("Brand"), "brand_staff:settings", areas=STAFF, position="setup",
          parent="staff.setup", permission="view_settings"),
 

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Domain registrar" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Domain registrar" %}</h1></div>
+<p class="text-secondary">{% trans "The company domains are registered, renewed and transferred through. Only one can be in use. Its credentials are encrypted and never shown again; leave them blank when editing to keep them." %}</p>
+{% if not providers %}<div class="alert alert-warning" role="alert">{% trans "No registrar is set up, so domain searches and orders cannot work." %}</div>{% endif %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <section class="card"><div class="card-header">{% trans "Registrars" %}</div>
+      <ul class="list-group list-group-flush">
+        {% for p in providers %}
+        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span><strong>{{ p.name }}</strong> {% if p.is_active %}<span class="badge text-bg-success">{% trans "In use" %}</span>{% endif %}<div class="small text-secondary">{{ p.get_kind_display }}{% if p.sandbox %} · {% trans "sandbox" %}{% endif %}</div></span>
+          {% if can_manage %}<span class="d-flex gap-2"><a class="btn btn-sm btn-outline-secondary" href="{% url 'console:registrars' %}?edit={{ p.pk }}">{% trans "Edit" %}</a>
+            {% if not p.is_active %}<form method="post" action="{% url 'console:registrar_delete' p.pk %}" data-confirm="{% trans 'Delete this registrar?' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Delete" %}</button></form>{% endif %}</span>{% endif %}
+        </li>
+        {% empty %}<li class="list-group-item text-secondary">{% trans "None yet." %}</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+  {% if can_manage %}
+  <div class="col-lg-6">
+    <section class="card"><div class="card-body">
+      <h2 class="h5">{% if editing %}{% trans "Edit" %} {{ editing.name }}{% else %}{% trans "Add a registrar" %}{% endif %}</h2>
+      <form method="post" action="{% url 'console:registrar_save' %}" novalidate>{% csrf_token %}
+        {% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
+        {% include "partials/form.html" %}
+        <div class="d-flex gap-2"><button class="btn btn-primary" type="submit">{% trans "Save" %}</button>{% if editing %}<a class="btn btn-outline-secondary" href="{% url 'console:registrars' %}">{% trans "Cancel" %}</a>{% endif %}</div>
+      </form>
+    </div></section>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
