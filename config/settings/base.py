@@ -93,6 +93,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.branding.context_processors.brand",
                 "apps.core.context_processors.layout",
+                "apps.core.context_processors.menus",
                 "apps.orders.context_processors.cart_summary",
                 "apps.notifications.context_processors.unread_notifications",
             ],

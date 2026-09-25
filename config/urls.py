@@ -2,10 +2,12 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from apps.core.redirects import retired_urlpatterns
 from apps.notifications import views as notification_views
 
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="accounts:profile", permanent=False), name="home"),
+    *retired_urlpatterns(),
     path("admin/", admin.site.urls),
     path("api/v1/", include(("config.api_urls", "v1"), namespace="v1")),
     path("account/", include("apps.accounts.urls")),

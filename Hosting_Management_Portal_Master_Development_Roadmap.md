@@ -844,35 +844,35 @@ Before marking any phase 🟢:
 
 | Phase | Status | Tests | Browser | Links | Commit | Deploy |
 |---|---|---|---|---|---|---|
-| 01 Foundation & Architecture | 🟢 | 70 ✅ | ✅ | — | 960bd54 | — |
-| 02 Client Management | 🟢 | 98 ✅ | ✅ | — | 3d257c4 | — |
-| 03 Products & Addons | 🟢 | 150 ✅ | ✅ | — | 3697eac | — |
-| 04 Domain Management | 🟢 | 227 ✅ | ✅ | — | e614249 | — |
-| 05 WHM Provisioning | 🟢 | 296 ✅ | ✅ | — | 9c0c517 | — |
-| 06 Cart & Checkout | 🟢 | 458 ✅ | ✅ | — | 23168d7 | — |
-| 07 Billing & Invoices | 🟢 | 622 ✅ | ✅ | — | ac37961 | — |
-| 08 Renewals & Upgrades | 🟢 | 729 ✅ | ✅ | — | 4d00e37 | — |
-| 09 Orders & Lifecycle | 🟢 | 788 ✅ | ✅ | — | 8d83271 | — |
-| 10 Support | 🟢 | 885 ✅ | ✅ | — | e425a85 | — |
-| 11 Notifications & Email | 🟢 | 945 ✅ | ✅ | — | 7d4026a | — |
-| 12 Cancellation | 🟢 | 1046 ✅ | ✅ | — | d3f9b82 | — |
-| 13 Affiliates | 🟢 | 1134 ✅ | ✅ | — | a2e8989 | — |
-| 14 Reports | 🟢 | 1197 ✅ | ✅ | — | f1246ba | — |
+| 01 Foundation & Architecture | 🟢 | 70 ✅ | ✅ | D2 crawl: 0 broken | 960bd54 | — |
+| 02 Client Management | 🟢 | 98 ✅ | ✅ | D2 crawl: 0 broken | 3d257c4 | — |
+| 03 Products & Addons | 🟢 | 150 ✅ | ✅ | D2 crawl: 0 broken | 3697eac | — |
+| 04 Domain Management | 🟢 | 227 ✅ | ✅ | D2 crawl: 0 broken | e614249 | — |
+| 05 WHM Provisioning | 🟢 | 296 ✅ | ✅ | D2 crawl: 0 broken | 9c0c517 | — |
+| 06 Cart & Checkout | 🟢 | 458 ✅ | ✅ | D2 crawl: 0 broken | 23168d7 | — |
+| 07 Billing & Invoices | 🟢 | 622 ✅ | ✅ | D2 crawl: 0 broken | ac37961 | — |
+| 08 Renewals & Upgrades | 🟢 | 729 ✅ | ✅ | D2 crawl: 0 broken | 4d00e37 | — |
+| 09 Orders & Lifecycle | 🟢 | 788 ✅ | ✅ | D2 crawl: 0 broken | 8d83271 | — |
+| 10 Support | 🟢 | 885 ✅ | ✅ | D2 crawl: 0 broken | e425a85 | — |
+| 11 Notifications & Email | 🟢 | 945 ✅ | ✅ | D2 crawl: 0 broken | 7d4026a | — |
+| 12 Cancellation | 🟢 | 1046 ✅ | ✅ | D2 crawl: 0 broken | d3f9b82 | — |
+| 13 Affiliates | 🟢 | 1134 ✅ | ✅ | D2 crawl: 0 broken | a2e8989 | — |
+| 14 Reports | 🟢 | 1197 ✅ | ✅ | D2 crawl: 0 broken | f1246ba | — |
 | 15 Admin Operations | ⬜ | — | — | — | — | — |
 | 16 Security | ⬜ | — | — | — | — | — |
 | 17 Reliability | ⬜ | — | — | — | — | — |
 | 18 Testing & Readiness | ⬜ | — | — | — | — | — |
 | 19 Production Launch | ⬜ | — | — | — | — | — |
 
-"Links" column: phases 01–14 predate the crawler; D2 back-fills it for them. D0 ran a prototype crawler (8 roles, 3,000+ pages: no 404, 500 or 403-after-link) and a hostile-query sweep, now partly in CI (`apps/core/test_link_integrity.py`).
+"Links" column: phases 01–14 predate the crawler; D2 back-filled it for them: the crawl covers every page of every phase for eight roles on data with one object in every status. D0 ran a prototype crawler (8 roles, 3,000+ pages: no 404, 500 or 403-after-link) and a hostile-query sweep, now partly in CI (`apps/core/test_link_integrity.py`).
 
 ## Design & navigation track
 
 | Phase | Status | Tests | Browser | Links | Commit | Deploy |
 |---|---|---|---|---|---|---|
-| D0 UI & Navigation Audit | 🟢 | 1220 ✅ | ✅ | prototype crawler: 8 roles, 0 broken | dd1c88a | — |
+| D0 UI & Navigation Audit | 🟢 | 1220 ✅ | ✅ | prototype crawler: 8 roles, 0 broken (kept as a CI test in D2) | dd1c88a | — |
 | D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | ee8a609 | — |
-| D2 Link Integrity Harness | ⬜ | — | — | — | — | — |
+| D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | pending | — |
 | D3 Client Area Parity | ⬜ | — | — | — | — | — |
 | D4 Staff Area Parity | ⬜ | — | — | — | — | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
@@ -951,8 +951,6 @@ Use this section whenever something is discovered but intentionally postponed.
 | Page templates still use the old class names through `static/css/legacy.css` and are not yet wrapped for translation (shells and components are) | Open (D1 bridge) | Re-skinned screen by screen; delete the rules as they become unused | D3 / D4 |
 | Vendored Bootstrap 5.3.3, Bootstrap Icons 1.11.3 and htmx 2.0.4 are updated by hand | Deferred | No package manager for front-end assets; versions recorded here | Post-MVP |
 | Dark mode follows the system setting only (no manual toggle); HTML emails are the text email in a branded frame | Deferred | Not required by v2 | Post-MVP |
-| Static files use default storage, not `ManifestStaticFilesStorage` | Open (found in D0) | A CSS reference to a missing file would not fail collectstatic | D2 |
-| Path prefixes: customer area stays `/account/...` (v2 says `/client/...`); add vanity redirects `/login/`, `/register/`, `/store/`, `/knowledgebase/` | Decided in D0 | Links already emailed must keep working; renaming buys only cosmetics | D2 |
 | Staff UI still missing for: staff users and roles, payment providers, registrar provider, email provider, audit log viewer; no staff dashboard or global search | Open (found in D0) | Django admin only today | D4 / Phase 15 |
 
 ## Closed
@@ -975,6 +973,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Staff not notified of reported offline payment | Phase 11 | Team alert to billing staff |
 | Basic reports (sales, financial, services, support) with PDF/CSV/XLSX export | Phase 14 | 14 reports, audited, formula-safe exports, API |
 | Runtime CDN dependency; unbranded errors; hand-coloured status badges; unlabelled form fields; no focus styles; brand not configurable | D1 | Assets vendored; branded error pages; one status-badge tag; labels added and tested; focus rings; brand settings in the database (colours checked for contrast) |
+| Static files on default storage; vanity paths; hand-written navbars; no link crawler in CI; emailed links and PDFs untested; a Support Agent shown a link to Products | D2 | `ManifestStaticFilesStorage` in production (a missing file fails the build); `/login/`, `/register/`, `/store/`, `/knowledgebase/` answer 301 via one `RETIRED` map; all menus from `apps/core/navigation.py` with a startup check; crawler for 8 roles on a world with one object in every status as a CI gate; email, PDF, redirect and safe-`next` tests; deploy check that `SITE_URL` is https |
 | Server errors from junk or NUL characters in the address or forms; two "create" pages that 404 without `?client=`; hand-built internal URLs | D0 | `query_id` helper, `StripNullBytesMiddleware`, redirects to the client chooser, `reverse()` everywhere; regression tests |
 
 ------------------------------------------------------------------------
@@ -1049,25 +1048,28 @@ Use this section whenever something is discovered but intentionally postponed.
 | Status colour is decided in one template tag (`{% status_badge %}`) from the roadmap map; a text label is always shown | One vocabulary; unknown statuses are neutral, never uncoloured | Active |
 | Brand (name, logo, favicon, colours, footer, formats) is a database record; primary colour must give 4.5:1 contrast with white; images are validated by content and never SVG | Rule 6; readable buttons; an uploaded file must never run as script | Active |
 | `static/css/legacy.css` is a bridge for the old class names and receives no new rules | Retired screen by screen in D3/D4 | Active |
+| Every menu, breadcrumb and active state is drawn from the menu registry (`apps/core/navigation.py`); `manage.py check` fails on a bad entry (`core.E001`); a group is shown only when a child is | A menu entry cannot name a missing page, and is shown exactly to people who may open it | Active |
+| The link crawler (`apps/core/harness.py`, `test_crawler.py`) is a CI gate: 8 roles, a world with one object in every status, no 404/500/403/dead link, and every GET page reached by some role unless allowlisted with a reason | Rule 5: a broken link is a failed build | Active |
+| Old paths live in one `RETIRED` map (`apps/core/redirects.py`), 301 with the query string, named `retired_*`; a moved page keeps its URL name | Rule 5.7: emailed links work forever | Active |
+| Production uses `ManifestStaticFilesStorage`; `SITE_URL` must be https (deploy check `core.E002`); no address is typed by hand in a template or code | Fingerprinted assets; emailed links open for customers | Active |
+| Dropdown toggles are buttons, never `href="#..."`; the crawler reports empty, `#`, `javascript:` and missing-anchor links | Rule 5: no dead links | Active |
 
 ------------------------------------------------------------------------
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–14, D0 and D1 are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md` (what the shells, components and brand settings are) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`).
+Phases 01–14, D0, D1 and D2 are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md` (shells, components, brand settings), `docs/d2-link-integrity.md` (menu registry, crawler, redirects) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`).
 
-## Start: Phase D2 — Link Integrity Harness
+## Start: Phase D3 — Client Area Parity
 
-**Do not start coding before Rule 1 inspection.** Then, per the D0 report ("CHANGES → D2"):
+**Do not start coding before Rule 1 inspection.** Then, per Section 10 and the D0 mapping (`docs/d0-ui-navigation-audit.md`):
 
-1. `apps/core/navigation.py`: the **menu registry** (key, label, URL name, permission, area, parent, feature flag, badge). Generate the three navbars in `templates/components/navbar_*.html` from it; a registry test reverses every entry and checks every parent. Active-state highlighting and breadcrumbs derive from the same registry.
-2. Promote the D0 crawler to a **CI test** (roles: anonymous, customer owner, billing contact, technical contact, support agent, manager, admin, super admin) with a fixture that has **one object in every status** (orders, invoices, quotes, transactions, tickets, hosting, domains, cancellations, commissions, payouts, plus knowledgebase articles, an addon, a coupon and a failed email). It follows `href`, GET form `action`, `hx-get`, `src`, `<link>`, and fails on 404, 500, or a 403 on a link the page displayed. `apps/core/test_link_integrity.py` and `apps/core/test_ui.py` already hold the lint, the hostile-query sweep, the navigation-agreement test and the asset checks to build on.
-3. Email-link test (every link in every email template resolves and uses the configured HTTPS site address), PDF-link test, redirect test, safe-`next` test.
-4. `ManifestStaticFilesStorage` (a missing file referenced from CSS fails the build) and a check that `collectstatic` succeeds.
-5. Vanity redirects `/login/`, `/register/`, `/store/`, `/knowledgebase/` (301, no URL name changes).
-6. D2 ends with the crawler green for every role, the template lint green, and the tracker "Links" column filled for D0-D2.
+1. Customer **dashboard** (stat tiles that are links, active services, unpaid invoices, open tickets, quick actions) replacing the profile page as the home page (`home` keeps its name).
+2. **Sidebar panels** and **URL-based tabs** on the service and domain detail pages, per Section 10; breadcrumbs from the registry.
+3. Re-skin every customer screen onto the shells and components; delete each `legacy.css` rule that stops being used; wrap page strings for translation as each is touched.
+4. Every new page: entry in the menu registry (with permission), crawler and coverage floor green, browser check at 375 / 768 / 1280 px, no URL name renamed, moved paths added to `RETIRED`.
 
-Then D3 (client-area parity: dashboard, sidebars, service/domain tabs, per Section 10 and the D0 mapping), then D4 + Phase 15, and so on per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
+Then D4 + Phase 15 (staff area parity and admin operations), then 16, 17, D5, 18, 19 per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
 
 ------------------------------------------------------------------------
 

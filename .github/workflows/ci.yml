@@ -47,6 +47,8 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Production settings deploy check
+        env:
+          SITE_URL: https://portal.example.com  # the deploy check refuses a non-https address
         run: python manage.py check --deploy --settings=config.settings.prod --fail-level ERROR
 
       - name: Test suite on PostgreSQL

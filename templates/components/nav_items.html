@@ -1,0 +1,18 @@
+{# Renders menu entries from the registry (apps/core/navigation.py): entries, and optionally end=True for right-aligned dropdowns. #}
+{% for e in entries %}
+  {% if e.is_group %}
+  <li class="nav-item dropdown">
+    <button class="nav-link dropdown-toggle{% if e.active %} active{% endif %}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="menu-{{ e.key|slugify }}">{% if e.icon %}<i class="bi {{ e.icon }}" aria-hidden="true"></i> {% endif %}{{ e.label }}</button>
+    <ul class="dropdown-menu{% if end %} dropdown-menu-end{% endif %}" id="menu-{{ e.key|slugify }}">
+      {% for c in e.children %}
+      {% if c.divider_before %}<li><hr class="dropdown-divider"></li>{% endif %}
+      <li><a class="dropdown-item{% if c.active %} active{% endif %}" href="{{ c.url }}"{% if c.active %} aria-current="page"{% endif %}>{{ c.label }}</a></li>
+      {% endfor %}
+      {% if with_signout %}<li><hr class="dropdown-divider"></li>
+      <li><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" class="dropdown-item">Sign out</button></form></li>{% endif %}
+    </ul>
+  </li>
+  {% else %}
+  <li class="nav-item"><a class="nav-link{% if e.key == 'account.notifications' %} bell{% endif %}{% if e.active %} active{% endif %}" href="{{ e.url }}"{% if e.active %} aria-current="page"{% endif %}>{% if e.icon %}<i class="bi {{ e.icon }}" aria-hidden="true"></i> {% endif %}{{ e.label }}{% if e.badge %}{% if e.key == 'account.notifications' %} <span class="badge unread">{{ e.badge }}</span>{% else %} ({{ e.badge }}){% endif %}{% endif %}</a></li>
+  {% endif %}
+{% endfor %}

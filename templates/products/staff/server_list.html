@@ -6,7 +6,7 @@
 <div class="page-head">
   <h1>Servers</h1>
   <div class="actions">
-    <a href="{% url 'catalog_staff:product_list' %}">Products</a>
+    {% if perms.accounts.view_products %}<a href="{% url 'catalog_staff:product_list' %}">Products</a>{% endif %}
     {% if perms.accounts.manage_hosting %}<a class="btn" href="{% url 'catalog_staff:server_create' %}">Add server</a>{% endif %}
   </div>
 </div>

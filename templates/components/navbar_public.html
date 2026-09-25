@@ -4,15 +4,8 @@
     {% include "components/navbar_brand.html" %}
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav-main" aria-controls="nav-main" aria-expanded="false" aria-label="{% trans 'Toggle navigation' %}"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav-main">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link" href="{% url 'catalog:product_list' %}">{% trans "Plans" %}</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'domains_public:search' %}">{% trans "Domains" %}</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'help:index' %}">{% trans "Help" %}</a></li>
-      </ul>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'accounts:register' %}">{% trans "Create account" %}</a></li>
-      </ul>
+      <ul class="navbar-nav me-auto">{% include "components/nav_items.html" with entries=nav.main %}</ul>
+      <ul class="navbar-nav">{% include "components/nav_items.html" with entries=nav.right %}</ul>
     </div>
   </div>
 </nav>

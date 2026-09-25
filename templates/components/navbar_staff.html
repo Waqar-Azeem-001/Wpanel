@@ -1,95 +1,14 @@
 {% load i18n %}
-{# Grouped staff menus (roadmap Section 11.1). Every entry is shown only if the person may open it (Rule 5.6). #}
 <nav class="navbar navbar-expand-xl navbar-dark app-navbar navbar-staff" aria-label="{% trans 'Main' %}">
   <div class="container-xxl">
     {% include "components/navbar_brand.html" %}
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav-main" aria-controls="nav-main" aria-expanded="false" aria-label="{% trans 'Toggle navigation' %}"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav-main">
-      <ul class="navbar-nav me-auto">
-        {% if perms.accounts.view_clients or perms.accounts.view_hosting or perms.accounts.view_domains or perms.accounts.view_affiliates %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#menu-clients" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Clients" %}</a>
-          <ul class="dropdown-menu" id="menu-clients">
-            {% if perms.accounts.view_clients %}<li><a class="dropdown-item" href="{% url 'clients_staff:list' %}">{% trans "View / Search Clients" %}</a></li>{% endif %}
-            {% if perms.accounts.manage_clients %}<li><a class="dropdown-item" href="{% url 'clients_staff:create' %}">{% trans "Add New Client" %}</a></li>{% endif %}
-            {% if perms.accounts.view_hosting %}<li><a class="dropdown-item" href="{% url 'hosting_staff:list' %}">{% trans "Products / Services" %}</a></li>{% endif %}
-            {% if perms.accounts.view_domains %}<li><a class="dropdown-item" href="{% url 'domains_staff:list' %}">{% trans "Domain Registrations" %}</a></li>{% endif %}
-            {% if perms.accounts.view_hosting or perms.accounts.view_domains %}<li><a class="dropdown-item" href="{% url 'lifecycle_staff:cancellations' %}">{% trans "Cancellation Requests" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'lifecycle_staff:overview' %}">{% trans "Service Lifecycle" %}</a></li>{% endif %}
-            {% if perms.accounts.view_affiliates %}<li><a class="dropdown-item" href="{% url 'affiliates_staff:overview' %}">{% trans "Manage Affiliates" %}</a></li>{% endif %}
-          </ul>
-        </li>
-        {% endif %}
-        {% if perms.accounts.view_orders %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#menu-orders" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Orders" %}</a>
-          <ul class="dropdown-menu" id="menu-orders">
-            <li><a class="dropdown-item" href="{% url 'orders_staff:list' %}">{% trans "List All Orders" %}</a></li>
-            {% if perms.accounts.manage_orders %}<li><a class="dropdown-item" href="{% url 'orders_staff:new' %}">{% trans "Add New Order" %}</a></li>{% endif %}
-          </ul>
-        </li>
-        {% endif %}
-        {% if perms.accounts.view_billing %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#menu-billing" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Billing" %}</a>
-          <ul class="dropdown-menu" id="menu-billing">
-            <li><a class="dropdown-item" href="{% url 'billing_staff:index' %}">{% trans "Billing Overview" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'billing_staff:transaction_list' %}">{% trans "Transactions" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'billing_staff:invoice_list' %}">{% trans "Invoices" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'billing_staff:billable_list' %}">{% trans "Billable Items" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'billing_staff:quote_list' %}">{% trans "Quotes" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'renewals_staff:list' %}">{% trans "Renewals & Upgrades" %}</a></li>
-          </ul>
-        </li>
-        {% endif %}
-        {% if perms.accounts.view_support %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#menu-support" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Support" %}</a>
-          <ul class="dropdown-menu" id="menu-support">
-            <li><a class="dropdown-item" href="{% url 'support_staff:overview' %}">{% trans "Support Overview" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'support_staff:tickets' %}">{% trans "Support Tickets" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'support_staff:ticket_new' %}">{% trans "Open New Ticket" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'support_staff:replies' %}">{% trans "Predefined Replies" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'support_staff:kb' %}">{% trans "Knowledgebase" %}</a></li>
-          </ul>
-        </li>
-        {% endif %}
-        {% if perms.accounts.view_reports %}<li class="nav-item"><a class="nav-link" href="{% url 'reports_staff:index' %}">{% trans "Reports" %}</a></li>{% endif %}
-        {% if perms.accounts.view_settings %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#menu-utilities" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Utilities" %}</a>
-          <ul class="dropdown-menu" id="menu-utilities">
-            <li><a class="dropdown-item" href="{% url 'notifications_staff:overview' %}">{% trans "Email Statistics" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'notifications_staff:emails' %}">{% trans "Email Message Log" %}</a></li>
-          </ul>
-        </li>
-        {% endif %}
-      </ul>
+      <ul class="navbar-nav me-auto">{% include "components/nav_items.html" with entries=nav.main %}</ul>
       <ul class="navbar-nav align-items-xl-center">
-        {% if perms.accounts.view_products or perms.accounts.view_billing or perms.accounts.view_settings or perms.accounts.view_domains or perms.accounts.view_support %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#menu-setup" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Setup' %}"><i class="bi bi-gear" aria-hidden="true"></i> {% trans "Setup" %}</a>
-          <ul class="dropdown-menu dropdown-menu-end" id="menu-setup">
-            {% if perms.accounts.view_products %}
-            <li><a class="dropdown-item" href="{% url 'catalog_staff:product_list' %}">{% trans "Products / Services" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'catalog_staff:addon_list' %}">{% trans "Product Addons" %}</a></li>{% endif %}
-            {% if perms.accounts.view_domains %}<li><a class="dropdown-item" href="{% url 'domains_staff:tld_list' %}">{% trans "Domain Pricing" %}</a></li>{% endif %}
-            {% if perms.accounts.view_hosting %}<li><a class="dropdown-item" href="{% url 'catalog_staff:server_list' %}">{% trans "Servers" %}</a></li>{% endif %}
-            {% if perms.accounts.view_billing %}
-            <li><a class="dropdown-item" href="{% url 'billing_staff:payment_methods' %}">{% trans "Payment Methods" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'billing_staff:tax_rules' %}">{% trans "Tax Rules" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'billing_staff:coupons' %}">{% trans "Coupons" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'billing_staff:settings' %}">{% trans "Billing Settings" %}</a></li>{% endif %}
-            {% if perms.accounts.view_support %}<li><a class="dropdown-item" href="{% url 'support_staff:departments' %}">{% trans "Support Departments" %}</a></li>{% endif %}
-            {% if perms.accounts.view_settings %}
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="{% url 'lifecycle_staff:settings' %}">{% trans "Lifecycle Timings" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'affiliates_staff:settings' %}">{% trans "Affiliate Settings" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'brand_staff:settings' %}">{% trans "Brand" %}</a></li>{% endif %}
-          </ul>
-        </li>
-        {% endif %}
-        {% include "components/navbar_account.html" %}
+        {% include "components/nav_items.html" with entries=nav.setup end=True %}
+        {% include "components/nav_items.html" with entries=nav.right %}
+        {% include "components/nav_items.html" with entries=nav.account end=True with_signout=True %}
       </ul>
     </div>
   </div>

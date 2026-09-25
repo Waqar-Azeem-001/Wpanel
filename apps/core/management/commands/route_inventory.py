@@ -46,7 +46,7 @@ def permission_aliases(module_source):
 def access_of(callback):
     cls = getattr(callback, "cls", None) or getattr(callback, "view_class", None)
     target = cls or inspect.unwrap(callback)
-    if cls and cls.__name__ == "RedirectView":
+    if cls and cls.__name__ in ("RedirectView", "RetiredPath"):
         return "public (redirects)"
     try:
         source = inspect.getsource(target)
