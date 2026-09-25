@@ -1,0 +1,1 @@
+Invoice {{ invoice.number }} is {{ days_overdue }} day{{ days_overdue|pluralize }} overdue - {{ site_name }}

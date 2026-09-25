@@ -1,0 +1,9 @@
+{% autoescape off %}Hello,
+
+Your hosting account for {{ account.domain }} has been suspended.{% if reason %}
+Reason: {{ reason }}{% endif %}
+
+Your website and email for this account are unavailable until it is reactivated. To resolve this, please contact us: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

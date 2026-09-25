@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from apps.notifications import views as notification_views
+
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="accounts:profile", permanent=False)),
     path("admin/", admin.site.urls),
@@ -21,6 +23,9 @@ urlpatterns = [
     path("account/billing/", include("apps.billing.urls_customer")),
     path("account/renewals/", include("apps.renewals.urls_customer")),
     path("account/support/", include("apps.support.urls_customer")),
+    path("account/notifications/", include("apps.notifications.urls")),
+    path("staff/notifications/", include("apps.notifications.urls_staff")),
+    path("e/o/<uuid:token>.gif", notification_views.open_pixel, name="email_open_pixel"),
     path("staff/support/", include("apps.support.urls_staff")),
     path("help/", include("apps.support.urls_kb")),
     path("staff/renewals/", include("apps.renewals.urls_staff")),

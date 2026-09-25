@@ -104,10 +104,7 @@ def _send_set_password_email(user, client):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     link = settings.SITE_URL.rstrip("/") + reverse("accounts:password_reset_confirm", args=[uid, token])
-    notifications.send_email(
-        to_email=user.email, template="client_welcome", context={"user": user, "client": client, "link": link},
-        user=user, event="client.welcome",
-    )
+    notifications.dispatch("client.welcome", user=user, context={"client": client, "link": link})
 
 
 def _get_or_create_contact_user(email, first_name="", last_name=""):

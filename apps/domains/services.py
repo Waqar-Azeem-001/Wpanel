@@ -45,6 +45,16 @@ def _require_self_service(actor, domain):
         raise _denied()
 
 
+def _announce_registered(domain):
+    from django.urls import reverse
+
+    from apps.notifications import services as notifications
+
+    link = reverse("domains_customer:detail", args=[domain.pk])
+    notifications.dispatch_client("domain.registered", domain.client, title=f"{domain.name} is now active",
+                                  link=link, context={"domain": domain, "link": link})
+
+
 # --- Registrar / adapter -----------------------------------------------------------------
 
 def get_active_registrar():
@@ -159,6 +169,7 @@ def complete_registration(actor, domain, *, request=None):
     audit.record("domain.registered", actor=actor, target=domain,
                  metadata={"provider_ref": domain.provider_ref, "expires_at": domain.expires_at.isoformat()},
                  request=request)
+    _announce_registered(domain)
     return domain
 
 
@@ -212,6 +223,7 @@ def complete_transfer(actor, domain, *, request=None):
                                "auth_code_encrypted", "updated_at"])
     audit.record("domain.transfer_completed", actor=actor, target=domain,
                  metadata={"provider_ref": domain.provider_ref}, request=request)
+    _announce_registered(domain)
     return domain
 
 

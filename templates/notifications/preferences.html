@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Notification preferences · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'notifications:inbox' %}">&larr; Notifications</a></p>
+<h1>Notification preferences</h1>
+<p class="muted">Choose how you hear about optional updates. Messages about your account security, invoices and payments, and the state of your services are always sent - they cannot be switched off.</p>
+<form method="post" novalidate>{% csrf_token %}
+  {% for row in rows %}
+  <section class="card">
+    <h2>{{ row.label }}</h2>
+    <ul class="event-list">{% for event in row.events %}<li>{{ event.label }}</li>{% endfor %}</ul>
+    <label class="check"><input type="checkbox" name="email_{{ row.category }}"{% if row.email_enabled %} checked{% endif %}> Email me</label>
+    <label class="check"><input type="checkbox" name="in_app_{{ row.category }}"{% if row.in_app_enabled %} checked{% endif %}> Show in my notifications</label>
+  </section>
+  {% endfor %}
+  <div class="actions"><button class="btn" type="submit">Save preferences</button></div>
+</form>
+<section class="card">
+  <h2>Always sent</h2>
+  <ul class="event-list">{% for event in essential %}<li>{{ event.label }} <small class="muted">({{ event.category }})</small></li>{% endfor %}</ul>
+</section>
+{% endblock %}

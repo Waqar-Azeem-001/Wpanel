@@ -1,0 +1,8 @@
+{% autoescape off %}Hello,
+
+{{ service }} has been upgraded to {{ plan }} and is paid until {{ new_expiry|date:"j M Y" }}.
+
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

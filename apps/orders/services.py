@@ -233,13 +233,10 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
 
 def _notify_order_placed(actor, order, method, invoice):
     link = reverse("orders_customer:detail", args=[order.pk])
-    notifications.notify(actor, event="order.placed", title=f"Order {order.reference} placed",
-                         body=f"Total {order.currency} {order.total}. Awaiting payment.", link=link)
-    notifications.send_email(
-        to_email=order.billing_email or order.client.email, template="order_placed",
-        context={"order": order, "items": list(order.items.all()), "method": method, "invoice": invoice}, user=actor,
-        event="order.placed",
-    )
+    notifications.dispatch(
+        "order.placed", user=actor, email=order.billing_email or order.client.email,
+        title=f"Order {order.reference} placed", body=f"Total {order.currency} {order.total}. Awaiting payment.",
+        link=link, context={"order": order, "items": list(order.items.all()), "method": method, "invoice": invoice})
 
 
 # --- Orders ---------------------------------------------------------------------------------

@@ -310,19 +310,19 @@ def _issue(invoice, *, actor, snapshot=None, notify=True, request=None):
     if settled:
         invoice_paid.send(sender=Invoice, invoice=invoice, actor=actor)
     if notify:
-        notify_invoice_issued(invoice, actor)
+        notify_invoice_issued(invoice)
     return invoice
 
 
-def notify_invoice_issued(invoice, actor=None):
+def notify_invoice_issued(invoice):
     from django.urls import reverse
 
-    notifications.send_email(
-        to_email=invoice.billing_email or invoice.client.email, template="invoice_issued",
-        context={"invoice": invoice, "items": list(invoice.items.all()),
-                 "link": reverse("billing_customer:invoice_detail", args=[invoice.pk])},
-        user=actor if actor and getattr(actor, "is_authenticated", False) else None, event="invoice.issued",
-    )
+    link = reverse("billing_customer:invoice_detail", args=[invoice.pk])
+    notifications.dispatch_client(
+        "invoice.issued", invoice.client, email=invoice.billing_email or invoice.client.email,
+        title=f"Invoice {invoice.number} for {invoice.currency} {invoice.total}", link=link,
+        body=f"Due {invoice.due_date:%d %b %Y}." if invoice.balance_due and invoice.due_date else "",
+        context={"invoice": invoice, "items": list(invoice.items.all()), "link": link})
 
 
 @transaction.atomic
@@ -534,12 +534,10 @@ def send_quote(actor, quote, *, request=None):
     audit.record("quote.sent", actor=actor, target=quote, metadata={"number": quote.number}, request=request)
     from django.urls import reverse
 
-    notifications.send_email(
-        to_email=quote.billing_email or quote.client.email, template="quote_sent",
+    notifications.dispatch(
+        "quote.sent", email=quote.billing_email or quote.client.email, user=actor,
         context={"quote": quote, "items": list(quote.items.all()),
-                 "link": reverse("billing_customer:quote_detail", args=[quote.pk])},
-        user=actor, event="quote.sent",
-    )
+                 "link": reverse("billing_customer:quote_detail", args=[quote.pk])})
     return quote
 
 
@@ -571,6 +569,7 @@ def accept_quote(actor, quote, *, request=None):
     invoice.tax_total, invoice.total = totals.tax_total, totals.total
     _save_document(invoice, _build_items(InvoiceItem, "invoice", invoice, lines, totals), "invoice")
     audit.record("quote.accepted", actor=actor, target=quote, metadata={"invoice_id": invoice.pk}, request=request)
+    _tell_billing_team("quote.accepted", f"Quote {quote.reference} was accepted", quote)
     return _issue(invoice, actor=actor, snapshot=snapshot, notify=True, request=request)
 
 
@@ -580,6 +579,7 @@ def decline_quote(actor, quote, *, request=None):
     quote.status, quote.decided_at = QuoteStatus.DECLINED, timezone.now()
     quote.save(update_fields=["status", "decided_at", "updated_at"])
     audit.record("quote.declined", actor=actor, target=quote, request=request)
+    _tell_billing_team("quote.declined", f"Quote {quote.reference} was declined", quote)
     return quote
 
 
@@ -604,7 +604,8 @@ def save_billing_settings(actor, data, *, request=None):
     _require_manage(actor)
     row = BillingSettings.load()
     fields = ("company_name", "address", "email", "phone", "tax_id", "invoice_prefix", "quote_prefix",
-              "payment_terms_days", "quote_validity_days", "invoice_footer", "renewal_invoice_days")
+              "payment_terms_days", "quote_validity_days", "invoice_footer", "renewal_invoice_days",
+              "send_payment_reminders")
     changed = [f for f in fields if f in data and getattr(row, f) != data[f]]
     for field in changed:
         setattr(row, field, data[field])
@@ -614,6 +615,13 @@ def save_billing_settings(actor, data, *, request=None):
         audit.record("billing_settings.updated", actor=actor, target=row, metadata={"fields": changed},
                      request=request)
     return row
+
+
+def _tell_billing_team(event, title, quote):
+    from django.urls import reverse
+
+    notifications.notify_team(event, "manage_billing", title=title, body=quote.client.display_name,
+                              link=reverse("billing_staff:quote_detail", args=[quote.pk]))
 
 
 # --- Search ---------------------------------------------------------------------------------------

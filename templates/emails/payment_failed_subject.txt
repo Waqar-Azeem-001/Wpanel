@@ -1,0 +1,1 @@
+Your payment for invoice {{ invoice.number }} did not go through - {{ site_name }}

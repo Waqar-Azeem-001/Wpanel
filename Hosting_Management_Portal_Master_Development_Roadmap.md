@@ -1618,7 +1618,7 @@ If UI changed:
   08 Renewals & Upgrades         🟢       729 ✅  ✅        4d00e37  ---
   09 Orders & Lifecycle          🟢       788 ✅  ✅        8d83271  ---
   10 Support                     🟢       885 ✅  ✅        e425a85  ---
-  11 Notifications & Email       ⬜       ---     ---       ---      ---
+  11 Notifications & Email       🟡       945 ✅  ✅        ---      ---
   12 Cancellation                ⬜       ---     ---       ---      ---
   13 Affiliates                  ⬜       ---     ---       ---      ---
   14 Reports                     ⬜       ---     ---       ---      ---
@@ -1638,8 +1638,12 @@ postponed.
   -------------------------------------------------------------------------------------------
   Item                               Status    Reason                          Target
   ---------------------------------- --------- ------------------------------- ----------------
-  Email open/failure tracking,       Deferred  Phase 01 records sent/failed    Phase 11
-  more provider kinds, templates               with SMTP only
+  Email open/failure tracking         Closed    Delivered in Phase 11 (sent, failed, Phase 11
+                                                opened, open rate, resend, alerts)
+
+  More email provider kinds (API      Deferred  SMTP only; no click tracking or   Post-MVP
+  senders), bounce handling,                    bounce handling; templates are
+  admin-editable templates                      files, not editable in the admin
 
   MFA                                Deferred  Roadmap places MFA in security  Phase 16
                                                hardening
@@ -1733,9 +1737,9 @@ postponed.
   attachments                                   stored privately and only downloaded,
                                                 but not scanned (e.g. ClamAV)
 
-  Reply-by-email / email-to-ticket;   Deferred  Customers reply in the portal;      Phase 11
-  team notifications for unassigned             only an assignee is notified
-  tickets
+  Reply-by-email / email-to-ticket    Deferred  Customers reply in the portal;      Post-MVP
+                                                team alerts for unassigned
+                                                tickets delivered in Phase 11
 
   SLA timers, escalation, ticket      Deferred  Not in the roadmap's Phase 10      Post-MVP
   merge, satisfaction rating                    list
@@ -1749,8 +1753,8 @@ postponed.
   hosting only; refunds do not                  left alone; a refund does not undo
   cancel fulfilled services                     what was fulfilled
 
-  Staff are not alerted when          Deferred  Visible as "Failed" in the list,   Phase 11
-  fulfilment fails                              the tab counts and the audit trail
+  Staff are not alerted when          Closed    Team alert on a failed order      Phase 11
+  fulfilment fails                              (Phase 11)
 
   No real payment gateway adapter     Open      Only the simulated test gateway   Before launch
   (Stripe is unavailable in                     ships (dev/test only, guarded by
@@ -1760,8 +1764,11 @@ postponed.
   Invoices/quotes visible to any      Deferred  Restrict financial documents to   Phase 15/16
   contact of the client                         owner/billing contacts
 
-  Overdue reminders / dunning         Deferred  Overdue is derived and            Phase 11
-                                                filterable; no scheduled emails
+  Overdue reminders / dunning         Closed    Daily job: 3 days before due,     Phase 11
+                                                then 1, 7, 14 days after (on/off
+                                                in Billing settings)
+
+  Reminder schedule is fixed          Deferred  Only on/off is configurable         Phase 15
 
   Renewals, upgrade proration         Closed    Delivered in Phase 08               Phase 08
 
@@ -1780,8 +1787,8 @@ postponed.
   PDF text limited to Western         Deferred  Built-in PDF fonts; other         Post-MVP
   European characters                           scripts print as "?"
 
-  Staff not notified when a customer  Deferred  Visible on the Payments page      Phase 11/15
-  reports an offline payment
+  Staff not notified when a customer  Closed    Team alert to billing staff       Phase 11
+  reports an offline payment                    (Phase 11)
 
   Abandoned online payment attempts   Deferred  Stay pending until the gateway    Phase 17
   never expire                                  answers or the invoice is
@@ -2019,6 +2026,24 @@ Record permanent technical decisions here.
   term days, capped at what was paid, never exceeds valid paid
   none once expired; shown on the     value; expired plans get
   invoice as a discount line          none; invoice shows it
+
+  All business messaging goes through One place decides who is    Active
+  notifications.dispatch, using the   told, by which channel, and
+  event registry (events.py): an      what cannot be switched off; a
+  unregistered event is an error;     typo can no longer silently
+  essential events ignore user        send nothing
+  preferences
+
+  Emails carrying a secret (password, Secrets must not sit in a   Active
+  reset or verification link) are     log: encrypted only until
+  stored encrypted until delivered,   delivered, wiped after; never
+  then wiped (24 h if undelivered);   open-tracked; not resendable
+  never open-tracked                  once gone
+
+  Open tracking is a signal, not      Image blocking hides opens;   Active
+  proof: 1x1 image, not on security   proxies and scanners create
+  emails, caveat shown wherever the   them
+  rate is shown
   -----------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

@@ -1,0 +1,1 @@
+Invoice {{ invoice.number }} is due on {{ invoice.due_date|date:"j M Y" }} - {{ site_name }}

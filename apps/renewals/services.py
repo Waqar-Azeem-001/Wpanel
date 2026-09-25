@@ -32,6 +32,7 @@ from apps.domains import services as domain_services
 from apps.domains.models import Domain, DomainStatus
 from apps.hosting import services as hosting_services
 from apps.hosting.models import HostingAccount, HostingStatus
+from apps.notifications import services as notifications
 from apps.products import services as product_services
 from apps.products.models import STANDARD_CYCLE_MONTHS, BillingCycle, CatalogStatus, Product
 
@@ -422,6 +423,21 @@ def _apply_domain(change):
     return domain, domain.expires_at
 
 
+def _announce_applied(change, service, expires):
+    from django.urls import reverse
+
+    if change.hosting_account_id:
+        link, name = reverse("hosting_customer:detail", args=[service.pk]), f"Hosting for {service.domain}"
+    else:
+        link, name = reverse("domains_customer:detail", args=[service.pk]), service.name
+    renewal = change.kind == ChangeKind.RENEWAL
+    notifications.dispatch_client(
+        "service.renewed" if renewal else "service.upgraded", change.client,
+        title=f"{name} has been {'renewed' if renewal else 'upgraded'}", link=link,
+        context={"service": name, "new_expiry": expires, "link": link,
+                 "plan": change.to_product.name if change.to_product_id else ""})
+
+
 def _apply(change, actor=None):
     """Apply one change. A failure is recorded on the change (the payment stands) rather than raised."""
     try:
@@ -439,6 +455,7 @@ def _apply(change, actor=None):
                      target=service, metadata={"client_id": change.client_id, "invoice_id": change.invoice_id,
                                                "change_id": change.pk, "new_expiry": _day(expires),
                                                "months": change.period_months})
+        _announce_applied(change, service, expires)
         return change
     change.status, change.error = ChangeStatus.FAILED, error[:500]
     change.save(update_fields=["status", "error", "updated_at"])

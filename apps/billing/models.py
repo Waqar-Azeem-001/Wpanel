@@ -156,6 +156,8 @@ class BillingSettings(models.Model):
     quote_validity_days = models.PositiveSmallIntegerField(default=30, validators=[MinValueValidator(1),
                                                                                     MaxValueValidator(365)])
     invoice_footer = models.TextField(blank=True, help_text="Printed at the bottom of every invoice, e.g. bank details.")
+    send_payment_reminders = models.BooleanField(
+        default=True, help_text="Email customers before an invoice is due and when it becomes overdue.")
     renewal_invoice_days = models.PositiveSmallIntegerField(
         default=14, validators=[MaxValueValidator(90)],
         help_text="Renewal invoices are created this many days before a service expires.")
@@ -333,6 +335,23 @@ class Invoice(BillingDocument):
         """Money held beyond the invoice total (a payment that landed after the invoice was settled or cancelled)."""
         owed = Decimal("0.00") if self.status == InvoiceStatus.CANCELLED else self.total
         return max(self.amount_paid - self.amount_refunded - owed, Decimal("0.00"))
+
+
+class InvoiceReminder(TimeStampedModel):
+    """
+    A payment reminder that was sent for an invoice. The unique (invoice, kind) pair is what makes the daily job safe to
+    run twice: a reminder of a given kind is never sent to the same invoice again.
+    """
+
+    invoice = models.ForeignKey("billing.Invoice", on_delete=models.CASCADE, related_name="reminders")
+    kind = models.CharField(max_length=20)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [models.UniqueConstraint(fields=["invoice", "kind"], name="unique_reminder_per_invoice_kind")]
+
+    def __str__(self):
+        return f"{self.invoice_id}: {self.kind}"
 
 
 class LineItem(models.Model):

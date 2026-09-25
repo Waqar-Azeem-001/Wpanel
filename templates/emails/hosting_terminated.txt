@@ -1,0 +1,8 @@
+{% autoescape off %}Hello,
+
+Your hosting account for {{ account.domain }} has been terminated and its data removed from our servers.
+
+If you believe this is a mistake, please contact us straight away: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

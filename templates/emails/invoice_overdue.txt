@@ -1,0 +1,11 @@
+{% autoescape off %}Hello {{ invoice.billing_name|default:"there" }},
+
+Invoice {{ invoice.number }} for {{ invoice.currency }} {{ invoice.balance_due }} was due on {{ invoice.due_date|date:"j M Y" }} and is now {{ days_overdue }} day{{ days_overdue|pluralize }} overdue.
+
+Please pay it as soon as you can to keep your services running without interruption:
+{{ site_url }}{{ link }}
+
+If you have already paid, thank you - it may not have reached us yet. If you have a question about this invoice, just reply to this email or open a support ticket.
+
+{{ site_name }}
+{% endautoescape %}

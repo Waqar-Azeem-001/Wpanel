@@ -1,0 +1,8 @@
+{% autoescape off %}Hello,
+
+Your domain {{ domain.name }} is now active{% if domain.expires_at %} and registered until {{ domain.expires_at|date:"j M Y" }}{% endif %}.
+
+Manage its nameservers, DNS and renewal here: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

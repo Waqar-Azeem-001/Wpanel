@@ -1,0 +1,1 @@
+Your hosting account {{ account.domain }} has been terminated - {{ site_name }}

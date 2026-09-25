@@ -77,7 +77,24 @@ def transition(order, new, *, actor=None, action="order.status_changed", reason=
     order.save(update_fields=fields)
     audit.record(action, actor=actor, target=order,
                  metadata={"from": previous, "to": new, "reason": reason, **metadata}, request=request)
+    _announce(order, new)
     return order
+
+
+def _announce(order, new):
+    """The moves that people need to hear about: the customer when an order is cancelled, the team when one fails."""
+    from django.urls import reverse
+
+    from apps.notifications import services as notifications
+
+    if new == S.CANCELLED:
+        link = reverse("orders_customer:detail", args=[order.pk])
+        notifications.dispatch_client("order.cancelled", order.client, title=f"Order {order.reference} was cancelled",
+                                      link=link, context={"order": order, "link": link})
+    elif new == S.FAILED:
+        notifications.notify_team("order.failed", "manage_orders",
+                                  title=f"Order {order.reference} could not be fully fulfilled",
+                                  body=order.status_reason[:200], link=reverse("orders_staff:detail", args=[order.pk]))
 
 
 def timeline(order):

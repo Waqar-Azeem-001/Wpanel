@@ -49,6 +49,15 @@ def can_self_service(user, account):
     return bool(user and user.is_authenticated and contact_role(user, account.client) is not None)
 
 
+def _announce(account, event, title, **context):
+    """Tell the account's owner and billing contacts what happened to their hosting."""
+    from django.urls import reverse
+
+    link = reverse("hosting_customer:detail", args=[account.pk])
+    notifications.dispatch_client(event, account.client, title=title, link=link,
+                                  context={"account": account, "link": link, **context})
+
+
 def get_adapter(server):
     return build_adapter(server)
 
@@ -157,11 +166,8 @@ def complete_provisioning(actor, account, *, request=None):
     # The account's password lives only in WHM from here on and in this one-time
     # email - it is never written to our own database (see the module docstring
     # in apps.hosting.adapters.whm_api and roadmap section 23, "safe credentials").
-    notifications.send_email(
-        to_email=account.client.email, template="hosting_welcome",
-        context={"account": account, "username": account.username, "password": raw_password},
-        event="hosting.welcome",
-    )
+    notifications.dispatch("hosting.welcome", email=account.client.email,
+                           context={"account": account, "username": account.username, "password": raw_password})
     return account
 
 
@@ -197,6 +203,7 @@ def suspend_account(actor, account, *, reason="", request=None):
     account.save(update_fields=["status", "suspend_reason", "last_error", "updated_at"])
     audit.record("hosting.suspended", actor=actor, target=account, metadata={"reason": reason[:500]},
                  request=request)
+    _announce(account, "hosting.suspended", f"{account.domain} has been suspended", reason=reason)
     return account
 
 
@@ -217,6 +224,7 @@ def unsuspend_account(actor, account, *, request=None):
     account.status, account.suspend_reason, account.last_error = HostingStatus.ACTIVE, "", ""
     account.save(update_fields=["status", "suspend_reason", "last_error", "updated_at"])
     audit.record("hosting.unsuspended", actor=actor, target=account, request=request)
+    _announce(account, "hosting.unsuspended", f"{account.domain} is active again")
     return account
 
 
@@ -238,6 +246,7 @@ def terminate_account(actor, account, *, keep_dns=False, request=None):
     account.save(update_fields=["status", "last_error", "updated_at"])
     audit.record("hosting.terminated", actor=actor, target=account, metadata={"keep_dns": keep_dns},
                  request=request)
+    _announce(account, "hosting.terminated", f"{account.domain} has been terminated")
     return account
 
 

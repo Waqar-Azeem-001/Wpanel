@@ -1,0 +1,8 @@
+{% autoescape off %}Hello,
+
+Thank you - {{ service }} has been renewed and is now paid until {{ new_expiry|date:"j M Y" }}.
+
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

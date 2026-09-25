@@ -181,13 +181,10 @@ def fulfil_order(order_id, *, actor=SYSTEM):
 
 def _notify_active(order):
     link = reverse("orders_customer:detail", args=[order.pk])
-    if order.placed_by is not None:
-        notifications.notify(order.placed_by, event="order.active", title=f"Order {order.reference} is active",
-                             body="Your services are ready.", link=link)
-    notifications.send_email(
-        to_email=order.billing_email or order.client.email, template="order_active",
-        context={"order": order, "items": list(order.items.select_related("hosting_account", "domain")),
-                 "link": link}, event="order.active")
+    notifications.dispatch_client(
+        "order.active", order.client, title=f"Order {order.reference} is active", body="Your services are ready.",
+        link=link, context={"order": order, "link": link,
+                            "items": list(order.items.select_related("hosting_account", "domain"))})
 
 
 def sweep(now=None):

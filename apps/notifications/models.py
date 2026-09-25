@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -72,11 +74,31 @@ class EmailMessage(TimeStampedModel):
     last_error = models.TextField(blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
 
+    # Emails carrying a secret (a temporary password, a one-time link) are kept encrypted only until they are
+    # delivered, then wiped - the log must not be a second copy of a credential.
+    is_sensitive = models.BooleanField(default=False)
+    sensitive_body = models.TextField(blank=True, editable=False)
+
+    # Open tracking (a signal, not proof of reading): the first open and how many times the pixel was fetched.
+    track_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    opened_at = models.DateTimeField(null=True, blank=True)
+    open_count = models.PositiveIntegerField(default=0)
+
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.subject} -> {self.to_email} [{self.status}]"
+
+    @property
+    def was_opened(self):
+        return self.opened_at is not None
+
+    @property
+    def event_label(self):
+        from . import events
+
+        return events.EVENTS[self.event].label if self.event in events.EVENTS else ""
 
 
 class Notification(TimeStampedModel):
@@ -98,3 +120,22 @@ class Notification(TimeStampedModel):
     @property
     def is_read(self):
         return self.read_at is not None
+
+
+class NotificationPreference(TimeStampedModel):
+    """
+    A person's choice for one category of optional message (orders, services, support tickets, team alerts).
+    No row means "the event's defaults". Essential messages (account security, billing, service continuity) ignore
+    preferences entirely.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notification_preferences")
+    category = models.CharField(max_length=20)
+    email_enabled = models.BooleanField(default=True)
+    in_app_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "category"], name="unique_preference_per_category")]
+
+    def __str__(self):
+        return f"{self.user} / {self.category}"

@@ -15,3 +15,9 @@ from . import services
 )
 def deliver_email(self, message_id):
     return services.deliver(message_id)
+
+
+@shared_task
+def purge_sensitive_emails_task():
+    """Daily: remove the secret content of emails that could not be delivered within a day."""
+    return services.purge_sensitive()

@@ -1,0 +1,9 @@
+{% autoescape off %}Hello {{ order.billing_name|default:"there" }},
+
+Your order {{ order.reference }} has been cancelled.{% if order.cancel_reason %}
+Reason: {{ order.cancel_reason }}{% endif %}
+
+If this is not what you expected, please contact us: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

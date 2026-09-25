@@ -118,13 +118,15 @@ def _create_transaction(**fields):
     return tx
 
 
+def _tell_customer(event, invoice, **context):
+    notifications.dispatch(
+        event, email=invoice.billing_email or invoice.client.email,
+        context={"invoice": invoice, "link": reverse("billing_customer:invoice_detail", args=[invoice.pk]),
+                 **context})
+
+
 def _notify_payment(invoice, tx):
-    notifications.send_email(
-        to_email=invoice.billing_email or invoice.client.email, template="payment_received",
-        context={"invoice": invoice, "payment": tx,
-                 "link": reverse("billing_customer:invoice_detail", args=[invoice.pk])},
-        event="payment.received",
-    )
+    _tell_customer("payment.received", invoice, payment=tx)
 
 
 def _audit_payment(action, actor, tx, invoice, request=None, **extra):
@@ -194,6 +196,10 @@ def report_payment(actor, invoice, *, method, amount=None, reference="", note=""
         method_name=method.name[:100], reference=reference.strip()[:200], note=note.strip()[:500],
         recorded_by=actor)
     _audit_payment("payment.reported", actor, tx, invoice, request)
+    notifications.notify_team(
+        "payment.reported", "manage_billing", exclude=actor,
+        title=f"{invoice.reference}: {invoice.client.display_name} reports a payment of {tx.currency} {tx.amount}",
+        link=reverse("billing_staff:invoice_detail", args=[invoice.pk]))
     return tx
 
 
@@ -226,6 +232,7 @@ def reject_payment(actor, tx, *, reason="", request=None):
     tx.status, tx.failure_reason = TransactionStatus.FAILED, reason.strip()[:500]
     tx.save(update_fields=["status", "failure_reason", "updated_at"])
     _audit_payment("payment.rejected", actor, tx, invoice, request, reason=tx.failure_reason)
+    _tell_customer("payment.rejected", invoice, payment=tx)
     return tx
 
 
@@ -263,6 +270,7 @@ def refund_payment(actor, payment, *, amount=None, reason="", request=None):
         external_id=external_id, parent=payment, note=reason.strip()[:500], recorded_by=actor)
     recompute_invoice(invoice, actor=actor)
     _audit_payment("payment.refunded", actor, refund, invoice, request, parent_id=payment.pk)
+    _tell_customer("payment.refunded", invoice, refund=refund)
     return refund
 
 
@@ -326,6 +334,7 @@ def _apply_event(provider, event):
         tx.status, tx.failure_reason = TransactionStatus.FAILED, (event.reason or "Payment failed.")[:500]
         tx.save(update_fields=["status", "failure_reason", "updated_at"])
         _audit_payment("payment.failed", None, tx, invoice)
+        _tell_customer("payment.failed", invoice, payment=tx)
         return WebhookStatus.PROCESSED, "Payment marked failed."
 
     if tx.status == TransactionStatus.SUCCEEDED:

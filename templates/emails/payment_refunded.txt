@@ -1,0 +1,10 @@
+{% autoescape off %}Hello {{ invoice.billing_name|default:"there" }},
+
+We have refunded {{ refund.currency }} {{ refund.amount }} against invoice {{ invoice.number }}{% if refund.method_name %} (to {{ refund.method_name }}){% endif %}.{% if refund.note %}
+Note: {{ refund.note }}{% endif %}
+
+Refunds can take a few days to appear, depending on your bank or card issuer.
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

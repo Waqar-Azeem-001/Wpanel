@@ -63,13 +63,7 @@ def send_verification_email(user):
         return None
     token = make_email_verification_token(user)
     link = settings.SITE_URL.rstrip("/") + reverse("accounts:verify_email", args=[token])
-    return notifications.send_email(
-        to_email=user.email,
-        template="verify_email",
-        context={"user": user, "link": link},
-        user=user,
-        event="account.verification",
-    )
+    return notifications.dispatch("account.verification", user=user, context={"link": link}).message
 
 
 def verify_email(token, request=None):
@@ -161,13 +155,8 @@ def request_password_reset(email, request=None):
     token = default_token_generator.make_token(user)
     link = settings.SITE_URL.rstrip("/") + reverse("accounts:password_reset_confirm", args=[uid, token])
     audit.record("auth.password_reset_requested", target=user, request=request)
-    return notifications.send_email(
-        to_email=user.email,
-        template="password_reset",
-        context={"user": user, "link": link, "uid": uid, "token": token},
-        user=user,
-        event="account.password_reset",
-    )
+    return notifications.dispatch("account.password_reset", user=user,
+                                  context={"link": link, "uid": uid, "token": token}).message
 
 
 def get_user_for_reset(uidb64, token):

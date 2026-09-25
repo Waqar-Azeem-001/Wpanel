@@ -29,6 +29,8 @@
         {% if user.client_contacts.exists %}<a href="{% url 'billing_customer:invoice_list' %}">Invoices</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'support_customer:list' %}">Support</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'orders_customer:cart' %}">Cart{% if cart_item_count %} ({{ cart_item_count }}){% endif %}</a>{% endif %}
+        <a href="{% url 'notifications:inbox' %}" class="bell" aria-label="Notifications">Notifications{% if unread_notification_count %} <span class="badge unread">{{ unread_notification_count }}</span>{% endif %}</a>
+        {% if perms.accounts.view_settings %}<a href="{% url 'notifications_staff:overview' %}">Email log</a>{% endif %}
         <a href="{% url 'accounts:profile' %}">{{ user.get_short_name }}</a>
         {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
         <form method="post" action="{% url 'accounts:logout' %}" class="inline">{% csrf_token %}

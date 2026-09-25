@@ -1,0 +1,10 @@
+{% autoescape off %}Hello {{ invoice.billing_name|default:"there" }},
+
+Your payment of {{ payment.currency }} {{ payment.amount }} for invoice {{ invoice.number }} did not go through.{% if payment.failure_reason %}
+Reason: {{ payment.failure_reason }}{% endif %}
+
+Nothing has been charged to the invoice. You can try again, or choose another payment method:
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

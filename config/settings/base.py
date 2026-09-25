@@ -32,6 +32,9 @@ ALLOW_TEST_PAYMENT_GATEWAY = env.bool("ALLOW_TEST_PAYMENT_GATEWAY", default=Fals
 # A paid order is fulfilled (services created, terms started) automatically in the background. The switch
 # exists so tests of *other* behaviour can pay an order without provisioning; it is on everywhere else.
 ORDER_AUTO_FULFIL = env.bool("ORDER_AUTO_FULFIL", default=True)
+# Emails get a 1x1 image that records when it is fetched ("opened"). It is a signal, not proof of reading: mail
+# clients that block images hide it, and privacy proxies and link scanners fetch it. Never added to security emails.
+EMAIL_OPEN_TRACKING = env.bool("EMAIL_OPEN_TRACKING", default=True)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -85,6 +88,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.site",
                 "apps.orders.context_processors.cart_summary",
+                "apps.notifications.context_processors.unread_notifications",
             ],
         },
     },
@@ -240,6 +244,14 @@ CELERY_BEAT_SCHEDULE = {
     "generate-renewal-invoices": {
         "task": "apps.renewals.tasks.generate_renewal_invoices_task",
         "schedule": crontab(hour=3, minute=0),
+    },
+    "send-invoice-reminders": {
+        "task": "apps.billing.tasks.send_invoice_reminders_task",
+        "schedule": crontab(hour=8, minute=0),
+    },
+    "purge-sensitive-emails": {
+        "task": "apps.notifications.tasks.purge_sensitive_emails_task",
+        "schedule": crontab(hour=4, minute=30),
     },
     "auto-close-resolved-tickets": {
         "task": "apps.support.tasks.auto_close_resolved_tickets_task",

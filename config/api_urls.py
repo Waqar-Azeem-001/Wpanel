@@ -11,7 +11,7 @@ from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
 from apps.domains.api import AvailabilityView, DomainViewSet, TldPricingViewSet
 from apps.hosting.api import HostingAccountViewSet
-from apps.notifications.api import NotificationViewSet
+from apps.notifications.api import EmailMessageViewSet, NotificationViewSet, PreferencesView
 from apps.orders import api as orders_api
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
 from apps.renewals import api as renewals_api
@@ -20,6 +20,7 @@ from apps.support import api as support_api
 router = DefaultRouter()
 router.register("users", accounts_api.UserAdminViewSet, basename="user")
 router.register("notifications", NotificationViewSet, basename="notification")
+router.register("email-messages", EmailMessageViewSet, basename="email-message")
 router.register("audit-events", AuditEventViewSet, basename="audit-event")
 router.register("clients", ClientViewSet, basename="client")
 router.register("me/clients", MyClientViewSet, basename="my-client")
@@ -65,6 +66,7 @@ urlpatterns = [
     path("hosting-accounts/<int:pk>/upgrade/", renewals_api.HostingUpgradesView.as_view(), name="hosting-upgrade"),
     path("hosting-accounts/<int:pk>/term/", renewals_api.HostingTermView.as_view(), name="hosting-term"),
     path("domains/<int:pk>/renewal-invoice/", renewals_api.DomainRenewalView.as_view(), name="domain-renewal"),
+    path("notification-preferences/", PreferencesView.as_view(), name="notification-preferences"),
     path("billing-settings/", billing_docs.BillingSettingsView.as_view(), name="billing-settings"),
     path("webhooks/payments/<int:provider_id>/", billing_docs.PaymentWebhookView.as_view(), name="payment-webhook"),
     path("cart/", orders_api.CartView.as_view(), name="cart"),

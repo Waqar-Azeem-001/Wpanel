@@ -252,7 +252,7 @@ def test_a_failure_part_way_leaves_no_order_and_keeps_the_cart_open(owner, clien
     def boom(*args, **kwargs):
         raise RuntimeError("notification service down")
 
-    monkeypatch.setattr("apps.orders.services.notifications.notify", boom)
+    monkeypatch.setattr("apps.orders.services.notifications.dispatch", boom)
     cart = _fill(owner, client_obj, shop)
     with pytest.raises(RuntimeError):
         services.checkout(owner, cart, payment_method_code=shop["bank"].code)

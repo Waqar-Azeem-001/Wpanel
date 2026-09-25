@@ -1,0 +1,10 @@
+{% autoescape off %}Hello {{ invoice.billing_name|default:"there" }},
+
+You told us you had paid {{ payment.currency }} {{ payment.amount }} towards invoice {{ invoice.number }}, but we have not been able to find that payment.{% if payment.failure_reason %}
+Note from our team: {{ payment.failure_reason }}{% endif %}
+
+The invoice is still unpaid. If you did pay, please reply with your payment reference, or report it again:
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

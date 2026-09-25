@@ -43,10 +43,11 @@ class EmailProviderAdmin(admin.ModelAdmin):
 
 @admin.register(EmailMessage)
 class EmailMessageAdmin(admin.ModelAdmin):
-    list_display = ("created_at", "to_email", "subject", "event", "status", "attempts", "sent_at")
-    list_filter = ("status", "event", "template")
+    list_display = ("created_at", "to_email", "subject", "event", "status", "attempts", "sent_at", "opened_at")
+    list_filter = ("status", "event", "template", "is_sensitive")
     search_fields = ("to_email", "subject")
-    readonly_fields = [f.name for f in EmailMessage._meta.fields]
+    exclude = ("sensitive_body",)  # encrypted secret content is never shown, not even as ciphertext
+    readonly_fields = [f.name for f in EmailMessage._meta.fields if f.name != "sensitive_body"]
 
     def has_add_permission(self, request):
         return False

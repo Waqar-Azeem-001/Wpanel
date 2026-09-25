@@ -1,0 +1,1 @@
+Your hosting account {{ account.domain }} is active again - {{ site_name }}

@@ -1,0 +1,4 @@
+<nav class="subnav">
+  <a href="{% url 'notifications_staff:overview' %}"{% if section == "overview" %} class="active"{% endif %}>Statistics</a>
+  <a href="{% url 'notifications_staff:emails' %}"{% if section == "emails" %} class="active"{% endif %}>Email log</a>
+</nav>

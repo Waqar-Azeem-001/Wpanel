@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Email statistics · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Email</h1>
+{% include "notifications/staff/_nav.html" %}
+{% if failed %}<div class="errors"><p>{{ failed }} email{{ failed|pluralize }} failed to send. <a href="{% url 'notifications_staff:emails' %}?status=failed">Review and resend</a>.</p></div>{% endif %}
+<nav class="tabs" aria-label="Period">
+  <a href="?days=7"{% if days == 7 %} class="active"{% endif %}>7 days</a>
+  <a href="?days=30"{% if days == 30 %} class="active"{% endif %}>30 days</a>
+  <a href="?days=90"{% if days == 90 %} class="active"{% endif %}>90 days</a>
+</nav>
+<div class="stats">
+  <div class="stat"><strong>{{ stats.sent }}</strong><span>Sent</span></div>
+  <div class="stat"><strong>{{ stats.failed }}</strong><span>Failed</span></div>
+  <div class="stat"><strong>{{ stats.queued }}</strong><span>Queued</span></div>
+  <div class="stat"><strong>{% if stats.open_rate is not None %}{{ stats.open_rate }}%{% else %}&mdash;{% endif %}</strong><span>Open rate</span></div>
+</div>
+<p class="muted">Open tracking is a <strong>signal, not proof of reading</strong>: mail programs that block images hide opens, and privacy features and link scanners can register opens nobody made. Security emails (password resets, verification, login details) are never tracked.
+  {% if not stats.tracking_enabled %}<strong>Tracking is switched off.</strong>{% endif %}</p>
+<section class="card">
+  <h2>By message type, last {{ days }} days</h2>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Message</th><th class="num">Total</th><th class="num">Sent</th><th class="num">Failed</th><th class="num">Queued</th><th class="num">Opened</th><th class="num">Open rate</th></tr></thead>
+    <tbody>
+    {% for row in stats.by_event %}
+      <tr><td><a href="{% url 'notifications_staff:emails' %}?event={{ row.event|urlencode }}">{{ row.event_label }}</a></td>
+          <td class="num">{{ row.total }}</td><td class="num">{{ row.sent }}</td><td class="num">{{ row.failed }}</td><td class="num">{{ row.queued }}</td>
+          <td class="num">{{ row.opened }}</td><td class="num">{% if row.open_rate is not None %}{{ row.open_rate }}%{% else %}&mdash;{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="7" class="muted">No emails in this period.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+{% endblock %}

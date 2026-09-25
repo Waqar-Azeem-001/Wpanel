@@ -175,7 +175,7 @@ def _customer_link(ticket):
 def _notify_assignee(ticket, *, event, title, body, exclude=None):
     agent = ticket.assigned_to
     if agent is not None and agent != exclude and agent.is_active:
-        notifications.notify(agent, event=event, title=title, body=body[:200], link=_staff_link(ticket))
+        notifications.dispatch(event, user=agent, title=title, body=body[:200], link=_staff_link(ticket))
 
 
 def _requester(ticket):
@@ -224,11 +224,15 @@ def open_ticket(actor, client, *, department, subject, body, priority=TicketPrio
     audit.record("ticket.opened", actor=actor, target=ticket,
                  metadata={"client_id": client.pk, "department": department.slug, "priority": priority,
                            "attachments": len(checked), "on_behalf": kind == MessageKind.STAFF}, request=request)
-    notifications.send_email(to_email=_requester_email(ticket), template="ticket_opened",
-                             context={"ticket": ticket, "link": _customer_link(ticket)},
-                             user=actor if getattr(actor, "pk", None) else None, event="ticket.opened")
-    _notify_assignee(ticket, event="ticket.assigned", title=f"New ticket {ticket.reference}: {subject}"[:200],
-                     body=body, exclude=actor)
+    notifications.dispatch("ticket.opened", user=_requester(ticket), email=_requester_email(ticket),
+                           context={"ticket": ticket, "link": _customer_link(ticket)})
+    if ticket.assigned_to_id:
+        _notify_assignee(ticket, event="ticket.assigned", title=f"New ticket {ticket.reference}: {subject}"[:200],
+                         body=body, exclude=actor)
+    else:  # nobody owns it yet: tell the whole support team
+        notifications.notify_team("ticket.unassigned", "manage_support", exclude=actor, body=body[:200],
+                                  title=f"New ticket {ticket.reference} needs an owner: {subject}"[:200],
+                                  link=_staff_link(ticket))
     return ticket
 
 
@@ -267,13 +271,9 @@ def reply(actor, ticket, body, *, files=(), internal=False, set_status=None, req
         audit.record("ticket.replied", actor=actor, target=ticket,
                      metadata={"message_id": message.pk, "attachments": len(checked), "client_id": ticket.client_id},
                      request=request)
-        notifications.send_email(to_email=_requester_email(ticket), template="ticket_reply",
-                                 context={"ticket": ticket, "message": message, "link": _customer_link(ticket)},
-                                 event="ticket.reply")
-        requester = _requester(ticket)
-        if requester is not None:
-            notifications.notify(requester, event="ticket.reply", title=f"Reply on {ticket.reference}",
-                                 body=ticket.subject, link=_customer_link(ticket))
+        notifications.dispatch("ticket.reply", user=_requester(ticket), email=_requester_email(ticket),
+                               title=f"Reply on {ticket.reference}", body=ticket.subject, link=_customer_link(ticket),
+                               context={"ticket": ticket, "message": message, "link": _customer_link(ticket)})
         return message
 
     if staff and internal:  # a note: no status change, no customer contact

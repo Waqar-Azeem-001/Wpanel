@@ -1,0 +1,8 @@
+{% autoescape off %}Hello,
+
+Good news: your hosting account for {{ account.domain }} has been reactivated. Your website and email should be working again.
+
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}
