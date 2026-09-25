@@ -10,7 +10,8 @@ urlpatterns = [
     path("<int:pk>/", views.staff_client_detail, name="detail"),
     path("<int:pk>/edit/", views.staff_client_edit, name="edit"),
     path("<int:pk>/status/", views.staff_client_status, name="status"),
-    path("<int:pk>/contacts/", views.staff_contact_add, name="contact_add"),
+    path("<int:pk>/contacts/", views.staff_contact_add, name="contact_add"),  # GET: the Contacts tab; POST: add a contact
+    path("<int:pk>/tab/<slug:tab>/", views.staff_client_tab, name="tab"),
     path("<int:pk>/contacts/<int:contact_id>/role/", views.staff_contact_role, name="contact_role"),
     path("<int:pk>/contacts/<int:contact_id>/remove/", views.staff_contact_remove, name="contact_remove"),
 ]

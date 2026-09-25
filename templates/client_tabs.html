@@ -1,0 +1,6 @@
+{# The staff client profile's tab bar: (label, url, active, count) for each tab this person may open. #}
+<ul class="nav nav-tabs mb-3 tab-scroll" role="tablist">
+  {% for label, url, active, count in items %}
+  <li class="nav-item"><a class="nav-link text-nowrap{% if active %} active{% endif %}" href="{{ url }}"{% if active %} aria-current="page"{% endif %}>{{ label }}{% if count %} <span class="badge text-bg-secondary rounded-pill">{{ count }}</span>{% endif %}</a></li>
+  {% endfor %}
+</ul>

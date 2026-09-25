@@ -1,0 +1,15 @@
+{% load ui client_tabs i18n %}
+<p class="mb-2"><a href="{% url 'clients_staff:list' %}">&larr; {% trans "All clients" %}</a></p>
+<div class="page-head">
+  <h1>{{ client.display_name }} <small class="text-secondary fs-6">{{ client.reference }}</small></h1>
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    {% status_badge client.status client.get_status_display %}
+    {% if perms.accounts.manage_billing %}
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'billing_staff:invoice_create' %}?client={{ client.pk }}">{% trans "New invoice" %}</a>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'billing_staff:quote_create' %}?client={{ client.pk }}">{% trans "New quote" %}</a>
+    {% endif %}
+    {% if perms.accounts.manage_orders %}<a class="btn btn-sm btn-outline-primary" href="{% url 'orders_staff:new' %}?client={{ client.pk }}">{% trans "New order" %}</a>{% endif %}
+    {% if perms.accounts.view_support %}<a class="btn btn-sm btn-outline-primary" href="{% url 'support_staff:ticket_new' %}?client={{ client.pk }}">{% trans "Open a ticket" %}</a>{% endif %}
+  </div>
+</div>
+{% client_tab_bar client tab %}

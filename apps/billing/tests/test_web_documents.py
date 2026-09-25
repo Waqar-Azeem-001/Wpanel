@@ -326,13 +326,14 @@ def test_client_profile_lists_the_clients_records(client, manager, client_obj, s
     invoice = issued(manager, client_obj)
     payments.record_payment(manager, invoice, amount="10.00")
     client.force_login(manager)
-    page = client.get(f"/staff/clients/{client_obj.pk}/")
-    assert b"INV-000001" in page.content and b"Payment on INV-000001" in page.content
-    assert b"New invoice" in page.content
+    assert b"INV-000001" in client.get(f"/staff/clients/{client_obj.pk}/tab/invoices/").content
+    payments_tab = client.get(f"/staff/clients/{client_obj.pk}/tab/transactions/")
+    assert b"INV-000001" in payments_tab.content and b"Payment" in payments_tab.content
+    assert b"New invoice" in client.get(f"/staff/clients/{client_obj.pk}/").content
 
     client.force_login(staff(Role.SUPPORT_AGENT))  # view_billing but not manage_billing
-    page = client.get(f"/staff/clients/{client_obj.pk}/")
-    assert b"INV-000001" in page.content and b"New invoice" not in page.content
+    assert b"INV-000001" in client.get(f"/staff/clients/{client_obj.pk}/tab/invoices/").content
+    assert b"New invoice" not in client.get(f"/staff/clients/{client_obj.pk}/").content
 
 
 def test_tax_exempt_is_a_staff_setting(client, manager, client_obj, owner):

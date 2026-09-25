@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Notes" %} · {{ client.display_name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+{% include "clients/staff/_header.html" %}
+<section class="card"><div class="card-body">
+  <div class="page-head"><h2 class="h5">{% trans "Internal notes" %}</h2>{% if can_manage %}<a class="btn btn-sm btn-outline-primary" href="{% url 'clients_staff:edit' client.pk %}">{% trans "Edit" %}</a>{% endif %}</div>
+  <p class="text-secondary small">{% trans "Only staff can see these. They are never shown to the client." %}</p>
+  {% if client.notes %}<p class="text-break mb-0">{{ client.notes|linebreaksbr }}</p>{% else %}<p class="text-secondary mb-0">{% trans "No notes yet." %}</p>{% endif %}
+</div></section>
+{% endblock %}

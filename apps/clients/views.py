@@ -12,6 +12,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 
 from . import forms, records, services
+from . import tabs as client_tabs
 from .models import Client, ClientContact
 
 
@@ -68,16 +69,32 @@ def staff_client_detail(request, pk):
     contacts = client.contacts.select_related("user").order_by("role", "id")
     activity = services.client_activity(client)[:25]
     return render(request, "clients/staff/detail.html", {
-        "client": client,
-        "contacts": contacts,
-        "activity": activity,
+        "client": client, "contacts": contacts, "activity": activity[:5], "tab": "summary",
         "records": records.account_records(request.user, client),
         "status_form": forms.ClientStatusForm(initial={"status": client.status}),
-        "contact_form": forms.AddContactForm(),
-        "role_choices": forms.ContactRole.choices,
         "can_manage": request.user.has_perm(perm("manage_clients")),
         "can_bill": request.user.has_perm(perm("manage_billing")),
     })
+
+
+@portal_permission_required(perm("view_clients"))
+def staff_client_tab(request, pk, tab):
+    """One list tab of the profile (invoices, tickets, log...): 25 rows a page, only if the person may open it."""
+    client = get_object_or_404(Client, pk=pk)
+    found = client_tabs.BY_KEY.get(tab)
+    if found is None or found.url_name != "clients_staff:tab":
+        raise Http404
+    if not client_tabs.allowed(request.user, found):
+        raise PermissionDenied
+    context = {"client": client, "tab": tab, "found": found, "can_manage": request.user.has_perm(perm("manage_clients")),
+               "can_bill": request.user.has_perm(perm("manage_billing"))}
+    if tab == "notes":
+        return render(request, "clients/staff/tab_notes.html", context)
+    if tab == "affiliate":
+        from apps.affiliates.models import Referral
+
+        context["referral"] = Referral.objects.select_related("affiliate").filter(client=client).first()
+    return render(request, "clients/staff/tab.html", {**context, **client_tabs.table(request.user, client, tab, request.GET.get("page"))})
 
 
 @portal_permission_required(perm("manage_clients"))
@@ -92,12 +109,12 @@ def staff_client_edit(request, pk):
         else:
             messages.success(request, "Client updated.")
             return redirect("clients_staff:detail", pk=client.pk)
-    return render(request, "clients/staff/form.html", {"form": form, "client": client,
+    return render(request, "clients/staff/form.html", {"form": form, "client": client, "tab": "profile",
                                                         "title": f"Edit {client.display_name}"})
 
 
-def _post_action(request, pk, action):
-    """Run a staff POST action, flash the outcome, and return to the client profile."""
+def _post_action(request, pk, action, back="clients_staff:detail"):
+    """Run a staff POST action, flash the outcome, and return to the profile (or the tab it came from)."""
     client = get_object_or_404(Client, pk=pk)
     try:
         message = action(client)
@@ -105,7 +122,7 @@ def _post_action(request, pk, action):
         messages.error(request, exc.message if isinstance(exc, ServiceError) else "; ".join(exc.messages))
     else:
         messages.success(request, message)
-    return redirect("clients_staff:detail", pk=client.pk)
+    return redirect(back, pk=client.pk)
 
 
 @require_POST
@@ -123,9 +140,17 @@ def staff_client_status(request, pk):
     return _post_action(request, pk, action)
 
 
-@require_POST
-@portal_permission_required(perm("manage_clients"))
+@portal_permission_required(perm("view_clients"))
 def staff_contact_add(request, pk):
+    """GET: the Contacts tab (people on the account, and a form to add one). POST: add a contact."""
+    if request.method != "POST":
+        client = get_object_or_404(Client, pk=pk)
+        return render(request, "clients/staff/tab_contacts.html", {
+            "client": client, "tab": "contacts", "contacts": client.contacts.select_related("user").order_by("role", "id"),
+            "contact_form": forms.AddContactForm(), "role_choices": forms.ContactRole.choices,
+            "can_manage": request.user.has_perm(perm("manage_clients"))})
+    if not request.user.has_perm(perm("manage_clients")):
+        raise PermissionDenied
     form = forms.AddContactForm(request.POST)
 
     def action(client):
@@ -134,7 +159,7 @@ def staff_contact_add(request, pk):
         contact = services.add_contact(request.user, client, request=request, **form.cleaned_data)
         return f"{contact.user.email} added as {contact.get_role_display().lower()} contact."
 
-    return _post_action(request, pk, action)
+    return _post_action(request, pk, action, back="clients_staff:contact_add")
 
 
 @require_POST
@@ -149,7 +174,7 @@ def staff_contact_role(request, pk, contact_id):
         services.change_contact_role(request.user, contact, form.cleaned_data["role"], request=request)
         return f"{contact.user.email} is now a {form.cleaned_data['role']} contact."
 
-    return _post_action(request, pk, action)
+    return _post_action(request, pk, action, back="clients_staff:contact_add")
 
 
 @require_POST
@@ -161,7 +186,7 @@ def staff_contact_remove(request, pk, contact_id):
         services.remove_contact(request.user, contact, request=request)
         return f"{email} removed."
 
-    return _post_action(request, pk, action)
+    return _post_action(request, pk, action, back="clients_staff:contact_add")
 
 
 # --- Customer ---------------------------------------------------------------------------

@@ -281,14 +281,14 @@ def test_a_payout_below_the_minimum_is_refused_on_the_page(client, manager, earn
 def test_staff_credit_a_client_from_its_profile(client, manager, affiliate, make_customer, agent):
     _, late = make_customer("late@example.com")
     client.force_login(manager)
-    page = client.get(f"/staff/clients/{late.pk}/").content
+    page = client.get(f"/staff/clients/{late.pk}/tab/affiliate/").content  # the Affiliate tab of the profile
     assert b"Referred by an affiliate?" in page and b"Credit this affiliate" in page
     client.post(f"/staff/affiliates/attribute/{late.pk}/", {"code": "nosuch"}, follow=True)
     assert not Referral.objects.exists()
     client.post(f"/staff/affiliates/attribute/{late.pk}/", {"code": affiliate.code.upper()}, follow=True)
     assert Referral.objects.get().client == late
-    profile = client.get(f"/staff/clients/{late.pk}/").content
-    assert f"Referred by {affiliate.code}".encode() in profile and b"Credit this affiliate" not in profile
+    profile = client.get(f"/staff/clients/{late.pk}/tab/affiliate/").content
+    assert f"Referred by".encode() in profile and affiliate.code.encode() in profile and b"Credit this affiliate" not in profile
     client.force_login(agent)
     assert client.post(f"/staff/affiliates/attribute/{late.pk}/", {"code": affiliate.code}).status_code == 403
 

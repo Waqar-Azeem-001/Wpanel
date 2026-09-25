@@ -292,8 +292,8 @@ def test_departments_replies_and_kb_management_pages(client, agent, manager):
 def test_the_client_profile_lists_tickets(client, owner, client_obj, technical, manager):
     ticket = open_ticket(owner, client_obj, technical, subject="Profile ticket")
     client.force_login(manager)
-    page = client.get(f"/staff/clients/{client_obj.pk}/").content
-    assert ticket.reference.encode() in page and b"Tickets" in page
+    page = client.get(f"/staff/clients/{client_obj.pk}/tab/tickets/").content
+    assert ticket.reference.encode() in page and b"Profile ticket" in page
 
 
 # --- The help centre ------------------------------------------------------------------------------------------------------

@@ -1,14 +1,17 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block title %}{{ title }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}{% if client %}wide{% endif %}{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>{{ title }}</h1>
+{% if client %}{% include "clients/staff/_header.html" %}{% endif %}
+<section class="card"><div class="card-body">
+  {% if not client %}<h1 class="h4">{{ title }}</h1>{% else %}<h2 class="h5">{{ title }}</h2>{% endif %}
   <form method="post" novalidate class="grid-form">{% csrf_token %}
     {% include "partials/form.html" %}
     <div class="actions">
-      <button type="submit" class="btn">Save</button>
-      <a href="{% if client %}{% url 'clients_staff:detail' client.pk %}{% else %}{% url 'clients_staff:list' %}{% endif %}">Cancel</a>
+      <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+      <a href="{% if client %}{% url 'clients_staff:detail' client.pk %}{% else %}{% url 'clients_staff:list' %}{% endif %}">{% trans "Cancel" %}</a>
     </div>
   </form>
-</section>
+</div></section>
 {% endblock %}

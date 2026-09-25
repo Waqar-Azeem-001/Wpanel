@@ -113,3 +113,19 @@ def is_checkbox(field):
 def feature_lines(text):
     """A plan's description as a list: one feature per non-empty line."""
     return [line.strip() for line in (text or "").splitlines() if line.strip()]
+
+
+@register.filter
+def cell(value):
+    """A table cell's value in the site's formats: dates, moments and money as the brand writes them, nothing as a dash."""
+    from decimal import Decimal
+
+    if value is None or value == "":
+        return "—"
+    if isinstance(value, datetime):
+        return fdatetime(value)
+    if isinstance(value, date):
+        return fdate(value)
+    if isinstance(value, Decimal):
+        return money(value)
+    return value

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ found.label }} · {{ client.display_name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+{% include "clients/staff/_header.html" %}
+{% if tab == "affiliate" %}
+<section class="card mb-3"><div class="card-body">
+  {% if referral %}<p class="mb-0">{% trans "Referred by" %} <a href="{% url 'affiliates_staff:affiliate' referral.affiliate_id %}">{{ referral.affiliate.code }}</a> ({{ referral.get_source_display }}, {{ referral.created_at|fdate }}).</p>
+  {% else %}<p class="text-secondary">{% trans "This client was not referred by an affiliate." %}</p>
+    {% if perms.accounts.manage_affiliates %}
+    <form method="post" action="{% url 'affiliates_staff:attribute' client.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+      <div class="col-auto"><label class="form-label" for="id_affiliate_code">{% trans "Referred by an affiliate?" %}</label><input class="form-control" type="text" name="code" id="id_affiliate_code" placeholder="Affiliate code" maxlength="32"></div>
+      <div class="col-auto"><button class="btn btn-outline-primary" type="submit">{% trans "Credit this affiliate" %}</button></div>
+    </form>
+    {% endif %}
+  {% endif %}
+</div></section>
+{% endif %}
+<div class="card"><div class="table-responsive"><table class="table mb-0 align-middle">
+  <thead><tr>{% for column in columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>{% for c in row %}<td{% if c.right %} class="text-end"{% endif %}>{% if c.status %}{% status_badge c.status c.label %}{% elif c.url %}<a href="{{ c.url }}">{{ c.text|cell }}</a>{% else %}{{ c.text|cell }}{% endif %}</td>{% endfor %}</tr>
+  {% empty %}
+    <tr><td colspan="{{ columns|length }}" class="text-secondary">{% trans "Nothing here yet." %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% if page.paginator.count %}<p class="text-secondary small mt-2">{% blocktrans with first=page.start_index last=page.end_index total=page.paginator.count %}Showing {{ first }}–{{ last }} of {{ total }}{% endblocktrans %}</p>{% endif %}
+{% include "components/pager.html" %}
+{% endblock %}

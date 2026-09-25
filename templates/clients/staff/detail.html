@@ -1,136 +1,62 @@
 {% extends "base.html" %}
-{% load ui %}
+{% load ui i18n %}
 {% block title %}{{ client.display_name }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<p><a href="{% url 'clients_staff:list' %}">&larr; All clients</a></p>
-<div class="page-head">
-  <h1>{{ client.display_name }} <small class="muted">{{ client.reference }}</small></h1>
-  {% status_badge client.status client.get_status_display %}
+{% include "clients/staff/_header.html" %}
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <section class="card h-100"><div class="card-body">
+      <div class="page-head"><h2 class="h5">{% trans "Details" %}</h2>
+        {% if can_manage %}<a class="btn btn-sm btn-outline-primary" href="{% url 'clients_staff:edit' client.pk %}">{% trans "Edit" %}</a>{% endif %}
+      </div>
+      <dl class="row mb-0">
+        <dt class="col-sm-3">{% trans "Contact" %}</dt><dd class="col-sm-9">{{ client.contact_name|default:"—" }}</dd>
+        <dt class="col-sm-3">{% trans "Company" %}</dt><dd class="col-sm-9">{{ client.company_name|default:"—" }}</dd>
+        <dt class="col-sm-3">{% trans "Email" %}</dt><dd class="col-sm-9">{{ client.email }}</dd>
+        <dt class="col-sm-3">{% trans "Phone" %}</dt><dd class="col-sm-9">{{ client.phone|default:"—" }}</dd>
+        <dt class="col-sm-3">{% trans "Address" %}</dt><dd class="col-sm-9">{% if client.address_line1 %}{{ client.address_line1 }}{% if client.address_line2 %}, {{ client.address_line2 }}{% endif %}<br>{{ client.city }} {{ client.state }} {{ client.postcode }} {{ client.country }}{% else %}—{% endif %}</dd>
+        <dt class="col-sm-3">{% trans "Tax ID" %}</dt><dd class="col-sm-9">{{ client.tax_id|default:"—" }}</dd>
+        <dt class="col-sm-3">{% trans "Currency" %}</dt><dd class="col-sm-9">{{ client.currency }}</dd>
+        <dt class="col-sm-3">{% trans "Tax" %}</dt><dd class="col-sm-9">{% if client.tax_exempt %}{% trans "Exempt" %}{% else %}{% trans "Charged per tax rules" %}{% endif %}</dd>
+        <dt class="col-sm-3">{% trans "Created" %}</dt><dd class="col-sm-9">{{ client.created_at|fdatetime }}</dd>
+      </dl>
+    </div></section>
+  </div>
+  <div class="col-lg-4">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">{% trans "Status" %}</h2>
+      {% if can_manage %}
+      <form method="post" action="{% url 'clients_staff:status' client.pk %}">{% csrf_token %}
+        <div class="mb-3"><label class="form-label" for="id_status">{% trans "Status" %}</label>{{ status_form.status|bs_field }}</div>
+        <div class="mb-3"><label class="form-label" for="id_reason">{% trans "Reason (audited)" %}</label>{{ status_form.reason|bs_field }}</div>
+        <button class="btn btn-outline-primary" type="submit">{% trans "Update status" %}</button>
+      </form>
+      {% else %}<p class="mb-0">{{ client.get_status_display }}</p>{% endif %}
+    </div></section>
+  </div>
 </div>
 
-<div class="cols">
-  <section class="card">
-    <div class="page-head"><h2>Details</h2>
-      {% if can_manage %}<a class="btn secondary" href="{% url 'clients_staff:edit' client.pk %}">Edit</a>{% endif %}
-    </div>
-    <dl class="meta">
-      <dt>Contact</dt><dd>{{ client.contact_name|default:"—" }}</dd>
-      <dt>Company</dt><dd>{{ client.company_name|default:"—" }}</dd>
-      <dt>Email</dt><dd>{{ client.email }}</dd>
-      <dt>Phone</dt><dd>{{ client.phone|default:"—" }}</dd>
-      <dt>Address</dt><dd>{% if client.address_line1 %}{{ client.address_line1 }}{% if client.address_line2 %}, {{ client.address_line2 }}{% endif %}<br>{{ client.city }} {{ client.state }} {{ client.postcode }} {{ client.country }}{% else %}—{% endif %}</dd>
-      <dt>Tax ID</dt><dd>{{ client.tax_id|default:"—" }}</dd>
-      <dt>Currency</dt><dd>{{ client.currency }}</dd>
-      <dt>Tax</dt><dd>{% if client.tax_exempt %}Exempt{% else %}Charged per tax rules{% endif %}</dd>
-      <dt>Created</dt><dd>{{ client.created_at|date:"Y-m-d H:i" }}</dd>
-    </dl>
-    {% if client.notes %}<h3>Internal notes</h3><p class="notes">{{ client.notes|linebreaksbr }}</p>{% endif %}
-  </section>
-
-  <section class="card">
-    <h2>Status</h2>
-    {% if can_manage %}
-    <form method="post" action="{% url 'clients_staff:status' client.pk %}">{% csrf_token %}
-      <div class="field"><label for="id_status">Status</label>{{ status_form.status }}</div>
-      <div class="field"><label for="id_reason">Reason (audited)</label>{{ status_form.reason }}</div>
-      <button class="btn secondary" type="submit">Update status</button>
-    </form>
-    {% else %}<p>{{ client.get_status_display }}</p>{% endif %}
-  </section>
+{% if records %}
+<div class="stat-tiles mb-4">
+  {% for section in records %}<div class="stat-tile"><strong>{{ section.total }}</strong><span>{{ section.title }}</span></div>{% endfor %}
 </div>
+{% endif %}
 
-<section class="card">
-  <h2>Users</h2>
-  <div class="table-wrap">
-  <table class="table">
-    <thead><tr><th>User</th><th>Role</th><th>Login status</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
-    <tbody>
-    {% for contact in contacts %}
-      <tr>
-        <td>{{ contact.user.email }}{% if contact.user.full_name %}<br><small class="muted">{{ contact.user.full_name }}</small>{% endif %}</td>
-        <td>
-          {% if can_manage %}
-          <form method="post" action="{% url 'clients_staff:contact_role' client.pk contact.pk %}" class="inline-form">{% csrf_token %}
-            <select name="role" aria-label="Role for {{ contact.user.email }}">
-              {% for value, label in role_choices %}<option value="{{ value }}"{% if value == contact.role %} selected{% endif %}>{{ label }}</option>{% endfor %}
-            </select>
-            <button class="btn small secondary" type="submit">Set</button>
-          </form>
-          {% else %}{{ contact.get_role_display }}{% endif %}
-        </td>
-        <td>{% if not contact.user.has_usable_password %}Invited{% else %}{{ contact.user.get_status_display }}{% endif %}</td>
-        {% if can_manage %}
-        <td>
-          <form method="post" action="{% url 'clients_staff:contact_remove' client.pk contact.pk %}"
-                onsubmit="return confirm('Remove {{ contact.user.email|escapejs }} from this client?');">{% csrf_token %}
-            <button class="btn small danger" type="submit">Remove</button>
-          </form>
-        </td>
-        {% endif %}
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-  {% if can_manage %}
-  <h3>Add user</h3>
-  <form method="post" action="{% url 'clients_staff:contact_add' client.pk %}" class="row-form">{% csrf_token %}
-    <div class="field grow"><label for="id_email">Email</label>{{ contact_form.email }}</div>
-    <div class="field"><label for="id_role">Role</label>{{ contact_form.role }}</div>
-    <div class="field"><label for="id_first_name">First name</label>{{ contact_form.first_name }}</div>
-    <div class="field"><label for="id_last_name">Last name</label>{{ contact_form.last_name }}</div>
-    <div class="field"><button class="btn" type="submit">Add</button></div>
-  </form>
-  <p class="muted">New users receive an email to set their password.</p>
-  {% endif %}
-</section>
-
-<section class="card">
-  <div class="page-head"><h2>Account records</h2>
-    {% if can_bill %}<span><a class="btn small secondary" href="{% url 'billing_staff:invoice_create' %}?client={{ client.pk }}">New invoice</a>
-      <a class="btn small secondary" href="{% url 'billing_staff:quote_create' %}?client={{ client.pk }}">New quote</a>
-      <a class="btn small secondary" href="{% url 'billing_staff:billable_list' %}?client={{ client.pk }}">Add charge</a></span>{% endif %}</div>
-  <div class="cols">
-  {% for section in records %}
-    <div>
-      <h3>{{ section.title }} <small class="muted">({{ section.total }})</small></h3>
-      <ul class="records">
-      {% for row in section.rows %}
-        <li><a href="{{ row.url }}">{{ row.label }}</a>
-          {% status_badge row.status_key row.status %}
-          {% if row.amount %}<span class="muted">{{ row.amount }}</span>{% endif %}</li>
-      {% empty %}
-        <li class="muted">None yet.</li>
-      {% endfor %}
-      </ul>
-      {% if section.total > section.rows|length %}<a href="{{ section.list_url }}">View all</a>{% endif %}
-    </div>
-  {% empty %}
-    <p class="muted">You do not have permission to view this client's records.</p>
-  {% endfor %}
-  </div>
-  {% if perms.accounts.manage_affiliates and not client.referral %}
-  <form method="post" action="{% url 'affiliates_staff:attribute' client.pk %}" class="row-form">{% csrf_token %}
-    <div class="field"><label for="id_affiliate_code">Referred by an affiliate?</label><input type="text" name="code" id="id_affiliate_code" placeholder="Affiliate code" maxlength="32"></div>
-    <div class="field"><button class="btn small secondary" type="submit">Credit this affiliate</button></div>
-  </form>
-  {% endif %}
-</section>
-
-<section class="card">
-  <h2>Activity</h2>
-  <ul class="timeline">
+<section class="card"><div class="card-body">
+  <div class="page-head"><h2 class="h5">{% trans "Recent activity" %}</h2>{% if perms.accounts.view_audit_log %}<a href="{% url 'clients_staff:tab' client.pk 'log' %}">{% trans "See the whole log" %}</a>{% endif %}</div>
+  <ul class="timeline-feed">
   {% for event in activity %}
-    <li><span class="muted">{{ event.created_at|date:"Y-m-d H:i" }}</span>
-      <strong>{{ event.action }}</strong> by {{ event.actor_repr|default:"system" }}
-      {% if event.metadata.fields %}<small class="muted">({{ event.metadata.fields|join:", " }})</small>{% endif %}
-      {% if event.metadata.user %}<small class="muted">({{ event.metadata.user }})</small>{% endif %}
-      {% if event.metadata.to and not event.metadata.user %}<small class="muted">({{ event.metadata.from }} → {{ event.metadata.to }})</small>{% endif %}
+    <li><span class="text-secondary">{{ event.created_at|fdatetime }}</span>
+      <strong>{{ event.action }}</strong> {% trans "by" %} {{ event.actor_repr|default:"system" }}
+      {% if event.metadata.fields %}<small class="text-secondary">({{ event.metadata.fields|join:", " }})</small>{% endif %}
+      {% if event.metadata.user %}<small class="text-secondary">({{ event.metadata.user }})</small>{% endif %}
+      {% if event.metadata.to and not event.metadata.user %}<small class="text-secondary">({{ event.metadata.from }} → {{ event.metadata.to }})</small>{% endif %}
     </li>
   {% empty %}
-    <li class="muted">No activity yet.</li>
+    <li class="text-secondary">{% trans "No activity yet." %}</li>
   {% endfor %}
   </ul>
-</section>
+</div></section>
 {% endblock %}
