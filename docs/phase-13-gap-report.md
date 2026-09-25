@@ -75,7 +75,7 @@ Everything on the roadmap's Phase 13 list: affiliate accounts, referral links, a
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 1134 |
 | Migrations, `makemigrations --check`, OpenAPI with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | pending at time of writing |
+| CI green on PostgreSQL + Redis | ✅ Run 36156609207 on `a2e8989` (first run) |
 
 ## Known limitations / deferred
 
