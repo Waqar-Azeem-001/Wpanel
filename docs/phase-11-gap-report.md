@@ -81,7 +81,7 @@ Everything on the roadmap's Phase 11 list: registration, verification, order, pa
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 945 |
 | Migrations (verified with existing data), `makemigrations --check`, OpenAPI with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | pending at time of writing |
+| CI green on PostgreSQL + Redis | ✅ Run 36137861357 on `7d4026a` (first run) |
 
 ## Known limitations / deferred
 

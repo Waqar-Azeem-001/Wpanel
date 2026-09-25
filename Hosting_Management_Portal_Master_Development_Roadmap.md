@@ -1618,7 +1618,7 @@ If UI changed:
   08 Renewals & Upgrades         🟢       729 ✅  ✅        4d00e37  ---
   09 Orders & Lifecycle          🟢       788 ✅  ✅        8d83271  ---
   10 Support                     🟢       885 ✅  ✅        e425a85  ---
-  11 Notifications & Email       🟡       945 ✅  ✅        ---      ---
+  11 Notifications & Email       🟢       945 ✅  ✅        7d4026a  ---
   12 Cancellation                ⬜       ---     ---       ---      ---
   13 Affiliates                  ⬜       ---     ---       ---      ---
   14 Reports                     ⬜       ---     ---       ---      ---
