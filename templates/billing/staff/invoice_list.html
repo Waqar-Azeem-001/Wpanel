@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Invoices · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Billing</h1>
+  {% if can_manage %}<a class="btn" href="{% url 'billing_staff:invoice_new' %}">New invoice</a>{% endif %}
+</div>
+{% include "billing/staff/_nav.html" %}
+<form class="filters" method="get">
+  <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}" placeholder="INV-000123, client, email"></div>
+  <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Invoice</th><th>Client</th><th>Issued</th><th>Due</th><th>Status</th><th class="num">Total</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+  {% for invoice in page %}
+    <tr>
+      <td><a href="{% url 'billing_staff:invoice_detail' invoice.pk %}">{{ invoice.reference }}</a></td>
+      <td>{{ invoice.client.display_name }}</td>
+      <td>{{ invoice.issue_date|date:"Y-m-d"|default:"&mdash;" }}</td>
+      <td>{{ invoice.due_date|date:"Y-m-d"|default:"&mdash;" }}</td>
+      <td><span class="badge status-{{ invoice.display_status }}">{{ invoice.display_status_label }}</span></td>
+      <td class="num">{{ invoice.currency }} {{ invoice.total }}</td>
+      <td class="num">{{ invoice.balance_due }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="muted">No invoices match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "billing/_pager.html" %}
+{% endblock %}

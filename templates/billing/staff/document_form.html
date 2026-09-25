@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{% if document %}Edit{% else %}New{% endif %} {{ kind }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>{% if document %}Edit draft {{ kind }} {{ document.reference }}{% else %}New {{ kind }}{% endif %}</h1>
+<p class="muted">For <a href="{% url 'clients_staff:detail' client.pk %}">{{ client.display_name }}</a>. Tax is added automatically from the tax rules and the client's tax status.</p>
+<form method="post" novalidate>{% csrf_token %}
+  <section class="card">
+    <h2>Lines</h2>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="errors">{% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    <div class="table-wrap">
+    <table class="table lines">
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Taxable</th></tr></thead>
+      <tbody>
+      {% for line in formset %}
+        <tr>
+          <td>{{ line.description }}{% for e in line.description.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td class="qty">{{ line.quantity }}{% for e in line.quantity.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td class="price">{{ line.unit_price }}{% for e in line.unit_price.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td>{{ line.taxable }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="muted">Leave a row blank to skip it. Clear a row's description and price to remove it. Save to get more blank rows.</p>
+  </section>
+  <section class="card">
+    <h2>Discount and notes</h2>
+    <div class="grid-form">{% include "partials/form.html" %}</div>
+    <div class="actions">
+      <button type="submit" class="btn">Save draft</button>
+      {% if kind == "quote" %}<a href="{% if document %}{% url 'billing_staff:quote_detail' document.pk %}{% else %}{% url 'billing_staff:quote_list' %}{% endif %}">Cancel</a>
+      {% else %}<a href="{% if document %}{% url 'billing_staff:invoice_detail' document.pk %}{% else %}{% url 'billing_staff:invoice_list' %}{% endif %}">Cancel</a>{% endif %}
+    </div>
+  </section>
+</form>
+{% endblock %}

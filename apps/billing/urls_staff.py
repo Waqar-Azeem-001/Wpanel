@@ -1,11 +1,38 @@
 from django.urls import path
 
-from . import views
+from . import views, views_documents as docs
 
 app_name = "billing_staff"
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("invoices/", docs.invoice_list, name="invoice_list"),
+    path("invoices/new/", docs.invoice_new, name="invoice_new"),
+    path("invoices/create/", docs.invoice_create, name="invoice_create"),
+    path("invoices/<int:pk>/", docs.invoice_detail, name="invoice_detail"),
+    path("invoices/<int:pk>/edit/", docs.invoice_edit, name="invoice_edit"),
+    path("invoices/<int:pk>/issue/", docs.invoice_issue, name="invoice_issue"),
+    path("invoices/<int:pk>/cancel/", docs.invoice_cancel, name="invoice_cancel"),
+    path("invoices/<int:pk>/delete/", docs.invoice_delete, name="invoice_delete"),
+    path("invoices/<int:pk>/payment/", docs.invoice_record_payment, name="invoice_record_payment"),
+    path("invoices/<int:pk>/pdf/", docs.invoice_pdf, name="invoice_pdf"),
+    path("payments/", docs.transaction_list, name="transaction_list"),
+    path("payments/<int:pk>/confirm/", docs.transaction_confirm, name="transaction_confirm"),
+    path("payments/<int:pk>/reject/", docs.transaction_reject, name="transaction_reject"),
+    path("payments/<int:pk>/refund/", docs.transaction_refund, name="transaction_refund"),
+    path("quotes/", docs.quote_list, name="quote_list"),
+    path("quotes/new/", docs.quote_new, name="quote_new"),
+    path("quotes/create/", docs.quote_create, name="quote_create"),
+    path("quotes/<int:pk>/", docs.quote_detail, name="quote_detail"),
+    path("quotes/<int:pk>/edit/", docs.quote_edit, name="quote_edit"),
+    path("quotes/<int:pk>/send/", docs.quote_send, name="quote_send"),
+    path("quotes/<int:pk>/cancel/", docs.quote_cancel, name="quote_cancel"),
+    path("quotes/<int:pk>/pdf/", docs.quote_pdf, name="quote_pdf"),
+    path("billable-items/", docs.billable_list, name="billable_list"),
+    path("billable-items/add/", docs.billable_create, name="billable_create"),
+    path("billable-items/<int:pk>/delete/", docs.billable_delete, name="billable_delete"),
+    path("billable-items/invoice/<int:client_id>/", docs.billable_invoice, name="billable_invoice"),
+    path("settings/", docs.billing_settings, name="settings"),
     path("payment-methods/", views.payment_methods, name="payment_methods"),
     path("payment-methods/save/", views.payment_method_save, name="payment_method_save"),
     path("payment-methods/<int:pk>/status/", views.payment_method_status, name="payment_method_status"),

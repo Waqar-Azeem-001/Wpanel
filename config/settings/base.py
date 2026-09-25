@@ -25,6 +25,9 @@ SITE_NAME = env("SITE_NAME", default="Wpanel")
 SITE_URL = env("SITE_URL", default="http://localhost:8000")
 # All catalog prices and orders are in this one currency (multi-currency is a deferred item).
 STORE_CURRENCY = env("STORE_CURRENCY", default="USD")
+# The built-in test payment gateway simulates a hosted checkout page and signs its own webhooks. It moves no
+# money, so it must never be usable in production: off by default, on in dev/test settings only.
+ALLOW_TEST_PAYMENT_GATEWAY = env.bool("ALLOW_TEST_PAYMENT_GATEWAY", default=False)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -201,6 +204,10 @@ SPECTACULAR_SETTINGS = {
         "OrderStatusEnum": "apps.orders.models.OrderStatus",
         "CartItemKindEnum": "apps.orders.models.ItemKind",
         "CartStatusEnum": "apps.orders.models.CartStatus",
+        "InvoiceStatusEnum": "apps.billing.models.InvoiceStatus",
+        "QuoteStatusEnum": "apps.billing.models.QuoteStatus",
+        "TransactionStatusEnum": "apps.billing.models.TransactionStatus",
+        "TransactionTypeEnum": "apps.billing.models.TransactionType",
     },
 }
 

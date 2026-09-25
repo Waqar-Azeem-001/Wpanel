@@ -111,3 +111,12 @@ h3 { font-size: 1rem; }
 /* Two-column pages: never squeeze the side card below a readable width; stack earlier instead. */
 .cols { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
 @media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+
+/* Phase 07: billing */
+.badge.status-draft, .badge.status-refunded, .badge.status-sent { color: var(--muted, #616e7c); }
+.badge.status-unpaid, .badge.status-partially_paid { color: var(--warn); }
+.badge.status-overdue, .badge.status-declined { color: var(--danger); }
+.badge.status-succeeded, .badge.status-accepted { color: var(--ok); }
+table.lines input[type="text"], table.lines input[type="number"] { width: 100%; box-sizing: border-box; }
+table.lines td.qty { width: 5rem; } table.lines td.price { width: 9rem; }
+input.short { width: 6rem; }

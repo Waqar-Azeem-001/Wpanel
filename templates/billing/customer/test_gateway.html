@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Test payment · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Test payment gateway</h1>
+  <p class="muted">This is a simulated checkout for development and testing. No money moves.</p>
+  <dl class="meta">
+    <dt>Invoice</dt><dd>{{ tx.invoice.number }}</dd>
+    <dt>Amount</dt><dd>{{ tx.currency }} {{ tx.amount }}</dd>
+    <dt>Status</dt><dd><span class="badge status-{{ tx.status }}">{{ tx.get_status_display }}</span></dd>
+  </dl>
+  {% if tx.status == "pending" %}
+  <div class="actions">
+    <form method="post">{% csrf_token %}<input type="hidden" name="outcome" value="succeeded"><button class="btn" type="submit">Pay {{ tx.currency }} {{ tx.amount }}</button></form>
+    <form method="post">{% csrf_token %}<input type="hidden" name="outcome" value="failed"><button class="btn secondary" type="submit">Decline</button></form>
+  </div>
+  {% endif %}
+  <p><a href="{% url 'billing_customer:invoice_detail' tx.invoice_id %}">&larr; Back to the invoice</a></p>
+</section>
+{% endblock %}

@@ -1,6 +1,11 @@
 <nav class="subnav">
+  <a href="{% url 'billing_staff:invoice_list' %}"{% if section == "invoices" %} class="active"{% endif %}>Invoices</a>
+  <a href="{% url 'billing_staff:transaction_list' %}"{% if section == "transactions" %} class="active"{% endif %}>Payments</a>
+  <a href="{% url 'billing_staff:quote_list' %}"{% if section == "quotes" %} class="active"{% endif %}>Quotes</a>
+  <a href="{% url 'billing_staff:billable_list' %}"{% if section == "billable" %} class="active"{% endif %}>Billable items</a>
   <a href="{% url 'billing_staff:payment_methods' %}"{% if section == "payment_methods" %} class="active"{% endif %}>Payment methods</a>
   <a href="{% url 'billing_staff:tax_rules' %}"{% if section == "tax_rules" %} class="active"{% endif %}>Tax rules</a>
   <a href="{% url 'billing_staff:coupons' %}"{% if section == "coupons" %} class="active"{% endif %}>Coupons</a>
+  <a href="{% url 'billing_staff:settings' %}"{% if section == "settings" %} class="active"{% endif %}>Settings</a>
   <a href="{% url 'orders_staff:list' %}">Orders</a>
 </nav>

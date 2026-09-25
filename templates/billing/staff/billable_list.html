@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Billable items · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Billing</h1>
+{% include "billing/staff/_nav.html" %}
+<p class="muted">One-off charges recorded against a client. Collect a client's uninvoiced charges onto a draft invoice.</p>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Client</th><th>Description</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Amount</th><th>Invoice</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for item in page %}
+    <tr>
+      <td><a href="{% url 'clients_staff:detail' item.client_id %}">{{ item.client.display_name }}</a></td>
+      <td>{{ item.description }}{% if not item.taxable %} <small class="muted">(no tax)</small>{% endif %}</td>
+      <td class="num">{{ item.quantity }}</td><td class="num">{{ item.unit_price }}</td><td class="num">{{ item.amount }}</td>
+      <td>{% if item.invoice %}<a href="{% url 'billing_staff:invoice_detail' item.invoice_id %}">{{ item.invoice.reference }}</a>{% else %}<span class="badge status-pending">Uninvoiced</span>{% endif %}</td>
+      {% if can_manage %}
+      <td>
+        {% if not item.invoice_id %}
+        <form method="post" action="{% url 'billing_staff:billable_invoice' item.client_id %}" class="inline-form">{% csrf_token %}<button class="btn small" type="submit" title="Invoice all of this client's uninvoiced charges">Invoice client</button></form>
+        <form method="post" action="{% url 'billing_staff:billable_delete' item.pk %}" class="inline-form" onsubmit="return confirm('Delete this charge?');">{% csrf_token %}<button class="btn small danger" type="submit">Delete</button></form>
+        {% endif %}
+      </td>
+      {% endif %}
+    </tr>
+  {% empty %}
+    <tr><td colspan="{% if can_manage %}7{% else %}6{% endif %}" class="muted">No billable items yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "billing/_pager.html" %}
+{% if form %}
+<section class="card">
+  <h2>Add a charge</h2>
+  <p class="muted">Enter the number from the client's reference (client C000123 is 123).</p>
+  <form method="post" action="{% url 'billing_staff:billable_create' %}" class="grid-form">{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="actions"><button class="btn" type="submit">Add charge</button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

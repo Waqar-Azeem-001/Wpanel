@@ -3,7 +3,7 @@
 This is a hosting business management portal, similar to WHMCS. It is built with Django and Django REST Framework, uses PostgreSQL for data, and runs background jobs through Redis and Celery.
 
 - **Roadmap and rules:** [Hosting_Management_Portal_Master_Development_Roadmap.md](Hosting_Management_Portal_Master_Development_Roadmap.md)
-- **Phase reports:** [Phase 01](docs/phase-01-gap-report.md), [Phase 02](docs/phase-02-gap-report.md), [Phase 03](docs/phase-03-gap-report.md), [Phase 04](docs/phase-04-gap-report.md), [Phase 05](docs/phase-05-gap-report.md), [Phase 06](docs/phase-06-gap-report.md)
+- **Phase reports:** [Phase 01](docs/phase-01-gap-report.md), [Phase 02](docs/phase-02-gap-report.md), [Phase 03](docs/phase-03-gap-report.md), [Phase 04](docs/phase-04-gap-report.md), [Phase 05](docs/phase-05-gap-report.md), [Phase 06](docs/phase-06-gap-report.md), [Phase 07](docs/phase-07-gap-report.md)
 
 ## Local development (no Docker)
 
@@ -30,7 +30,9 @@ pytest
 - Cart and checkout: http://localhost:8000/cart/
 - My orders: http://localhost:8000/account/orders/
 - Staff orders: http://localhost:8000/staff/orders/
-- Staff billing configuration (payment methods, tax, coupons): http://localhost:8000/staff/billing/
+- Staff billing (invoices, payments, quotes, billable items, settings, payment methods, tax, coupons): http://localhost:8000/staff/billing/
+- My invoices and quotes: http://localhost:8000/account/billing/invoices/
+- Payment webhook (gateway calls this; signature-verified): `POST /api/v1/webhooks/payments/<provider_id>/`
 - Django admin: http://localhost:8000/admin/
 - API: http://localhost:8000/api/v1/
 - API docs (staff login required): http://localhost:8000/api/v1/docs/
@@ -55,7 +57,7 @@ apps/clients/        client accounts, contacts (owner/billing/technical), staff 
 apps/products/        products, addons, pricing, servers (with WHM connection fields since Phase 05)
 apps/domains/          domains, DNS, TLD pricing, registrar adapter (Manual only - no real registration yet)
 apps/hosting/          hosting accounts, WHM adapter (Manual + a real, unverified WhmApiAdapter)
-apps/billing/          billing configuration: payment methods, tax rules, coupons (Phase 07 adds invoices)
+apps/billing/          payment methods, tax, coupons; invoices, quotes, transactions, payment gateway adapters (calculations.py is the only billing arithmetic)
 apps/orders/           cart, pricing engine, checkout, orders (pricing.py is the only place a price is computed)
 templates/           web pages and email templates
 deploy/nginx/        reverse proxy config
@@ -68,4 +70,6 @@ deploy/nginx/        reverse proxy config
 - A staff API view declares `permission_classes = [HasPortalPermission]` along with `required_permissions`. If a view declares nothing, access is denied.
 - Every sensitive action calls `apps.audit.services.record(...)`.
 - Emails go through `apps.notifications.services.send_email` or `notify`. Never call `send_mail` directly.
+- Money is `Decimal`, and every billing figure comes from `apps/billing/calculations.py`. An invoice's paid amount and status are derived from its succeeded transactions; `python manage.py verify_billing` re-checks every stored figure.
+- The built-in test payment gateway moves no money and only works when `ALLOW_TEST_PAYMENT_GATEWAY` is true (dev/test). Add a payment provider in Django admin (credentials and webhook secret are encrypted, write-only).
 - Provider credentials (email, WHM, registrar, payment) live in the database, encrypted with `apps.core.crypto`. Never put them in environment variables.

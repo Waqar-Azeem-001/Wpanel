@@ -1,0 +1,18 @@
+{% autoescape off %}Hello {{ invoice.billing_name|default:"there" }},
+
+Invoice {{ invoice.number }} has been issued.
+
+{% for item in items %}- {{ item.description }}{% if item.quantity > 1 %} x {{ item.quantity }}{% endif %}: {{ invoice.currency }} {{ item.amount }}
+{% endfor %}
+Subtotal: {{ invoice.currency }} {{ invoice.subtotal }}
+{% if invoice.discount_total %}{{ invoice.discount_label|default:"Discount" }}: -{{ invoice.currency }} {{ invoice.discount_total }}
+{% endif %}{% if invoice.tax_total %}{{ invoice.tax_name|default:"Tax" }} ({{ invoice.tax_rate }}%): {{ invoice.currency }} {{ invoice.tax_total }}
+{% endif %}Total: {{ invoice.currency }} {{ invoice.total }}
+
+{% if invoice.balance_due %}Amount due: {{ invoice.currency }} {{ invoice.balance_due }} by {{ invoice.due_date|date:"j M Y" }}.
+{% else %}Nothing is due on this invoice.
+{% endif %}
+View, pay or download it: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

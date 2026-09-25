@@ -37,6 +37,7 @@ class Client(TimeStampedModel):
     country = models.CharField(max_length=2, blank=True, validators=[country_code])
     tax_id = models.CharField(max_length=50, blank=True, help_text="VAT/GST/NTN number, if any.")
     currency = models.CharField(max_length=3, default="USD", validators=[currency_code])
+    tax_exempt = models.BooleanField(default=False, help_text="No tax is charged on new orders and invoices. Staff only.")
 
     status = models.CharField(max_length=16, choices=ClientStatus.choices, default=ClientStatus.ACTIVE,
                               db_index=True)

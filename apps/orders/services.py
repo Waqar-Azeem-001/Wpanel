@@ -12,7 +12,8 @@ from rest_framework import status
 
 from apps.accounts.roles import perm
 from apps.audit import services as audit
-from apps.billing.models import Coupon, PaymentMethod
+from apps.billing.invoicing import billing_snapshot, cancel_invoice_internal, create_invoice_for_order
+from apps.billing.models import Coupon, Invoice, InvoiceStatus, PaymentMethod
 from apps.clients.models import Client
 from apps.clients.services import contact_role
 from apps.core.exceptions import ServiceError
@@ -162,16 +163,6 @@ def remove_coupon(actor, cart):
 
 # --- Checkout -------------------------------------------------------------------------------
 
-def _billing_snapshot(client):
-    return {
-        "billing_name": client.contact_name[:300], "billing_company": client.company_name,
-        "billing_email": client.email, "billing_phone": client.phone,
-        "billing_address_line1": client.address_line1, "billing_address_line2": client.address_line2,
-        "billing_city": client.city, "billing_state": client.state, "billing_postcode": client.postcode,
-        "billing_country": client.country, "billing_tax_id": client.tax_id,
-    }
-
-
 def checkout(actor, cart, *, payment_method_code, notes="", request=None):
     """
     Turn a cart into an order awaiting payment.
@@ -213,7 +204,7 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
             tax_total=priced.tax_total, total=priced.total,
             coupon=priced.coupon, coupon_code=priced.coupon.code if priced.coupon else "",
             payment_method=method, payment_method_name=method.name, notes=notes.strip()[:2000],
-            **_billing_snapshot(client),
+            **billing_snapshot(client),
         )
         created = {}
         for line in priced.lines:  # cart order guarantees a hosting line precedes its add-ons
@@ -234,17 +225,19 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
         audit.record("order.placed", actor=actor, target=order,
                      metadata={"client_id": client.pk, "total": str(order.total), "items": len(priced.lines),
                                "coupon": order.coupon_code, "payment_method": method.code}, request=request)
-        _notify_order_placed(actor, order, method)
+        invoice = create_invoice_for_order(order, actor=actor)
+        _notify_order_placed(actor, order, method, invoice)
+    order.refresh_from_db()  # a zero-total order is settled (and marked paid) as its invoice is issued
     return order
 
 
-def _notify_order_placed(actor, order, method):
+def _notify_order_placed(actor, order, method, invoice):
     link = reverse("orders_customer:detail", args=[order.pk])
     notifications.notify(actor, event="order.placed", title=f"Order {order.reference} placed",
                          body=f"Total {order.currency} {order.total}. Awaiting payment.", link=link)
     notifications.send_email(
         to_email=order.billing_email or order.client.email, template="order_placed",
-        context={"order": order, "items": list(order.items.all()), "method": method}, user=actor,
+        context={"order": order, "items": list(order.items.all()), "method": method, "invoice": invoice}, user=actor,
         event="order.placed",
     )
 
@@ -277,6 +270,9 @@ def cancel_order(actor, order, *, reason="", request=None):
     """Cancel an order that hasn't been paid. Releases its coupon use and any reserved domain names."""
     if not (actor.has_perm(perm("manage_orders")) or contact_role(actor, order.client) is not None):
         raise _denied()
+    # Lock order matches the payment path (invoice first, then order) so the two can never deadlock.
+    open_invoices = list(Invoice.objects.select_for_update().filter(
+        order=order, status__in=(InvoiceStatus.UNPAID, InvoiceStatus.PARTIALLY_PAID)))
     order = Order.objects.select_for_update().get(pk=order.pk)
     if order.status != OrderStatus.PENDING_PAYMENT:
         raise ServiceError("Only an order that is awaiting payment can be cancelled.", code="invalid_status")
@@ -284,4 +280,6 @@ def cancel_order(actor, order, *, reason="", request=None):
     order.save(update_fields=["status", "cancel_reason", "updated_at"])
     audit.record("order.cancelled", actor=actor, target=order, metadata={"reason": order.cancel_reason},
                  request=request)
+    for invoice in open_invoices:
+        cancel_invoice_internal(invoice, actor=actor, reason=order.cancel_reason, request=request)
     return order

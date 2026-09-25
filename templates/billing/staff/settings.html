@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Billing settings · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Billing</h1>
+{% include "billing/staff/_nav.html" %}
+<section class="card">
+  <h2>Invoice and quote settings</h2>
+  <p class="muted">Your details as printed on every invoice and quote. Numbers are assigned when a document is issued and never reused.</p>
+  <form method="post" novalidate class="grid-form">{% csrf_token %}
+    {% include "partials/form.html" %}
+    {% if can_manage %}<div class="actions"><button class="btn" type="submit">Save</button></div>{% endif %}
+  </form>
+</section>
+{% endblock %}

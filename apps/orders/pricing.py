@@ -10,13 +10,14 @@ invoices copy the figures snapshotted on the order rather than recomputing.
 Money is ``Decimal``, rounded half-up to two places.
 """
 from dataclasses import dataclass, field
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
-from apps.billing.models import TWO_PLACES, Coupon, TaxRule
-from apps.billing.services import tax_rule_for_country
+from apps.billing.calculations import ZERO, discount_amount, money, tax_amount
+from apps.billing.models import Coupon, TaxRule
+from apps.billing.services import tax_rule_for_client
 from apps.core.exceptions import ServiceError
 from apps.core.web import error_text
 from apps.domains import services as domain_services
@@ -25,13 +26,6 @@ from apps.products import services as product_services
 from apps.products.models import BillingCycle, CatalogStatus
 
 from .models import CartItem, CouponRedemption, ItemKind, OrderItem, OrderStatus
-
-ZERO = Decimal("0.00")
-
-
-def money(value):
-    return Decimal(value).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
-
 
 def cycle_label(billing_cycle, custom_months=0):
     if billing_cycle == BillingCycle.CUSTOM:
@@ -250,9 +244,9 @@ def price_cart(cart, *, strict=False, verify_availability=False):
             priced.coupon_error = exc.message
 
     taxable = priced.subtotal - priced.discount_total
-    priced.tax_rule = tax_rule_for_country(cart.client.country)
+    priced.tax_rule = tax_rule_for_client(cart.client)
     if priced.tax_rule:
         priced.tax_rate = priced.tax_rule.rate
-        priced.tax_total = money(taxable * priced.tax_rule.rate / Decimal(100))
+        priced.tax_total = tax_amount(taxable, priced.tax_rule.rate)
     priced.total = money(taxable + priced.tax_total)
     return priced

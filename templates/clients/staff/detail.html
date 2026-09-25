@@ -21,6 +21,7 @@
       <dt>Address</dt><dd>{% if client.address_line1 %}{{ client.address_line1 }}{% if client.address_line2 %}, {{ client.address_line2 }}{% endif %}<br>{{ client.city }} {{ client.state }} {{ client.postcode }} {{ client.country }}{% else %}—{% endif %}</dd>
       <dt>Tax ID</dt><dd>{{ client.tax_id|default:"—" }}</dd>
       <dt>Currency</dt><dd>{{ client.currency }}</dd>
+      <dt>Tax</dt><dd>{% if client.tax_exempt %}Exempt{% else %}Charged per tax rules{% endif %}</dd>
       <dt>Created</dt><dd>{{ client.created_at|date:"Y-m-d H:i" }}</dd>
     </dl>
     {% if client.notes %}<h3>Internal notes</h3><p class="notes">{{ client.notes|linebreaksbr }}</p>{% endif %}
@@ -85,9 +86,30 @@
 </section>
 
 <section class="card">
-  <h2>Account records</h2>
-  <p class="muted">Orders, services, domains, invoices, transactions, tickets, quotes, cancellations and affiliate
-    records will appear here as those modules are delivered (roadmap phases 04–13).</p>
+  <div class="page-head"><h2>Account records</h2>
+    {% if can_bill %}<span><a class="btn small secondary" href="{% url 'billing_staff:invoice_create' %}?client={{ client.pk }}">New invoice</a>
+      <a class="btn small secondary" href="{% url 'billing_staff:quote_create' %}?client={{ client.pk }}">New quote</a>
+      <a class="btn small secondary" href="{% url 'billing_staff:billable_list' %}?client={{ client.pk }}">Add charge</a></span>{% endif %}</div>
+  <div class="cols">
+  {% for section in records %}
+    <div>
+      <h3>{{ section.title }} <small class="muted">({{ section.total }})</small></h3>
+      <ul class="records">
+      {% for row in section.rows %}
+        <li><a href="{{ row.url }}">{{ row.label }}</a>
+          <span class="badge status-{{ row.status_key }}">{{ row.status }}</span>
+          {% if row.amount %}<span class="muted">{{ row.amount }}</span>{% endif %}</li>
+      {% empty %}
+        <li class="muted">None yet.</li>
+      {% endfor %}
+      </ul>
+      {% if section.total > section.rows|length %}<a href="{{ section.list_url }}">View all</a>{% endif %}
+    </div>
+  {% empty %}
+    <p class="muted">You do not have permission to view this client's records.</p>
+  {% endfor %}
+  </div>
+  <p class="muted">Support tickets, cancellations and affiliate records will appear here as those modules are delivered.</p>
 </section>
 
 <section class="card">

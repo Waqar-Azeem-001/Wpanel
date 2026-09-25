@@ -18,5 +18,6 @@ urlpatterns = [
     path("staff/hosting/", include("apps.hosting.urls_staff")),
     path("staff/orders/", include("apps.orders.urls_staff")),
     path("staff/billing/", include("apps.billing.urls_staff")),
+    path("account/billing/", include("apps.billing.urls_customer")),
     path("", include("apps.orders.urls_customer")),
 ]

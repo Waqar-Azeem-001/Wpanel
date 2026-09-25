@@ -8,7 +8,7 @@ from apps.accounts.roles import perm
 from apps.core.permissions import AuthenticatedReadPermission, HasPortalPermission
 
 from . import services
-from .models import Coupon, DiscountType, PaymentMethod, TaxRule
+from .models import Coupon, DiscountType, PaymentMethod, PaymentProvider, TaxRule
 
 
 class SetActiveSerializer(serializers.Serializer):
@@ -18,9 +18,12 @@ class SetActiveSerializer(serializers.Serializer):
 # --- Payment methods ------------------------------------------------------------------------
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
+    provider = serializers.PrimaryKeyRelatedField(queryset=PaymentProvider.objects.filter(is_active=True),
+                                                  allow_null=True, required=False)
+
     class Meta:
         model = PaymentMethod
-        fields = ["id", "code", "name", "instructions", "is_active", "sort_order"]
+        fields = ["id", "code", "name", "instructions", "provider", "is_active", "sort_order"]
         read_only_fields = ["id", "is_active"]
 
 
@@ -49,8 +52,10 @@ class PaymentMethodViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mix
         services.save_payment_method(
             self.request.user, instance.code, name=data.get("name", instance.name),
             instructions=data.get("instructions", instance.instructions),
-            sort_order=data.get("sort_order", instance.sort_order), request=self.request,
+            sort_order=data.get("sort_order", instance.sort_order),
+            provider=data["provider"] if "provider" in data else services.KEEP, request=self.request,
         )
+        instance.refresh_from_db()  # the response is built from this instance, so it must show what was saved
 
     @extend_schema(request=SetActiveSerializer, responses=PaymentMethodSerializer)
     @action(detail=True, methods=["post"], url_path="status")
@@ -98,6 +103,7 @@ class TaxRuleViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cr
         instance, data = serializer.instance, serializer.validated_data
         services.save_tax_rule(self.request.user, instance.country, name=data.get("name", instance.name),
                                rate=data.get("rate", instance.rate), request=self.request)
+        instance.refresh_from_db()
 
     @extend_schema(request=SetActiveSerializer, responses=TaxRuleSerializer)
     @action(detail=True, methods=["post"], url_path="status")
@@ -152,6 +158,7 @@ class CouponViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cre
     def perform_update(self, serializer):
         services.save_coupon(self.request.user, serializer.instance.code, dict(serializer.validated_data),
                              request=self.request)
+        serializer.instance.refresh_from_db()
 
     @extend_schema(request=SetActiveSerializer, responses=CouponSerializer)
     @action(detail=True, methods=["post"], url_path="status")

@@ -11,7 +11,7 @@ from apps.accounts.roles import perm
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 
-from . import forms, services
+from . import forms, records, services
 from .models import Client, ClientContact
 
 
@@ -71,10 +71,12 @@ def staff_client_detail(request, pk):
         "client": client,
         "contacts": contacts,
         "activity": activity,
+        "records": records.account_records(request.user, client),
         "status_form": forms.ClientStatusForm(initial={"status": client.status}),
         "contact_form": forms.AddContactForm(),
         "role_choices": forms.ContactRole.choices,
         "can_manage": request.user.has_perm(perm("manage_clients")),
+        "can_bill": request.user.has_perm(perm("manage_billing")),
     })
 
 

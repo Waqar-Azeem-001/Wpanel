@@ -13,7 +13,9 @@ Payment method: {{ order.payment_method_name }}
 {% if method.instructions %}
 {{ method.instructions }}
 {% endif %}
-Please quote {{ order.reference }} with your payment. Your services are set up once payment is confirmed.
+{% if invoice %}Your invoice is {{ invoice.number }}, due {{ invoice.due_date|date:"j M Y" }}. You can view, pay and download it from your account.
+
+Please quote {{ invoice.number }} with your payment.{% else %}Please quote {{ order.reference }} with your payment.{% endif %} Your services are set up once payment is confirmed.
 
 {{ site_name }}
 {% endautoescape %}

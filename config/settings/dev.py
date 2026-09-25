@@ -2,6 +2,7 @@ from .base import *  # noqa: F401,F403
 from .base import BASE_DIR, env
 
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
+ALLOW_TEST_PAYMENT_GATEWAY = env.bool("ALLOW_TEST_PAYMENT_GATEWAY", default=True)
 
 # Allow running locally without PostgreSQL/Redis. Production always uses PostgreSQL.
 if not env("DATABASE_URL", default=""):

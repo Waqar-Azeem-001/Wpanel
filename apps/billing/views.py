@@ -17,7 +17,7 @@ def _context(request, **extra):
 
 @portal_permission_required(perm("view_billing"))
 def index(request):
-    return redirect("billing_staff:payment_methods")
+    return redirect("billing_staff:invoice_list")
 
 
 # --- Payment methods ------------------------------------------------------------------------

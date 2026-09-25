@@ -1,0 +1,12 @@
+{% autoescape off %}Hello {{ quote.billing_name|default:"there" }},
+
+We have prepared quote {{ quote.number }} for you.
+
+{% for item in items %}- {{ item.description }}{% if item.quantity > 1 %} x {{ item.quantity }}{% endif %}: {{ quote.currency }} {{ item.amount }}
+{% endfor %}
+Total: {{ quote.currency }} {{ quote.total }}
+
+It is valid until {{ quote.valid_until|date:"j M Y" }}. You can review, accept or decline it here: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

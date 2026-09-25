@@ -1,0 +1,10 @@
+{% autoescape off %}Hello {{ invoice.billing_name|default:"there" }},
+
+We received your payment of {{ payment.currency }} {{ payment.amount }} for invoice {{ invoice.number }}{% if payment.method_name %} ({{ payment.method_name }}){% endif %}.
+
+{% if invoice.balance_due %}Remaining balance: {{ invoice.currency }} {{ invoice.balance_due }}.{% else %}This invoice is now paid in full.{% endif %}
+
+View the invoice: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

@@ -1614,7 +1614,7 @@ If UI changed:
   04 Domain Management           🟢       227 ✅  ✅        e614249  ---
   05 WHM Provisioning            🟢       296 ✅  ✅        9c0c517  ---
   06 Cart & Checkout             🟢       458 ✅  ✅        23168d7  ---
-  07 Billing & Invoices          ⬜       ---     ---       ---      ---
+  07 Billing & Invoices          🟡       622 ✅  ✅        ---      ---
   08 Renewals & Upgrades         ⬜       ---     ---       ---      ---
   09 Orders & Lifecycle          ⬜       ---     ---       ---      ---
   10 Support                     ⬜       ---     ---       ---      ---
@@ -1711,9 +1711,9 @@ postponed.
   Hosting usage sync is manual,       Deferred  Needs Celery beat + a verified   Phase 17/18
   not scheduled                                 live WHM adapter first
 
-  Payment, invoices, transactions     Open      Roadmap puts these in Phase 07;   Phase 07
-  for orders (order ends at           by design Phase 06 ends at a pending order
-  "pending payment")
+  Payment, invoices, transactions     Closed    Delivered in Phase 07: checkout   Phase 07
+  for orders (order ends at                     issues the invoice; paying it
+  "pending payment")                            marks the order paid
 
   Order fulfilment: provisioning      Open      Needs a system actor - domain/    Phase 07/09
   domains/hosting from a paid order             hosting services authorise a user
@@ -1724,11 +1724,37 @@ postponed.
 
   Guest (anonymous) carts             Deferred  Cart requires a signed-in user    Post-MVP
 
+  No real payment gateway adapter     Open      Only the simulated test gateway   Before launch
+  (Stripe is unavailable in                     ships (dev/test only, guarded by
+  Pakistan; choice is a business                ALLOW_TEST_PAYMENT_GATEWAY). A
+  decision)                                     real one = one adapter class
+
+  Invoices/quotes visible to any      Deferred  Restrict financial documents to   Phase 15/16
+  contact of the client                         owner/billing contacts
+
+  Overdue reminders / dunning         Deferred  Overdue is derived and            Phase 11
+                                                filterable; no scheduled emails
+
+  Recurring invoices, renewals,       Deferred  Invoices are one-off so far       Phase 08
+  credit balances, proration
+
+  PDF text limited to Western         Deferred  Built-in PDF fonts; other         Post-MVP
+  European characters                           scripts print as "?"
+
+  Staff not notified when a customer  Deferred  Visible on the Payments page      Phase 11/15
+  reports an offline payment
+
+  Abandoned online payment attempts   Deferred  Stay pending until the gateway    Phase 17
+  never expire                                  answers or the invoice is
+                                                cancelled
+
   Coupons apply to first payment      Deferred  No per-product limits or          Phase 08
   only                                          recurring discounts yet
 
-  Tax: one rule per country,          Deferred  No tax-exempt clients, tax-       Phase 07
-  order-level, exclusive                        inclusive pricing or state rules
+  Tax: one rule per country,          Deferred  Tax-exempt clients done in        Post-MVP
+  order-level, exclusive                        Phase 07; still no tax-inclusive
+                                                pricing, state rules or per-
+                                                invoice rate override
 
   Unpaid orders hold domain names     Deferred  No automatic order expiry yet     Phase 08/17
   until cancelled
@@ -1888,6 +1914,31 @@ Record permanent technical decisions here.
   locks, is atomic and double-submit  redemption of a coupon,   
   safe; unpaid orders reserve domain  no name sold twice        
   names until paid or cancelled                                 
+
+  One billing arithmetic              Roadmap rule: no duplicate  Active
+  (billing.calculations): cart,       billing calculations;
+  orders, invoices, quotes; discount  documents must sum exactly
+  and tax allocated to lines in cents 
+
+  Invoice paid/refunded amounts and   Financial figures must be   Active
+  status are derived from succeeded   reproducible from permanent
+  transactions under the invoice row  records (verify_billing)
+  lock; "overdue" is derived, never   
+  stored                              
+
+  Issued invoices are immutable       Legal/financial integrity;  Active
+  (pay, refund, cancel only); numbers gap-free numbering allocated
+  are gap-free, taken at issue        at issue under a row lock
+
+  Payments succeed only via a signed  Never trust the browser     Active
+  gateway webhook (idempotent by      redirect; redeliveries and
+  event id, amount/currency checked); retries must be safe
+  invoice order: invoice -> tx ->     
+  order lock order                    
+
+  PaymentProvider is DB-configured    Provider credentials never  Active
+  and admin-only; test gateway is     in ENV; a no-money gateway
+  behind ALLOW_TEST_PAYMENT_GATEWAY   must never run in production
   -----------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

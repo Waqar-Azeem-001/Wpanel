@@ -1,0 +1,15 @@
+<table class="totals">
+  <tr><th>Subtotal</th><td>{{ doc.currency }} {{ doc.subtotal }}</td></tr>
+  {% if doc.discount_total and doc.discount_total != 0 %}
+  <tr><th>{{ doc.discount_label|default:"Discount" }}</th><td>&minus; {{ doc.currency }} {{ doc.discount_total }}</td></tr>
+  {% endif %}
+  {% if doc.tax_name %}
+  <tr><th>{{ doc.tax_name }} ({{ doc.tax_rate }}%)</th><td>{{ doc.currency }} {{ doc.tax_total }}</td></tr>
+  {% endif %}
+  <tr class="grand"><th>Total</th><td>{{ doc.currency }} {{ doc.total }}</td></tr>
+  {% if invoice_totals %}
+    {% if doc.amount_paid %}<tr><th>Paid</th><td>{{ doc.currency }} {{ doc.amount_paid }}</td></tr>{% endif %}
+    {% if doc.amount_refunded %}<tr><th>Refunded</th><td>{{ doc.currency }} {{ doc.amount_refunded }}</td></tr>{% endif %}
+    <tr class="grand"><th>Amount due</th><td>{{ doc.currency }} {{ doc.balance_due }}</td></tr>
+  {% endif %}
+</table>

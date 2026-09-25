@@ -48,5 +48,12 @@
     {% if order.status == "cancelled" and order.cancel_reason %}<p class="muted">Cancelled: {{ order.cancel_reason }}</p>{% endif %}
   </section>
 </div>
-<p class="muted">Invoices, payment recording and fulfilment for this order arrive with the billing and order-lifecycle phases.</p>
+<section class="card">
+  <h2>Invoice</h2>
+  {% for invoice in order.invoices.all %}
+    <p><a href="{% url 'billing_staff:invoice_detail' invoice.pk %}">{{ invoice.reference }}</a>
+      <span class="badge status-{{ invoice.display_status }}">{{ invoice.display_status_label }}</span>
+      &middot; {{ invoice.currency }} {{ invoice.total }}, balance {{ invoice.balance_due }}</p>
+  {% empty %}<p class="muted">No invoice (this order predates invoicing).</p>{% endfor %}
+</section>
 {% endblock %}

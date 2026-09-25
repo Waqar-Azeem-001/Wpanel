@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts import api as accounts_api
 from apps.audit.api import AuditEventViewSet
+from apps.billing import api_documents as billing_docs
 from apps.billing.api import CouponViewSet, PaymentMethodViewSet, TaxRuleViewSet
 from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
@@ -30,6 +31,10 @@ router.register("payment-methods", PaymentMethodViewSet, basename="payment-metho
 router.register("tax-rules", TaxRuleViewSet, basename="tax-rule")
 router.register("coupons", CouponViewSet, basename="coupon")
 router.register("orders", orders_api.OrderViewSet, basename="order")
+router.register("invoices", billing_docs.InvoiceViewSet, basename="invoice")
+router.register("transactions", billing_docs.TransactionViewSet, basename="transaction")
+router.register("quotes", billing_docs.QuoteViewSet, basename="quote")
+router.register("billable-items", billing_docs.BillableItemViewSet, basename="billable-item")
 
 auth_patterns = [
     path("register/", accounts_api.RegisterView.as_view(), name="register"),
@@ -48,6 +53,8 @@ urlpatterns = [
     path("auth/", include(auth_patterns)),
     path("me/", accounts_api.MeView.as_view(), name="me"),
     path("domains/availability/", AvailabilityView.as_view(), name="domain-availability"),
+    path("billing-settings/", billing_docs.BillingSettingsView.as_view(), name="billing-settings"),
+    path("webhooks/payments/<int:provider_id>/", billing_docs.PaymentWebhookView.as_view(), name="payment-webhook"),
     path("cart/", orders_api.CartView.as_view(), name="cart"),
     path("cart/items/", orders_api.CartItemsView.as_view(), name="cart-items"),
     path("cart/items/<int:pk>/", orders_api.CartItemDetailView.as_view(), name="cart-item"),

@@ -2,6 +2,7 @@
 Billing configuration logic: payment methods, tax rules and coupons. Staff web
 pages, the staff API and the admin all call these; none holds rules of its own.
 """
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from rest_framework import status
 
@@ -10,6 +11,8 @@ from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
 from .models import Coupon, PaymentMethod, TaxRule
+
+KEEP = object()  # "leave this field as it is" (distinct from None, which clears it)
 
 
 def _denied(message="You do not have permission to perform this action."):
@@ -41,10 +44,17 @@ def tax_rule_for_country(country):
     return (country and rules.filter(country=country).first()) or rules.filter(country="").first()
 
 
+def tax_rule_for_client(client):
+    """The rule that applies to ``client``: none if they are tax exempt, otherwise by their country."""
+    if client.tax_exempt:
+        return None
+    return tax_rule_for_country(client.country)
+
+
 # --- Payment methods ------------------------------------------------------------------------
 
 @transaction.atomic
-def save_payment_method(actor, code, *, name, instructions="", sort_order=0, request=None):
+def save_payment_method(actor, code, *, name, instructions="", sort_order=0, provider=KEEP, request=None):
     """Create or update a payment method (upsert by code)."""
     _require(actor, "manage_billing")
     # Look up, then validate, then write - never get_or_create-then-validate, which would INSERT
@@ -54,6 +64,10 @@ def save_payment_method(actor, code, *, name, instructions="", sort_order=0, req
     if created:
         method = PaymentMethod(code=code)
     method.name, method.instructions, method.sort_order = name, instructions, sort_order
+    if provider is not KEEP:
+        if provider is not None and not provider.is_active:
+            raise ValidationError({"provider": "Choose an active payment gateway."})
+        method.provider = provider
     method.full_clean()
     method.save()
     audit.record("payment_method.created" if created else "payment_method.updated", actor=actor, target=method,

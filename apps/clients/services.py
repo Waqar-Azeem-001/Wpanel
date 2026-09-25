@@ -23,7 +23,7 @@ from .models import Client, ClientContact, ClientStatus, ContactRole
 # Fields staff may set on a client.
 STAFF_FIELDS = (
     "company_name", "first_name", "last_name", "email", "phone", "address_line1", "address_line2", "city",
-    "state", "postcode", "country", "tax_id", "currency", "notes",
+    "state", "postcode", "country", "tax_id", "currency", "tax_exempt", "notes",
 )
 # Fields a client's own owner/billing contact may change.
 CUSTOMER_FIELDS = (
