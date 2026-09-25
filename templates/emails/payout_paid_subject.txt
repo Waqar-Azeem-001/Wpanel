@@ -1,0 +1,1 @@
+You were paid {{ payout.currency }} {{ payout.amount }} - {{ site_name }}

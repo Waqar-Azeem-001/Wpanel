@@ -167,3 +167,6 @@ pre.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; 
 .badge.status-approved { color: var(--ok); }
 .badge.status-completed, .badge.status-withdrawn { color: var(--muted, #616e7c); }
 .badge.status-rejected { color: var(--danger); }
+
+/* Phase 13: affiliates */
+input.copy { width: 100%; font-family: monospace; }

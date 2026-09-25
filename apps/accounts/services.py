@@ -33,7 +33,8 @@ EMAIL_VERIFICATION_SALT = "accounts.email-verification"
 # --- Registration & verification ---------------------------------------------
 
 @transaction.atomic
-def register_user(*, email, password, first_name="", last_name="", phone="", company_name="", request=None):
+def register_user(*, email, password, first_name="", last_name="", phone="", company_name="", referral_code="",
+                  request=None):
     email = User.objects.normalize_email(email).lower()
     if User.objects.filter(email__iexact=email).exists():
         raise ServiceError("An account with this email already exists.", code="email_taken")
@@ -49,9 +50,23 @@ def register_user(*, email, password, first_name="", last_name="", phone="", com
     # holds their orders, services, domains and invoices.
     from apps.clients.services import create_client_for_registration
 
-    create_client_for_registration(user, company_name=company_name, request=request)
+    client = create_client_for_registration(user, company_name=company_name, request=request)
+    _attribute_referral(user, client, referral_code, request)
     send_verification_email(user)
     return user
+
+
+def _attribute_referral(user, client, code, request):
+    """Remember which affiliate sent this sign-up. A problem here must never stop someone registering."""
+    if not code:
+        return
+    from apps.affiliates import services as affiliates
+
+    try:
+        with transaction.atomic():
+            affiliates.attribute_signup(client, code, user=user, request=request)
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not attribute the referral for %s", user.pk)
 
 
 def make_email_verification_token(user):

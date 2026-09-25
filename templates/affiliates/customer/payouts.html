@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Payouts · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'affiliates_customer:dashboard' %}">&larr; Affiliate</a></p>
+<h1>Payout history</h1>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Payout</th><th>Date</th><th>Method</th><th>Reference</th><th class="num">Amount</th></tr></thead>
+  <tbody>{% for p in page %}
+    <tr><td>{{ p.code }}</td><td>{{ p.paid_on|date:"j M Y" }}</td><td>{{ p.method }}</td><td>{{ p.reference|default:"&mdash;" }}</td><td class="num">{{ p.currency }} {{ p.amount }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="muted">No payouts yet.</td></tr>{% endfor %}</tbody></table></div>
+{% include "billing/_pager.html" %}
+{% endblock %}

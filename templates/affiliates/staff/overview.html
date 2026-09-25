@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Affiliates · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Affiliates</h1>
+{% include "affiliates/staff/_nav.html" %}
+{% if awaiting %}<div class="errors"><p>{{ awaiting }} application{{ awaiting|pluralize }} waiting for approval. <a href="{% url 'affiliates_staff:affiliates' %}?status=pending">Review</a>.</p></div>{% endif %}
+{% if report.awaiting_review %}<div class="errors"><p>{{ report.awaiting_review }} commission{{ report.awaiting_review|pluralize }} refunded after being paid out. <a href="{% url 'affiliates_staff:commissions' %}?status=paid&amp;review=1">Review</a>.</p></div>{% endif %}
+<nav class="tabs" aria-label="Period">
+  <a href="?"{% if not days %} class="active"{% endif %}>All time</a>
+  <a href="?days=7"{% if days == 7 %} class="active"{% endif %}>7 days</a>
+  <a href="?days=30"{% if days == 30 %} class="active"{% endif %}>30 days</a>
+  <a href="?days=90"{% if days == 90 %} class="active"{% endif %}>90 days</a>
+</nav>
+<div class="stats">
+  <div class="stat"><strong>{{ report.affiliates.active }}</strong><span>Active affiliates</span></div>
+  <div class="stat"><strong>{{ report.visits }}</strong><span>Link visits</span></div>
+  <div class="stat"><strong>{{ report.referrals }}</strong><span>Referred sign-ups</span></div>
+  <div class="stat"><strong>{{ report.commissions.pending.amount }}</strong><span>Pending ({{ report.commissions.pending.count }})</span></div>
+  <div class="stat"><strong>{{ report.commissions.approved.amount }}</strong><span>Approved, owed ({{ report.commissions.approved.count }})</span></div>
+  <div class="stat"><strong>{{ report.commissions.paid.amount }}</strong><span>Paid ({{ report.commissions.paid.count }})</span></div>
+  <div class="stat"><strong>{{ report.commissions.rejected.amount }}</strong><span>Rejected ({{ report.commissions.rejected.count }})</span></div>
+  <div class="stat"><strong>{{ report.paid_out }}</strong><span>Total paid out (all time)</span></div>
+</div>
+<section class="card">
+  <h2>Top affiliates</h2>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Affiliate</th><th>Code</th><th class="num">Sales</th><th class="num">Earned</th></tr></thead>
+    <tbody>{% for row in report.top %}
+      <tr><td><a href="{% url 'affiliates_staff:affiliate' row.affiliate_id %}">{{ row.email }}</a></td><td>{{ row.code }}</td><td class="num">{{ row.sales }}</td><td class="num">{{ row.earned }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="muted">No commissions in this period.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

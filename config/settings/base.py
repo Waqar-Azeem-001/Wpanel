@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.orders",
     "apps.renewals",
     "apps.lifecycle",
+    "apps.affiliates",
     "apps.support",
 ]
 
@@ -233,6 +234,9 @@ SPECTACULAR_SETTINGS = {
         "CancellationReasonEnum": "apps.lifecycle.models.CancellationReason",
         "CancellationTimingEnum": "apps.lifecycle.models.Timing",
         "LifecycleStageEnum": "apps.lifecycle.models.Stage",
+        "AffiliateStatusEnum": "apps.affiliates.models.AffiliateStatus",
+        "CommissionStatusEnum": "apps.affiliates.models.CommissionStatus",
+        "CommissionKindEnum": "apps.affiliates.models.CommissionKind",
     },
 }
 
@@ -253,6 +257,10 @@ CELERY_BEAT_SCHEDULE = {
     "send-invoice-reminders": {
         "task": "apps.billing.tasks.send_invoice_reminders_task",
         "schedule": crontab(hour=8, minute=0),
+    },
+    "approve-commissions": {
+        "task": "apps.affiliates.tasks.approve_commissions_task",
+        "schedule": crontab(hour=6, minute=0),
     },
     "run-service-lifecycle": {
         "task": "apps.lifecycle.tasks.run_lifecycle_task",

@@ -66,4 +66,32 @@ def account_records(user, client):
                                    "status": t.get_status_display(), "status_key": t.status, "amount": "",
                                    "date": t.last_activity_at} for t in rows[:LIMIT]]})
 
+    if user.has_perm(perm("view_hosting")) or user.has_perm(perm("view_domains")):
+        from apps.lifecycle import services as lifecycle
+
+        rows = lifecycle.visible_requests_for_user(user).filter(client=client)
+        sections.append({"title": "Cancellations", "total": rows.count(),
+                         "list_url": reverse("lifecycle_staff:cancellations") + f"?status=all&q={client.email}",
+                         "rows": [{"label": f"{c.code} {c.service_name}",
+                                   "url": reverse("lifecycle_staff:cancellation", args=[c.pk]),
+                                   "status": c.get_status_display(), "status_key": c.status, "amount": "",
+                                   "date": c.created_at} for c in rows[:LIMIT]]})
+
+    if user.has_perm(perm("view_affiliates")):
+        from apps.affiliates.models import Referral
+
+        referral = Referral.objects.select_related("affiliate").filter(client=client).first()
+        rows = []
+        if referral is not None:
+            rows.append({"label": f"Referred by {referral.affiliate.code}",
+                         "url": reverse("affiliates_staff:affiliate", args=[referral.affiliate_id]),
+                         "status": referral.get_source_display(), "status_key": "sent", "amount": "",
+                         "date": referral.created_at})
+            for c in referral.commissions.select_related("invoice").order_by("-created_at")[:LIMIT]:
+                rows.append({"label": f"Commission {c.code}", "url": reverse("affiliates_staff:commissions") +
+                             f"?q={c.invoice.number}", "status": c.get_status_display(), "status_key": c.status,
+                             "amount": f"{c.currency} {c.amount}", "date": c.created_at})
+        sections.append({"title": "Affiliate", "total": len(rows), "list_url": reverse("affiliates_staff:overview"),
+                         "rows": rows})
+
     return sections

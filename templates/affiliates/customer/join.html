@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Affiliate programme · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>Affiliate programme</h1>
+{% if not config.enabled %}
+<section class="card"><p>The affiliate programme is not open right now. Please check back later.</p></section>
+{% else %}
+<section class="card">
+  <h2>Earn by referring customers</h2>
+  <p>Share your personal link. When someone signs up through it and pays, you earn
+    {% if config.commission_kind == "percentage" %}<strong>{{ config.commission_value|floatformat:"-2" }}%</strong> of what they pay (excluding tax){% else %}<strong>{{ config.commission_value }}</strong> for each sale{% endif %}{% if config.recurring_months %}, on every payment for {{ config.recurring_months }} month{{ config.recurring_months|pluralize }}{% else %}, on their first paid invoice{% endif %}.
+    Commissions are approved after {{ config.hold_days }} days and paid out once you have at least {{ config.minimum_payout }}.</p>
+  {% if config.program_terms %}<h3>Terms</h3><p>{{ config.program_terms|linebreaksbr }}</p>{% endif %}
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="actions"><button class="btn" type="submit">{% if config.require_approval %}Apply to join{% else %}Join now{% endif %}</button></div>
+  </form>
+  {% if config.require_approval %}<p class="muted">Applications are reviewed by our team.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

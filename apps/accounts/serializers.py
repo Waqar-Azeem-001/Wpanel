@@ -12,6 +12,8 @@ class RegisterSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     phone = serializers.CharField(max_length=32, required=False, allow_blank=True)
     company_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    referral_code = serializers.CharField(max_length=32, required=False, allow_blank=True,
+                                          help_text="The affiliate code the visitor arrived with, if any.")
 
 
 class LoginSerializer(serializers.Serializer):

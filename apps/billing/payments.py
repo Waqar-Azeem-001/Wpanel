@@ -26,7 +26,7 @@ from .gateways import PaymentError, get_adapter
 from .invoicing import MAX_AMOUNT, _own_clients, _require_client_access, _require_manage, is_staff_biller
 from .models import (OPEN_STATUSES, Invoice, InvoiceStatus, PaymentMethod, Transaction, TransactionStatus,
                      TransactionType, WebhookEvent, WebhookStatus)
-from .signals import invoice_paid
+from .signals import invoice_paid, invoice_refunded
 
 
 def visible_transactions_for_user(user):
@@ -80,7 +80,7 @@ def recompute_invoice(invoice, *, actor=None):
         status=TransactionStatus.SUCCEEDED).values("type").annotate(total=Sum("amount"))}
     paid = sums.get(TransactionType.PAYMENT) or calc.ZERO
     refunded = sums.get(TransactionType.REFUND) or calc.ZERO
-    previous = invoice.status
+    previous, previous_refunded = invoice.status, invoice.amount_refunded
     invoice.amount_paid, invoice.amount_refunded = paid, refunded
     if previous not in (InvoiceStatus.DRAFT, InvoiceStatus.CANCELLED):
         if paid > 0 and refunded >= paid:
@@ -98,6 +98,8 @@ def recompute_invoice(invoice, *, actor=None):
     invoice.save(update_fields=["amount_paid", "amount_refunded", "status", "paid_at", "updated_at"])
     if invoice.status == InvoiceStatus.PAID and previous in OPEN_STATUSES:
         invoice_paid.send(sender=Invoice, invoice=invoice, actor=actor)
+    if refunded != previous_refunded:
+        invoice_refunded.send(sender=Invoice, invoice=invoice, actor=actor)
     return invoice
 
 

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Affiliate settings · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>Affiliates</h1>
+{% include "affiliates/staff/_nav.html" %}
+<section class="card">
+  <h2>Programme settings</h2>
+  <p class="muted">The default commission rule, how long a referral link is remembered, and when commissions are approved and paid. An individual affiliate can have their own rule on their page.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    {% if can_manage %}<div class="actions"><button class="btn" type="submit">Save settings</button></div>{% else %}<p class="muted">You can view these settings but not change them.</p>{% endif %}
+  </form>
+</section>
+{% endblock %}

@@ -35,6 +35,7 @@ AREAS = [
     ("domains", "domains"),
     ("hosting", "hosting services"),
     ("support", "support tickets"),
+    ("affiliates", "affiliates, commissions and payouts"),
     ("reports", "reports"),
     ("providers", "provider connections"),
     ("settings", "system settings"),
@@ -66,7 +67,7 @@ ROLE_PERMISSIONS = {
     ],
     Role.MANAGER: [
         *_view(*(a for a, _ in AREAS if a not in {"providers", "settings"})),
-        *_manage("users", "clients", "products", "orders", "billing", "domains", "hosting", "support"),
+        *_manage("users", "clients", "products", "orders", "billing", "domains", "hosting", "support", "affiliates"),
         "view_audit_log",
     ],
     Role.ADMIN: ALL_CODENAMES,

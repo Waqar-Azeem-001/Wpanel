@@ -1,0 +1,1 @@
+Commission approved: {{ commission.currency }} {{ commission.amount }} - {{ site_name }}

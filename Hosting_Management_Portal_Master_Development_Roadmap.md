@@ -1620,7 +1620,7 @@ If UI changed:
   10 Support                     🟢       885 ✅  ✅        e425a85  ---
   11 Notifications & Email       🟢       945 ✅  ✅        7d4026a  ---
   12 Cancellation                🟢       1046 ✅ ✅        d3f9b82  ---
-  13 Affiliates                  ⬜       ---     ---       ---      ---
+  13 Affiliates                  🟡       1134 ✅ ✅        ---      ---
   14 Reports                     ⬜       ---     ---       ---      ---
   15 Admin Operations            ⬜       ---     ---       ---      ---
   16 Security                    ⬜       ---     ---       ---      ---
@@ -1665,10 +1665,10 @@ postponed.
   Require verified email before      Deferred  Verification tracked; purchase   Phase 06
   purchase                                     gating belongs to checkout
 
-  Client profile record sections     Partly    Orders, invoices, payments, quotes,   Phases 12-13
-  (orders, invoices, tickets...)     closed    domains, hosting and tickets are shown;
-                                               cancellations and affiliates await
-                                               their phases
+  Client profile record sections     Closed    Orders, invoices, payments, quotes,   Phase 13
+  (orders, invoices, tickets...)               domains, hosting, tickets,
+                                               cancellations and the affiliate
+                                               referral are all shown
 
   Customer self-service sub-user     Deferred  Staff manage contacts; needs     Phase 15/16
   invitations                                  customer-side permission design
@@ -1824,6 +1824,15 @@ postponed.
   Lifecycle timings are global;       Deferred  Not per product or client; a         Post-MVP
   refunds on cancellation are a                 refund is always a staff decision
   staff decision (suggested only)
+
+  Affiliates: no multi-tier or        Deferred  One level; a rule applies to the     Post-MVP
+  per-product commission rules, no              whole invoice; payouts are recorded
+  coupon-code attribution, no payout            by staff (money moves outside the
+  batch export                                  portal)
+
+  Affiliate fraud beyond hold period  Deferred  The portal keeps no address or       Phase 16
+  and rejection (e.g. a second                  device data, by design; staff review
+  account through one's own link)               referrals and can reject
 
   Terms-of-service acceptance at      Deferred  No ToS page/versioning yet        Phase 15
   checkout
@@ -2046,6 +2055,13 @@ Record permanent technical decisions here.
   term days, capped at what was paid, never exceeds valid paid
   none once expired; shown on the     value; expired plans get
   invoice as a discount line          none; invoice shows it
+
+  A commission is earned when an      Financial figures frozen at    Active
+  invoice is paid in full, worked     the moment of payment; refunds
+  out ex-tax after discount and       follow the money; a refund
+  frozen; refunds lower unpaid ones,  after payout is flagged, never
+  flag paid ones; attribution is      silently reversed; credit is
+  decided once at sign-up             decided once, at sign-up
 
   A service's lifecycle stage is      Like "overdue": reproducible   Active
   derived from its status and         from permanent records; the

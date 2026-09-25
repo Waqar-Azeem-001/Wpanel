@@ -1,0 +1,10 @@
+{% autoescape off %}Hello,
+
+We are not able to accept your application to the {{ site_name }} affiliate programme at this time.
+{% if affiliate.review_note %}
+Reason: {{ affiliate.review_note }}
+{% endif %}
+You can see the status of your application here: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

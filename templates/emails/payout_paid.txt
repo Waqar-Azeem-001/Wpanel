@@ -1,0 +1,11 @@
+{% autoescape off %}Hello,
+
+We recorded a payout of {{ payout.currency }} {{ payout.amount }} to you on {{ payout.paid_on|date:"j M Y" }}.
+
+Method: {{ payout.method }}{% if payout.reference %}
+Reference: {{ payout.reference }}{% endif %}
+
+Payout history: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

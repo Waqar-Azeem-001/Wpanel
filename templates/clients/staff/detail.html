@@ -109,7 +109,12 @@
     <p class="muted">You do not have permission to view this client's records.</p>
   {% endfor %}
   </div>
-  <p class="muted">Support tickets, cancellations and affiliate records will appear here as those modules are delivered.</p>
+  {% if perms.accounts.manage_affiliates and not client.referral %}
+  <form method="post" action="{% url 'affiliates_staff:attribute' client.pk %}" class="row-form">{% csrf_token %}
+    <div class="field"><label for="id_affiliate_code">Referred by an affiliate?</label><input type="text" name="code" id="id_affiliate_code" placeholder="Affiliate code" maxlength="32"></div>
+    <div class="field"><button class="btn small secondary" type="submit">Credit this affiliate</button></div>
+  </form>
+  {% endif %}
 </section>
 
 <section class="card">

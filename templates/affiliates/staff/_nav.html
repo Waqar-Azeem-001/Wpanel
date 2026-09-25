@@ -1,0 +1,7 @@
+<nav class="subnav">
+  <a href="{% url 'affiliates_staff:overview' %}"{% if section == "overview" %} class="active"{% endif %}>Overview</a>
+  <a href="{% url 'affiliates_staff:affiliates' %}"{% if section == "affiliates" %} class="active"{% endif %}>Affiliates</a>
+  <a href="{% url 'affiliates_staff:commissions' %}"{% if section == "commissions" %} class="active"{% endif %}>Commissions</a>
+  <a href="{% url 'affiliates_staff:payouts' %}"{% if section == "payouts" %} class="active"{% endif %}>Payouts</a>
+  {% if perms.accounts.view_settings %}<a href="{% url 'affiliates_staff:settings' %}"{% if section == "settings" %} class="active"{% endif %}>Settings</a>{% endif %}
+</nav>

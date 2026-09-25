@@ -1,0 +1,13 @@
+{% autoescape off %}Hello,
+
+Your application to the {{ site_name }} affiliate programme was approved.
+
+Your referral link:
+{{ referral_url }}
+
+Share it anywhere. When someone signs up through it and pays, you earn a commission. Track visits, sign-ups, commissions and payouts here: {{ site_url }}{{ link }}
+{% if affiliate.review_note %}
+Note from our team: {{ affiliate.review_note }}
+{% endif %}
+{{ site_name }}
+{% endautoescape %}

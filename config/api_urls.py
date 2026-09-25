@@ -4,6 +4,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts import api as accounts_api
+from apps.affiliates import api as affiliates_api
 from apps.audit.api import AuditEventViewSet
 from apps.billing import api_documents as billing_docs
 from apps.billing.api import CouponViewSet, PaymentMethodViewSet, TaxRuleViewSet
@@ -23,6 +24,9 @@ router.register("users", accounts_api.UserAdminViewSet, basename="user")
 router.register("notifications", NotificationViewSet, basename="notification")
 router.register("email-messages", EmailMessageViewSet, basename="email-message")
 router.register("cancellations", lifecycle_api.CancellationViewSet, basename="cancellation")
+router.register("affiliates", affiliates_api.AffiliateViewSet, basename="affiliate")
+router.register("commissions", affiliates_api.CommissionViewSet, basename="commission")
+router.register("payouts", affiliates_api.PayoutViewSet, basename="payout")
 router.register("audit-events", AuditEventViewSet, basename="audit-event")
 router.register("clients", ClientViewSet, basename="client")
 router.register("me/clients", MyClientViewSet, basename="my-client")
@@ -69,6 +73,9 @@ urlpatterns = [
     path("hosting-accounts/<int:pk>/term/", renewals_api.HostingTermView.as_view(), name="hosting-term"),
     path("domains/<int:pk>/renewal-invoice/", renewals_api.DomainRenewalView.as_view(), name="domain-renewal"),
     path("notification-preferences/", PreferencesView.as_view(), name="notification-preferences"),
+    path("affiliate/", affiliates_api.AffiliateMeView.as_view(), name="affiliate-me"),
+    path("affiliate-settings/", affiliates_api.AffiliateSettingsView.as_view(), name="affiliate-settings"),
+    path("affiliate-report/", affiliates_api.ReportView.as_view(), name="affiliate-report"),
     path("lifecycle/settings/", lifecycle_api.LifecycleSettingsView.as_view(), name="lifecycle-settings"),
     path("lifecycle/overview/", lifecycle_api.LifecycleOverviewView.as_view(), name="lifecycle-overview"),
     path("billing-settings/", billing_docs.BillingSettingsView.as_view(), name="billing-settings"),

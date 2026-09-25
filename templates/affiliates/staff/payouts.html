@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Payouts · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Affiliates</h1>
+{% include "affiliates/staff/_nav.html" %}
+<form class="filters" method="get">
+  <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ q }}" placeholder="Code, email or reference"></div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Payout</th><th>Affiliate</th><th>Date</th><th>Method</th><th>Reference</th><th class="num">Amount</th></tr></thead>
+  <tbody>{% for p in page %}
+    <tr><td>{{ p.code }}</td><td><a href="{% url 'affiliates_staff:affiliate' p.affiliate_id %}">{{ p.affiliate.user.email }}</a></td><td>{{ p.paid_on|date:"j M Y" }}</td>
+        <td>{{ p.method }}</td><td>{{ p.reference|default:"&mdash;" }}</td><td class="num">{{ p.currency }} {{ p.amount }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="muted">No payouts recorded.</td></tr>{% endfor %}</tbody></table></div>
+{% include "billing/_pager.html" %}
+{% endblock %}

@@ -1,0 +1,8 @@
+{% autoescape off %}Hello,
+
+A commission of {{ commission.currency }} {{ commission.amount }} was approved. It will be included in your next payout.
+
+See your balance and commissions: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

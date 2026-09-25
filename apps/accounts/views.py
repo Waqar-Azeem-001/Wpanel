@@ -62,14 +62,17 @@ def register_view(request):
             user = services.register_user(
                 email=data["email"], password=data["password"],
                 first_name=data["first_name"], last_name=data["last_name"],
-                company_name=data["company_name"], request=request,
+                company_name=data["company_name"], referral_code=request.COOKIES.get("wp_ref", ""),
+                request=request,
             )
         except (ServiceError, ValidationError) as exc:
             _apply_error(form, exc, "password")
         else:
             login(request, user)
             messages.success(request, "Account created. Check your inbox to verify your email address.")
-            return redirect("accounts:profile")
+            response = redirect("accounts:profile")
+            response.delete_cookie("wp_ref")  # the referral, if any, is now recorded on the account
+            return response
     return render(request, "accounts/register.html", {"form": form})
 
 
