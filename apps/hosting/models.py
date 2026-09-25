@@ -1,7 +1,8 @@
 import re
 
-from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
+from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
 
@@ -51,6 +52,15 @@ class HostingAccount(TimeStampedModel):
     last_error = models.TextField(blank=True)
     last_synced_at = models.DateTimeField(null=True, blank=True)
 
+    # The paid term (Phase 08). Blank for accounts whose term has not been recorded yet: those cannot be
+    # renewed or upgraded online until staff set it. ``term_paid`` is the amount actually paid for the
+    # current term, excluding tax and setup fees - the most an upgrade credit can ever be worth.
+    billing_cycle = models.CharField(max_length=16, blank=True)
+    custom_months = models.PositiveSmallIntegerField(default=0)
+    term_start = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Paid through this date.")
+    term_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+
     disk_used_mb = models.PositiveIntegerField(null=True, blank=True)
     disk_limit_mb = models.PositiveIntegerField(null=True, blank=True, help_text="Blank means unlimited/unknown.")
     bandwidth_used_mb = models.PositiveIntegerField(null=True, blank=True)
@@ -66,6 +76,10 @@ class HostingAccount(TimeStampedModel):
 
     def __str__(self):
         return f"{self.username} ({self.domain})"
+
+    @property
+    def term_expired(self):
+        return self.expires_at is not None and self.expires_at <= timezone.now()
 
     def save(self, *args, **kwargs):
         self.domain = self.domain.lower()

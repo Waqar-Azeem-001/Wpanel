@@ -14,6 +14,7 @@ from apps.hosting.api import HostingAccountViewSet
 from apps.notifications.api import NotificationViewSet
 from apps.orders import api as orders_api
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
+from apps.renewals import api as renewals_api
 
 router = DefaultRouter()
 router.register("users", accounts_api.UserAdminViewSet, basename="user")
@@ -32,6 +33,7 @@ router.register("tax-rules", TaxRuleViewSet, basename="tax-rule")
 router.register("coupons", CouponViewSet, basename="coupon")
 router.register("orders", orders_api.OrderViewSet, basename="order")
 router.register("invoices", billing_docs.InvoiceViewSet, basename="invoice")
+router.register("service-changes", renewals_api.ServiceChangeViewSet, basename="service-change")
 router.register("transactions", billing_docs.TransactionViewSet, basename="transaction")
 router.register("quotes", billing_docs.QuoteViewSet, basename="quote")
 router.register("billable-items", billing_docs.BillableItemViewSet, basename="billable-item")
@@ -53,6 +55,10 @@ urlpatterns = [
     path("auth/", include(auth_patterns)),
     path("me/", accounts_api.MeView.as_view(), name="me"),
     path("domains/availability/", AvailabilityView.as_view(), name="domain-availability"),
+    path("hosting-accounts/<int:pk>/renew/", renewals_api.HostingRenewView.as_view(), name="hosting-renew"),
+    path("hosting-accounts/<int:pk>/upgrade/", renewals_api.HostingUpgradesView.as_view(), name="hosting-upgrade"),
+    path("hosting-accounts/<int:pk>/term/", renewals_api.HostingTermView.as_view(), name="hosting-term"),
+    path("domains/<int:pk>/renewal-invoice/", renewals_api.DomainRenewalView.as_view(), name="domain-renewal"),
     path("billing-settings/", billing_docs.BillingSettingsView.as_view(), name="billing-settings"),
     path("webhooks/payments/<int:provider_id>/", billing_docs.PaymentWebhookView.as_view(), name="payment-webhook"),
     path("cart/", orders_api.CartView.as_view(), name="cart"),

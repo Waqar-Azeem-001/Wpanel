@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Renewals · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Billing</h1>
+  {% if can_manage %}<form method="post" action="{% url 'renewals_staff:generate' %}">{% csrf_token %}<button class="btn secondary" type="submit">Create due renewal invoices now</button></form>{% endif %}
+</div>
+{% include "billing/staff/_nav.html" %}
+{% if needs_attention %}<div class="errors"><p>{{ needs_attention }} paid change{{ needs_attention|pluralize }} could not be applied. Filter by "Paid - needs attention" and open the invoice to retry.</p></div>{% endif %}
+
+<section class="card">
+  <h2>Due for renewal</h2>
+  <p class="muted">Services expiring soon with no renewal invoice yet. Invoices are created automatically each night; domains only if auto-renew is on.</p>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Service</th><th>Client</th><th>Expires</th><th></th></tr></thead>
+    <tbody>
+    {% for account in due_hosting %}
+      <tr><td><a href="{% url 'hosting_staff:detail' account.pk %}">{{ account.domain }}</a> <small class="muted">hosting</small></td>
+          <td>{{ account.client.display_name }}</td><td>{{ account.expires_at|date:"Y-m-d" }}</td>
+          <td>{% if can_manage %}<form method="post" action="{% url 'renewals_staff:hosting_renew' account.pk %}">{% csrf_token %}<button class="btn small" type="submit">Invoice</button></form>{% endif %}</td></tr>
+    {% endfor %}
+    {% for domain in due_domains %}
+      <tr><td><a href="{% url 'domains_staff:detail' domain.pk %}">{{ domain.name }}</a> <small class="muted">domain</small></td>
+          <td>{{ domain.client.display_name }}</td><td>{{ domain.expires_at|date:"Y-m-d" }}</td>
+          <td>{% if can_manage %}<form method="post" action="{% url 'renewals_staff:domain_renew' domain.pk %}">{% csrf_token %}<input type="hidden" name="years" value="1"><button class="btn small" type="submit">Invoice</button></form>{% endif %}</td></tr>
+    {% empty %}{% if not due_hosting %}<tr><td colspan="4" class="muted">Nothing is due.</td></tr>{% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<form class="filters" method="get">
+  <div class="field"><label for="id_status">Status</label>
+    <select name="status" id="id_status"><option value="">All</option>{% for value, label in statuses %}<option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Date</th><th>Change</th><th>Service</th><th>Client</th><th>Invoice</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for change in page %}
+    <tr>
+      <td>{{ change.created_at|date:"Y-m-d" }}</td>
+      <td>{{ change.get_kind_display }}</td>
+      <td>{{ change.service_label }}</td>
+      <td>{{ change.client.display_name }}</td>
+      <td><a href="{% url 'billing_staff:invoice_detail' change.invoice_id %}">{{ change.invoice.reference }}</a></td>
+      <td><span class="badge status-{{ change.status }}">{{ change.get_status_display }}</span></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="muted">No renewals or upgrades yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "billing/_pager.html" %}
+{% endblock %}

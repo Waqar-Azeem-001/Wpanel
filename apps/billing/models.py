@@ -156,6 +156,9 @@ class BillingSettings(models.Model):
     quote_validity_days = models.PositiveSmallIntegerField(default=30, validators=[MinValueValidator(1),
                                                                                     MaxValueValidator(365)])
     invoice_footer = models.TextField(blank=True, help_text="Printed at the bottom of every invoice, e.g. bank details.")
+    renewal_invoice_days = models.PositiveSmallIntegerField(
+        default=14, validators=[MaxValueValidator(90)],
+        help_text="Renewal invoices are created this many days before a service expires.")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

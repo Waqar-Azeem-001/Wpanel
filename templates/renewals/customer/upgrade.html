@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Upgrade {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'hosting_customer:detail' account.pk %}">&larr; {{ account.domain }}</a></p>
+<h1>Upgrade {{ account.domain }}</h1>
+{% if error %}<div class="errors"><p>{{ error }}</p></div>{% else %}
+<p class="muted">You are on <strong>{{ account.product.name }}</strong>, paid through {{ account.expires_at|date:"j M Y" }}.
+  Upgrading starts a new term on the new plan. The unused value of your current term is credited against the new plan's price.</p>
+{% for preview in previews %}
+<section class="card">
+  <div class="page-head"><h2>{{ preview.to_product.name }}</h2>
+    <form method="post" action="{% url 'renewals_customer:hosting_upgrade' account.pk %}">{% csrf_token %}
+      <input type="hidden" name="product" value="{{ preview.to_product.pk }}">
+      <button class="btn" type="submit">Upgrade to {{ preview.to_product.name }}</button></form>
+  </div>
+  <table class="totals">
+    <tr><th>New plan ({{ preview.months }} months)</th><td>{{ preview.new_price }}</td></tr>
+    <tr><th>Credit for unused time ({{ preview.credit.remaining_days }} of {{ preview.credit.term_days }} days)</th><td>&minus; {{ preview.applied_credit }}</td></tr>
+    <tr class="grand"><th>To pay (before tax)</th><td>{{ preview.net_payable }}</td></tr>
+  </table>
+  <p class="muted">{{ preview.credit.formula }}{% if preview.forfeited %} {{ preview.forfeited }} of credit is more than this plan costs and is not carried forward.{% endif %}
+    Your new term would run to {{ preview.new_expiry|date:"j M Y" }} if paid today.</p>
+</section>
+{% empty %}
+<p class="muted">There are no plans you can upgrade to right now.</p>
+{% endfor %}
+{% endif %}
+{% endblock %}

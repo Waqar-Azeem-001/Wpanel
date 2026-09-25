@@ -221,14 +221,14 @@ def test_settings_page(client, manager):
     assert b'name="invoice_prefix"' in client.get("/staff/billing/settings/").content
     data = {"company_name": "Wpanel Ltd", "address": "1 Road", "email": "b@w.test", "phone": "", "tax_id": "NTN1",
             "invoice_prefix": "W-", "quote_prefix": "Q-", "payment_terms_days": 7, "quote_validity_days": 14,
-            "invoice_footer": "IBAN PK00"}
+            "invoice_footer": "IBAN PK00", "renewal_invoice_days": 21}
     assert client.post("/staff/billing/settings/", data).status_code == 302
     bad = client.post("/staff/billing/settings/", {**data, "payment_terms_days": 9999})
     assert bad.status_code == 200
     from apps.billing.models import BillingSettings
 
     row = BillingSettings.load()
-    assert (row.company_name, row.invoice_prefix, row.payment_terms_days) == ("Wpanel Ltd", "W-", 7)
+    assert (row.company_name, row.invoice_prefix, row.payment_terms_days, row.renewal_invoice_days) == ("Wpanel Ltd", "W-", 7, 21)
 
 
 def test_payment_method_form_can_choose_a_gateway(client, manager, provider):

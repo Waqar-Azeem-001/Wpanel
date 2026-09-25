@@ -19,5 +19,7 @@ urlpatterns = [
     path("staff/orders/", include("apps.orders.urls_staff")),
     path("staff/billing/", include("apps.billing.urls_staff")),
     path("account/billing/", include("apps.billing.urls_customer")),
+    path("account/renewals/", include("apps.renewals.urls_customer")),
+    path("staff/renewals/", include("apps.renewals.urls_staff")),
     path("", include("apps.orders.urls_customer")),
 ]

@@ -243,6 +243,15 @@ def terminate_account(actor, account, *, keep_dns=False, request=None):
 
 def change_package(actor, account, new_product, *, request=None):
     _require(actor, "manage_hosting")
+    return _change_package(actor, account, new_product, request=request)
+
+
+def change_package_as_system(account, new_product):
+    """Change the package on behalf of the system (a paid upgrade): no user, audited with no actor."""
+    return _change_package(None, account, new_product)
+
+
+def _change_package(actor, account, new_product, *, request=None):
     if account.status != HostingStatus.ACTIVE:
         raise ServiceError("Only an active account can change package.", code="invalid_status")
     if not new_product.whm_package_name:

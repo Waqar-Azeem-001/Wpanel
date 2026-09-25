@@ -43,6 +43,8 @@
   </section>
 </div>
 
+{% include "renewals/_invoice_changes.html" with staff=True %}
+
 {% if payment_form %}
 <section class="card">
   <h2>Record a payment</h2>

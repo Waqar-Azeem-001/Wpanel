@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Billing term · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'hosting_staff:detail' account.pk %}">&larr; {{ account.domain }}</a></p>
+<section class="card">
+  <h1>Billing term for {{ account.domain }}</h1>
+  <p class="muted">{{ account.client.display_name }} &middot; {{ account.product.name }}. Record what the client has paid for their current term. Renewals and upgrade credits are calculated from this, so enter only what was actually paid (excluding tax and setup fees). Changes are audited.</p>
+  <form method="post" novalidate class="grid-form">{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="actions"><button class="btn" type="submit">Save term</button>
+      <a href="{% url 'hosting_staff:detail' account.pk %}">Cancel</a></div>
+  </form>
+</section>
+{% endblock %}

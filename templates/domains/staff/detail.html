@@ -44,9 +44,13 @@
     </div>
     {% if domain.status == "active" %}
     <h3>Renew</h3>
-    <form method="post" action="{% url 'domains_staff:renew' domain.pk %}" class="row-form">{% csrf_token %}
+    <form method="post" action="{% url 'renewals_staff:domain_renew' domain.pk %}" class="row-form">{% csrf_token %}
+      <div class="field"><label for="id_invoice_years">Years</label><input type="number" name="years" id="id_invoice_years" value="1" min="1" max="10"></div>
+      <div class="field"><button class="btn" type="submit">Create renewal invoice</button></div>
+    </form>
+    <form method="post" action="{% url 'domains_staff:renew' domain.pk %}" class="row-form" onsubmit="return confirm('Renew at the registrar without an invoice or payment?');">{% csrf_token %}
       <div class="field"><label for="id_years">Years</label>{{ renew_form.years }}</div>
-      <div class="field"><button class="btn secondary" type="submit">Renew</button></div>
+      <div class="field"><button class="btn small secondary" type="submit">Renew now without an invoice</button></div>
     </form>
     {% endif %}
     <h3>Transfer lock</h3>

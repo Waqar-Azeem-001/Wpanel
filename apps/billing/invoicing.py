@@ -225,6 +225,17 @@ def create_invoice(actor, client, *, lines, discount_type="", discount_value=Non
                    request=None):
     """Staff: a new draft invoice for ``client``."""
     _require_manage(actor)
+    return create_draft_invoice(actor, client, lines=lines, discount_type=discount_type,
+                                discount_value=discount_value, discount_label=discount_label, notes=notes,
+                                request=request)
+
+
+def create_draft_invoice(actor, client, *, lines, discount_type="", discount_value=None, discount_label="",
+                         notes="", request=None):
+    """
+    A draft invoice, with no permission check: for callers that have already authorised the action
+    (renewals and upgrades, which a customer may start for their own service). Run inside a transaction.
+    """
     lines = _clean_lines(lines)
     totals, rule, label = _compute(client, lines, discount_type, discount_value, discount_label)
     invoice = Invoice(client=client, created_by=actor, currency=client.currency, notes=notes.strip()[:2000],
@@ -318,6 +329,11 @@ def notify_invoice_issued(invoice, actor=None):
 def issue_invoice(actor, invoice, *, notify=True, request=None):
     """Staff: turn a draft into an issued (unpaid) invoice."""
     _require_manage(actor)
+    return issue_draft_invoice(actor, invoice, notify=notify, request=request)
+
+
+def issue_draft_invoice(actor, invoice, *, notify=True, request=None):
+    """Issue a draft with no permission check (see ``create_draft_invoice``). Run inside a transaction."""
     invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
     _require_draft(invoice)
     items = list(invoice.items.all())
@@ -588,7 +604,7 @@ def save_billing_settings(actor, data, *, request=None):
     _require_manage(actor)
     row = BillingSettings.load()
     fields = ("company_name", "address", "email", "phone", "tax_id", "invoice_prefix", "quote_prefix",
-              "payment_terms_days", "quote_validity_days", "invoice_footer")
+              "payment_terms_days", "quote_validity_days", "invoice_footer", "renewal_invoice_days")
     changed = [f for f in fields if f in data and getattr(row, f) != data[f]]
     for field in changed:
         setattr(row, field, data[field])

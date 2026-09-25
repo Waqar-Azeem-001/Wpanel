@@ -238,6 +238,15 @@ def renew_domain(actor, domain, years, *, request=None):
     see ``complete_registration`` (the failure audit record must survive).
     """
     _require(actor, "manage_domains")
+    return _renew_domain(actor, domain, years, request=request)
+
+
+def renew_domain_as_system(domain, years):
+    """Renew on behalf of the system (a paid renewal invoice): no user, audited with no actor."""
+    return _renew_domain(None, domain, years)
+
+
+def _renew_domain(actor, domain, years, *, request=None):
     if domain.status != DomainStatus.ACTIVE:
         raise ServiceError("Only an active domain can be renewed.", code="invalid_status")
     pricing = get_tld_pricing(domain.tld, require_active=False)

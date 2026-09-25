@@ -1615,7 +1615,7 @@ If UI changed:
   05 WHM Provisioning            🟢       296 ✅  ✅        9c0c517  ---
   06 Cart & Checkout             🟢       458 ✅  ✅        23168d7  ---
   07 Billing & Invoices          🟢       622 ✅  ✅        ac37961  ---
-  08 Renewals & Upgrades         ⬜       ---     ---       ---      ---
+  08 Renewals & Upgrades         🟡       729 ✅  ✅        ---      ---
   09 Orders & Lifecycle          ⬜       ---     ---       ---      ---
   10 Support                     ⬜       ---     ---       ---      ---
   11 Notifications & Email       ⬜       ---     ---       ---      ---
@@ -1690,8 +1690,9 @@ postponed.
   Domain registration/transfer not   Open      Staff complete manually until   Phase 07/08
   yet wired to billing                         invoices/payment exist
 
-  No automated expiry/renewal-       Deferred  Owned by proration/notification  Phase 08/11
-  reminder Celery job                          Celery jobs
+  Automated renewal invoicing        Closed    Phase 08: nightly job creates    Phase 08
+  (expiry job)                                 renewal invoices; reminders/dunning
+                                               remain Phase 11
 
   Outbound transfer auth-code        Deferred  Registrar-specific; not in the   Real registrar
   retrieval not implemented                    roadmap's explicit op list      adapter
@@ -1735,8 +1736,19 @@ postponed.
   Overdue reminders / dunning         Deferred  Overdue is derived and            Phase 11
                                                 filterable; no scheduled emails
 
-  Recurring invoices, renewals,       Deferred  Invoices are one-off so far       Phase 08
-  credit balances, proration
+  Renewals, upgrade proration         Closed    Delivered in Phase 08               Phase 08
+
+  Credit balances (carrying forfeited Deferred  Credit beyond the new price is    Post-MVP
+  upgrade credit forward); refunds              forfeited and shown as such; a
+  do not reverse a renewal/upgrade              refund never undoes a service change
+
+  Hosting terms are recorded by staff Open      Nothing starts a term when an order Phase 09
+  (no automatic start on a paid order)          is paid yet; fulfilment must call
+                                                the same term logic
+
+  Downgrades / billing-cycle changes  Deferred  Only upgrades are offered online;   Post-MVP
+  online; renewal of EXPIRED domains            staff handle the rest
+  and unsuspend-on-payment
 
   PDF text limited to Western         Deferred  Built-in PDF fonts; other         Post-MVP
   European characters                           scripts print as "?"
@@ -1939,6 +1951,18 @@ Record permanent technical decisions here.
   PaymentProvider is DB-configured    Provider credentials never  Active
   and admin-only; test gateway is     in ENV; a no-money gateway
   behind ALLOW_TEST_PAYMENT_GATEWAY   must never run in production
+
+  Renewals/upgrades are invoices      One financial record; a     Active
+  (apps.renewals): figures frozen on  browser never supplies a
+  a ServiceChange at invoicing time,  price, credit or expiry;
+  applied once when paid; a failed    the payment is never lost
+  apply leaves the payment and a      to a service-side failure
+  retryable change
+
+  Upgrade credit = paid x days left / Roadmap rules: credit       Active
+  term days, capped at what was paid, never exceeds valid paid
+  none once expired; shown on the     value; expired plans get
+  invoice as a discount line          none; invoice shows it
   -----------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

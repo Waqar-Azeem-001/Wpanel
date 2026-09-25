@@ -10,6 +10,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
     "apps.hosting",
     "apps.billing",
     "apps.orders",
+    "apps.renewals",
 ]
 
 MIDDLEWARE = [
@@ -208,6 +210,8 @@ SPECTACULAR_SETTINGS = {
         "QuoteStatusEnum": "apps.billing.models.QuoteStatus",
         "TransactionStatusEnum": "apps.billing.models.TransactionStatus",
         "TransactionTypeEnum": "apps.billing.models.TransactionType",
+        "ServiceChangeKindEnum": "apps.renewals.models.ChangeKind",
+        "ServiceChangeStatusEnum": "apps.renewals.models.ChangeStatus",
     },
 }
 
@@ -220,7 +224,12 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_TIMEZONE = TIME_ZONE
-CELERY_BEAT_SCHEDULE = {}
+CELERY_BEAT_SCHEDULE = {
+    "generate-renewal-invoices": {
+        "task": "apps.renewals.tasks.generate_renewal_invoices_task",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}
 
 # --- Email -------------------------------------------------------------------
 # Phase 01 uses Django's email backend for delivery. The live, database-configured

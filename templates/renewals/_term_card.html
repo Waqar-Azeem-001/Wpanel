@@ -1,0 +1,28 @@
+<section class="card">
+  <h2>Billing term</h2>
+  {% if account.billing_cycle and account.expires_at %}
+  <dl class="meta">
+    <dt>Billing cycle</dt><dd>{% if account.billing_cycle == "custom" %}{{ account.custom_months }} months{% else %}{{ account.billing_cycle|capfirst }}{% endif %}</dd>
+    <dt>Paid through</dt><dd>{{ account.expires_at|date:"j M Y" }} {% if account.term_expired %}<span class="badge status-overdue">Expired</span>{% else %}<small class="muted">({{ account.expires_at|timeuntil }} left)</small>{% endif %}</dd>
+    {% if staff %}<dt>Term started</dt><dd>{{ account.term_start|date:"j M Y" }}</dd>
+    <dt>Paid for this term</dt><dd>{{ account.term_paid }} <small class="muted">(excl. tax and setup)</small></dd>{% endif %}
+  </dl>
+  {% else %}
+  <p class="muted">{% if staff %}No billing term recorded yet, so this account cannot be renewed or upgraded online.{% else %}Your billing term is being set up. Please contact us to renew or upgrade.{% endif %}</p>
+  {% endif %}
+  {% for change in account.service_changes.all %}{% if change.status == "pending" %}
+  <p>Awaiting payment: <a href="{% if staff %}{% url 'billing_staff:invoice_detail' change.invoice_id %}{% else %}{% url 'billing_customer:invoice_detail' change.invoice_id %}{% endif %}">{{ change.get_kind_display }} invoice {{ change.invoice.number }}</a></p>
+  {% elif change.status == "failed" %}
+  <p class="error">A paid {{ change.get_kind_display|lower }} needs attention (invoice {{ change.invoice.number }}).</p>
+  {% endif %}{% endfor %}
+  {% if account.status == "active" or account.status == "suspended" %}
+  {% if account.billing_cycle and account.expires_at %}
+  <div class="actions">
+    <form method="post" action="{% if staff %}{% url 'renewals_staff:hosting_renew' account.pk %}{% else %}{% url 'renewals_customer:hosting_renew' account.pk %}{% endif %}">{% csrf_token %}
+      <button class="btn" type="submit">{% if staff %}Create renewal invoice{% else %}Renew{% endif %}</button></form>
+    {% if account.status == "active" and not staff %}<a class="btn secondary" href="{% url 'renewals_customer:hosting_upgrade' account.pk %}">Upgrade</a>{% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
+  {% if staff and perms.accounts.manage_billing %}<p><a href="{% url 'renewals_staff:hosting_term' account.pk %}">{% if account.billing_cycle %}Edit{% else %}Set{% endif %} the billing term</a></p>{% endif %}
+</section>

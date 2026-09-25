@@ -171,6 +171,8 @@ class BillingSettingsForm(forms.Form):
     quote_prefix = forms.CharField(required=False, max_length=10)
     payment_terms_days = forms.IntegerField(min_value=0, max_value=365, help_text="Days from issue until due.")
     quote_validity_days = forms.IntegerField(min_value=1, max_value=365)
+    renewal_invoice_days = forms.IntegerField(min_value=0, max_value=90,
+                                              help_text="Create renewal invoices this many days before expiry.")
     invoice_footer = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}),
                                      help_text="Printed on every invoice, e.g. bank details.")
 

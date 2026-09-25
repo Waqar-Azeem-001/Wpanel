@@ -18,4 +18,5 @@
   </dl>
   {% if account.status == "suspended" %}<p class="muted">Suspended: {{ account.suspend_reason }}</p>{% endif %}
 </section>
+{% include "renewals/_term_card.html" %}
 {% endblock %}

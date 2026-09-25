@@ -13,6 +13,14 @@ from .models import Invoice, InvoiceStatus, NumberSequence, Quote, TransactionSt
 
 ZERO = Decimal("0.00")
 
+_extra_checks = []
+
+
+def register_check(check):
+    """Let another app add its own consistency check (``check() -> list[str]``) to ``verify_all``."""
+    if check not in _extra_checks:
+        _extra_checks.append(check)
+
 
 def _check_document(doc, items):
     problems = []
@@ -93,4 +101,6 @@ def verify_all():
     for quote in Quote.objects.iterator():
         problems += verify_quote(quote)
     problems += _sequence_problems("invoice", Invoice) + _sequence_problems("quote", Quote)
+    for check in _extra_checks:
+        problems += check()
     return problems
