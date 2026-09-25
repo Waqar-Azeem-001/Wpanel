@@ -58,7 +58,7 @@
 | Every new page in the menu registry, crawler and coverage floor green | ✅ |
 | No URL name renamed; no service or API change | ✅ |
 | Browser check at 375 / 768 / 1280 px, keyboard, dark mode | ✅ |
-| CI green | see tracker |
+| CI green | ✅ run 36187472052 on `03ba01b` (first run) |
 
 ## Known limitations (all scheduled)
 
