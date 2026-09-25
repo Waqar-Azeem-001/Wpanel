@@ -1,7 +1,8 @@
+{% load ui %}
 {% for change in invoice.service_changes.all %}
 <section class="card">
   <h2>{{ change.get_kind_display }}: {{ change.service_label }}</h2>
-  <p><span class="badge status-{{ change.status }}">{{ change.get_status_display }}</span>
+  <p>{% status_badge change.status change.get_status_display %}
     {% if change.status == "pending" %}<span class="muted">This takes effect when the invoice is paid in full.</span>{% endif %}
     {% if change.status == "failed" %}<span class="muted">{% if staff %}{{ change.error }}{% else %}Your payment has been received. We are finishing this off and will be in touch if we need anything.{% endif %}</span>{% endif %}
     {% if change.applied_at %}<span class="muted">Applied {{ change.applied_at|date:"j M Y H:i" }}.</span>{% endif %}</p>

@@ -1,7 +1,8 @@
+{% load ui %}
 <section class="card">
   <h2>{% if is_domain %}Cancel this domain{% else %}Service life{% endif %}</h2>
   {% if stage_label and not is_domain %}
-  <p>Stage: <span class="badge status-{{ stage }}">{{ stage_label }}</span></p>
+  <p>Stage: {% status_badge stage stage_label %}</p>
   {% if stage == "overdue" or stage == "grace" %}
   <p class="{% if stage == 'grace' %}error{% else %}muted{% endif %}">
     The paid period ended on {{ service.expires_at|date:"j M Y" }}.
@@ -13,7 +14,7 @@
   {% endif %}
   {% if open_request %}
   <p>Cancellation request <a href="{% if staff %}{% url 'lifecycle_staff:cancellation' open_request.pk %}{% else %}{% url 'lifecycle_customer:detail' open_request.pk %}{% endif %}">{{ open_request.code }}</a>:
-     <span class="badge status-{{ open_request.status }}">{{ open_request.get_status_display }}</span>
+     {% status_badge open_request.status open_request.get_status_display %}
      {% if open_request.status == "approved" and open_request.effective_at %}<small class="muted">ends {{ open_request.effective_at|date:"j M Y" }}</small>{% endif %}</p>
   {% elif can_request %}
   <p class="muted">{% if is_domain %}A domain registration ends when it expires; we stop renewing it.{% else %}No longer need this service? You can ask to cancel it.{% endif %}</p>

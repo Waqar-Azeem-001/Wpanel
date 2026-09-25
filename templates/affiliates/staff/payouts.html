@@ -14,5 +14,5 @@
     <tr><td>{{ p.code }}</td><td><a href="{% url 'affiliates_staff:affiliate' p.affiliate_id %}">{{ p.affiliate.user.email }}</a></td><td>{{ p.paid_on|date:"j M Y" }}</td>
         <td>{{ p.method }}</td><td>{{ p.reference|default:"&mdash;" }}</td><td class="num">{{ p.currency }} {{ p.amount }}</td></tr>
   {% empty %}<tr><td colspan="6" class="muted">No payouts recorded.</td></tr>{% endfor %}</tbody></table></div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% endblock %}

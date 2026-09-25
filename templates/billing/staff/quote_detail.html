@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Quote {{ quote.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'billing_staff:quote_list' %}">&larr; All quotes</a></p>
 <div class="page-head">
   <h1>Quote {{ quote.reference }}</h1>
-  <span class="badge status-{{ quote.status }}">{{ quote.display_status_label }}</span>
+  {% status_badge quote.status quote.display_status_label %}
 </div>
 <p class="muted">Client: <a href="{% url 'clients_staff:detail' quote.client.pk %}">{{ quote.client.display_name }}</a>
   {% if quote.valid_until %}&middot; valid until {{ quote.valid_until|date:"Y-m-d" }}{% endif %}

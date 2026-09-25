@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Billable items · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -14,7 +15,7 @@
       <td><a href="{% url 'clients_staff:detail' item.client_id %}">{{ item.client.display_name }}</a></td>
       <td>{{ item.description }}{% if not item.taxable %} <small class="muted">(no tax)</small>{% endif %}</td>
       <td class="num">{{ item.quantity }}</td><td class="num">{{ item.unit_price }}</td><td class="num">{{ item.amount }}</td>
-      <td>{% if item.invoice %}<a href="{% url 'billing_staff:invoice_detail' item.invoice_id %}">{{ item.invoice.reference }}</a>{% else %}<span class="badge status-pending">Uninvoiced</span>{% endif %}</td>
+      <td>{% if item.invoice %}<a href="{% url 'billing_staff:invoice_detail' item.invoice_id %}">{{ item.invoice.reference }}</a>{% else %}{% status_badge "pending" "Uninvoiced" %}{% endif %}</td>
       {% if can_manage %}
       <td>
         {% if not item.invoice_id %}
@@ -30,7 +31,7 @@
   </tbody>
 </table>
 </div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% if form %}
 <section class="card">
   <h2>Add a charge</h2>

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Order {{ order.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'orders_staff:list' %}">&larr; All orders</a></p>
 <div class="page-head">
   <h1>Order {{ order.reference }}</h1>
-  <span class="badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+  {% status_badge order.status order.get_status_display %}
 </div>
 <p class="muted">Client: <a href="{% url 'clients_staff:detail' order.client.pk %}">{{ order.client.display_name }}</a>
   &middot; placed {{ order.created_at|date:"Y-m-d H:i" }}{% if order.placed_by %} by {{ order.placed_by.email }}{% endif %}</p>
@@ -66,7 +67,7 @@
           <td>{{ item.description }}</td><td class="num">{{ item.unit_price }}</td>
           <td class="num">{{ item.setup_fee }}</td><td class="num">{{ item.line_total }}</td>
           <td>
-            <span class="badge status-{{ item.fulfilment_status }}">{{ item.get_fulfilment_status_display }}</span>
+            {% status_badge item.fulfilment_status item.get_fulfilment_status_display %}
             {% if item.hosting_account %}<br><a href="{% url 'hosting_staff:detail' item.hosting_account_id %}">hosting {{ item.hosting_account.username }}</a>{% endif %}
             {% if item.domain %}<br><a href="{% url 'domains_staff:detail' item.domain_id %}">{{ item.domain.name }}</a>{% endif %}
             {% if item.fulfilment_error %}<br><small class="error">{{ item.fulfilment_error }}</small>{% endif %}
@@ -97,7 +98,7 @@
   <h2>Invoice</h2>
   {% for invoice in order.invoices.all %}
     <p><a href="{% url 'billing_staff:invoice_detail' invoice.pk %}">{{ invoice.reference }}</a>
-      <span class="badge status-{{ invoice.display_status }}">{{ invoice.display_status_label }}</span>
+      {% status_badge invoice.display_status invoice.display_status_label %}
       &middot; {{ invoice.currency }} {{ invoice.total }}, balance {{ invoice.balance_due }}</p>
   {% empty %}<p class="muted">No invoice (this order predates invoicing).</p>{% endfor %}
 </section>

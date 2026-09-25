@@ -9,6 +9,16 @@ PASSWORD = "Str0ng-Passw0rd!x"
 
 
 @pytest.fixture(autouse=True)
+def fresh_cache():
+    """Brand settings (and any other cached value) must not leak from one test into the next."""
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
+
+
+@pytest.fixture(autouse=True)
 def run_on_commit_immediately(monkeypatch):
     """Test DB transactions never commit; run on_commit callbacks (e.g. email delivery) inline."""
     from django.db import transaction

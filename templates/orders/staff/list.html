@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Orders · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -24,7 +25,7 @@
       <td><a href="{% url 'orders_staff:detail' order.pk %}">{{ order.reference }}</a></td>
       <td>{{ order.client.display_name }}</td>
       <td>{{ order.created_at|date:"Y-m-d" }}</td>
-      <td><span class="badge status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+      <td>{% status_badge order.status order.get_status_display %}</td>
       <td>{{ order.payment_method_name|default:"&mdash;" }}</td>
       <td class="num">{{ order.currency }} {{ order.total }}</td>
     </tr>
@@ -34,5 +35,5 @@
   </tbody>
 </table>
 </div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% endblock %}

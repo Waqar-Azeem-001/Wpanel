@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Servers · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -18,7 +19,7 @@
       <td>{{ server.name }}</td>
       <td>{{ server.hostname }}</td>
       <td>{{ server.ip_address|default:"—" }}</td>
-      <td><span class="badge status-{{ server.status }}">{{ server.get_status_display }}</span></td>
+      <td>{% status_badge server.status server.get_status_display %}</td>
       <td>{{ server.products.count }}</td>
       {% if perms.accounts.manage_hosting %}
       <td><a href="{% url 'catalog_staff:server_edit' server.pk %}">Edit</a></td>

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Invoice {{ invoice.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'billing_staff:invoice_list' %}">&larr; All invoices</a></p>
 <div class="page-head">
   <h1>Invoice {{ invoice.reference }}</h1>
-  <span class="badge status-{{ invoice.display_status }}">{{ invoice.display_status_label }}</span>
+  {% status_badge invoice.display_status invoice.display_status_label %}
 </div>
 <p class="muted">Client: <a href="{% url 'clients_staff:detail' invoice.client.pk %}">{{ invoice.client.display_name }}</a>
   {% if invoice.order %}&middot; order <a href="{% url 'orders_staff:detail' invoice.order.pk %}">{{ invoice.order.reference }}</a>{% endif %}
@@ -35,7 +36,7 @@
       </div>
       {% elif invoice.status == "unpaid" %}
       <form method="post" action="{% url 'billing_staff:invoice_cancel' invoice.pk %}" onsubmit="return confirm('Cancel this invoice?');">{% csrf_token %}
-        <div class="field"><label for="id_cancel_reason">Reason (audited)</label>{{ cancel_form.reason }}</div>
+        <div class="field"><label for="{{ cancel_form.reason.id_for_label }}">Reason (audited)</label>{{ cancel_form.reason }}</div>
         <button class="btn small danger" type="submit">Cancel invoice</button>
       </form>
       {% endif %}
@@ -67,7 +68,7 @@
         <td>{{ tx.get_type_display }}</td>
         <td>{{ tx.method_name|default:"&mdash;" }}</td>
         <td>{{ tx.reference|default:tx.external_id|default:"&mdash;" }}{% if tx.failure_reason %}<br><small class="muted">{{ tx.failure_reason }}</small>{% endif %}</td>
-        <td><span class="badge status-{{ tx.status }}">{{ tx.get_status_display }}</span></td>
+        <td>{% status_badge tx.status tx.get_status_display %}</td>
         <td class="num">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
         {% if can_manage %}
         <td>

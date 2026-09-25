@@ -15,10 +15,10 @@
       <tbody>
       {% for line in formset %}
         <tr>
-          <td>{{ line.description }}{% for e in line.description.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
-          <td class="qty">{{ line.quantity }}{% for e in line.quantity.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
-          <td class="price">{{ line.unit_price }}{% for e in line.unit_price.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
-          <td>{{ line.taxable }}</td>
+          <td><label class="visually-hidden" for="{{ line.description.id_for_label }}">Description, row {{ forloop.counter }}</label>{{ line.description }}{% for e in line.description.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td class="qty"><label class="visually-hidden" for="{{ line.quantity.id_for_label }}">Quantity, row {{ forloop.counter }}</label>{{ line.quantity }}{% for e in line.quantity.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td class="price"><label class="visually-hidden" for="{{ line.unit_price.id_for_label }}">Unit price, row {{ forloop.counter }}</label>{{ line.unit_price }}{% for e in line.unit_price.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td><label class="visually-hidden" for="{{ line.taxable.id_for_label }}">Taxable, row {{ forloop.counter }}</label>{{ line.taxable }}</td>
         </tr>
       {% endfor %}
       </tbody>

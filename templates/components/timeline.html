@@ -1,0 +1,6 @@
+{# events: [(when, text)] - an activity feed, newest first as given. #}
+{% load ui %}
+<ul class="timeline-feed">
+  {% for when, text in events %}<li><small class="muted">{{ when|fdatetime }}</small><div>{{ text }}</div></li>
+  {% empty %}<li class="muted">Nothing has happened yet.</li>{% endfor %}
+</ul>

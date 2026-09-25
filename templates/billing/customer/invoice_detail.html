@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Invoice {{ invoice.number }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'billing_customer:invoice_list' %}">&larr; My invoices</a></p>
 <div class="page-head">
   <h1>Invoice {{ invoice.number }}</h1>
-  <span class="badge status-{{ invoice.display_status }}">{{ invoice.display_status_label }}</span>
+  {% status_badge invoice.display_status invoice.display_status_label %}
 </div>
 <p class="muted">Issued {{ invoice.issue_date|date:"j M Y" }} &middot; due {{ invoice.due_date|date:"j M Y" }}
   &middot; <a href="{% url 'billing_customer:invoice_pdf' invoice.pk %}">Download PDF</a></p>
@@ -60,7 +61,7 @@
       <tr>
         <td>{{ tx.occurred_at|date:"Y-m-d" }}</td><td>{{ tx.get_type_display }}</td>
         <td>{{ tx.method_name|default:"&mdash;" }}</td>
-        <td><span class="badge status-{{ tx.status }}">{{ tx.get_status_display }}</span></td>
+        <td>{% status_badge tx.status tx.get_status_display %}</td>
         <td class="num">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
       </tr>
     {% empty %}

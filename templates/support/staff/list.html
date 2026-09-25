@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Tickets · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -24,7 +25,7 @@
       <td>{{ t.client.display_name }}</td>
       <td>{{ t.department.name }}</td>
       <td><span class="badge priority-{{ t.priority }}">{{ t.get_priority_display }}</span></td>
-      <td><span class="badge status-{{ t.status }}">{{ t.get_status_display }}</span></td>
+      <td>{% status_badge t.status t.get_status_display %}</td>
       <td>{{ t.assignee_label }}</td>
       <td>{{ t.last_activity_at|date:"j M, H:i" }}</td>
     </tr>
@@ -34,5 +35,5 @@
   </tbody>
 </table>
 </div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% endblock %}

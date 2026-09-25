@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Cancellation {{ cr.code }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'lifecycle_staff:cancellations' %}">&larr; Cancellations</a></p>
-<div class="page-head"><h1>Cancel {{ cr.service_name }}</h1><span class="badge status-{{ cr.status }}">{{ cr.get_status_display }}</span></div>
+<div class="page-head"><h1>Cancel {{ cr.service_name }}</h1>{% status_badge cr.status cr.get_status_display %}</div>
 {% if cr.needs_attention %}<div class="errors"><p>Could not be carried out: {{ cr.last_error }}</p></div>{% endif %}
 {% if cr.refund_error %}<div class="errors"><p>The service ended but the refund failed: {{ cr.refund_error }} Refund it from the invoice.</p></div>{% endif %}
 <div class="cols">
@@ -12,7 +13,7 @@
     <dl class="meta">
       <dt>Client</dt><dd><a href="{% url 'clients_staff:detail' cr.client_id %}">{{ cr.client.display_name }}</a></dd>
       <dt>Service</dt><dd>{% if cr.kind == "hosting" %}<a href="{% url 'hosting_staff:detail' cr.hosting_account_id %}">{{ cr.service_name }}</a>{% else %}<a href="{% url 'domains_staff:detail' cr.domain_id %}">{{ cr.service_name }}</a>{% endif %}
-        {% if stage %}<span class="badge status-{{ stage }}">{{ stage }}</span>{% endif %}</dd>
+        {% if stage %}{% status_badge stage %}{% endif %}</dd>
       <dt>Asked</dt><dd>{{ cr.created_at|date:"j M Y H:i" }} by {% if cr.on_behalf %}staff ({{ cr.requested_by.email|default:"unknown" }}){% else %}the customer{% endif %}</dd>
       <dt>Wants</dt><dd>{{ cr.get_timing_display }}</dd>
       <dt>Paid through</dt><dd>{{ cr.term_expires_at|date:"j M Y"|default:"&mdash;" }}</dd>

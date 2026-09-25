@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Addons · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -21,7 +22,7 @@
   {% for addon in page %}
     <tr>
       <td><a href="{% url 'catalog_staff:addon_detail' addon.slug %}">{{ addon.name }}</a></td>
-      <td><span class="badge status-{{ addon.status }}">{{ addon.get_status_display }}</span></td>
+      <td>{% status_badge addon.status addon.get_status_display %}</td>
       <td>{{ addon.prices.count }}</td>
     </tr>
   {% empty %}

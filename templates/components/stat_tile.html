@@ -1,0 +1,5 @@
+{# {% include "components/stat_tile.html" with value=12 label="Open tickets" url=some_url icon="bi-ticket" %} - the whole tile is the link #}
+{% if url %}<a class="stat-tile" href="{{ url }}">{% else %}<div class="stat-tile">{% endif %}
+  {% if icon %}<i class="bi {{ icon }}" aria-hidden="true"></i>{% endif %}
+  <strong>{{ value }}</strong><span>{{ label }}</span>
+{% if url %}</a>{% else %}</div>{% endif %}

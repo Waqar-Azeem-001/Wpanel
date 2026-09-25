@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Account details · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <section class="card">
   <div class="page-head">
     <h1>{{ client.display_name }} <small class="muted">{{ client.reference }}</small></h1>
-    <span class="badge status-{{ client.status }}">{{ client.get_status_display }}</span>
+    {% status_badge client.status client.get_status_display %}
   </div>
   <p class="muted">Your role on this account: {{ my_role|capfirst }}. Billing currency: {{ client.currency }}.</p>
   {% if can_edit %}

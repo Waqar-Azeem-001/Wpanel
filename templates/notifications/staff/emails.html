@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Email log · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -19,9 +20,9 @@
     <tr><td>{{ m.created_at|date:"j M, H:i" }}</td><td>{{ m.to_email }}</td>
         <td><a href="{% url 'notifications_staff:email' m.pk %}">{{ m.subject|truncatechars:60 }}</a>{% if m.is_sensitive %} <span class="badge">Secret</span>{% endif %}</td>
         <td>{{ m.event_label|default:m.event|default:"&mdash;" }}</td>
-        <td><span class="badge status-{{ m.status }}">{{ m.get_status_display }}</span>{% if m.attempts > 1 %} <small class="muted">{{ m.attempts }} attempts</small>{% endif %}</td>
+        <td>{% status_badge m.status m.get_status_display %}{% if m.attempts > 1 %} <small class="muted">{{ m.attempts }} attempts</small>{% endif %}</td>
         <td>{% if m.is_sensitive %}<span class="muted">not tracked</span>{% elif m.opened_at %}{{ m.opened_at|date:"j M, H:i" }}{% else %}&mdash;{% endif %}</td></tr>
   {% empty %}<tr><td colspan="6" class="muted">No emails match.</td></tr>{% endfor %}
   </tbody></table></div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% endblock %}

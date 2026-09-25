@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Knowledgebase · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -28,7 +29,7 @@
       <tbody>
       {% for a in articles %}
         <tr><td>{{ a.title }}</td><td>{{ a.category.name }}</td>
-            <td>{% if a.is_published %}<span class="badge status-done">Published</span>{% else %}<span class="badge status-draft">Draft</span>{% endif %}</td>
+            <td>{% if a.is_published %}{% status_badge "done" "Published" %}{% else %}{% status_badge "draft" "Draft" %}{% endif %}</td>
             {% if can_manage %}<td><a href="?article={{ a.pk }}">Edit</a>
               <form method="post" action="{% url 'support_staff:kb_article_delete' a.pk %}" class="inline-form" onsubmit="return confirm('Delete this article?');">{% csrf_token %}<button class="btn small danger" type="submit">Delete</button></form></td>{% endif %}</tr>
       {% empty %}<tr><td colspan="4" class="muted">No articles yet.</td></tr>{% endfor %}

@@ -1,0 +1,10 @@
+{% if messages %}
+<div class="messages-region" role="status" aria-live="polite">
+  {% for m in messages %}
+  <div class="alert alert-{% if m.level_tag == 'error' %}danger{% elif m.level_tag == 'debug' %}secondary{% else %}{{ m.level_tag|default:'info' }}{% endif %} msg msg-{{ m.tags }} d-flex align-items-start gap-2" role="{% if m.level_tag == 'error' %}alert{% else %}status{% endif %}">
+    <i class="bi {% if m.level_tag == 'success' %}bi-check-circle{% elif m.level_tag == 'error' %}bi-exclamation-octagon{% elif m.level_tag == 'warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>
+    <div>{{ m }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{{ ticket.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'support_staff:tickets' %}">&larr; Tickets</a></p>
 <div class="page-head"><h1>{{ ticket.subject }}</h1>
-  <span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></div>
+  {% status_badge ticket.status ticket.get_status_display %}</div>
 <p class="muted">{{ ticket.reference }} &middot; <a href="{% url 'clients_staff:detail' ticket.client.pk %}">{{ ticket.client.display_name }}</a>
   &middot; opened {{ ticket.created_at|date:"j M Y H:i" }}{% if ticket.opened_by %} by {{ ticket.opened_by.email }}{% endif %}</p>
 

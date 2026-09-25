@@ -1,0 +1,6 @@
+{# tabs: [(label, url, active)] - every tab is its own URL, so it can be linked, bookmarked and crawled. #}
+<ul class="nav nav-tabs mb-3" role="tablist">
+  {% for label, url, active in tabs %}
+  <li class="nav-item"><a class="nav-link{% if active %} active{% endif %}" href="{{ url }}"{% if active %} aria-current="page"{% endif %}>{{ label }}</a></li>
+  {% endfor %}
+</ul>

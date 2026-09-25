@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Support · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Support</h1>
@@ -16,7 +17,7 @@
       <td><a href="{% url 'support_customer:ticket' ticket.pk %}">{{ ticket.reference }}</a></td>
       <td>{{ ticket.subject }}</td>
       <td>{{ ticket.department.name }}</td>
-      <td><span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
+      <td>{% status_badge ticket.status ticket.get_status_display %}</td>
       <td>{{ ticket.last_activity_at|date:"j M Y, H:i" }}</td>
     </tr>
   {% empty %}
@@ -25,5 +26,5 @@
   </tbody>
 </table>
 </div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% endblock %}

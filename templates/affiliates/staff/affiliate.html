@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Affiliate {{ affiliate.code }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'affiliates_staff:affiliates' %}">&larr; Affiliates</a></p>
-<div class="page-head"><h1>{{ affiliate.user.email }}</h1><span class="badge status-{{ affiliate.status }}">{{ affiliate.get_status_display }}</span></div>
+<div class="page-head"><h1>{{ affiliate.user.email }}</h1>{% status_badge affiliate.status affiliate.get_status_display %}</div>
 <div class="stats">
   <div class="stat"><strong>{{ balances.approved }}</strong><span>Approved, owed</span></div>
   <div class="stat"><strong>{{ balances.pending }}</strong><span>Pending</span></div>
@@ -66,7 +67,7 @@
     <thead><tr><th>Commission</th><th>Invoice</th><th>Status</th><th class="num">Sale</th><th class="num">Amount</th></tr></thead>
     <tbody>{% for c in commissions %}
       <tr><td>{{ c.code }}</td><td><a href="{% url 'billing_staff:invoice_detail' c.invoice_id %}">{{ c.invoice.number|default:c.invoice_id }}</a></td>
-          <td><span class="badge status-{{ c.status }}">{{ c.get_status_display }}</span>{% if c.needs_review %} <span class="badge status-failed">Refunded after payout</span>{% endif %}</td>
+          <td>{% status_badge c.status c.get_status_display %}{% if c.needs_review %} {% status_badge "failed" "Refunded after payout" %}{% endif %}</td>
           <td class="num">{{ c.base_amount }}</td><td class="num">{{ c.currency }} {{ c.amount }}</td></tr>
     {% empty %}<tr><td colspan="5" class="muted">No commissions yet.</td></tr>{% endfor %}</tbody></table></div>
   <p><a href="{% url 'affiliates_staff:commissions' %}?q={{ affiliate.code }}">All commissions</a></p>

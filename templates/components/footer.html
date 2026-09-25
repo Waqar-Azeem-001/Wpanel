@@ -1,0 +1,10 @@
+{% load i18n %}
+<footer class="app-footer">
+  <div class="container-xxl d-flex flex-wrap justify-content-between gap-2">
+    <span>{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}{% endif %}</span>
+    <span>
+      {% if brand.support_email %}<a href="mailto:{{ brand.support_email }}">{{ brand.support_email }}</a>{% endif %}
+      {% if not user.is_authenticated or ui_area == "client" %}<a class="ms-3" href="{% url 'help:index' %}">{% trans "Knowledgebase" %}</a>{% endif %}
+    </span>
+  </div>
+</footer>

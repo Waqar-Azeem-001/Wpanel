@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% load lifecycle %}
 {% block title %}{{ account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'hosting_customer:list' %}">&larr; My hosting</a></p>
 <div class="page-head">
   <h1>{{ account.domain }}</h1>
-  <span class="badge status-{{ account.status }}">{{ account.get_status_display }}</span>
+  {% status_badge account.status account.get_status_display %}
 </div>
 <section class="card">
   <h2>Details</h2>

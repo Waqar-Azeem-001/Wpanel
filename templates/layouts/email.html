@@ -1,0 +1,11 @@
+{# HTML email shell: table-based with inline styles (mail programs ignore stylesheets). Rendered by notifications.html_from_text. #}
+<!doctype html>
+<html lang="en"><body style="margin:0;padding:0;background:#f5f6f8">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f6f8"><tr><td align="center" style="padding:24px 12px">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1d2330">
+    <tr><td style="background:{{ brand.primary }};padding:16px 24px;color:#ffffff;font-size:18px;font-weight:bold">{% if logo_url %}<img src="{{ logo_url }}" alt="" height="32" style="vertical-align:middle;margin-right:8px">{% endif %}{{ brand.name }}</td></tr>
+    <tr><td style="padding:24px;font-size:15px;line-height:1.5">{{ body|safe }}</td></tr>
+    <tr><td style="padding:16px 24px;background:#f5f6f8;color:#5d6677;font-size:12px">{% if brand.footer_text %}{{ brand.footer_text }}{% else %}{{ brand.name }}{% endif %}{% if brand.support_email %}<br>{{ brand.support_email }}{% endif %}</td></tr>
+  </table>
+</td></tr></table>
+</body></html>

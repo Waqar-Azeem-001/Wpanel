@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}My Domains · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -15,7 +16,7 @@
   {% for domain in domains %}
     <tr>
       <td><a href="{% url 'domains_customer:detail' domain.pk %}">{{ domain.name }}</a></td>
-      <td><span class="badge status-{{ domain.status }}">{{ domain.get_status_display }}</span></td>
+      <td>{% status_badge domain.status domain.get_status_display %}</td>
       <td>{{ domain.expires_at|date:"Y-m-d"|default:"—" }}</td>
       <td>{{ domain.auto_renew|yesno:"Yes,No" }}</td>
     </tr>

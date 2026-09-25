@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Renewals · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -47,7 +48,7 @@
       <td>{{ change.service_label }}</td>
       <td>{{ change.client.display_name }}</td>
       <td><a href="{% url 'billing_staff:invoice_detail' change.invoice_id %}">{{ change.invoice.reference }}</a></td>
-      <td><span class="badge status-{{ change.status }}">{{ change.get_status_display }}</span></td>
+      <td>{% status_badge change.status change.get_status_display %}</td>
     </tr>
   {% empty %}
     <tr><td colspan="6" class="muted">No renewals or upgrades yet.</td></tr>
@@ -55,5 +56,5 @@
   </tbody>
 </table>
 </div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% endblock %}

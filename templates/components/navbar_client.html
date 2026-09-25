@@ -1,0 +1,54 @@
+{% load i18n %}
+<nav class="navbar navbar-expand-lg navbar-dark app-navbar navbar-client" aria-label="{% trans 'Main' %}">
+  <div class="container-xxl">
+    {% include "components/navbar_brand.html" %}
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav-main" aria-controls="nav-main" aria-expanded="false" aria-label="{% trans 'Toggle navigation' %}"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="nav-main">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile' %}">{% trans "Home" %}</a></li>
+        {% if user.client_contacts.exists %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#menu-services" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Services" %}</a>
+          <ul class="dropdown-menu" id="menu-services">
+            <li><a class="dropdown-item" href="{% url 'hosting_customer:list' %}">{% trans "My Hosting" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'orders_customer:list' %}">{% trans "My Orders" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'catalog:product_list' %}">{% trans "Order New Services" %}</a></li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#menu-domains" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Domains" %}</a>
+          <ul class="dropdown-menu" id="menu-domains">
+            <li><a class="dropdown-item" href="{% url 'domains_customer:list' %}">{% trans "My Domains" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'domains_public:search' %}">{% trans "Register a New Domain" %}</a></li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#menu-billing" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Billing" %}</a>
+          <ul class="dropdown-menu" id="menu-billing">
+            <li><a class="dropdown-item" href="{% url 'billing_customer:invoice_list' %}">{% trans "My Invoices" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'billing_customer:quote_list' %}">{% trans "My Quotes" %}</a></li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#menu-support" role="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Support" %}</a>
+          <ul class="dropdown-menu" id="menu-support">
+            <li><a class="dropdown-item" href="{% url 'support_customer:list' %}">{% trans "Tickets" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'help:index' %}">{% trans "Knowledgebase" %}</a></li>
+          </ul>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'support_customer:new' %}">{% trans "Open Ticket" %}</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'affiliates_customer:dashboard' %}">{% trans "Affiliates" %}</a></li>
+        {% else %}
+        <li class="nav-item"><a class="nav-link" href="{% url 'catalog:product_list' %}">{% trans "Plans" %}</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'help:index' %}">{% trans "Help" %}</a></li>
+        {% endif %}
+      </ul>
+      <ul class="navbar-nav align-items-lg-center">
+        {% if user.client_contacts.exists %}
+        <li class="nav-item"><a class="nav-link" href="{% url 'orders_customer:cart' %}"><i class="bi bi-cart" aria-hidden="true"></i> {% trans "Cart" %}{% if cart_item_count %} ({{ cart_item_count }}){% endif %}</a></li>
+        {% endif %}
+        {% include "components/navbar_account.html" %}
+      </ul>
+    </div>
+  </div>
+</nav>

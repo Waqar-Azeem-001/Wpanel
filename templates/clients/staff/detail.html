@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{{ client.display_name }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'clients_staff:list' %}">&larr; All clients</a></p>
 <div class="page-head">
   <h1>{{ client.display_name }} <small class="muted">{{ client.reference }}</small></h1>
-  <span class="badge status-{{ client.status }}">{{ client.get_status_display }}</span>
+  {% status_badge client.status client.get_status_display %}
 </div>
 
 <div class="cols">
@@ -97,7 +98,7 @@
       <ul class="records">
       {% for row in section.rows %}
         <li><a href="{{ row.url }}">{{ row.label }}</a>
-          <span class="badge status-{{ row.status_key }}">{{ row.status }}</span>
+          {% status_badge row.status_key row.status %}
           {% if row.amount %}<span class="muted">{{ row.amount }}</span>{% endif %}</li>
       {% empty %}
         <li class="muted">None yet.</li>

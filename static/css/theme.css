@@ -1,0 +1,124 @@
+/*
+ * Design tokens and the mapping of Bootstrap 5 onto them (roadmap Section 9.2).
+ * The brand colours arrive from /brand.css (the --brand-* variables); everything else is defined here, once.
+ * Components use these tokens, never literal colours.
+ */
+:root {
+  /* Brand (defaults; /brand.css overrides them from the database) */
+  --brand-primary: #2459d6; --brand-primary-dark: #1d47ac; --brand-primary-rgb: 36, 89, 214;
+  --brand-primary-subtle: #e9eefb; --brand-accent: #1f7a4d;
+
+  /* Neutrals */
+  --bg: #f5f6f8; --surface: #ffffff; --surface-2: #eef0f4; --text: #1d2330; --muted: #5d6677; --border: #dde1e8;
+
+  /* Status (used only through the status badge component) */
+  --ok: #1a6e44; --warn: #8a5700; --danger: #b42323; --info: #1d5fa8; --neutral: #5d6677;
+
+  --accent: var(--brand-primary); --accent-text: #ffffff;
+
+  /* Typography: one UI family, one monospace, a fixed scale */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-12: .75rem; --fs-14: .875rem; --fs-16: 1rem; --fs-20: 1.25rem; --fs-24: 1.5rem; --fs-30: 1.875rem;
+
+  /* Spacing (4px base), radius, shadow, layout */
+  --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-5: 1.5rem; --space-6: 2rem;
+  --radius-panel: 10px; --radius-button: 8px; --radius-input: 8px; --radius-modal: 12px;
+  --shadow-panel: 0 1px 2px rgba(16, 24, 40, .06); --shadow-modal: 0 12px 32px rgba(16, 24, 40, .25);
+  --layout-max: 1180px; --layout-narrow: 880px; --sidebar-w: 260px; --navbar-h: 56px;
+  --staff-bar: #1b2233; --focus-ring: 3px solid color-mix(in srgb, var(--accent) 55%, white);
+}
+
+[data-bs-theme="dark"] {
+  --bg: #12151b; --surface: #1b2029; --surface-2: #232a36; --text: #e6e9ef; --muted: #9aa3b2; --border: #2c3340;
+  --ok: #5ccf94; --warn: #e3b55b; --danger: #f07a7a; --info: #7fb2f0; --neutral: #9aa3b2;
+  --accent: color-mix(in srgb, var(--brand-primary) 58%, white); --accent-text: #0d1220;
+  --staff-bar: #0c0f15; --shadow-panel: none;
+}
+
+/* Bootstrap reads its own variables: point them at ours. */
+:root, [data-bs-theme] {
+  --bs-body-bg: var(--bg); --bs-body-color: var(--text); --bs-body-font-family: var(--font-ui);
+  --bs-secondary-color: var(--muted); --bs-border-color: var(--border); --bs-tertiary-bg: var(--surface-2);
+  --bs-link-color: var(--accent); --bs-link-hover-color: var(--brand-primary-dark);
+  --bs-link-color-rgb: var(--brand-primary-rgb); --bs-emphasis-color: var(--text);
+  --bs-border-radius: var(--radius-input); --bs-body-font-size: var(--fs-16);
+}
+[data-bs-theme="dark"] { --bs-link-color-rgb: var(--brand-primary-light-rgb, 140, 170, 245); --bs-link-hover-color: #ffffff; }
+
+body { min-height: 100vh; display: flex; flex-direction: column; }
+main.page { flex: 1 0 auto; }
+h1 { font-size: var(--fs-24); } h2 { font-size: 1.15rem; } h3 { font-size: var(--fs-16); }
+
+/* Buttons and links use the brand */
+.btn-primary { --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-color: var(--accent-text);
+  --bs-btn-hover-bg: var(--brand-primary-dark); --bs-btn-hover-border-color: var(--brand-primary-dark);
+  --bs-btn-hover-color: #fff; --bs-btn-active-bg: var(--brand-primary-dark); --bs-btn-active-color: #fff;
+  --bs-btn-active-border-color: var(--brand-primary-dark); --bs-btn-disabled-bg: var(--accent);
+  --bs-btn-disabled-border-color: var(--accent); --bs-btn-disabled-color: var(--accent-text);
+  --bs-btn-focus-shadow-rgb: var(--brand-primary-rgb); }
+.btn-outline-primary { --bs-btn-color: var(--accent); --bs-btn-border-color: var(--accent);
+  --bs-btn-hover-bg: var(--accent); --bs-btn-hover-border-color: var(--accent); --bs-btn-hover-color: var(--accent-text);
+  --bs-btn-active-bg: var(--accent); --bs-btn-active-border-color: var(--accent); --bs-btn-active-color: var(--accent-text); }
+.btn { --bs-btn-border-radius: var(--radius-button); font-weight: 600; }
+.form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+
+/* Visible keyboard focus everywhere (WCAG 2.4.7) */
+:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.form-control:focus, .form-select:focus, .btn:focus-visible, .form-check-input:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 .2rem rgba(var(--brand-primary-rgb), .3); outline: none; }
+.skip-link { position: absolute; left: -999px; top: 0; z-index: 2000; background: var(--surface); padding: .5rem 1rem; }
+.skip-link:focus { left: .5rem; top: .5rem; }
+
+/* Navigation bars */
+.app-navbar { --bs-navbar-padding-y: .35rem; min-height: var(--navbar-h); }
+.app-navbar.navbar-client { background: var(--brand-primary); }
+.app-navbar.navbar-public { background: var(--brand-primary); }
+.app-navbar.navbar-staff { background: var(--staff-bar); }
+.app-navbar .navbar-brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: #fff; }
+.app-navbar .navbar-brand img { max-height: 32px; width: auto; }
+.app-navbar .nav-link, .app-navbar .navbar-text { color: rgba(255, 255, 255, .9); }
+.app-navbar .nav-link:hover, .app-navbar .nav-link:focus, .app-navbar .nav-link.active, .app-navbar .show > .nav-link { color: #fff; }
+.app-navbar .navbar-toggler { border-color: rgba(255, 255, 255, .5); }
+.app-navbar .dropdown-menu { --bs-dropdown-border-radius: var(--radius-input); max-height: 75vh; overflow-y: auto; }
+.app-navbar .btn-link.nav-link { text-decoration: none; }
+.app-navbar :focus-visible { outline-color: #fff; }
+.app-navbar .badge.unread { background: #fff; color: var(--brand-primary); border-color: #fff; }
+
+/* Status badges: one component, five colours, always with a text label */
+.status-badge { display: inline-block; padding: .15em .65em; border-radius: 999px; font-size: var(--fs-14);
+  font-weight: 600; line-height: 1.4; border: 1px solid currentColor; white-space: nowrap;
+  background: color-mix(in srgb, currentColor 10%, var(--surface)); }
+.status-badge.is-success { color: var(--ok); } .status-badge.is-warning { color: var(--warn); }
+.status-badge.is-danger { color: var(--danger); } .status-badge.is-info { color: var(--info); }
+.status-badge.is-neutral { color: var(--neutral); }
+
+/* Components */
+.stat-tile { display: flex; flex-direction: column; text-decoration: none; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-panel); padding: var(--space-4) var(--space-5);
+  color: var(--muted); box-shadow: var(--shadow-panel); }
+a.stat-tile:hover { border-color: var(--accent); }
+.stat-tile strong { font-size: 1.6rem; color: var(--text); line-height: 1.2; }
+.stat-tile .bi { font-size: 1.25rem; color: var(--accent); margin-bottom: var(--space-1); }
+.empty-state { text-align: center; padding: var(--space-6) var(--space-4); color: var(--muted); }
+.empty-state .bi { font-size: 2rem; display: block; margin-bottom: var(--space-2); color: var(--accent); }
+.breadcrumb-bar { background: var(--surface); border-bottom: 1px solid var(--border); }
+.breadcrumb-bar .breadcrumb { margin: 0; padding: .5rem 0; font-size: var(--fs-14); }
+.app-footer { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  font-size: var(--fs-14); padding: var(--space-4) 0; margin-top: var(--space-6); }
+.htmx-indicator { opacity: 0; transition: opacity .2s; } .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+.timeline-feed { list-style: none; padding: 0; margin: 0; border-left: 2px solid var(--border); }
+.timeline-feed li { position: relative; padding: 0 0 var(--space-4) var(--space-4); }
+.timeline-feed li::before { content: ""; position: absolute; left: -6px; top: .35rem; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--accent); }
+.modal-content { border-radius: var(--radius-modal); box-shadow: var(--shadow-modal); }
+.brand-logo-preview { max-height: 64px; max-width: 240px; background: var(--surface-2); padding: var(--space-2); border-radius: var(--radius-input); }
+
+/* Error pages */
+.error-page { text-align: center; padding: var(--space-6) 0; }
+.error-page .code { font-size: 4rem; font-weight: 700; color: var(--accent); line-height: 1; }
+
+@media print {
+  .app-navbar, .app-footer, .breadcrumb-bar, .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+}

@@ -1,10 +1,11 @@
+{% load ui %}
 <div class="conversation">
 {% for message in messages_ %}
   <article class="msg {{ message.kind }}{% if message.is_internal %} internal{% endif %}">
     <header>
       <strong>{{ message.author_name|default:"System" }}</strong>
       {% if message.kind == "staff" and not staff %}<span class="badge">Support team</span>{% endif %}
-      {% if message.is_internal %}<span class="badge status-fraud">Internal note</span>{% endif %}
+      {% if message.is_internal %}{% status_badge "fraud" "Internal note" %}{% endif %}
       <span class="muted">{{ message.created_at|date:"j M Y, H:i" }}</span>
     </header>
     <div class="body">{{ message.body|linebreaks }}</div>

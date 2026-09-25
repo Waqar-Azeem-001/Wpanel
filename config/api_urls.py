@@ -7,6 +7,7 @@ from apps.accounts import api as accounts_api
 from apps.affiliates import api as affiliates_api
 from apps.audit.api import AuditEventViewSet
 from apps.billing import api_documents as billing_docs
+from apps.branding import api as branding_api
 from apps.billing.api import CouponViewSet, PaymentMethodViewSet, TaxRuleViewSet
 from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
@@ -74,6 +75,7 @@ urlpatterns = [
     path("hosting-accounts/<int:pk>/term/", renewals_api.HostingTermView.as_view(), name="hosting-term"),
     path("domains/<int:pk>/renewal-invoice/", renewals_api.DomainRenewalView.as_view(), name="domain-renewal"),
     path("notification-preferences/", PreferencesView.as_view(), name="notification-preferences"),
+    path("brand/", branding_api.BrandView.as_view(), name="brand"),
     path("reports/", reports_api.ReportListView.as_view(), name="reports"),
     path("reports/<slug:slug>/", reports_api.ReportView.as_view(), name="report"),
     path("affiliate/", affiliates_api.AffiliateMeView.as_view(), name="affiliate-me"),

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Quote {{ quote.number }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'billing_customer:quote_list' %}">&larr; My quotes</a></p>
 <div class="page-head">
   <h1>Quote {{ quote.number }}</h1>
-  <span class="badge status-{{ quote.status }}">{{ quote.display_status_label }}</span>
+  {% status_badge quote.status quote.display_status_label %}
 </div>
 <p class="muted">Issued {{ quote.issue_date|date:"j M Y" }} &middot; valid until {{ quote.valid_until|date:"j M Y" }}
   &middot; <a href="{% url 'billing_customer:quote_pdf' quote.pk %}">Download PDF</a>

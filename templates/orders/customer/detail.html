@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Order {{ order.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'orders_customer:list' %}">&larr; My orders</a></p>
 <div class="page-head">
   <h1>Order {{ order.reference }}</h1>
-  <span class="badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+  {% status_badge order.status order.get_status_display %}
 </div>
 
 {% if order.status == "pending_payment" %}
@@ -39,7 +40,7 @@
 <section class="card">
   <h2>Invoice</h2>
   <p><a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{{ invoice.number }}</a>
-    <span class="badge status-{{ invoice.display_status }}">{{ invoice.display_status_label }}</span>
+    {% status_badge invoice.display_status invoice.display_status_label %}
     &middot; balance {{ invoice.currency }} {{ invoice.balance_due }}
     {% if invoice.can_be_paid %}&middot; <a class="btn small" href="{% url 'billing_customer:invoice_detail' invoice.pk %}">Pay now</a>{% endif %}</p>
 </section>

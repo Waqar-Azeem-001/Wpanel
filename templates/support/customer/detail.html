@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{{ ticket.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'support_customer:list' %}">&larr; Support</a></p>
 <div class="page-head"><h1>{{ ticket.subject }}</h1>
-  <span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></div>
+  {% status_badge ticket.status ticket.get_status_display %}</div>
 <p class="muted">{{ ticket.reference }} &middot; {{ ticket.department.name }} &middot; opened {{ ticket.created_at|date:"j M Y" }}
   {% if ticket.hosting_account %}&middot; hosting: <a href="{% url 'hosting_customer:detail' ticket.hosting_account_id %}">{{ ticket.hosting_account.domain }}</a>{% endif %}
   {% if ticket.domain %}&middot; domain: <a href="{% url 'domains_customer:detail' ticket.domain_id %}">{{ ticket.domain.name }}</a>{% endif %}</p>

@@ -1,0 +1,6 @@
+{# {% include "components/page_header.html" with title=obj.name status=obj.status status_label=obj.get_status_display %} - title, status badge and the actions block the caller adds after it #}
+{% load ui %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  {% if status %}{% status_badge status status_label %}{% endif %}
+</div>

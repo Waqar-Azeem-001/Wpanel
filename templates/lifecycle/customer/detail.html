@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Cancellation {{ cr.code }} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'lifecycle_customer:list' %}">&larr; Cancellation requests</a></p>
-<div class="page-head"><h1>Cancel {{ cr.service_name }}</h1><span class="badge status-{{ cr.status }}">{{ cr.get_status_display }}</span></div>
+<div class="page-head"><h1>Cancel {{ cr.service_name }}</h1>{% status_badge cr.status cr.get_status_display %}</div>
 <section class="card">
   <dl class="meta">
     <dt>Request</dt><dd>{{ cr.code }}, sent {{ cr.created_at|date:"j M Y" }}{% if cr.on_behalf %} by our team on your behalf{% endif %}</dd>

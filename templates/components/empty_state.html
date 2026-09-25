@@ -1,0 +1,6 @@
+{# A message plus one working action: {% include "components/empty_state.html" with message="No services yet." action_url=url action_label="Order New Services" icon="bi-box" %} #}
+<div class="empty-state">
+  <i class="bi {{ icon|default:'bi-inbox' }}" aria-hidden="true"></i>
+  <p>{{ message }}</p>
+  {% if action_url %}<a class="btn btn-primary" href="{{ action_url }}">{{ action_label }}</a>{% endif %}
+</div>

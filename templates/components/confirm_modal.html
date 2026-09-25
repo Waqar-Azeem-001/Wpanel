@@ -1,0 +1,17 @@
+{% load i18n %}
+{# One confirmation dialog for the whole site: any form or button with data-confirm="..." asks here first (static/js/app.js). #}
+<div class="modal fade" id="confirm-modal" tabindex="-1" aria-labelledby="confirm-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="confirm-modal-title">{% trans "Please confirm" %}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+      </div>
+      <div class="modal-body" data-confirm-message></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-danger" data-confirm-accept>{% trans "Yes, continue" %}</button>
+      </div>
+    </div>
+  </div>
+</div>

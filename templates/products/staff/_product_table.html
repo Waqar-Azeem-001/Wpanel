@@ -1,3 +1,4 @@
+{% load ui %}
 <div class="table-wrap">
 <table class="table">
   <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Prices</th><th>Created</th></tr></thead>
@@ -6,7 +7,7 @@
     <tr>
       <td><a href="{% url 'catalog_staff:product_detail' product.slug %}">{{ product.name }}</a></td>
       <td>{{ product.get_type_display }}</td>
-      <td><span class="badge status-{{ product.status }}">{{ product.get_status_display }}</span></td>
+      <td>{% status_badge product.status product.get_status_display %}</td>
       <td>{{ product.prices.count }}</td>
       <td>{{ product.created_at|date:"Y-m-d" }}</td>
     </tr>

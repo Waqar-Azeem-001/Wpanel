@@ -1,9 +1,10 @@
+{% load ui %}
 <section class="card">
   <h2>Billing term</h2>
   {% if account.billing_cycle and account.expires_at %}
   <dl class="meta">
     <dt>Billing cycle</dt><dd>{% if account.billing_cycle == "custom" %}{{ account.custom_months }} months{% else %}{{ account.billing_cycle|capfirst }}{% endif %}</dd>
-    <dt>Paid through</dt><dd>{{ account.expires_at|date:"j M Y" }} {% if account.term_expired %}<span class="badge status-overdue">Expired</span>{% else %}<small class="muted">({{ account.expires_at|timeuntil }} left)</small>{% endif %}</dd>
+    <dt>Paid through</dt><dd>{{ account.expires_at|date:"j M Y" }} {% if account.term_expired %}{% status_badge "overdue" "Expired" %}{% else %}<small class="muted">({{ account.expires_at|timeuntil }} left)</small>{% endif %}</dd>
     {% if staff %}<dt>Term started</dt><dd>{{ account.term_start|date:"j M Y" }}</dd>
     <dt>Paid for this term</dt><dd>{{ account.term_paid }} <small class="muted">(excl. tax and setup)</small></dd>{% endif %}
   </dl>

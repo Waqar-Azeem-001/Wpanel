@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Cancellations · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -18,9 +19,9 @@
   {% for cr in page %}
     <tr><td><a href="{% url 'lifecycle_staff:cancellation' cr.pk %}">{{ cr.code }}</a></td><td>{{ cr.service_name }} <small class="muted">{{ cr.kind }}</small></td>
         <td>{{ cr.client.display_name }}</td><td>{{ cr.get_reason_code_display }}</td><td>{{ cr.get_timing_display }}</td>
-        <td><span class="badge status-{{ cr.status }}">{{ cr.get_status_display }}</span>{% if cr.needs_attention %} <span class="badge status-failed">Needs attention</span>{% endif %}</td>
+        <td>{% status_badge cr.status cr.get_status_display %}{% if cr.needs_attention %} {% status_badge "failed" "Needs attention" %}{% endif %}</td>
         <td>{{ cr.created_at|date:"j M" }}</td></tr>
   {% empty %}<tr><td colspan="7" class="muted">No cancellation requests match.</td></tr>{% endfor %}
   </tbody></table></div>
-{% include "billing/_pager.html" %}
+{% include "components/pager.html" %}
 {% endblock %}

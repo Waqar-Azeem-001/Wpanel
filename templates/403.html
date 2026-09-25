@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Not allowed · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="code" aria-hidden="true">403</div>
+  <h1>You do not have access to this page</h1>
+  <p class="muted">{% if user.is_authenticated %}Your account is not allowed to open it. If you think it should be, ask an administrator to give you access{% if brand.support_email %} (<a href="mailto:{{ brand.support_email }}">{{ brand.support_email }}</a>){% endif %}.{% else %}Please sign in first.{% endif %}</p>
+  <p>
+    <a class="btn btn-primary" href="{% url 'home' %}">Back to the dashboard</a>
+    {% if not user.is_authenticated %}<a class="btn btn-outline-primary" href="{% url 'accounts:login' %}">Sign in</a>{% endif %}
+  </p>
+</div>
+{% endblock %}

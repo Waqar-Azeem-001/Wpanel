@@ -26,6 +26,8 @@ urlpatterns = [
     path("account/affiliate/", include("apps.affiliates.urls_customer")),
     path("staff/affiliates/", include("apps.affiliates.urls_staff")),
     path("staff/reports/", include("apps.reports.urls")),
+    path("staff/settings/brand/", include("apps.branding.urls_staff")),
+    path("", include("apps.branding.urls")),
     path("r/", include("apps.affiliates.urls_public")),
     path("staff/lifecycle/", include("apps.lifecycle.urls_staff")),
     path("account/support/", include("apps.support.urls_customer")),

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Hosting · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -19,7 +20,7 @@
       <td>{{ account.client.display_name }}</td>
       <td>{{ account.product.name }}</td>
       <td>{{ account.server|default:"—" }}</td>
-      <td><span class="badge status-{{ account.status }}">{{ account.get_status_display }}</span></td>
+      <td>{% status_badge account.status account.get_status_display %}</td>
     </tr>
   {% empty %}
     <tr><td colspan="6" class="muted">No hosting accounts match.</td></tr>

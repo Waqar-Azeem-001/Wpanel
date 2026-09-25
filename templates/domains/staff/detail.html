@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% load lifecycle %}
 {% block title %}{{ domain.name }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
@@ -6,7 +7,7 @@
 <p><a href="{% url 'domains_staff:list' %}">&larr; All domains</a></p>
 <div class="page-head">
   <h1>{{ domain.name }}</h1>
-  <span class="badge status-{{ domain.status }}">{{ domain.get_status_display }}</span>
+  {% status_badge domain.status domain.get_status_display %}
 </div>
 <p class="muted">Client: <a href="{% url 'clients_staff:detail' domain.client.pk %}">{{ domain.client.display_name }}</a></p>
 

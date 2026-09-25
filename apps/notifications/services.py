@@ -71,7 +71,9 @@ def _connection_and_sender():
 
 def render_email(template, context):
     """Render ``emails/<template>_subject.txt``, ``.txt`` and optional ``.html``."""
-    ctx = {"site_name": settings.SITE_NAME, "site_url": settings.SITE_URL, **context}
+    from apps.branding import services as branding
+
+    ctx = {"site_name": branding.get().name, "site_url": settings.SITE_URL, **context}
     subject = " ".join(render_to_string(f"emails/{template}_subject.txt", ctx).split())
     body_text = render_to_string(f"emails/{template}.txt", ctx)
     try:
@@ -82,14 +84,19 @@ def render_email(template, context):
 
 
 def html_from_text(text):
-    """A simple, safe HTML version of a plain-text email: escaped, paragraphs kept, web addresses made clickable."""
+    """A safe HTML version of a plain-text email in the branded email layout: escaped, paragraphs kept, links live."""
+    from django.template.loader import render_to_string
+
+    from apps.branding import services as branding
+
     paragraphs = []
     for block in text.replace("\r", "").strip().split("\n\n"):
         escaped = html.escape(block.strip())
         linked = URL_RE.sub(lambda m: f'<a href="{m.group(1)}">{m.group(1)}</a>', escaped)
         paragraphs.append(f"<p>{linked.replace(chr(10), '<br>')}</p>")
-    return ('<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1d2330">'
-            + "".join(paragraphs) + "</div>")
+    brand = branding.get()
+    logo_url = (settings.SITE_URL.rstrip("/") + reverse("brand_logo") + f"?v={brand.version}") if brand.has_logo else ""
+    return render_to_string("layouts/email.html", {"brand": brand, "logo_url": logo_url, "body": "".join(paragraphs)})
 
 
 def _with_open_pixel(body_html, token):
@@ -97,7 +104,7 @@ def _with_open_pixel(body_html, token):
         return body_html
     pixel = (f'<img src="{settings.SITE_URL.rstrip("/")}{reverse("email_open_pixel", args=[token])}" width="1" height="1" alt="" '
              'style="display:none">')
-    return body_html + pixel
+    return body_html.replace("</body>", pixel + "</body>", 1) if "</body>" in body_html else body_html + pixel
 
 
 # --- Sending ----------------------------------------------------------------------------------------------------

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{{ product.name }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'catalog_staff:product_list' %}">&larr; All products</a></p>
 <div class="page-head">
   <h1>{{ product.name }}</h1>
-  <span class="badge status-{{ product.status }}">{{ product.get_status_display }}</span>
+  {% status_badge product.status product.get_status_display %}
 </div>
 
 <div class="cols">
@@ -32,7 +33,7 @@
     <h2>Status</h2>
     {% if can_manage %}
     <form method="post" action="{% url 'catalog_staff:product_status' product.slug %}">{% csrf_token %}
-      <div class="field">{{ status_form.status }}</div>
+      <div class="field"><label class="visually-hidden" for="{{ status_form.status.id_for_label }}">Status</label>{{ status_form.status }}</div>
       <button class="btn secondary" type="submit">Update status</button>
     </form>
     {% else %}<p>{{ product.get_status_display }}</p>{% endif %}

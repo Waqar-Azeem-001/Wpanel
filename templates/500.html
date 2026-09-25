@@ -1,0 +1,22 @@
+{% load static %}<!doctype html>
+{# Standalone on purpose: Django renders this with no request, no context processors and no database, because it is shown when something is already broken. #}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Something went wrong</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+</head>
+<body>
+  <main class="page" id="main">
+    <div class="error-page">
+      <div class="code" aria-hidden="true">500</div>
+      <h1>Something went wrong on our side</h1>
+      <p class="text-secondary">The problem has been recorded and we are looking into it. Please try again in a few minutes.</p>
+      <p><a class="btn btn-primary" href="{% url 'home' %}">Go to the home page</a>
+         <a class="btn btn-outline-primary" href="{% url 'help:index' %}">Visit the knowledgebase</a></p>
+    </div>
+  </main>
+</body>
+</html>

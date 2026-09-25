@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Test payment · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <section class="card">
@@ -7,7 +8,7 @@
   <dl class="meta">
     <dt>Invoice</dt><dd>{{ tx.invoice.number }}</dd>
     <dt>Amount</dt><dd>{{ tx.currency }} {{ tx.amount }}</dd>
-    <dt>Status</dt><dd><span class="badge status-{{ tx.status }}">{{ tx.get_status_display }}</span></dd>
+    <dt>Status</dt><dd>{% status_badge tx.status tx.get_status_display %}</dd>
   </dl>
   {% if tx.status == "pending" %}
   <div class="actions">

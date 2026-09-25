@@ -871,7 +871,7 @@ Before marking any phase 🟢:
 | Phase | Status | Tests | Browser | Links | Commit | Deploy |
 |---|---|---|---|---|---|---|
 | D0 UI & Navigation Audit | 🟢 | 1220 ✅ | ✅ | prototype crawler: 8 roles, 0 broken | dd1c88a | — |
-| D1 Design System & Shell | ⬜ | — | — | — | — | — |
+| D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | see git log | — |
 | D2 Link Integrity Harness | ⬜ | — | — | — | — | — |
 | D3 Client Area Parity | ⬜ | — | — | — | — | — |
 | D4 Staff Area Parity | ⬜ | — | — | — | — | — |
@@ -879,7 +879,7 @@ Before marking any phase 🟢:
 
 ## Recommended order
 
-D0 → D1 → D2 → D3 → (14 Reports: done) → D4 + 15 Admin Operations → 16 Security → 17 Reliability → D5 → 18 → 19
+D0 ✅ → D1 ✅ → D2 → D3 → (14 Reports: done) → D4 + 15 Admin Operations → 16 Security → 17 Reliability → D5 → 18 → 19
 
 ------------------------------------------------------------------------
 
@@ -946,10 +946,11 @@ Use this section whenever something is discovered but intentionally postponed.
 | Local payment gateway adapters (e.g. JazzCash, Easypaisa, bank payment gateways) | Deferred (new) | Choose provider first; one adapter class each | When chosen |
 | Phase 14 follow-ups from v2: product-sales, tax-collected, coupon-usage, churn, response-time and affiliate reports; orders-by-status view; charts; heavy reports as Celery jobs with a durable download link | Deferred | The 14 delivered reports cover the MVP list; these need a chart approach (D1 design system) and the job/status pattern | Phase 15 / D4 |
 | Reports: no scheduled or emailed reports, saved views or currency conversion; no chargeback data; "cancelled services" covers portal cancellations only | Deferred | On-demand CSV/XLSX/PDF only; the portal has no dispute records | Post-MVP |
-| Error pages (403/404/500) are Django defaults: unbranded, no navigation | Open (found in D0) | Rule 5.8; needs the shell | D1 / D2 |
-| Ten form fields without a label (product/server status selects, invoice and quote line inputs, invoice cancel reason) | Open (found in D0) | WCAG 2.1 AA; in forms being re-skinned | D3 / D4 |
+| Error pages: branded 403/404/400, standalone 500 and maintenance page exist (D1); the crawler still has to prove every link on them, and Nginx must serve the maintenance page | Partly closed (D1) | Rule 5.8 | D2 / Phase 15 |
 | Customers have no menu link to their cancellation requests | Open (found in D0) | Reachable only from a service page and notification links | D3 |
-| htmx loaded from a CDN and effectively unused; no design tokens, no focus styles, one 172-line stylesheet; brand (logo, favicon, colour, footer) not configurable; no i18n wrapping | Open (found in D0) | v2 Sections 3 and 9 | D1 |
+| Page templates still use the old class names through `static/css/legacy.css` and are not yet wrapped for translation (shells and components are) | Open (D1 bridge) | Re-skinned screen by screen; delete the rules as they become unused | D3 / D4 |
+| Vendored Bootstrap 5.3.3, Bootstrap Icons 1.11.3 and htmx 2.0.4 are updated by hand | Deferred | No package manager for front-end assets; versions recorded here | Post-MVP |
+| Dark mode follows the system setting only (no manual toggle); HTML emails are the text email in a branded frame | Deferred | Not required by v2 | Post-MVP |
 | Static files use default storage, not `ManifestStaticFilesStorage` | Open (found in D0) | A CSS reference to a missing file would not fail collectstatic | D2 |
 | Path prefixes: customer area stays `/account/...` (v2 says `/client/...`); add vanity redirects `/login/`, `/register/`, `/store/`, `/knowledgebase/` | Decided in D0 | Links already emailed must keep working; renaming buys only cosmetics | D2 |
 | Staff UI still missing for: staff users and roles, payment providers, registrar provider, email provider, audit log viewer; no staff dashboard or global search | Open (found in D0) | Django admin only today | D4 / Phase 15 |
@@ -973,6 +974,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Unsuspend-on-payment | Phase 12 | A paid renewal lifts a non-payment suspension |
 | Staff not notified of reported offline payment | Phase 11 | Team alert to billing staff |
 | Basic reports (sales, financial, services, support) with PDF/CSV/XLSX export | Phase 14 | 14 reports, audited, formula-safe exports, API |
+| Runtime CDN dependency; unbranded errors; hand-coloured status badges; unlabelled form fields; no focus styles; brand not configurable | D1 | Assets vendored; branded error pages; one status-badge tag; labels added and tested; focus rings; brand settings in the database (colours checked for contrast) |
 | Server errors from junk or NUL characters in the address or forms; two "create" pages that 404 without `?client=`; hand-built internal URLs | D0 | `query_id` helper, `StripNullBytesMiddleware`, redirects to the client chooser, `reverse()` everywhere; regression tests |
 
 ------------------------------------------------------------------------
@@ -1042,25 +1044,30 @@ Use this section whenever something is discovered but intentionally postponed.
 | Reports read the permanent records (money from successful transactions, never stored totals); a report needs `view_reports` and its area's permission; every export is audited and neutralises spreadsheet formulas | A report can never disagree with the ledger; exports leave the portal's control | Active |
 | The customer area stays under `/account/`; v2's `/client/` prefix is not adopted; short vanity redirects are added instead | Verification/reset/invoice links already sent must keep working | Active (D0 decision; revisit in D2 if the owner prefers `/client/`) |
 | A query-string id is parsed by `core.web.query_id` (junk = not given); NUL characters are stripped from queries and forms by middleware | PostgreSQL rejects NUL and a junk id must never be a server error; SQLite hid both | Active |
+| Bootstrap 5.3.3 + Bootstrap Icons + htmx are vendored into `static/vendor/`; our tokens (`theme.css`) sit on top and the brand arrives through `/brand.css` | No framework existed; no runtime CDN; brand colours without inline style | Active |
+| One layout shell per audience (public, client, staff), chosen per request by a context processor; `base.html` is an alias | Every page moves into the new shell without being edited; new pages extend a shell directly | Active |
+| Status colour is decided in one template tag (`{% status_badge %}`) from the roadmap map; a text label is always shown | One vocabulary; unknown statuses are neutral, never uncoloured | Active |
+| Brand (name, logo, favicon, colours, footer, formats) is a database record; primary colour must give 4.5:1 contrast with white; images are validated by content and never SVG | Rule 6; readable buttons; an uploaded file must never run as script | Active |
+| `static/css/legacy.css` is a bridge for the old class names and receives no new rules | Retired screen by screen in D3/D4 | Active |
 
 ------------------------------------------------------------------------
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–14 are 🟢. Phase D0 (UI & Navigation Audit) is done: see `docs/d0-ui-navigation-audit.md` (the gap report; Sections 10-11 are mapped there as exists / partial / missing) and `docs/route-inventory.md` (414 routes; regenerate with `python manage.py route_inventory`).
+Phases 01–14, D0 and D1 are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md` (what the shells, components and brand settings are) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`).
 
-## Start: Phase D1 — Design System & Layout Shell
+## Start: Phase D2 — Link Integrity Harness
 
-**Do not start coding before Rule 1 inspection of what D0 found.** Then, per the D0 report ("CHANGES → D1"):
+**Do not start coding before Rule 1 inspection.** Then, per the D0 report ("CHANGES → D2"):
 
-1. Vendor Bootstrap 5 and one icon set (and htmx) into `static/`; remove the runtime CDN reference; one stylesheet entry point with our tokens (brand colour from settings).
-2. Build the shells `layouts/public.html`, `client.html`, `staff.html`, `document.html`, `email.html`; keep `base.html` as a thin alias until every template is moved. **No URL name, service or API contract changes.**
-3. Build the components of Section 9.4, including the single status-badge tag (replacing the 53 hand-coloured badge uses), breadcrumbs, empty states, the confirmation modal, focus styles, money/date/ID filters, i18n-wrapped strings, and fix the ten unlabelled fields.
-4. Brand settings in the database (name, logo, favicon, colour, support email, footer).
-5. Branded 403 / 404 / 500 templates and a maintenance page.
-6. D1 ends with the existing pages rendering inside the new shell, the whole suite and `apps/core/test_link_integrity.py` green, and a browser check at 375 / 768 / 1280 px.
+1. `apps/core/navigation.py`: the **menu registry** (key, label, URL name, permission, area, parent, feature flag, badge). Generate the three navbars in `templates/components/navbar_*.html` from it; a registry test reverses every entry and checks every parent. Active-state highlighting and breadcrumbs derive from the same registry.
+2. Promote the D0 crawler to a **CI test** (roles: anonymous, customer owner, billing contact, technical contact, support agent, manager, admin, super admin) with a fixture that has **one object in every status** (orders, invoices, quotes, transactions, tickets, hosting, domains, cancellations, commissions, payouts, plus knowledgebase articles, an addon, a coupon and a failed email). It follows `href`, GET form `action`, `hx-get`, `src`, `<link>`, and fails on 404, 500, or a 403 on a link the page displayed. `apps/core/test_link_integrity.py` and `apps/core/test_ui.py` already hold the lint, the hostile-query sweep, the navigation-agreement test and the asset checks to build on.
+3. Email-link test (every link in every email template resolves and uses the configured HTTPS site address), PDF-link test, redirect test, safe-`next` test.
+4. `ManifestStaticFilesStorage` (a missing file referenced from CSS fails the build) and a check that `collectstatic` succeeds.
+5. Vanity redirects `/login/`, `/register/`, `/store/`, `/knowledgebase/` (301, no URL name changes).
+6. D2 ends with the crawler green for every role, the template lint green, and the tracker "Links" column filled for D0-D2.
 
-Then D2 (menu registry, the real crawler as a CI gate, vanity redirects, static manifest storage), D3, D4 + Phase 15, and so on per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
+Then D3 (client-area parity: dashboard, sidebars, service/domain tabs, per Section 10 and the D0 mapping), then D4 + Phase 15, and so on per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
 
 ------------------------------------------------------------------------
 

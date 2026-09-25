@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Email · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <p><a href="{% url 'notifications_staff:emails' %}">&larr; Email log</a></p>
-<div class="page-head"><h1>{{ message.subject }}</h1><span class="badge status-{{ message.status }}">{{ message.get_status_display }}</span></div>
+<div class="page-head"><h1>{{ message.subject }}</h1>{% status_badge message.status message.get_status_display %}</div>
 <div class="cols">
   <section class="card">
     <h2>Message</h2>

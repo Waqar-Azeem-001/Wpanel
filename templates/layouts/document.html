@@ -1,0 +1,23 @@
+{% load static %}<!doctype html>
+{# Printable documents (invoices, quotes): no navigation, print-first. #}
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% url 'brand_css' %}?v={{ brand.version }}">
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+  <link rel="stylesheet" href="{% static 'css/legacy.css' %}">
+</head>
+<body class="bg-white">
+  <main class="page document" id="main">
+    <header class="d-flex justify-content-between align-items-start mb-4">
+      <div>{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="" style="max-height:48px">{% endif %}<strong class="fs-4 d-block">{{ SITE_NAME }}</strong></div>
+      <div class="text-end">{% block document_meta %}{% endblock %}</div>
+    </header>
+    {% block content %}{% endblock %}
+    <footer class="mt-5 pt-3 border-top text-muted small">{% if brand.footer_text %}{{ brand.footer_text }}{% else %}{{ SITE_NAME }}{% endif %}{% if brand.support_email %} &middot; {{ brand.support_email }}{% endif %}</footer>
+  </main>
+</body>
+</html>

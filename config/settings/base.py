@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "apps.lifecycle",
     "apps.affiliates",
     "apps.reports",
+    "apps.branding",
     "apps.support",
 ]
 
@@ -90,7 +91,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "apps.core.context_processors.site",
+                "apps.branding.context_processors.brand",
+                "apps.core.context_processors.layout",
                 "apps.orders.context_processors.cart_summary",
                 "apps.notifications.context_processors.unread_notifications",
             ],
