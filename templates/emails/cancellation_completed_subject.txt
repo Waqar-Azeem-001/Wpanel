@@ -1,0 +1,1 @@
+{{ service }} has been cancelled - {{ site_name }}

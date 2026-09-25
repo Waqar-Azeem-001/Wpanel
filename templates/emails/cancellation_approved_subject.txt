@@ -1,0 +1,1 @@
+Your cancellation of {{ service }} was approved - {{ site_name }}

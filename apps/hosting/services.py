@@ -185,7 +185,7 @@ def cancel_request(actor, account, *, reason="", request=None):
 
 # --- Lifecycle: suspend, unsuspend, terminate, change package -------------------------------
 
-def suspend_account(actor, account, *, reason="", request=None):
+def suspend_account(actor, account, *, reason="", for_nonpayment=False, request=None):
     _require(actor, "manage_hosting")
     if account.status != HostingStatus.ACTIVE:
         raise ServiceError("Only an active account can be suspended.", code="invalid_status")
@@ -200,9 +200,10 @@ def suspend_account(actor, account, *, reason="", request=None):
         raise ServiceError(f"Suspend failed: {exc}", code="adapter_error") from exc
 
     account.status, account.suspend_reason, account.last_error = HostingStatus.SUSPENDED, reason, ""
-    account.save(update_fields=["status", "suspend_reason", "last_error", "updated_at"])
-    audit.record("hosting.suspended", actor=actor, target=account, metadata={"reason": reason[:500]},
-                 request=request)
+    account.suspended_for_nonpayment = for_nonpayment
+    account.save(update_fields=["status", "suspend_reason", "suspended_for_nonpayment", "last_error", "updated_at"])
+    audit.record("hosting.suspended", actor=actor, target=account,
+                 metadata={"reason": reason[:500], "for_nonpayment": for_nonpayment}, request=request)
     _announce(account, "hosting.suspended", f"{account.domain} has been suspended", reason=reason)
     return account
 
@@ -222,7 +223,8 @@ def unsuspend_account(actor, account, *, request=None):
         raise ServiceError(f"Unsuspend failed: {exc}", code="adapter_error") from exc
 
     account.status, account.suspend_reason, account.last_error = HostingStatus.ACTIVE, "", ""
-    account.save(update_fields=["status", "suspend_reason", "last_error", "updated_at"])
+    account.suspended_for_nonpayment = False
+    account.save(update_fields=["status", "suspend_reason", "suspended_for_nonpayment", "last_error", "updated_at"])
     audit.record("hosting.unsuspended", actor=actor, target=account, request=request)
     _announce(account, "hosting.unsuspended", f"{account.domain} is active again")
     return account

@@ -1,0 +1,10 @@
+{% autoescape off %}Hello,
+
+{{ service }} has been cancelled and will not renew.{% if cancellation.review_note %}
+
+Note from our team: {{ cancellation.review_note }}{% endif %}
+
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

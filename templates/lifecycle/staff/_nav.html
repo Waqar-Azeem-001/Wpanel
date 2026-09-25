@@ -1,0 +1,5 @@
+<nav class="subnav">
+  <a href="{% url 'lifecycle_staff:overview' %}"{% if section == "overview" %} class="active"{% endif %}>Overview</a>
+  <a href="{% url 'lifecycle_staff:cancellations' %}"{% if section == "cancellations" %} class="active"{% endif %}>Cancellations</a>
+  {% if perms.accounts.view_settings %}<a href="{% url 'lifecycle_staff:settings' %}"{% if section == "settings" %} class="active"{% endif %}>Timings</a>{% endif %}
+</nav>

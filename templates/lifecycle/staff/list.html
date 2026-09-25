@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Cancellations · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Service lifecycle</h1>
+{% include "lifecycle/staff/_nav.html" %}
+<form class="filters" method="get">
+  <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ q }}" placeholder="Domain or client"></div>
+  <div class="field"><label for="id_status">Status</label>
+    <select name="status" id="id_status"><option value="open"{% if status == "open" %} selected{% endif %}>Open</option><option value="all"{% if status == "all" %} selected{% endif %}>All</option>{% for value, label in statuses %}<option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="id_kind">Service</label>
+    <select name="kind" id="id_kind"><option value="">All</option><option value="hosting"{% if kind == "hosting" %} selected{% endif %}>Hosting</option><option value="domain"{% if kind == "domain" %} selected{% endif %}>Domains</option></select></div>
+  <div class="field"><button class="btn secondary" type="submit">Filter</button></div>
+</form>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Request</th><th>Service</th><th>Client</th><th>Reason</th><th>When</th><th>Status</th><th>Sent</th></tr></thead>
+  <tbody>
+  {% for cr in page %}
+    <tr><td><a href="{% url 'lifecycle_staff:cancellation' cr.pk %}">{{ cr.code }}</a></td><td>{{ cr.service_name }} <small class="muted">{{ cr.kind }}</small></td>
+        <td>{{ cr.client.display_name }}</td><td>{{ cr.get_reason_code_display }}</td><td>{{ cr.get_timing_display }}</td>
+        <td><span class="badge status-{{ cr.status }}">{{ cr.get_status_display }}</span>{% if cr.needs_attention %} <span class="badge status-failed">Needs attention</span>{% endif %}</td>
+        <td>{{ cr.created_at|date:"j M" }}</td></tr>
+  {% empty %}<tr><td colspan="7" class="muted">No cancellation requests match.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% include "billing/_pager.html" %}
+{% endblock %}

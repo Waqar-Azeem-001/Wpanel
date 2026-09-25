@@ -22,6 +22,8 @@ urlpatterns = [
     path("staff/billing/", include("apps.billing.urls_staff")),
     path("account/billing/", include("apps.billing.urls_customer")),
     path("account/renewals/", include("apps.renewals.urls_customer")),
+    path("account/cancellations/", include("apps.lifecycle.urls_customer")),
+    path("staff/lifecycle/", include("apps.lifecycle.urls_staff")),
     path("account/support/", include("apps.support.urls_customer")),
     path("account/notifications/", include("apps.notifications.urls")),
     path("staff/notifications/", include("apps.notifications.urls_staff")),

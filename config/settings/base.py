@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "apps.billing",
     "apps.orders",
     "apps.renewals",
+    "apps.lifecycle",
     "apps.support",
 ]
 
@@ -228,6 +229,10 @@ SPECTACULAR_SETTINGS = {
         "TicketMessageKindEnum": "apps.support.models.MessageKind",
         "ServiceChangeKindEnum": "apps.renewals.models.ChangeKind",
         "ServiceChangeStatusEnum": "apps.renewals.models.ChangeStatus",
+        "CancellationStatusEnum": "apps.lifecycle.models.CancellationStatus",
+        "CancellationReasonEnum": "apps.lifecycle.models.CancellationReason",
+        "CancellationTimingEnum": "apps.lifecycle.models.Timing",
+        "LifecycleStageEnum": "apps.lifecycle.models.Stage",
     },
 }
 
@@ -248,6 +253,10 @@ CELERY_BEAT_SCHEDULE = {
     "send-invoice-reminders": {
         "task": "apps.billing.tasks.send_invoice_reminders_task",
         "schedule": crontab(hour=8, minute=0),
+    },
+    "run-service-lifecycle": {
+        "task": "apps.lifecycle.tasks.run_lifecycle_task",
+        "schedule": crontab(hour=5, minute=0),
     },
     "purge-sensitive-emails": {
         "task": "apps.notifications.tasks.purge_sensitive_emails_task",

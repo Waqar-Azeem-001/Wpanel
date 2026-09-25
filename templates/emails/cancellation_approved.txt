@@ -1,0 +1,12 @@
+{% autoescape off %}Hello,
+
+Your request to cancel {{ service }} was approved.{% if cancellation.effective_at %} The service ends {{ ends_text }}.{% endif %}
+{% if cancellation.review_note %}
+Note from our team: {{ cancellation.review_note }}
+{% endif %}{% if cancellation.refund_amount %}
+A refund of {{ cancellation.refund_payment.currency }} {{ cancellation.refund_amount }} has been arranged.
+{% endif %}
+Until then you can still withdraw the request: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

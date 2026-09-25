@@ -38,6 +38,7 @@ from apps.products.models import STANDARD_CYCLE_MONTHS, BillingCycle, CatalogSta
 
 from .models import ChangeKind, ChangeStatus, ServiceChange
 from .proration import Credit, add_months, unused_credit
+from .signals import service_renewed
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +152,7 @@ def require_upgradeable(account):
     if account.status != HostingStatus.ACTIVE:
         raise ServiceError("Only an active account can be upgraded.", code="invalid_status")
     _require_term(account)
+    _require_not_cancelling(account)
 
 
 def _require_term(account):
@@ -162,6 +164,13 @@ def _require_term(account):
 
 
 # --- Creating the invoice and the change ------------------------------------------------------------------
+
+def _require_not_cancelling(service):
+    """A service with an open cancellation request is not renewed or upgraded (withdraw the request first)."""
+    if service.cancellation_requests.filter(status__in=("pending", "approved")).exists():
+        raise ServiceError("There is a cancellation request for this service. Withdraw it before renewing.",
+                           code="cancellation_open")
+
 
 def _pending_change(*, hosting=None, domain=None):
     queryset = ServiceChange.objects.filter(status=ChangeStatus.PENDING).select_related("invoice")
@@ -185,6 +194,7 @@ def _hosting_renewal(actor, account, *, request=None, notify=True):
     if account.status not in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED):
         raise ServiceError("Only an active or suspended account can be renewed.", code="invalid_status")
     _require_term(account)
+    _require_not_cancelling(account)
     pending = _pending_change(hosting=account)
     if pending is not None:
         if pending.kind == ChangeKind.RENEWAL:
@@ -227,6 +237,7 @@ def _domain_renewal(actor, domain, years, *, request=None, notify=True):
     domain = Domain.objects.select_for_update().get(pk=domain.pk)
     if domain.status != DomainStatus.ACTIVE:
         raise ServiceError("Only an active domain can be renewed.", code="invalid_status")
+    _require_not_cancelling(domain)
     pricing = domain_services.get_tld_pricing(domain.tld, require_active=False)
     if not isinstance(years, int) or not (1 <= years <= pricing.max_years):
         raise ServiceError(f"Choose a term between 1 and {pricing.max_years} years.", code="invalid_term")
@@ -456,6 +467,7 @@ def _apply(change, actor=None):
                                                "change_id": change.pk, "new_expiry": _day(expires),
                                                "months": change.period_months})
         _announce_applied(change, service, expires)
+        service_renewed.send(sender=ServiceChange, change=change, service=service)
         return change
     change.status, change.error = ChangeStatus.FAILED, error[:500]
     change.save(update_fields=["status", "error", "updated_at"])
@@ -525,10 +537,12 @@ def due_for_renewal(*, now=None, lead_days=None):
     hosting = (HostingAccount.objects.filter(status=HostingStatus.ACTIVE, expires_at__isnull=False,
                                              expires_at__lte=horizon)
                .exclude(billing_cycle="").exclude(pk__in=pending.filter(hosting_account__isnull=False)
-                                                  .values("hosting_account_id")).order_by("expires_at"))
+                                                  .values("hosting_account_id"))
+               .exclude(cancellation_requests__status__in=("pending", "approved")).order_by("expires_at"))
     domains = (Domain.objects.filter(status=DomainStatus.ACTIVE, auto_renew=True, expires_at__isnull=False,
                                      expires_at__lte=horizon)
-               .exclude(pk__in=pending.filter(domain__isnull=False).values("domain_id")).order_by("expires_at"))
+               .exclude(pk__in=pending.filter(domain__isnull=False).values("domain_id"))
+               .exclude(cancellation_requests__status__in=("pending", "approved")).order_by("expires_at"))
     return list(hosting), list(domains)
 
 

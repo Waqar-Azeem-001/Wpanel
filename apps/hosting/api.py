@@ -6,13 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.clients.models import Client
+from apps.lifecycle.serializers import LifecycleStageMixin
 from apps.products.models import Product, Server
 
 from . import services
 from .models import HostingAccount
 
 
-class HostingAccountSerializer(serializers.ModelSerializer):
+class HostingAccountSerializer(LifecycleStageMixin, serializers.ModelSerializer):
     client_name = serializers.CharField(source="client.display_name", read_only=True)
     product_name = serializers.CharField(source="product.name", read_only=True)
     server_name = serializers.CharField(source="server.name", read_only=True, default=None)
@@ -22,7 +23,7 @@ class HostingAccountSerializer(serializers.ModelSerializer):
         fields = ["id", "client", "client_name", "product", "product_name", "server", "server_name", "domain",
                   "username", "status", "package_name", "suspend_reason", "last_error", "last_synced_at",
                   "disk_used_mb", "disk_limit_mb", "bandwidth_used_mb", "bandwidth_limit_mb", "created_at",
-                  "updated_at"]
+                  "updated_at", "lifecycle_stage"]
         read_only_fields = ["id", "username", "status", "package_name", "suspend_reason", "last_error",
                             "last_synced_at", "disk_used_mb", "disk_limit_mb", "bandwidth_used_mb",
                             "bandwidth_limit_mb", "created_at", "updated_at"]

@@ -1,0 +1,1 @@
+Final notice: {{ account.domain }} will be suspended - {{ site_name }}

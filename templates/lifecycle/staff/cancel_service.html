@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Cancel {{ name }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% if kind == 'hosting' %}{% url 'hosting_staff:detail' service.pk %}{% else %}{% url 'domains_staff:detail' service.pk %}{% endif %}">&larr; {{ name }}</a></p>
+<h1>Cancel {{ name }}</h1>
+<section class="card">
+  <p>Client: <a href="{% url 'clients_staff:detail' service.client_id %}">{{ service.client.display_name }}</a>.
+    {% if kind == "hosting" %}An immediate cancellation terminates the account now (the customer's data is deleted) and cancels any unpaid renewal invoice.
+    {% if suggested %}Unused part of the paid term (excl. tax): <strong>{{ suggested }}</strong>.{% endif %}
+    {% else %}A domain ends when it expires; auto-renew is turned off.{% endif %}</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="actions"><button class="btn danger" type="submit">Cancel service</button></div>
+  </form>
+</section>
+{% endblock %}

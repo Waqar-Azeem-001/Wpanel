@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Cancellation {{ cr.code }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'lifecycle_staff:cancellations' %}">&larr; Cancellations</a></p>
+<div class="page-head"><h1>Cancel {{ cr.service_name }}</h1><span class="badge status-{{ cr.status }}">{{ cr.get_status_display }}</span></div>
+{% if cr.needs_attention %}<div class="errors"><p>Could not be carried out: {{ cr.last_error }}</p></div>{% endif %}
+{% if cr.refund_error %}<div class="errors"><p>The service ended but the refund failed: {{ cr.refund_error }} Refund it from the invoice.</p></div>{% endif %}
+<div class="cols">
+  <section class="card">
+    <h2>Request</h2>
+    <dl class="meta">
+      <dt>Client</dt><dd><a href="{% url 'clients_staff:detail' cr.client_id %}">{{ cr.client.display_name }}</a></dd>
+      <dt>Service</dt><dd>{% if cr.kind == "hosting" %}<a href="{% url 'hosting_staff:detail' cr.hosting_account_id %}">{{ cr.service_name }}</a>{% else %}<a href="{% url 'domains_staff:detail' cr.domain_id %}">{{ cr.service_name }}</a>{% endif %}
+        {% if stage %}<span class="badge status-{{ stage }}">{{ stage }}</span>{% endif %}</dd>
+      <dt>Asked</dt><dd>{{ cr.created_at|date:"j M Y H:i" }} by {% if cr.on_behalf %}staff ({{ cr.requested_by.email|default:"unknown" }}){% else %}the customer{% endif %}</dd>
+      <dt>Wants</dt><dd>{{ cr.get_timing_display }}</dd>
+      <dt>Paid through</dt><dd>{{ cr.term_expires_at|date:"j M Y"|default:"&mdash;" }}</dd>
+      <dt>Reason</dt><dd>{{ cr.get_reason_code_display }}{% if cr.reason_text %} &mdash; {{ cr.reason_text }}{% endif %}</dd>
+      {% if cr.reviewed_at %}<dt>Reviewed</dt><dd>{{ cr.reviewed_at|date:"j M Y H:i" }} by {{ cr.reviewed_by.email|default:"&mdash;" }}</dd>{% endif %}
+      {% if cr.review_note %}<dt>Note to customer</dt><dd>{{ cr.review_note }}</dd>{% endif %}
+      {% if cr.effective_at %}<dt>Ends</dt><dd>{{ cr.effective_at|date:"j M Y H:i" }}</dd>{% endif %}
+      {% if cr.refund_amount %}<dt>Refund</dt><dd>{{ cr.refund_amount }}{% if cr.refund_transaction_id %} &mdash; <a href="{% url 'billing_staff:invoice_detail' cr.refund_transaction.invoice_id %}">recorded</a>{% else %} (not yet given){% endif %}</dd>{% endif %}
+    </dl>
+  </section>
+  <section class="card">
+    {% if approve_form %}
+    <h2>Approve</h2>
+    <p class="muted">Approving cancels any unpaid renewal invoice for this service{% if cr.kind == "domain" %} and turns off auto-renew{% endif %}.
+      {% if cr.kind == "hosting" %}An immediate cancellation ends the account now.{% endif %}</p>
+    {% if cr.kind == "hosting" and suggested %}<p class="muted">Unused part of the paid term (excl. tax): <strong>{{ suggested }}</strong> &mdash; a suggestion, not a promise.</p>{% endif %}
+    <form method="post" action="{% url 'lifecycle_staff:approve' cr.pk %}">{% csrf_token %}
+      {% include "partials/form.html" with form=approve_form %}
+      <div class="actions"><button class="btn" type="submit">Approve</button></div>
+    </form>
+    <h2>Decline</h2>
+    <form method="post" action="{% url 'lifecycle_staff:reject' cr.pk %}">{% csrf_token %}
+      {% include "partials/form.html" with form=reject_form %}
+      <div class="actions"><button class="btn secondary" type="submit">Decline</button></div>
+    </form>
+    {% elif cr.status == "pending" and not can_act %}<p class="muted">You can view this request but not act on it.</p>
+    {% elif cr.status == "approved" and can_act %}
+    <h2>Scheduled</h2>
+    <p>The service ends {{ cr.effective_at|date:"j M Y H:i" }}.</p>
+    <form method="post" action="{% url 'lifecycle_staff:retry' cr.pk %}">{% csrf_token %}<button class="btn" type="submit">Carry out now</button></form>
+    {% endif %}
+    {% if cr.status == "pending" or cr.status == "approved" %}{% if can_act %}
+    <form method="post" action="{% url 'lifecycle_staff:withdraw' cr.pk %}">{% csrf_token %}<button class="btn secondary" type="submit">Withdraw the request</button></form>
+    {% endif %}{% endif %}
+  </section>
+</div>
+{% endblock %}

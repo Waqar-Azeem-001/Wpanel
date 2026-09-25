@@ -161,3 +161,9 @@ input.short { width: 6rem; }
 label.check { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
 pre.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin: 0; }
 .badge.status-sent { color: var(--ok); } .badge.status-queued { color: var(--warn); }
+
+/* Phase 12: lifecycle stages and cancellation requests */
+.badge.status-renewal_due, .badge.status-grace, .badge.status-pending { color: var(--warn); }
+.badge.status-approved { color: var(--ok); }
+.badge.status-completed, .badge.status-withdrawn { color: var(--muted, #616e7c); }
+.badge.status-rejected { color: var(--danger); }

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load lifecycle %}
 {% block title %}{{ account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'hosting_customer:list' %}">&larr; My hosting</a></p>
@@ -19,4 +20,5 @@
   {% if account.status == "suspended" %}<p class="muted">Suspended: {{ account.suspend_reason }}</p>{% endif %}
 </section>
 {% include "renewals/_term_card.html" %}
+{% lifecycle_card account %}
 {% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Cancellation requests · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>Cancellation requests</h1>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Request</th><th>Service</th><th>When</th><th>Status</th><th>Sent</th></tr></thead>
+  <tbody>
+  {% for cr in page %}
+    <tr><td><a href="{% url 'lifecycle_customer:detail' cr.pk %}">{{ cr.code }}</a></td><td>{{ cr.service_name }}</td>
+        <td>{{ cr.get_timing_display }}</td><td><span class="badge status-{{ cr.status }}">{{ cr.get_status_display }}</span></td>
+        <td>{{ cr.created_at|date:"j M Y" }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="muted">You have not asked to cancel anything.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% include "billing/_pager.html" %}
+{% endblock %}

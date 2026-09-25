@@ -1,0 +1,9 @@
+{% autoescape off %}Hello,
+
+We received a request to cancel {{ service }} ({{ cancellation.get_timing_display|lower }}).
+Reason: {{ cancellation.get_reason_code_display }}{% if cancellation.reason_text %} - {{ cancellation.reason_text }}{% endif %}
+
+Nothing has changed yet: our team will review it and let you know. You can withdraw the request until it has been carried out: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

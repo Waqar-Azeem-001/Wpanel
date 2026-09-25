@@ -1,0 +1,1 @@
+We received your request to cancel {{ service }} - {{ site_name }}

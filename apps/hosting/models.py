@@ -49,6 +49,8 @@ class HostingAccount(TimeStampedModel):
     # rename or reconfiguration of the product doesn't retroactively rewrite history.
     package_name = models.CharField(max_length=100, blank=True)
     suspend_reason = models.CharField(max_length=500, blank=True)
+    suspended_for_nonpayment = models.BooleanField(
+        default=False, help_text="Suspended automatically because the renewal was not paid; lifted when it is.")
     last_error = models.TextField(blank=True)
     last_synced_at = models.DateTimeField(null=True, blank=True)
 

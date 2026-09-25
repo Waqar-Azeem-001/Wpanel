@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.roles import perm
 from apps.clients.models import Client
+from apps.lifecycle.serializers import LifecycleStageMixin
 from apps.core.permissions import PublicReadPermission
 
 from . import services
@@ -125,7 +126,7 @@ class DnsRecordSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-class DomainSerializer(serializers.ModelSerializer):
+class DomainSerializer(LifecycleStageMixin, serializers.ModelSerializer):
     dns_records = DnsRecordSerializer(many=True, read_only=True)
     client_name = serializers.CharField(source="client.display_name", read_only=True)
 
@@ -133,7 +134,7 @@ class DomainSerializer(serializers.ModelSerializer):
         model = Domain
         fields = ["id", "name", "tld", "client", "client_name", "status", "years", "registered_at", "expires_at",
                   "auto_renew", "is_locked", "nameservers", "provider_ref", "last_error", "dns_records",
-                  "created_at", "updated_at"]
+                  "created_at", "updated_at", "lifecycle_stage"]
         read_only_fields = ["id", "tld", "status", "registered_at", "expires_at", "provider_ref", "last_error",
                             "dns_records", "created_at", "updated_at"]
 

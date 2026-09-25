@@ -1619,7 +1619,7 @@ If UI changed:
   09 Orders & Lifecycle          🟢       788 ✅  ✅        8d83271  ---
   10 Support                     🟢       885 ✅  ✅        e425a85  ---
   11 Notifications & Email       🟢       945 ✅  ✅        7d4026a  ---
-  12 Cancellation                ⬜       ---     ---       ---      ---
+  12 Cancellation                🟡       1046 ✅ ✅        ---      ---
   13 Affiliates                  ⬜       ---     ---       ---      ---
   14 Reports                     ⬜       ---     ---       ---      ---
   15 Admin Operations            ⬜       ---     ---       ---      ---
@@ -1787,7 +1787,11 @@ postponed.
 
   Downgrades / billing-cycle changes  Deferred  Only upgrades are offered online;   Post-MVP
   online; renewal of EXPIRED domains            staff handle the rest
-  and unsuspend-on-payment
+  (unsuspend-on-payment: closed in
+  Phase 12)
+
+  Unsuspend-on-payment                Closed    A paid renewal lifts a            Phase 12
+                                                non-payment suspension
 
   PDF text limited to Western         Deferred  Built-in PDF fonts; other         Post-MVP
   European characters                           scripts print as "?"
@@ -1809,6 +1813,17 @@ postponed.
 
   Unpaid orders hold domain names     Deferred  No automatic order expiry yet     Phase 08/17
   until cancelled
+
+  Domains are not suspended,          Deferred  The registrar owns what follows      Post-MVP
+  terminated or marked expired by               expiry; only cancellation acts
+  the lifecycle job                             on domains
+
+  Automatic termination has no        Deferred  Off by default; deletes data when    Phase 17
+  backup / hold-before-delete step              on
+
+  Lifecycle timings are global;       Deferred  Not per product or client; a         Post-MVP
+  refunds on cancellation are a                 refund is always a staff decision
+  staff decision (suggested only)
 
   Terms-of-service acceptance at      Deferred  No ToS page/versioning yet        Phase 15
   checkout
@@ -2031,6 +2046,25 @@ Record permanent technical decisions here.
   term days, capped at what was paid, never exceeds valid paid
   none once expired; shown on the     value; expired plans get
   invoice as a discount line          none; invoice shows it
+
+  A service's lifecycle stage is      Like "overdue": reproducible   Active
+  derived from its status and         from permanent records; the
+  paid-through date, never stored;    timings can change without a
+  the daily job acts on it with the   migration
+  timings in LifecycleSettings
+
+  Ending a service (cancellation,     One audited path to the       Active
+  lifecycle) goes through the         server; two workers or two
+  existing hosting services, claimed  clicks never end it twice; a
+  with a lock-free update first;      failure leaves it retryable
+  automatic termination is off by
+  default
+
+  Approving a cancellation does the   Nothing is billed for a       Active
+  final billing at once (unpaid       service that is ending;
+  renewal invoices cancelled,         refunds move money only
+  domain stops auto-renewing);        through payments.refund_payment
+  refunds only for immediate ends
 
   All business messaging goes through One place decides who is    Active
   notifications.dispatch, using the   told, by which channel, and

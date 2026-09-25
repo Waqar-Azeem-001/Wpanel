@@ -1,0 +1,12 @@
+{% autoescape off %}Hello,
+
+Your hosting for {{ account.domain }} expired on {{ expired_on|date:"j M Y" }} and has not been renewed yet.{% if suspend_on %}
+
+If it is not renewed by {{ suspend_on|date:"j M Y" }}, it will be suspended and your website and email will stop working.{% endif %}
+
+Renew it now to keep everything running: {{ site_url }}{{ link }}
+
+If you no longer need it, you can ignore this message or cancel the service from the same page.
+
+{{ site_name }}
+{% endautoescape %}

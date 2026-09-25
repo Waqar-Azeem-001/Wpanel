@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Lifecycle timings · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>Service lifecycle</h1>
+{% include "lifecycle/staff/_nav.html" %}
+<section class="card">
+  <h2>Timings</h2>
+  <p class="muted">A hosting account moves along <strong>Active &rarr; Renewal due &rarr; Overdue &rarr; Grace &rarr; Suspended &rarr; Terminated</strong>. Every number counts days after the paid period ends. Renewal invoices are created earlier, in Billing settings.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    {% if can_manage %}<div class="actions"><button class="btn" type="submit">Save timings</button></div>{% else %}<p class="muted">You can view these settings but not change them.</p>{% endif %}
+  </form>
+</section>
+{% endblock %}

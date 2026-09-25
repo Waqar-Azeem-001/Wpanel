@@ -1,0 +1,10 @@
+{% autoescape off %}Hello,
+
+We could not cancel {{ service }} as requested.
+
+Reason: {{ cancellation.review_note }}
+
+The service continues as normal. If you have questions, please open a support ticket: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}
