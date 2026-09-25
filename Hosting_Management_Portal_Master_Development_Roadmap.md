@@ -1616,7 +1616,7 @@ If UI changed:
   06 Cart & Checkout             🟢       458 ✅  ✅        23168d7  ---
   07 Billing & Invoices          🟢       622 ✅  ✅        ac37961  ---
   08 Renewals & Upgrades         🟢       729 ✅  ✅        4d00e37  ---
-  09 Orders & Lifecycle          🟡       788 ✅  ✅        ---      ---
+  09 Orders & Lifecycle          🟢       788 ✅  ✅        8d83271  ---
   10 Support                     ⬜       ---     ---       ---      ---
   11 Notifications & Email       ⬜       ---     ---       ---      ---
   12 Cancellation                ⬜       ---     ---       ---      ---

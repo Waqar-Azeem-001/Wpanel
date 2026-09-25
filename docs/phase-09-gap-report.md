@@ -75,7 +75,7 @@ The order state machine, automatic fulfilment of a paid order, staff actions (fr
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 788 |
 | Migrations, `makemigrations --check`, OpenAPI schema with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green | pending push |
+| CI green on PostgreSQL + Redis | ✅ Run 36107352747 on `8d83271` (first run) |
 
 ## Known limitations / deferred
 
