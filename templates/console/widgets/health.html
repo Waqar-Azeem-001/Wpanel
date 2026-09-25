@@ -1,0 +1,6 @@
+{% load i18n %}
+<ul class="list-group list-group-flush">
+  {% for c in checks %}<li class="list-group-item d-flex justify-content-between align-items-center">
+    <span><i class="bi {% if c.ok %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %}" aria-hidden="true"></i> <strong>{{ c.name }}</strong></span>
+    <span class="small {% if c.ok %}text-secondary{% else %}text-danger{% endif %}">{% if c.ok %}{% trans "OK" %}{% else %}{% trans "Problem" %}{% endif %} &middot; {{ c.detail }}</span></li>{% endfor %}
+</ul>

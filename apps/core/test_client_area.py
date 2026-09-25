@@ -43,10 +43,10 @@ def stranger(world):
 
 # --- Home -------------------------------------------------------------------------------------------------------------
 
-def test_a_customer_lands_on_the_dashboard_and_everyone_else_on_the_profile(world, stranger):
+def test_customers_land_on_their_dashboard_staff_on_theirs_and_visitors_see_the_store(world, stranger):
     for role in ("customer owner", "billing contact", "technical contact"):
         assert browser(world.people[role]).get("/").headers["Location"] == reverse("dashboard"), role
-    assert browser(world.people["manager"]).get("/").headers["Location"] == reverse("accounts:profile")
+    assert browser(world.people["manager"]).get("/").headers["Location"] == reverse("console:dashboard")
     assert browser().get("/").status_code == 200  # a visitor sees the storefront, not a sign-in page
 
 

@@ -1,0 +1,9 @@
+{% load i18n %}
+<div class="card-body">
+  <ul class="list-unstyled mb-3">
+    {% for label, n in stages %}<li class="d-flex justify-content-between py-1"><span>{{ label }}</span><strong>{{ n }}</strong></li>{% endfor %}
+  </ul>
+  <p class="mb-1"><a href="{% url 'lifecycle_staff:cancellations' %}">{% trans "Cancellation requests waiting" %}</a>: <strong>{{ pending_cancellations }}</strong></p>
+  {% if needing_attention %}<p class="text-danger mb-1">{{ needing_attention }} {% trans "cancellation(s) failed and need a retry." %}</p>{% endif %}
+  <a class="btn btn-sm btn-outline-primary mt-2" href="{% url 'lifecycle_staff:overview' %}">{% trans "Service lifecycle" %}</a>
+</div>

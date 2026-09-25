@@ -9,17 +9,20 @@ from apps.products.views import public_home
 
 
 def home(request):
-    """The site's front door: visitors see the storefront, customers their dashboard, staff their profile."""
+    """The site's front door: visitors see the storefront, customers their dashboard, staff their dashboard."""
     if not request.user.is_authenticated:
         return public_home(request)
     if not request.user.is_staff and request.user.client_contacts.exists():
         return redirect("dashboard")
+    if request.user.is_staff:
+        return redirect("console:dashboard")
     return redirect("accounts:profile")
 
 
 urlpatterns = [
     path("", home, name="home"),
     path("account/", dashboard, name="dashboard"),
+    path("staff/", include("apps.console.urls")),
     *retired_urlpatterns(),
     path("admin/", admin.site.urls),
     path("api/v1/", include(("config.api_urls", "v1"), namespace="v1")),

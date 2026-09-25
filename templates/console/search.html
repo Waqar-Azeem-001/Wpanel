@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Search" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Search" %}</h1></div>
+<form method="get" class="row g-2 mb-4" role="search">
+  <div class="col"><label class="visually-hidden" for="q">{% trans "Search clients, invoices, orders, domains, hosting and tickets" %}</label>
+    <input class="form-control form-control-lg" id="q" name="q" value="{{ term }}" placeholder="{% trans 'Client, invoice number, domain, order, ticket…' %}" autofocus></div>
+  <div class="col-auto"><button class="btn btn-primary btn-lg" type="submit"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Search" %}</button></div>
+</form>
+{% if too_short %}<p class="text-secondary">{% trans "Type at least two characters." %}</p>
+{% elif term %}
+  {% if not groups %}{% include "components/empty_state.html" with message=_("Nothing matches that search.") icon="bi-search" %}
+  {% else %}
+  <p class="text-secondary">{{ total }} {% trans "results" %}</p>
+  <div class="row g-4">
+    {% for g in groups %}
+    <div class="col-lg-6"><section class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi {{ g.icon }} text-primary" aria-hidden="true"></i> {{ g.label }} <span class="badge text-bg-secondary rounded-pill">{{ g.total }}</span></span>
+        {% if g.total > g.hits|length %}<a class="small" href="{{ g.all_url }}">{% trans "See all" %}</a>{% endif %}</div>
+      <ul class="list-group list-group-flush">
+        {% for h in g.hits %}<li class="list-group-item"><a class="fw-semibold" href="{{ h.url }}">{{ h.title }}</a><div class="small text-secondary">{{ h.detail }}</div></li>{% endfor %}
+      </ul>
+    </section></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

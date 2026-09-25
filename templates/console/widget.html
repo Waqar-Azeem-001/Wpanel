@@ -1,0 +1,5 @@
+{% load i18n %}
+<section class="card h-100" id="widget-{{ widget.key }}" aria-label="{{ widget.title }}">
+  <div class="card-header d-flex align-items-center gap-2"><i class="bi {{ widget.icon }} text-primary" aria-hidden="true"></i><h2 class="h6 mb-0">{{ widget.title }}</h2></div>
+  {% include widget.template %}
+</section>

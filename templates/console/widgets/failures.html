@@ -1,0 +1,10 @@
+{% load ui i18n %}
+{% if not order_count and not hosting_count %}
+<div class="card-body text-secondary"><i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% trans "Nothing has failed to set up." %}</div>
+{% else %}
+<ul class="list-group list-group-flush">
+  {% for o in orders %}<li class="list-group-item d-flex justify-content-between"><span><a class="fw-semibold" href="{% url 'orders_staff:detail' o.pk %}">{% trans "Order" %} {{ o.reference }}</a> <span class="text-secondary">{{ o.client.display_name }}</span></span>{% status_badge o.status o.get_status_display %}</li>{% endfor %}
+  {% for a in hosting %}<li class="list-group-item d-flex justify-content-between"><span><a class="fw-semibold" href="{% url 'hosting_staff:detail' a.pk %}">{{ a.domain }}</a> <span class="text-secondary">{{ a.client.display_name }}</span></span>{% status_badge a.status a.get_status_display %}</li>{% endfor %}
+</ul>
+<div class="card-footer bg-transparent small text-secondary">{{ order_count }} {% trans "orders and" %} {{ hosting_count }} {% trans "hosting accounts need attention." %}</div>
+{% endif %}

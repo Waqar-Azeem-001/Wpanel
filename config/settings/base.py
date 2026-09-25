@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "apps.reports",
     "apps.branding",
     "apps.support",
+    "apps.console",
 ]
 
 MIDDLEWARE = [

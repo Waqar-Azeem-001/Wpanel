@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Dashboard" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% blocktrans with name=user.get_short_name %}Welcome back, {{ name }}{% endblocktrans %}</h1>
+  <div class="d-flex flex-wrap gap-2">
+    {% for label, name in shortcuts %}<a class="btn btn-sm btn-outline-primary" href="{% url name %}">{{ label }}</a>{% endfor %}
+  </div>
+</div>
+<div class="row g-4">
+  {% for w in widgets %}
+  <div class="{% if w.size == 'full' %}col-12{% else %}col-xl-6{% endif %}">
+    <div hx-get="{% url 'console:widget' w.key %}" hx-trigger="load" hx-swap="outerHTML" class="card h-100" aria-busy="true">
+      <div class="card-header d-flex align-items-center gap-2"><i class="bi {{ w.icon }} text-primary" aria-hidden="true"></i><h2 class="h6 mb-0">{{ w.title }}</h2></div>
+      <div class="card-body text-secondary">{% trans "Loading…" %} <noscript><a href="{% url 'console:widget' w.key %}">{% trans "Open" %}</a></noscript></div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">{% include "components/empty_state.html" with message=_("There is nothing to show for your role yet.") icon="bi-speedometer2" %}</div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -138,9 +138,9 @@ def test_staff_menus_follow_their_permissions(agent, manager, admin):
     def top(user):
         return labels(navigation.build(request_for(user), "staff"), "main")
 
-    assert top(agent) == ["Clients", "Orders", "Billing", "Support"]  # no Reports, no Utilities
-    assert top(manager) == ["Clients", "Orders", "Billing", "Support", "Reports"]
-    assert top(admin) == ["Clients", "Orders", "Billing", "Support", "Reports", "Utilities"]
+    assert top(agent) == ["Dashboard", "Clients", "Orders", "Billing", "Support"]  # no Reports, no Utilities
+    assert top(manager) == ["Dashboard", "Clients", "Orders", "Billing", "Support", "Reports", "Utilities"]  # the audit log
+    assert top(admin) == ["Dashboard", "Clients", "Orders", "Billing", "Support", "Reports", "Utilities"]
 
 
 def test_a_group_appears_only_when_something_in_it_can_be_opened(agent, admin):
@@ -233,7 +233,7 @@ def test_no_navigation_template_contains_a_link_of_its_own():
         text = (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")
         assert "<a class=\"nav-link\" href=\"/" not in text and 'href="/' not in text, name
         urls = [u for u in text.replace("\n", " ").split("{% url ")[1:]]
-        assert all(u.startswith("'accounts:logout'") for u in urls), (name, urls)  # only the sign-out form
+        assert all(u.startswith(("'accounts:logout'", "'console:search'")) for u in urls), (name, urls)  # sign out, search
 
 
 def test_the_old_hand_written_account_partial_is_gone():

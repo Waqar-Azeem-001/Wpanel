@@ -875,7 +875,7 @@ Before marking any phase 🟢:
 | D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | da099e8 | — |
 | D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | 03ba01b | — |
 | D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | ef7a6ce | — |
-| D4 Staff Area Parity | ⬜ | — | — | — | — | — |
+| D4 Staff Area Parity (stage D4a: dashboard, search, audit log) | 🟡 | 1574 ✅ | ✅ | crawler green (dashboard widgets followed via hx-get) | pending | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
 ## Recommended order
@@ -1052,6 +1052,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Brand (name, logo, favicon, colours, footer, formats) is a database record; primary colour must give 4.5:1 contrast with white; images are validated by content and never SVG | Rule 6; readable buttons; an uploaded file must never run as script | Active |
 | `static/css/legacy.css` is a bridge for the old class names and receives no new rules | Retired screen by screen in D3/D4 (customer screens done in D3; the rest goes with D4) | Active |
 | The Web Host Era brand, plans and prices are loaded by `manage.py seed_webhostera` into the database (editable in Setup); the accent colour must carry white or dark text; the front page is the storefront for visitors | Brand is configuration (Rule 6); the owner's site is the source of the catalogue | Active |
+| The staff console (`apps/console`) only reads: dashboard widgets are loaded separately, shown only to staff who may open what they link to, and every figure equals the list it links to; global search covers only areas the person may open | Rule 5.6; a number never disagrees with its list; search cannot reveal what a menu hides | Active |
 | A view that supplies `sidebar` panels (built in `apps/core/portal.py` from URL names) gets a two-column page; every count on a link equals the rows it opens | One sidebar mechanism; a number never disagrees with its list | Active |
 | Service and domain pages are tab bars (each tab its own URL); the tab for an action is shown only when the person can use it (`portal.can_cancel`) | Rule 5.6: a visible link always opens something usable | Active |
 | Customer contacts are read-only pages; staff manage contacts | Self-service contact management stays deferred | Active |

@@ -89,6 +89,7 @@ ITEMS = [
          badge="cart", icon="bi-cart"),
 
     # --- Staff area --------------------------------------------------------------------------------------------------
+    item("staff.dashboard", _("Dashboard"), "console:dashboard", areas=STAFF),
     item("staff.clients", _("Clients"), areas=STAFF),
     item("staff.clients.list", _("View / Search Clients"), "clients_staff:list", areas=STAFF, parent="staff.clients",
          permission="view_clients"),
@@ -135,6 +136,8 @@ ITEMS = [
          permission="view_support"),
     item("staff.reports", _("Reports"), "reports_staff:index", areas=STAFF, permission="view_reports"),
     item("staff.utilities", _("Utilities"), areas=STAFF),
+    item("staff.utilities.audit", _("Audit Log"), "console:audit_log", areas=STAFF, parent="staff.utilities",
+         permission="view_audit_log"),
     item("staff.utilities.email_stats", _("Email Statistics"), "notifications_staff:overview", areas=STAFF,
          parent="staff.utilities", permission="view_settings"),
     item("staff.utilities.email_log", _("Email Message Log"), "notifications_staff:emails", areas=STAFF,

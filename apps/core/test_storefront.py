@@ -66,7 +66,7 @@ def test_customers_and_staff_do_not_get_the_storefront_at_the_front_door(client,
     client.force_login(customer)
     assert client.get("/").status_code == 302
     client.force_login(staff(Role.MANAGER))
-    assert client.get("/").headers["Location"] == reverse("accounts:profile")
+    assert client.get("/").headers["Location"] == reverse("console:dashboard")
 
 
 def test_feature_lines_split_a_description_into_clean_lines():

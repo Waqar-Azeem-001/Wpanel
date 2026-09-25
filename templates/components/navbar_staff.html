@@ -1,11 +1,15 @@
 {% load i18n %}
-<nav class="navbar navbar-expand-xl navbar-dark app-navbar navbar-staff" aria-label="{% trans 'Main' %}">
+<nav class="navbar navbar-expand-xxl navbar-dark app-navbar navbar-staff" aria-label="{% trans 'Main' %}">
   <div class="container-xxl">
     {% include "components/navbar_brand.html" %}
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav-main" aria-controls="nav-main" aria-expanded="false" aria-label="{% trans 'Toggle navigation' %}"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav-main">
       <ul class="navbar-nav me-auto">{% include "components/nav_items.html" with entries=nav.main %}</ul>
-      <ul class="navbar-nav align-items-xl-center">
+      <form class="d-flex me-xxl-2 my-2 my-xxl-0" role="search" action="{% url 'console:search' %}" method="get">
+        <label class="visually-hidden" for="staff-search">{% trans 'Search' %}</label>
+        <input id="staff-search" class="form-control form-control-sm staff-search" type="search" name="q" placeholder="{% trans 'Search…' %}" autocomplete="off">
+      </form>
+      <ul class="navbar-nav align-items-xxl-center">
         {% include "components/nav_items.html" with entries=nav.setup end=True %}
         {% include "components/nav_items.html" with entries=nav.right %}
         {% include "components/nav_items.html" with entries=nav.account end=True with_signout=True %}

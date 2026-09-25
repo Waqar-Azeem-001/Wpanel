@@ -1,0 +1,6 @@
+{% load ui i18n %}
+<div class="table-responsive"><table class="table mb-0 align-middle">
+  <thead><tr><th>{% trans "When" %}</th><th>{% trans "Who" %}</th><th>{% trans "What" %}</th><th>{% trans "Record" %}</th></tr></thead>
+  <tbody>{% for e in events %}<tr><td class="text-nowrap">{{ e.created_at|fdatetime }}</td><td>{{ e.actor_repr|default:"system" }}</td><td><code>{{ e.action }}</code></td><td>{{ e.target_repr|default:"—" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="text-secondary">{% trans "Nothing has been recorded yet." %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="card-footer bg-transparent small"><a href="{% url 'console:audit_log' %}">{% trans "Open the audit log" %}</a></div>

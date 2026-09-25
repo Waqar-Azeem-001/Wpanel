@@ -121,7 +121,9 @@ a { text-underline-offset: 3px; }
 .app-navbar .nav-link.active, .app-navbar .show > .nav-link { color: var(--accent); background: var(--brand-primary-subtle); }
 [data-bs-theme="dark"] .app-navbar .nav-link:hover, [data-bs-theme="dark"] .app-navbar .nav-link.active,
 [data-bs-theme="dark"] .app-navbar .show > .nav-link { background: var(--surface-2); color: #fff; }
-.app-navbar.navbar-staff .nav-link { color: rgba(255, 255, 255, .86); border-radius: 8px; padding: .45rem .75rem !important; }
+.app-navbar.navbar-staff .nav-link { color: rgba(255, 255, 255, .86); border-radius: 8px; padding: .45rem .6rem !important; font-size: .88rem; }
+.app-navbar.navbar-staff .navbar-brand { margin-right: .75rem; }
+@media (min-width: 1400px) { .app-navbar.navbar-staff .nav-item:last-child > .nav-link { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; } }
 .app-navbar.navbar-staff .nav-link:hover, .app-navbar.navbar-staff .nav-link.active, .app-navbar.navbar-staff .show > .nav-link {
   color: #fff; background: rgba(255, 255, 255, .12); }
 .app-navbar .navbar-toggler { border-color: var(--border); }
@@ -136,6 +138,9 @@ a { text-underline-offset: 3px; }
 .app-navbar .badge.unread { background: var(--accent); color: var(--accent-text); border-color: var(--accent); margin-left: .25rem; }
 .app-navbar.navbar-staff .badge.unread { background: var(--lime); color: var(--lime-text); border-color: var(--lime); }
 .app-navbar.navbar-staff :focus-visible { outline-color: #fff; }
+.staff-search { width: 9rem; min-width: 0; background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .25); color: #fff; border-radius: 999px; }
+.staff-search::placeholder { color: rgba(255, 255, 255, .6); }
+.staff-search:focus { background: rgba(255, 255, 255, .18); color: #fff; }
 
 /* Status badges: one component, five colours, always with a text label */
 .status-badge { display: inline-block; padding: .18em .7em; border-radius: 999px; font-size: .78rem;

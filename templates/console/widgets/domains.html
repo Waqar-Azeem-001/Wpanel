@@ -1,0 +1,6 @@
+{% load ui i18n %}
+<ul class="list-group list-group-flush">
+  {% for d in domains %}<li class="list-group-item d-flex justify-content-between align-items-center"><span><a class="fw-semibold" href="{% url 'domains_staff:detail' d.pk %}">{{ d.name }}</a> <span class="text-secondary">{{ d.client.display_name }}</span></span><span class="small {% if d.expires_at < now %}text-danger{% else %}text-secondary{% endif %}">{{ d.expires_at|fdate }}</span></li>
+  {% empty %}<li class="list-group-item text-secondary">{% trans "No domain expires in the next 30 days." %}</li>{% endfor %}
+</ul>
+{% if count > domains|length %}<div class="card-footer bg-transparent small"><a href="{% url 'domains_staff:list' %}">{% trans "See all" %} {{ count }}</a></div>{% endif %}
