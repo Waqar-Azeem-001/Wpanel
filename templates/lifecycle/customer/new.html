@@ -1,18 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Cancel {{ name }} · {{ SITE_NAME }}{% endblock %}
+{% load ui portal i18n %}
+{% block title %}{% trans "Cancel" %} {{ name }} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<p><a href="{% if kind == 'hosting' %}{% url 'hosting_customer:detail' service.pk %}{% else %}{% url 'domains_customer:detail' service.pk %}{% endif %}">&larr; {{ name }}</a></p>
-<h1>Cancel {{ name }}</h1>
-<section class="card">
+{% if kind == "hosting" %}
+<p class="mb-2"><a href="{% url 'hosting_customer:list' %}">&larr; {% trans "My Services" %}</a></p>
+<div class="page-head"><h1>{{ name }}</h1>{% status_badge service.status service.get_status_display %}</div>
+{% service_tabs service "cancel" %}
+{% else %}
+<p class="mb-2"><a href="{% url 'domains_customer:list' %}">&larr; {% trans "My Domains" %}</a></p>
+<div class="page-head"><h1>{{ name }}</h1>{% status_badge service.status service.get_status_display %}</div>
+{% domain_tabs service "cancel" %}
+{% endif %}
+<section class="card"><div class="card-body">
   {% if kind == "hosting" %}
-  <p>You can end this hosting account <strong>immediately</strong> or <strong>when the period you have paid for ends</strong>{% if service.expires_at %} ({{ service.expires_at|date:"j M Y" }}){% endif %}. Our team reviews every request. Whether any money is refunded is decided by them.</p>
+  <p>{% blocktrans %}You can end this hosting account <strong>immediately</strong> or <strong>when the period you have paid for ends</strong>{% endblocktrans %}{% if service.expires_at %} ({{ service.expires_at|fdate }}){% endif %}. {% trans "Our team reviews every request. Whether any money is refunded is decided by them." %}</p>
   {% else %}
-  <p>A registered domain cannot be cancelled early. We will stop renewing it and it will end when it expires{% if service.expires_at %} on {{ service.expires_at|date:"j M Y" }}{% endif %}. Our team reviews every request.</p>
+  <p>{% trans "A registered domain cannot be cancelled early. We will stop renewing it and it will end when it expires" %}{% if service.expires_at %} ({{ service.expires_at|fdate }}){% endif %}. {% trans "Our team reviews every request." %}</p>
   {% endif %}
   <form method="post" novalidate>{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions"><button class="btn danger" type="submit">Send cancellation request</button>
-      <a class="btn secondary" href="{% if kind == 'hosting' %}{% url 'hosting_customer:detail' service.pk %}{% else %}{% url 'domains_customer:detail' service.pk %}{% endif %}">Keep it</a></div>
+    <div class="d-flex gap-2"><button class="btn btn-danger" type="submit">{% trans "Send cancellation request" %}</button>
+      <a class="btn btn-outline-secondary" href="{% if kind == 'hosting' %}{% url 'hosting_customer:detail' service.pk %}{% else %}{% url 'domains_customer:detail' service.pk %}{% endif %}">{% trans "Keep it" %}</a></div>
   </form>
-</section>
+</div></section>
 {% endblock %}

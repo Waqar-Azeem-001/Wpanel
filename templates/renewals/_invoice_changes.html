@@ -1,27 +1,27 @@
-{% load ui %}
+{% load ui i18n %}
 {% for change in invoice.service_changes.all %}
-<section class="card">
-  <h2>{{ change.get_kind_display }}: {{ change.service_label }}</h2>
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{{ change.get_kind_display }}: {{ change.service_label }}</h2>
   <p>{% status_badge change.status change.get_status_display %}
-    {% if change.status == "pending" %}<span class="muted">This takes effect when the invoice is paid in full.</span>{% endif %}
-    {% if change.status == "failed" %}<span class="muted">{% if staff %}{{ change.error }}{% else %}Your payment has been received. We are finishing this off and will be in touch if we need anything.{% endif %}</span>{% endif %}
-    {% if change.applied_at %}<span class="muted">Applied {{ change.applied_at|date:"j M Y H:i" }}.</span>{% endif %}</p>
+    {% if change.status == "pending" %}<span class="text-secondary">{% trans "This takes effect when the invoice is paid in full." %}</span>{% endif %}
+    {% if change.status == "failed" %}<span class="text-secondary">{% if staff %}{{ change.error }}{% else %}{% trans "Your payment has been received. We are finishing this off and will be in touch if we need anything." %}{% endif %}</span>{% endif %}
+    {% if change.applied_at %}<span class="text-secondary">{% trans "Applied" %} {{ change.applied_at|fdatetime }}.</span>{% endif %}</p>
   {% if change.kind == "upgrade" %}
-  <table class="totals">
-    <tr><th>New plan ({{ change.calculation.months }} months)</th><td>{{ invoice.currency }} {{ change.calculation.new_price }}</td></tr>
-    <tr><th>Paid for the current term</th><td>{{ invoice.currency }} {{ change.calculation.term_paid }}</td></tr>
-    <tr><th>Days remaining</th><td>{{ change.calculation.remaining_days }} of {{ change.calculation.term_days }}</td></tr>
-    <tr><th>Credit for unused time</th><td>{{ invoice.currency }} {{ change.calculation.credit }}</td></tr>
-    <tr class="grand"><th>Net payable (before tax)</th><td>{{ invoice.currency }} {{ change.calculation.net_payable }}</td></tr>
+  <table class="table table-sm w-auto">
+    <tr><th class="fw-normal">{% blocktrans with months=change.calculation.months %}New plan ({{ months }} months){% endblocktrans %}</th><td class="text-end">{{ change.calculation.new_price|money:invoice.currency }}</td></tr>
+    <tr><th class="fw-normal">{% trans "Paid for the current term" %}</th><td class="text-end">{{ change.calculation.term_paid|money:invoice.currency }}</td></tr>
+    <tr><th class="fw-normal">{% trans "Days remaining" %}</th><td class="text-end">{{ change.calculation.remaining_days }} of {{ change.calculation.term_days }}</td></tr>
+    <tr><th class="fw-normal">{% trans "Credit for unused time" %}</th><td class="text-end">{{ change.calculation.credit|money:invoice.currency }}</td></tr>
+    <tr class="fw-bold"><th>{% trans "Net payable (before tax)" %}</th><td class="text-end">{{ change.calculation.net_payable|money:invoice.currency }}</td></tr>
   </table>
   {% endif %}
   {% if staff and can_manage and change.status == "failed" %}
-  <div class="actions">
-    <form method="post" action="{% url 'renewals_staff:retry' change.pk %}">{% csrf_token %}<button class="btn" type="submit">Retry applying</button></form>
-    <form method="post" action="{% url 'renewals_staff:dismiss' change.pk %}" class="inline-form" onsubmit="return confirm('Mark this as handled by hand?');">{% csrf_token %}
-      <input type="text" name="note" placeholder="What was done (e.g. refunded)" aria-label="Note" maxlength="500">
-      <button class="btn small secondary" type="submit">Mark handled</button></form>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <form method="post" action="{% url 'renewals_staff:retry' change.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Retry applying" %}</button></form>
+    <form method="post" action="{% url 'renewals_staff:dismiss' change.pk %}" class="d-flex gap-2" data-confirm="{% trans 'Mark this as handled by hand?' %}">{% csrf_token %}
+      <input class="form-control" type="text" name="note" placeholder="What was done (e.g. refunded)" aria-label="Note" maxlength="500">
+      <button class="btn btn-outline-secondary" type="submit">{% trans "Mark handled" %}</button></form>
   </div>
   {% endif %}
-</section>
+</div></section>
 {% endfor %}

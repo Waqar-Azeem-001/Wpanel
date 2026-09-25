@@ -200,3 +200,11 @@ def my_client_detail(request, pk):
                 return redirect("clients_customer:detail", pk=client.pk)
     return render(request, "clients/customer/detail.html",
                   {"client": client, "form": form, "can_edit": can_edit, "my_role": role})
+
+
+@login_required
+def my_contacts(request):
+    """The people on each of the customer's accounts, with their roles (read-only: staff manage contacts)."""
+    clients = Client.objects.filter(contacts__user=request.user).distinct().order_by("created_at")
+    accounts = [(client, client.contacts.select_related("user").order_by("role", "id")) for client in clients]
+    return render(request, "clients/customer/contacts.html", {"accounts": accounts})

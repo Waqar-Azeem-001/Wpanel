@@ -8,11 +8,13 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
 from apps.clients.services import single_contact_client
+from apps.core import portal
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
+from apps.orders.models import ItemKind, OrderItem
 
 from . import forms, services
-from .models import HostingAccount
+from .models import HostingAccount, HostingStatus
 
 
 def _apply_error(form, exc):
@@ -43,17 +45,40 @@ def _run(request, action, view_name, **redirect_kwargs):
 def my_hosting_list(request):
     accounts = HostingAccount.objects.filter(client__contacts__user=request.user).select_related(
         "product", "server").distinct()
-    return render(request, "hosting/customer/list.html", {"accounts": accounts})
+    accounts, view_panel = portal.status_filter(request, accounts, HostingStatus.choices,
+                                                url_name="hosting_customer:list", all_label="All services")
+    actions = portal.actions_panel(request, "Actions", [
+        ("Order new services", "catalog:product_list", "bi-plus-circle"),
+        ("View available addons", "catalog:addons", "bi-puzzle")])
+    return render(request, "hosting/customer/list.html", {"accounts": accounts, "sidebar": [view_panel, actions]})
 
 
 def _own_account(request, pk):
     return get_object_or_404(services.visible_hosting_accounts_for_user(request.user), pk=pk)
 
 
+def _service_page(request, pk, template, **extra):
+    account = _own_account(request, pk)
+    return render(request, template, {"account": account, "sidebar": portal.service_sidebar(request, account), **extra})
+
+
 @login_required
 def my_hosting_detail(request, pk):
+    return _service_page(request, pk, "hosting/customer/detail.html")
+
+
+@login_required
+def my_hosting_information(request, pk):
+    return _service_page(request, pk, "hosting/customer/information.html")
+
+
+@login_required
+def my_hosting_addons(request, pk):
     account = _own_account(request, pk)
-    return render(request, "hosting/customer/detail.html", {"account": account})
+    addon_lines = OrderItem.objects.filter(parent__hosting_account=account, kind=ItemKind.ADDON).select_related(
+        "order", "addon").order_by("-created_at", "-id")
+    return render(request, "hosting/customer/addons.html", {
+        "account": account, "addon_lines": addon_lines, "sidebar": portal.service_sidebar(request, account)})
 
 
 # --- Staff -------------------------------------------------------------------------------

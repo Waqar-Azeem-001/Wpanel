@@ -1,0 +1,7 @@
+{% load ui portal i18n %}
+<p class="mb-2"><a href="{% url 'hosting_customer:list' %}">&larr; {% trans "My Services" %}</a></p>
+<div class="page-head">
+  <h1>{{ account.domain }}</h1>
+  {% status_badge account.status account.get_status_display %}
+</div>
+{% service_tabs account tab %}

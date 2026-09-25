@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ domain.name }} · {% trans "Registrar lock" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "domains/customer/_header.html" %}
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Registrar lock" %}</h2>
+  <p class="text-secondary">{% trans "A locked domain cannot be transferred to another registrar. Unlock it only when you are moving the domain away." %}</p>
+  <p>{% trans "Status:" %} <strong>{{ domain.is_locked|yesno:_("Locked,Unlocked") }}</strong></p>
+  {% if can_edit %}
+    {% if domain.is_locked %}
+    <form method="post" action="{% url 'domains_customer:unlock' domain.pk %}" data-confirm="{% trans 'Unlock this domain so it can be transferred away?' %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">{% trans "Unlock (to transfer away)" %}</button></form>
+    {% else %}
+    <form method="post" action="{% url 'domains_customer:lock' domain.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Lock" %}</button></form>
+    {% endif %}
+  {% endif %}
+</div></section>
+{% endblock %}

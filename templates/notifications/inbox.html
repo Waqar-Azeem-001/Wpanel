@@ -1,24 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Notifications · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Notifications" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Notifications</h1>
-  <span><a class="btn secondary" href="{% url 'notifications:preferences' %}">Preferences</a>
-    {% if unread %}<form method="post" action="{% url 'notifications:mark_all_read' %}" class="inline-form">{% csrf_token %}<button class="btn" type="submit">Mark all as read</button></form>{% endif %}</span></div>
-<nav class="tabs" aria-label="Filter">
-  <a href="?show=all"{% if show != "unread" %} class="active" aria-current="page"{% endif %}>All</a>
-  <a href="?show=unread"{% if show == "unread" %} class="active" aria-current="page"{% endif %}>Unread <span class="count">{{ unread }}</span></a>
-</nav>
-<div class="notifications">
+<div class="page-head"><h1>{% trans "Notifications" %}</h1>
+  <span class="d-flex gap-2"><a class="btn btn-outline-primary" href="{% url 'notifications:preferences' %}">{% trans "Preferences" %}</a>
+    {% if unread %}<form method="post" action="{% url 'notifications:mark_all_read' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Mark all as read" %}</button></form>{% endif %}</span></div>
+<ul class="nav nav-tabs mb-3" aria-label="Filter">
+  <li class="nav-item"><a class="nav-link{% if show != "unread" %} active{% endif %}" href="?show=all"{% if show != "unread" %} aria-current="page"{% endif %}>{% trans "All" %}</a></li>
+  <li class="nav-item"><a class="nav-link{% if show == "unread" %} active{% endif %}" href="?show=unread"{% if show == "unread" %} aria-current="page"{% endif %}>{% trans "Unread" %} <span class="badge text-bg-secondary rounded-pill">{{ unread }}</span></a></li>
+</ul>
+<div class="d-flex flex-column gap-2">
 {% for n in page %}
-  <article class="note{% if not n.is_read %} unread{% endif %}">
-    <div>
-      <strong>{% if n.link %}<a href="{% url 'notifications:open' n.pk %}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</strong>
-      {% if n.body %}<p>{{ n.body }}</p>{% endif %}
-      <small class="muted">{{ n.created_at|date:"j M Y, H:i" }}{% if not n.is_read %} &middot; <span class="badge unread">New</span>{% endif %}</small>
-    </div>
-  </article>
+  <article class="card{% if not n.is_read %} border-start border-4 border-primary{% endif %}"><div class="card-body py-2">
+    <strong>{% if n.link %}<a href="{% url 'notifications:open' n.pk %}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</strong>
+    {% if n.body %}<p class="mb-1 text-break">{{ n.body }}</p>{% endif %}
+    <small class="text-secondary">{{ n.created_at|fdatetime }}{% if not n.is_read %} &middot; <span class="badge text-bg-primary">{% trans "New" %}</span>{% endif %}</small>
+  </div></article>
 {% empty %}
-  <p class="muted">{% if show == "unread" %}You are all caught up.{% else %}No notifications yet. Updates about your orders, invoices, services and support tickets will appear here.{% endif %}</p>
+  <p class="text-secondary">{% if show == "unread" %}{% trans "You are all caught up." %}{% else %}{% trans "No notifications yet. Updates about your orders, invoices, services and support tickets will appear here." %}{% endif %}</p>
 {% endfor %}
 </div>
 {% include "components/pager.html" %}

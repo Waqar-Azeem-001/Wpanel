@@ -873,7 +873,7 @@ Before marking any phase 🟢:
 | D0 UI & Navigation Audit | 🟢 | 1220 ✅ | ✅ | prototype crawler: 8 roles, 0 broken (kept as a CI test in D2) | dd1c88a | — |
 | D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | ee8a609 | — |
 | D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | da099e8 | — |
-| D3 Client Area Parity | ⬜ | — | — | — | — | — |
+| D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | pending | — |
 | D4 Staff Area Parity | ⬜ | — | — | — | — | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
@@ -974,6 +974,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Basic reports (sales, financial, services, support) with PDF/CSV/XLSX export | Phase 14 | 14 reports, audited, formula-safe exports, API |
 | Runtime CDN dependency; unbranded errors; hand-coloured status badges; unlabelled form fields; no focus styles; brand not configurable | D1 | Assets vendored; branded error pages; one status-badge tag; labels added and tested; focus rings; brand settings in the database (colours checked for contrast) |
 | Static files on default storage; vanity paths; hand-written navbars; no link crawler in CI; emailed links and PDFs untested; a Support Agent shown a link to Products | D2 | `ManifestStaticFilesStorage` in production (a missing file fails the build); `/login/`, `/register/`, `/store/`, `/knowledgebase/` answer 301 via one `RETIRED` map; all menus from `apps/core/navigation.py` with a startup check; crawler for 8 roles on a world with one object in every status as a CI gate; email, PDF, redirect and safe-`next` tests; deploy check that `SITE_URL` is https |
+| Customer dashboard, sidebars with counts, service and domain tabs, addons/payment methods/email history/contacts pages, re-skin of every customer screen | D3 | Section 10 delivered; `legacy.css` rules only the customer area used deleted; see `docs/d3-client-area.md` |
 | Server errors from junk or NUL characters in the address or forms; two "create" pages that 404 without `?client=`; hand-built internal URLs | D0 | `query_id` helper, `StripNullBytesMiddleware`, redirects to the client chooser, `reverse()` everywhere; regression tests |
 
 ------------------------------------------------------------------------
@@ -1047,7 +1048,10 @@ Use this section whenever something is discovered but intentionally postponed.
 | One layout shell per audience (public, client, staff), chosen per request by a context processor; `base.html` is an alias | Every page moves into the new shell without being edited; new pages extend a shell directly | Active |
 | Status colour is decided in one template tag (`{% status_badge %}`) from the roadmap map; a text label is always shown | One vocabulary; unknown statuses are neutral, never uncoloured | Active |
 | Brand (name, logo, favicon, colours, footer, formats) is a database record; primary colour must give 4.5:1 contrast with white; images are validated by content and never SVG | Rule 6; readable buttons; an uploaded file must never run as script | Active |
-| `static/css/legacy.css` is a bridge for the old class names and receives no new rules | Retired screen by screen in D3/D4 | Active |
+| `static/css/legacy.css` is a bridge for the old class names and receives no new rules | Retired screen by screen in D3/D4 (customer screens done in D3; the rest goes with D4) | Active |
+| A view that supplies `sidebar` panels (built in `apps/core/portal.py` from URL names) gets a two-column page; every count on a link equals the rows it opens | One sidebar mechanism; a number never disagrees with its list | Active |
+| Service and domain pages are tab bars (each tab its own URL); the tab for an action is shown only when the person can use it (`portal.can_cancel`) | Rule 5.6: a visible link always opens something usable | Active |
+| Customer contacts are read-only pages; staff manage contacts | Self-service contact management stays deferred | Active |
 | Every menu, breadcrumb and active state is drawn from the menu registry (`apps/core/navigation.py`); `manage.py check` fails on a bad entry (`core.E001`); a group is shown only when a child is | A menu entry cannot name a missing page, and is shown exactly to people who may open it | Active |
 | The link crawler (`apps/core/harness.py`, `test_crawler.py`) is a CI gate: 8 roles, a world with one object in every status, no 404/500/403/dead link, and every GET page reached by some role unless allowlisted with a reason | Rule 5: a broken link is a failed build | Active |
 | Old paths live in one `RETIRED` map (`apps/core/redirects.py`), 301 with the query string, named `retired_*`; a moved page keeps its URL name | Rule 5.7: emailed links work forever | Active |
@@ -1058,18 +1062,20 @@ Use this section whenever something is discovered but intentionally postponed.
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–14, D0, D1 and D2 are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md` (shells, components, brand settings), `docs/d2-link-integrity.md` (menu registry, crawler, redirects) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`).
+Phases 01–14 and D0–D3 are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The project stays **local** until the owner asks to deploy.
 
-## Start: Phase D3 — Client Area Parity
+## Start: Phase D4 with Phase 15 — Staff Area Parity and Admin Operations
 
-**Do not start coding before Rule 1 inspection.** Then, per Section 10 and the D0 mapping (`docs/d0-ui-navigation-audit.md`):
+**Do not start coding before Rule 1 inspection.** Then, per Section 11 and the D0 mapping ("Staff area" tables):
 
-1. Customer **dashboard** (stat tiles that are links, active services, unpaid invoices, open tickets, quick actions) replacing the profile page as the home page (`home` keeps its name).
-2. **Sidebar panels** and **URL-based tabs** on the service and domain detail pages, per Section 10; breadcrumbs from the registry.
-3. Re-skin every customer screen onto the shells and components; delete each `legacy.css` rule that stops being used; wrap page strings for translation as each is touched.
-4. Every new page: entry in the menu registry (with permission), crawler and coverage floor green, browser check at 375 / 768 / 1280 px, no URL name renamed, moved paths added to `RETIRED`.
+1. **Staff dashboard** at `/staff/` (`home` keeps its name) with the Section 11.2 widgets, each linking to its list, loaded with HTMX; **global search** (clients, invoices, domains, tickets, orders) in the top bar.
+2. **Client profile as tabs**, each its own URL (Summary, Profile, Contacts, Products/Services, Domains, Billable Items, Invoices, Quotes, Transactions, Tickets, Emails, Cancellations, Affiliate, Notes, Log).
+3. **Standard list pattern** (search, filters, bulk-action bar, "Showing X–Y of Z", HTMX, filters kept in the URL) applied to every staff list; the confirmation modal on destructive actions (`data-confirm`).
+4. **Phase 15 screens that still need Django admin:** staff users and roles, payment providers, registrar provider, email provider, audit/activity log viewer, Utilities menu (Activity Log, Audit Log, Email Message Log, Job Queue, WHOIS). Provider credentials stay encrypted in the database (Rule on credentials).
+5. Re-skin the remaining staff templates onto the components and **delete the rest of `static/css/legacy.css`**; wrap strings for translation as each page is touched.
+6. Every new page: registry entry with permission, crawler and coverage floor green, browser check at 375 / 768 / 1280 px, no URL name renamed, moved paths added to `RETIRED`.
 
-Then D4 + Phase 15 (staff area parity and admin operations), then 16, 17, D5, 18, 19 per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
+Then Phase 16 (Security), 17 (Reliability), D5 (Visual QA), 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
 
 ------------------------------------------------------------------------
 

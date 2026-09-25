@@ -1,0 +1,8 @@
+{% load ui portal i18n %}
+<p class="mb-2"><a href="{% url 'domains_customer:list' %}">&larr; {% trans "My Domains" %}</a></p>
+<div class="page-head">
+  <h1>{{ domain.name }}</h1>
+  {% status_badge domain.status domain.get_status_display %}
+</div>
+{% domain_tabs domain tab %}
+{% if not can_edit and tab != "overview" %}<div class="alert alert-secondary" role="alert">{% trans "This domain can no longer be changed." %}</div>{% endif %}

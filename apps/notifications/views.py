@@ -52,6 +52,22 @@ def inbox(request):
                                                         "unread": services.unread_count(request.user)})
 
 
+def _own_emails(user):
+    """Emails sent to this person. A message carrying a secret (a set-password link) is never listed or shown."""
+    return EmailMessage.objects.filter(Q(user=user) | Q(to_email__iexact=user.email), is_sensitive=False).order_by("-created_at", "-id")
+
+
+@login_required
+def email_history(request):
+    page = Paginator(_own_emails(request.user), 25).get_page(request.GET.get("page"))
+    return render(request, "notifications/email_history.html", {"page": page})
+
+
+@login_required
+def email_history_detail(request, pk):
+    return render(request, "notifications/email_history_detail.html", {"message": get_object_or_404(_own_emails(request.user), pk=pk)})
+
+
 @login_required
 def open_notification(request, pk):
     """Mark one notification read and go to what it is about (only ever a path on this site)."""

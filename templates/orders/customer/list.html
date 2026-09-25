@@ -1,26 +1,26 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}My orders · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "My orders" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>My orders</h1>
-  <a class="btn secondary" href="{% url 'orders_customer:cart' %}">View cart</a>
+  <h1>{% trans "My orders" %}</h1>
+  <a class="btn btn-outline-primary" href="{% url 'orders_customer:cart' %}">{% trans "View cart" %}</a>
 </div>
-<div class="table-wrap">
-<table class="table">
-  <thead><tr><th>Order</th><th>Date</th><th>Status</th><th class="num">Total</th></tr></thead>
-  <tbody>
-  {% for order in orders %}
-    <tr>
-      <td><a href="{% url 'orders_customer:detail' order.pk %}">{{ order.reference }}</a></td>
-      <td>{{ order.created_at|date:"Y-m-d" }}</td>
-      <td>{% status_badge order.status order.get_status_display %}</td>
-      <td class="num">{{ order.currency }} {{ order.total }}</td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="4" class="muted">You have not placed any orders yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card">
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Order" %}</th><th>{% trans "Date" %}</th><th>{% trans "Status" %}</th><th class="text-end">{% trans "Total" %}</th></tr></thead>
+    <tbody>
+    {% for order in orders %}
+      <tr>
+        <td><a href="{% url 'orders_customer:detail' order.pk %}">{{ order.reference }}</a></td>
+        <td>{{ order.created_at|fdate }}</td>
+        <td>{% status_badge order.status order.get_status_display %}</td>
+        <td class="text-end">{{ order.total|money:order.currency }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-secondary">{% trans "You have not placed any orders yet." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
 </div>
 {% endblock %}

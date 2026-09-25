@@ -1,13 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Your accounts · {{ SITE_NAME }}{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Your accounts" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Your accounts</h1>
+<section class="card"><div class="card-body">
+  <h1 class="h4">{% trans "Your accounts" %}</h1>
+  <ul class="list-group list-group-flush">
   {% for client in clients %}
-    <p><a href="{% url 'clients_customer:detail' client.pk %}">{{ client.display_name }}</a>
-      <small class="muted">{{ client.reference }}</small></p>
+    <li class="list-group-item px-0"><a href="{% url 'clients_customer:detail' client.pk %}">{{ client.display_name }}</a>
+      <small class="text-secondary">{{ client.reference }}</small></li>
   {% empty %}
-    <p class="muted">You are not a contact on any account yet.</p>
+    <li class="list-group-item px-0 text-secondary">{% trans "You are not a contact on any account yet." %}</li>
   {% endfor %}
-</section>
+  </ul>
+</div></section>
 {% endblock %}

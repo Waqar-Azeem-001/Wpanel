@@ -1,22 +1,22 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Commissions · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Commissions" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<p><a href="{% url 'affiliates_customer:dashboard' %}">&larr; Affiliate</a></p>
-<h1>Commissions</h1>
-<nav class="tabs" aria-label="Status">
-  <a href="?"{% if not status %} class="active"{% endif %}>All</a>
-  <a href="?status=pending"{% if status == "pending" %} class="active"{% endif %}>Pending</a>
-  <a href="?status=approved"{% if status == "approved" %} class="active"{% endif %}>Approved</a>
-  <a href="?status=paid"{% if status == "paid" %} class="active"{% endif %}>Paid</a>
-  <a href="?status=rejected"{% if status == "rejected" %} class="active"{% endif %}>Rejected</a>
-</nav>
-<div class="table-wrap"><table class="table">
-  <thead><tr><th>Date</th><th>Customer</th><th>Status</th><th class="num">Sale</th><th class="num">Commission</th></tr></thead>
+<p class="mb-2"><a href="{% url 'affiliates_customer:dashboard' %}">&larr; {% trans "Affiliate" %}</a></p>
+<h1>{% trans "Commissions" %}</h1>
+<ul class="nav nav-tabs mb-3" aria-label="Status">
+  <li class="nav-item"><a class="nav-link{% if not status %} active{% endif %}" href="{% url 'affiliates_customer:commissions' %}">{% trans "All" %}</a></li>
+  <li class="nav-item"><a class="nav-link{% if status == 'pending' %} active{% endif %}" href="{% url 'affiliates_customer:commissions' %}?status=pending">{% trans "Pending" %}</a></li>
+  <li class="nav-item"><a class="nav-link{% if status == 'approved' %} active{% endif %}" href="{% url 'affiliates_customer:commissions' %}?status=approved">{% trans "Approved" %}</a></li>
+  <li class="nav-item"><a class="nav-link{% if status == 'paid' %} active{% endif %}" href="{% url 'affiliates_customer:commissions' %}?status=paid">{% trans "Paid" %}</a></li>
+  <li class="nav-item"><a class="nav-link{% if status == 'rejected' %} active{% endif %}" href="{% url 'affiliates_customer:commissions' %}?status=rejected">{% trans "Rejected" %}</a></li>
+</ul>
+<div class="card"><div class="table-responsive"><table class="table mb-0 align-middle">
+  <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Customer" %}</th><th>{% trans "Status" %}</th><th class="text-end">{% trans "Sale" %}</th><th class="text-end">{% trans "Commission" %}</th></tr></thead>
   <tbody>{% for c in page %}
-    <tr><td>{{ c.created_at|date:"j M Y" }}</td><td>{{ c.referral.label }}</td>
-        <td>{% status_badge c.status c.get_status_display %}{% if c.status == "pending" %} <small class="muted">approved after {{ c.eligible_at|date:"j M" }}</small>{% endif %}{% if c.note %} <small class="muted">{{ c.note }}</small>{% endif %}</td>
-        <td class="num">{{ c.currency }} {{ c.base_amount }}</td><td class="num">{{ c.currency }} {{ c.amount }}</td></tr>
-  {% empty %}<tr><td colspan="5" class="muted">Nothing here yet.</td></tr>{% endfor %}</tbody></table></div>
+    <tr><td>{{ c.created_at|fdate }}</td><td>{{ c.referral.label }}</td>
+        <td>{% status_badge c.status c.get_status_display %}{% if c.status == "pending" %} <small class="text-secondary">approved after {{ c.eligible_at|fdate }}</small>{% endif %}{% if c.note %} <small class="text-secondary">{{ c.note }}</small>{% endif %}</td>
+        <td class="text-end">{{ c.base_amount|money:c.currency }}</td><td class="text-end">{{ c.amount|money:c.currency }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="text-secondary">{% trans "Nothing here yet." %}</td></tr>{% endfor %}</tbody></table></div></div>
 {% include "components/pager.html" %}
 {% endblock %}

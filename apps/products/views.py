@@ -42,6 +42,12 @@ def public_product_list(request):
     return render(request, "products/public/list.html", {"products": products})
 
 
+def public_addon_list(request):
+    """The extras a customer can add to a plan, with their prices (they are chosen at checkout, on a hosting line)."""
+    addons = Addon.objects.filter(status=CatalogStatus.ACTIVE).prefetch_related("prices").order_by("name")
+    return render(request, "products/public/addons.html", {"addons": addons})
+
+
 def public_product_detail(request, slug):
     product = get_object_or_404(Product.objects.prefetch_related("prices"), slug=slug, status=CatalogStatus.ACTIVE)
     prices = product.prices.filter(is_active=True)

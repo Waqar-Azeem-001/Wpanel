@@ -1,25 +1,26 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}My Hosting · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "My Services" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>My Hosting</h1>
-  <a class="btn secondary" href="{% url 'catalog:product_list' %}">Order hosting</a>
+  <h1>{% trans "My Services" %}</h1>
+  <a class="btn btn-primary" href="{% url 'catalog:product_list' %}">{% trans "Order new services" %}</a>
 </div>
-<div class="table-wrap">
-<table class="table">
-  <thead><tr><th>Domain</th><th>Product</th><th>Status</th></tr></thead>
-  <tbody>
-  {% for account in accounts %}
-    <tr>
-      <td><a href="{% url 'hosting_customer:detail' account.pk %}">{{ account.domain }}</a></td>
-      <td>{{ account.product.name }}</td>
-      <td>{% status_badge account.status account.get_status_display %}</td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="3" class="muted">You have no hosting accounts yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card">
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Domain" %}</th><th>{% trans "Product" %}</th><th>{% trans "Next due" %}</th><th>{% trans "Status" %}</th></tr></thead>
+    <tbody>
+    {% for account in accounts %}
+      <tr>
+        <td><a href="{% url 'hosting_customer:detail' account.pk %}">{{ account.domain }}</a></td>
+        <td>{{ account.product.name }}</td>
+        <td>{{ account.expires_at|fdate|default:"—" }}</td>
+        <td>{% status_badge account.status account.get_status_display %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-secondary">{% trans "No services match." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
 </div>
 {% endblock %}

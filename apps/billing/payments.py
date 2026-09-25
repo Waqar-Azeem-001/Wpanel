@@ -388,6 +388,11 @@ def handle_webhook(provider, body, headers):
 
 def active_payment_methods_for(invoice):
     """Methods a customer can pay ``invoice`` with: (offline methods, online methods)."""
+    return active_payment_methods()
+
+
+def active_payment_methods():
+    """Every way a customer can pay: (offline methods, online methods)."""
     methods = PaymentMethod.objects.filter(is_active=True).select_related("provider")
     online = [m for m in methods if m.provider_id and m.provider.is_active]
     offline = [m for m in methods if not m.provider_id]

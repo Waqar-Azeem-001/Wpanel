@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Payment methods" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Payment methods" %}</h1></div>
+<p class="text-secondary">{% trans "These are the ways you can pay an invoice. Open an invoice to pay it or to tell us you have paid." %}</p>
+{% for method in offline_methods %}
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{{ method.name }}</h2>
+  {% if method.instructions %}<p class="mb-0">{{ method.instructions|linebreaksbr }}</p>{% else %}<p class="mb-0 text-secondary">{% trans "Contact us for details." %}</p>{% endif %}
+</div></section>
+{% endfor %}
+{% for method in online_methods %}
+<section class="card mb-3"><div class="card-body"><h2 class="h5">{{ method.name }}</h2><p class="mb-0">{% trans "Pay online from the invoice page." %}</p></div></section>
+{% endfor %}
+{% if not offline_methods and not online_methods %}
+  {% url 'billing_customer:invoice_list' as invoices_url %}
+  {% include "components/empty_state.html" with message=_("No payment methods are set up yet. Please contact us.") action_url=invoices_url action_label=_("My invoices") icon="bi-credit-card" %}
+{% endif %}
+<a class="btn btn-outline-primary" href="{% url 'billing_customer:invoice_list' %}">{% trans "My invoices" %}</a>
+{% endblock %}

@@ -1,87 +1,90 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Order {{ order.reference }} · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Order" %} {{ order.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<p><a href="{% url 'orders_customer:list' %}">&larr; My orders</a></p>
+<p class="mb-2"><a href="{% url 'orders_customer:list' %}">&larr; {% trans "My orders" %}</a></p>
 <div class="page-head">
-  <h1>Order {{ order.reference }}</h1>
+  <h1>{% trans "Order" %} {{ order.reference }}</h1>
   {% status_badge order.status order.get_status_display %}
 </div>
 
 {% if order.status == "pending_payment" %}
-<section class="card">
-  <h2>Awaiting payment</h2>
-  <p>Payment method: <strong>{{ order.payment_method_name }}</strong></p>
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{% trans "Awaiting payment" %}</h2>
+  <p>{% trans "Payment method:" %} <strong>{{ order.payment_method_name }}</strong></p>
   {% if payment_method and payment_method.instructions %}<p>{{ payment_method.instructions|linebreaksbr }}</p>{% endif %}
-  <p class="muted">Quote your invoice number with your payment. Your services are set up once payment is confirmed.</p>
-</section>
+  <p class="text-secondary mb-0">{% trans "Quote your invoice number with your payment. Your services are set up once payment is confirmed." %}</p>
+</div></section>
 {% endif %}
 {% if order.status == "paid" or order.status == "processing" or order.status == "provisioning" %}
-<section class="card"><h2>Setting up your order</h2>
-  <p>We have received your payment and are setting up your services now. This usually takes a few minutes; you will get an email when it is done.</p></section>
+<section class="card mb-3"><div class="card-body"><h2 class="h5">{% trans "Setting up your order" %}</h2>
+  <p class="mb-0">{% trans "We have received your payment and are setting up your services now. This usually takes a few minutes; you will get an email when it is done." %}</p></div></section>
 {% elif order.status == "failed" %}
-<section class="card"><h2>We are finishing your order</h2>
-  <p>We have received your payment, but part of the setup needs our team's attention. We are on it and will be in touch if we need anything from you.</p></section>
+<section class="card mb-3"><div class="card-body"><h2 class="h5">{% trans "We are finishing your order" %}</h2>
+  <p class="mb-0">{% trans "We have received your payment, but part of the setup needs our team's attention. We are on it and will be in touch if we need anything from you." %}</p></div></section>
 {% elif order.status == "fraud" %}
-<section class="card"><h2>Your order is under review</h2>
-  <p>We need to complete a routine check before we can set this order up. We will contact you if we need anything.</p></section>
+<section class="card mb-3"><div class="card-body"><h2 class="h5">{% trans "Your order is under review" %}</h2>
+  <p class="mb-0">{% trans "We need to complete a routine check before we can set this order up. We will contact you if we need anything." %}</p></div></section>
 {% elif order.status == "active" or order.status == "suspended" %}
-<section class="card"><h2>{% if order.status == "active" %}Your services{% else %}Suspended{% endif %}</h2>
-  {% if order.status == "suspended" %}<p>These services are suspended. Please contact us.</p>{% endif %}
-  <ul>
-  {% for item in items %}{% if item.hosting_account %}<li><a href="{% url 'hosting_customer:detail' item.hosting_account_id %}">Hosting for {{ item.hosting_account.domain }}</a></li>{% endif %}
-  {% if item.domain %}<li><a href="{% url 'domains_customer:detail' item.domain_id %}">Domain {{ item.domain.name }}</a></li>{% endif %}{% endfor %}
-  </ul></section>
+<section class="card mb-3"><div class="card-body"><h2 class="h5">{% if order.status == "active" %}{% trans "Your services" %}{% else %}{% trans "Suspended" %}{% endif %}</h2>
+  {% if order.status == "suspended" %}<p>{% trans "These services are suspended. Please contact us." %}</p>{% endif %}
+  <ul class="mb-0">
+  {% for item in items %}{% if item.hosting_account %}<li><a href="{% url 'hosting_customer:detail' item.hosting_account_id %}">{% trans "Hosting for" %} {{ item.hosting_account.domain }}</a></li>{% endif %}
+  {% if item.domain %}<li><a href="{% url 'domains_customer:detail' item.domain_id %}">{% trans "Domain" %} {{ item.domain.name }}</a></li>{% endif %}{% endfor %}
+  </ul></div></section>
 {% elif order.status == "terminated" %}
-<section class="card"><h2>Terminated</h2><p>These services have been terminated.</p></section>
+<section class="card mb-3"><div class="card-body"><h2 class="h5">{% trans "Terminated" %}</h2><p class="mb-0">{% trans "These services have been terminated." %}</p></div></section>
 {% endif %}
 {% for invoice in order.invoices.all %}
-<section class="card">
-  <h2>Invoice</h2>
-  <p><a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{{ invoice.number }}</a>
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{% trans "Invoice" %}</h2>
+  <p class="mb-0"><a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{{ invoice.number }}</a>
     {% status_badge invoice.display_status invoice.display_status_label %}
-    &middot; balance {{ invoice.currency }} {{ invoice.balance_due }}
-    {% if invoice.can_be_paid %}&middot; <a class="btn small" href="{% url 'billing_customer:invoice_detail' invoice.pk %}">Pay now</a>{% endif %}</p>
-</section>
+    &middot; {% trans "balance" %} {{ invoice.balance_due|money:invoice.currency }}
+    {% if invoice.can_be_paid %}&middot; <a class="btn btn-sm btn-primary" href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{% trans "Pay now" %}</a>{% endif %}</p>
+</div></section>
 {% endfor %}
 
-<div class="cols">
-  <section class="card">
-    <h2>Items</h2>
-    <div class="table-wrap">
-    <table class="table">
-      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Setup fee</th><th class="num">First payment</th></tr></thead>
-      <tbody>
-      {% for item in order.items.all %}
-        <tr class="{% if item.kind == 'addon' %}addon-row{% endif %}">
-          <td>{{ item.description }}</td><td class="num">{{ item.unit_price }}</td>
-          <td class="num">{{ item.setup_fee }}</td><td class="num">{{ item.line_total }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    </div>
-    {% include "orders/_totals.html" with currency=order.currency subtotal=order.subtotal discount_total=order.discount_total coupon_code=order.coupon_code tax_name=order.tax_name tax_rate=order.tax_rate tax_total=order.tax_total total=order.total %}
-  </section>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <section class="card"><div class="card-body">
+      <h2 class="h5">{% trans "Items" %}</h2>
+      <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>{% trans "Item" %}</th><th class="text-end">{% trans "Price" %}</th><th class="text-end">{% trans "Setup fee" %}</th><th class="text-end">{% trans "First payment" %}</th></tr></thead>
+        <tbody>
+        {% for item in order.items.all %}
+          <tr{% if item.kind == 'addon' %} class="table-light"{% endif %}>
+            <td{% if item.kind == 'addon' %} class="ps-4"{% endif %}>{{ item.description }}</td><td class="text-end">{{ item.unit_price|money:order.currency }}</td>
+            <td class="text-end">{{ item.setup_fee|money:order.currency }}</td><td class="text-end">{{ item.line_total|money:order.currency }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% include "orders/_totals.html" with currency=order.currency subtotal=order.subtotal discount_total=order.discount_total coupon_code=order.coupon_code tax_name=order.tax_name tax_rate=order.tax_rate tax_total=order.tax_total total=order.total %}
+    </div></section>
+  </div>
 
-  <section class="card">
-    <h2>Billing details</h2>
-    <dl class="meta">
-      <dt>Name</dt><dd>{{ order.billing_name|default:"&mdash;" }}</dd>
-      <dt>Company</dt><dd>{{ order.billing_company|default:"&mdash;" }}</dd>
-      <dt>Email</dt><dd>{{ order.billing_email }}</dd>
-      <dt>Country</dt><dd>{{ order.billing_country|default:"&mdash;" }}</dd>
-      <dt>Tax ID</dt><dd>{{ order.billing_tax_id|default:"&mdash;" }}</dd>
-      <dt>Placed</dt><dd>{{ order.created_at|date:"Y-m-d H:i" }}</dd>
-    </dl>
-    {% if order.status == "pending_payment" %}
-    <form method="post" action="{% url 'orders_customer:cancel' order.pk %}"
-          onsubmit="return confirm('Cancel this order?');">{% csrf_token %}
-      <button class="btn small danger" type="submit">Cancel order</button>
-    </form>
-    {% endif %}
-    {% if order.status == "cancelled" and order.cancel_reason %}<p class="muted">Reason: {{ order.cancel_reason }}</p>{% endif %}
-  </section>
+  <div class="col-lg-5">
+    <section class="card"><div class="card-body">
+      <h2 class="h5">{% trans "Billing details" %}</h2>
+      <dl class="row">
+        <dt class="col-sm-4">{% trans "Name" %}</dt><dd class="col-sm-8">{{ order.billing_name|default:"&mdash;" }}</dd>
+        <dt class="col-sm-4">{% trans "Company" %}</dt><dd class="col-sm-8">{{ order.billing_company|default:"&mdash;" }}</dd>
+        <dt class="col-sm-4">{% trans "Email" %}</dt><dd class="col-sm-8">{{ order.billing_email }}</dd>
+        <dt class="col-sm-4">{% trans "Country" %}</dt><dd class="col-sm-8">{{ order.billing_country|default:"&mdash;" }}</dd>
+        <dt class="col-sm-4">{% trans "Tax ID" %}</dt><dd class="col-sm-8">{{ order.billing_tax_id|default:"&mdash;" }}</dd>
+        <dt class="col-sm-4">{% trans "Placed" %}</dt><dd class="col-sm-8">{{ order.created_at|fdatetime }}</dd>
+      </dl>
+      {% if order.status == "pending_payment" %}
+      <form method="post" action="{% url 'orders_customer:cancel' order.pk %}" data-confirm="{% trans 'Cancel this order?' %}">{% csrf_token %}
+        <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Cancel order" %}</button>
+      </form>
+      {% endif %}
+      {% if order.status == "cancelled" and order.cancel_reason %}<p class="text-secondary mb-0">{% trans "Reason:" %} {{ order.cancel_reason }}</p>{% endif %}
+    </div></section>
+  </div>
 </div>
 {% endblock %}

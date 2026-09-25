@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ domain.name }} · {% trans "Auto renew" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "domains/customer/_header.html" %}
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Auto renew" %}</h2>
+  <p class="text-secondary">{% trans "When on, we create the renewal invoice for you before the domain expires." %}</p>
+  <form method="post" action="{% url 'domains_customer:auto_renew' domain.pk %}">{% csrf_token %}
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" role="switch" id="id_auto_renew" name="auto_renew" {% if domain.auto_renew %}checked{% endif %}{% if not can_edit %} disabled{% endif %}>
+      <label class="form-check-label" for="id_auto_renew">{% trans "Renew this domain automatically" %}</label>
+    </div>
+    {% if can_edit %}<button class="btn btn-primary" type="submit">{% trans "Save" %}</button>{% endif %}
+  </form>
+</div></section>
+{% endblock %}

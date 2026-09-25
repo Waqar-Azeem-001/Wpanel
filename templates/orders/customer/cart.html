@@ -1,100 +1,109 @@
 {% extends "base.html" %}
-{% block title %}Your cart · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Your cart" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<h1>Your cart</h1>
+<div class="page-head"><h1>{% trans "Your cart" %}</h1></div>
 
 {% if not rows %}
-<section class="card">
-  <p class="muted">Your cart is empty.</p>
-  <div class="actions">
-    <a class="btn" href="{% url 'catalog:product_list' %}">Browse plans</a>
-    <a class="btn secondary" href="{% url 'domains_public:search' %}">Find a domain</a>
+<section class="card"><div class="card-body">
+  <p class="text-secondary">{% trans "Your cart is empty." %}</p>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{% url 'catalog:product_list' %}">{% trans "Browse plans" %}</a>
+    <a class="btn btn-outline-primary" href="{% url 'domains_public:search' %}">{% trans "Find a domain" %}</a>
   </div>
-</section>
+</div></section>
 {% else %}
-<div class="table-wrap">
-<table class="table cart-table">
-  <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Setup fee</th><th class="num">First payment</th><th></th></tr></thead>
-  <tbody>
-  {% for row in rows %}
-    {% with line=row.line %}
-    <tr class="{% if line.item.kind == 'addon' %}addon-row{% endif %}">
-      <td>{{ line.description }}{% if line.error %}<p class="error">{{ line.error }}</p>{% endif %}</td>
-      <td class="num">{% if line.ok %}{{ line.unit_price }}{% else %}&mdash;{% endif %}</td>
-      <td class="num">{% if line.ok %}{{ line.setup_fee }}{% else %}&mdash;{% endif %}</td>
-      <td class="num">{% if line.ok %}{{ line.total }}{% else %}&mdash;{% endif %}</td>
-      <td>
-        <form method="post" action="{% url 'orders_customer:cart_remove' line.item.pk %}">{% csrf_token %}
-          <button class="btn small danger" type="submit">Remove</button>
-        </form>
-      </td>
-    </tr>
-    {% if row.offers %}
-    <tr class="offers-row">
-      <td colspan="5">
-        <strong>Add to this plan:</strong>
-        {% for offer in row.offers %}
-        <form method="post" action="{% url 'orders_customer:cart_add_addon' %}" class="row-form offer">{% csrf_token %}
-          <input type="hidden" name="parent_item" value="{{ line.item.pk }}">
-          <input type="hidden" name="addon" value="{{ offer.addon.pk }}">
-          <span class="offer-name">{{ offer.addon.name }}</span>
-          <select name="option" aria-label="Billing for {{ offer.addon.name }}">
-            {% for choice in offer.choices %}
-              <option value="{{ choice.value }}">{{ choice.label }} &ndash; {{ choice.price }}{% if choice.setup_fee != 0 %} (+{{ choice.setup_fee }} setup){% endif %}</option>
-            {% endfor %}
-          </select>
-          <button class="btn small secondary" type="submit">Add</button>
-        </form>
-        {% endfor %}
-      </td>
-    </tr>
-    {% endif %}
-    {% endwith %}
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card mb-4">
+  <div class="table-responsive"><table class="table mb-0 align-middle cart-table">
+    <thead><tr><th>{% trans "Item" %}</th><th class="text-end">{% trans "Price" %}</th><th class="text-end">{% trans "Setup fee" %}</th><th class="text-end">{% trans "First payment" %}</th><th></th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      {% with line=row.line %}
+      <tr{% if line.item.kind == 'addon' %} class="table-light"{% endif %}>
+        <td{% if line.item.kind == 'addon' %} class="ps-4"{% endif %}>{{ line.description }}{% if line.error %}<p class="text-danger mb-0">{{ line.error }}</p>{% endif %}</td>
+        <td class="text-end">{% if line.ok %}{{ line.unit_price|money:priced.currency }}{% else %}&mdash;{% endif %}</td>
+        <td class="text-end">{% if line.ok %}{{ line.setup_fee|money:priced.currency }}{% else %}&mdash;{% endif %}</td>
+        <td class="text-end">{% if line.ok %}{{ line.total|money:priced.currency }}{% else %}&mdash;{% endif %}</td>
+        <td class="text-end">
+          <form method="post" action="{% url 'orders_customer:cart_remove' line.item.pk %}">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Remove" %}</button>
+          </form>
+        </td>
+      </tr>
+      {% if row.offers %}
+      <tr class="table-light">
+        <td colspan="5">
+          <strong>{% trans "Add to this plan:" %}</strong>
+          {% for offer in row.offers %}
+          <form method="post" action="{% url 'orders_customer:cart_add_addon' %}" class="row g-2 align-items-center mt-1">{% csrf_token %}
+            <input type="hidden" name="parent_item" value="{{ line.item.pk }}">
+            <input type="hidden" name="addon" value="{{ offer.addon.pk }}">
+            <div class="col-auto fw-semibold">{{ offer.addon.name }}</div>
+            <div class="col-auto">
+              <select class="form-select form-select-sm" name="option" aria-label="Billing for {{ offer.addon.name }}">
+                {% for choice in offer.choices %}
+                  <option value="{{ choice.value }}">{{ choice.label }} &ndash; {{ choice.price }}{% if choice.setup_fee != 0 %} (+{{ choice.setup_fee }} setup){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-auto"><button class="btn btn-sm btn-outline-primary" type="submit">{% trans "Add" %}</button></div>
+          </form>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% endwith %}
+    {% endfor %}
+    </tbody>
+  </table></div>
 </div>
 
-<div class="cols">
-  <section class="card">
-    <h2>Discount code</h2>
-    {% if priced.coupon %}
-      <p>Code <strong>{{ priced.coupon.code }}</strong> applied.</p>
-      <form method="post" action="{% url 'orders_customer:cart_coupon_remove' %}">{% csrf_token %}
-        <button class="btn small secondary" type="submit">Remove code</button>
-      </form>
-    {% else %}
-      {% if priced.coupon_error %}<p class="error">{{ priced.coupon_error }}</p>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <section class="card mb-3"><div class="card-body">
+      <h2 class="h5">{% trans "Discount code" %}</h2>
+      {% if priced.coupon %}
+        <p>{% trans "Code" %} <strong>{{ priced.coupon.code }}</strong> {% trans "applied." %}</p>
         <form method="post" action="{% url 'orders_customer:cart_coupon_remove' %}">{% csrf_token %}
-          <button class="btn small secondary" type="submit">Remove code</button>
+          <button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Remove code" %}</button>
+        </form>
+      {% else %}
+        {% if priced.coupon_error %}<p class="text-danger">{{ priced.coupon_error }}</p>
+          <form method="post" action="{% url 'orders_customer:cart_coupon_remove' %}">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Remove code" %}</button>
+          </form>
+        {% endif %}
+        <form method="post" action="{% url 'orders_customer:cart_coupon' %}" class="row g-2 align-items-end">{% csrf_token %}
+          <div class="col"><label class="form-label" for="id_code">{% trans "Coupon code" %}</label>{{ coupon_form.code|bs_field }}</div>
+          <div class="col-auto"><button class="btn btn-outline-primary" type="submit">{% trans "Apply" %}</button></div>
         </form>
       {% endif %}
-      <form method="post" action="{% url 'orders_customer:cart_coupon' %}" class="row-form">{% csrf_token %}
-        <div class="field grow"><label for="id_code">Coupon code</label>{{ coupon_form.code }}</div>
-        <div class="field"><button class="btn secondary" type="submit">Apply</button></div>
+    </div></section>
+
+    <section class="card"><div class="card-body">
+      <h2 class="h5">{% trans "Transfer a domain in" %}</h2>
+      <form method="post" action="{% url 'orders_customer:cart_add_transfer' %}" class="row g-2 align-items-end">{% csrf_token %}
+        <div class="col-md"><label class="form-label" for="id_domain">{% trans "Domain" %}</label>{{ transfer_form.domain|bs_field }}</div>
+        <div class="col-md"><label class="form-label" for="id_auth_code">{% trans "Authorization code" %}</label>{{ transfer_form.auth_code|bs_field }}</div>
+        <div class="col-auto"><button class="btn btn-outline-primary" type="submit">{% trans "Add transfer" %}</button></div>
       </form>
-    {% endif %}
+      <p class="text-secondary mt-3 mb-0">{% trans "Need another domain?" %} <a href="{% url 'domains_public:search' %}">{% trans "Search for one" %}</a>.</p>
+    </div></section>
+  </div>
 
-    <h2>Transfer a domain in</h2>
-    <form method="post" action="{% url 'orders_customer:cart_add_transfer' %}" class="row-form">{% csrf_token %}
-      <div class="field grow"><label for="id_domain">Domain</label>{{ transfer_form.domain }}</div>
-      <div class="field grow"><label for="id_auth_code">Authorization code</label>{{ transfer_form.auth_code }}</div>
-      <div class="field"><button class="btn secondary" type="submit">Add transfer</button></div>
-    </form>
-    <p class="muted">Need another domain? <a href="{% url 'domains_public:search' %}">Search for one</a>.</p>
-  </section>
-
-  <section class="card">
-    <h2>Order summary</h2>
-    {% include "orders/_totals.html" with currency=priced.currency subtotal=priced.subtotal discount_total=priced.discount_total coupon_code=priced.coupon.code tax_name=priced.tax_rule.name tax_rate=priced.tax_rate tax_total=priced.tax_total total=priced.total %}
-    {% if priced.is_valid %}
-      <a class="btn block" href="{% url 'orders_customer:checkout' %}">Proceed to checkout</a>
-    {% else %}
-      <p class="muted">Fix the items marked above (or remove them) to continue.</p>
-    {% endif %}
-    <p class="muted">Prices are calculated by our servers and confirmed again when you place the order.</p>
-  </section>
+  <div class="col-lg-5">
+    <section class="card"><div class="card-body">
+      <h2 class="h5">{% trans "Order summary" %}</h2>
+      {% include "orders/_totals.html" with currency=priced.currency subtotal=priced.subtotal discount_total=priced.discount_total coupon_code=priced.coupon.code tax_name=priced.tax_rule.name tax_rate=priced.tax_rate tax_total=priced.tax_total total=priced.total %}
+      {% if priced.is_valid %}
+        <a class="btn btn-primary w-100 mb-2" href="{% url 'orders_customer:checkout' %}">{% trans "Proceed to checkout" %}</a>
+      {% else %}
+        <p class="text-secondary">{% trans "Fix the items marked above (or remove them) to continue." %}</p>
+      {% endif %}
+      <p class="text-secondary small mb-0">{% trans "Prices are calculated by our servers and confirmed again when you place the order." %}</p>
+    </div></section>
+  </div>
 </div>
 {% endif %}
 {% endblock %}

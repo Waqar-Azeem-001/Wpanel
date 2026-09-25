@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ account.domain }} · {% trans "Information" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="information" %}
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Hosting information" %}</h2>
+  <dl class="row mb-0">
+    <dt class="col-sm-4">{% trans "Domain" %}</dt><dd class="col-sm-8">{{ account.domain }}</dd>
+    <dt class="col-sm-4">{% trans "Plan" %}</dt><dd class="col-sm-8">{{ account.product.name }}</dd>
+    <dt class="col-sm-4">{% trans "Username" %}</dt><dd class="col-sm-8">{{ account.username|default:"—" }}</dd>
+    <dt class="col-sm-4">{% trans "Server" %}</dt><dd class="col-sm-8">{{ account.server.hostname|default:_("Not assigned yet") }}</dd>
+    <dt class="col-sm-4">{% trans "Server IP address" %}</dt><dd class="col-sm-8">{{ account.server.ip_address|default:"—" }}</dd>
+    <dt class="col-sm-4">{% trans "Ordered" %}</dt><dd class="col-sm-8">{{ account.created_at|fdate }}</dd>
+    <dt class="col-sm-4">{% trans "Paid through" %}</dt><dd class="col-sm-8">{{ account.expires_at|fdate|default:"—" }}</dd>
+  </dl>
+  <p class="text-secondary mt-3 mb-0">{% trans "We never show or store your control panel password. Use the password reset in your control panel if you have lost it." %}</p>
+</div></section>
+{% endblock %}

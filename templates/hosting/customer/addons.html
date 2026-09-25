@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ account.domain }} · {% trans "Addons" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="addons" %}
+<section class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h2 class="h6 mb-0">{% trans "Addons ordered with this service" %}</h2>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'catalog:addons' %}">{% trans "View available addons" %}</a>
+  </div>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Addon" %}</th><th>{% trans "Order" %}</th><th>{% trans "Ordered" %}</th><th class="text-end">{% trans "Price" %}</th></tr></thead>
+    <tbody>{% for line in addon_lines %}
+      <tr><td>{{ line.description }}</td><td><a href="{% url 'orders_customer:detail' line.order_id %}">{{ line.order.reference }}</a></td>
+        <td>{{ line.created_at|fdate }}</td><td class="text-end">{{ line.line_total|money:line.order.currency }}</td></tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-secondary">{% trans "No addons were ordered with this service." %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

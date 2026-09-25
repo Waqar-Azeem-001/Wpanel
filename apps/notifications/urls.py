@@ -9,5 +9,7 @@ urlpatterns = [
     path("", views.inbox, name="inbox"),
     path("mark-read/", views.mark_all_read, name="mark_all_read"),
     path("preferences/", views.preferences, name="preferences"),
+    path("emails/", views.email_history, name="emails"),
+    path("emails/<int:pk>/", views.email_history_detail, name="email"),
     path("<int:pk>/open/", views.open_notification, name="open"),
 ]

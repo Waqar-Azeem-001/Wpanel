@@ -1,12 +1,22 @@
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.urls import include, path
-from django.views.generic import RedirectView
 
+from apps.clients.views_dashboard import dashboard
 from apps.core.redirects import retired_urlpatterns
 from apps.notifications import views as notification_views
 
+
+def home(request):
+    """The site's front door: customers land on their dashboard, staff and visitors as before."""
+    if request.user.is_authenticated and not request.user.is_staff and request.user.client_contacts.exists():
+        return redirect("dashboard")
+    return redirect("accounts:profile")
+
+
 urlpatterns = [
-    path("", RedirectView.as_view(pattern_name="accounts:profile", permanent=False), name="home"),
+    path("", home, name="home"),
+    path("account/", dashboard, name="dashboard"),
     *retired_urlpatterns(),
     path("admin/", admin.site.urls),
     path("api/v1/", include(("config.api_urls", "v1"), namespace="v1")),

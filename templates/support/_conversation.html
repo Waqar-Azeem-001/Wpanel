@@ -1,21 +1,23 @@
-{% load ui %}
-<div class="conversation">
+{% load ui i18n %}
+<div class="mb-4">
 {% for message in messages_ %}
-  <article class="msg {{ message.kind }}{% if message.is_internal %} internal{% endif %}">
-    <header>
+  <article class="card mb-3{% if message.is_internal %} border-warning bg-warning-subtle{% elif message.kind == 'staff' %} border-start border-4 border-primary{% endif %}">
+    <header class="card-header d-flex flex-wrap gap-2 align-items-baseline">
       <strong>{{ message.author_name|default:"System" }}</strong>
-      {% if message.kind == "staff" and not staff %}<span class="badge">Support team</span>{% endif %}
+      {% if message.kind == "staff" and not staff %}<span class="badge text-bg-primary">{% trans "Support team" %}</span>{% endif %}
       {% if message.is_internal %}{% status_badge "fraud" "Internal note" %}{% endif %}
-      <span class="muted">{{ message.created_at|date:"j M Y, H:i" }}</span>
+      <span class="text-secondary small">{{ message.created_at|fdatetime }}</span>
     </header>
-    <div class="body">{{ message.body|linebreaks }}</div>
-    {% if message.attachments.all %}
-    <ul class="attachments">
-      {% for a in message.attachments.all %}
-      <li><a href="{% url 'support_customer:attachment' a.pk %}">{{ a.original_name }}</a> <small class="muted">{{ a.size|filesizeformat }}</small></li>
-      {% endfor %}
-    </ul>
-    {% endif %}
+    <div class="card-body">
+      <div class="text-break">{{ message.body|linebreaks }}</div>
+      {% if message.attachments.all %}
+      <ul class="mb-0">
+        {% for a in message.attachments.all %}
+        <li><a href="{% url 'support_customer:attachment' a.pk %}">{{ a.original_name }}</a> <small class="text-secondary">{{ a.size|filesizeformat }}</small></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
   </article>
 {% endfor %}
 </div>

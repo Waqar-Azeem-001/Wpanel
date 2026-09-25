@@ -1,38 +1,42 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Quote {{ quote.number }} · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Quote" %} {{ quote.number }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<p><a href="{% url 'billing_customer:quote_list' %}">&larr; My quotes</a></p>
+<p class="mb-2"><a href="{% url 'billing_customer:quote_list' %}">&larr; {% trans "My quotes" %}</a></p>
 <div class="page-head">
-  <h1>Quote {{ quote.number }}</h1>
+  <h1>{% trans "Quote" %} {{ quote.number }}</h1>
   {% status_badge quote.status quote.display_status_label %}
 </div>
-<p class="muted">Issued {{ quote.issue_date|date:"j M Y" }} &middot; valid until {{ quote.valid_until|date:"j M Y" }}
-  &middot; <a href="{% url 'billing_customer:quote_pdf' quote.pk %}">Download PDF</a>
-  {% for invoice in invoices %}&middot; <a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">Invoice {{ invoice.number }}</a>{% endfor %}</p>
+<p class="text-secondary">{% trans "Issued" %} {{ quote.issue_date|fdate }} &middot; {% trans "valid until" %} {{ quote.valid_until|fdate }}
+  &middot; <a href="{% url 'billing_customer:quote_pdf' quote.pk %}">{% trans "Download PDF" %}</a>
+  {% for invoice in invoices %}&middot; <a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{% trans "Invoice" %} {{ invoice.number }}</a>{% endfor %}</p>
 
 {% if quote.can_be_accepted %}
-<section class="card">
-  <h2>Your decision</h2>
-  <p>Accepting this quote issues an invoice for {{ quote.currency }} {{ quote.total }}.</p>
-  <div class="actions">
-    <form method="post" action="{% url 'billing_customer:quote_accept' quote.pk %}">{% csrf_token %}<button class="btn" type="submit">Accept quote</button></form>
-    <form method="post" action="{% url 'billing_customer:quote_decline' quote.pk %}" onsubmit="return confirm('Decline this quote?');">{% csrf_token %}<button class="btn secondary" type="submit">Decline</button></form>
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{% trans "Your decision" %}</h2>
+  <p>{% trans "Accepting this quote issues an invoice for" %} {{ quote.total|money:quote.currency }}.</p>
+  <div class="d-flex flex-wrap gap-2">
+    <form method="post" action="{% url 'billing_customer:quote_accept' quote.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Accept quote" %}</button></form>
+    <form method="post" action="{% url 'billing_customer:quote_decline' quote.pk %}" data-confirm="{% trans 'Decline this quote?' %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">{% trans "Decline" %}</button></form>
   </div>
-</section>
+</div></section>
 {% endif %}
 
-<div class="cols">
-  <section class="card">
-    <h2>Lines</h2>
-    {% include "billing/_items.html" %}
-    {% include "billing/_totals.html" with doc=quote %}
-    {% if quote.notes %}<h3>Notes</h3><p>{{ quote.notes|linebreaksbr }}</p>{% endif %}
-  </section>
-  <section class="card">
-    <h2>Quote for</h2>
-    {% include "billing/_billto.html" with doc=quote %}
-  </section>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">{% trans "Lines" %}</h2>
+      {% include "billing/_items.html" %}
+      {% include "billing/_totals.html" with doc=quote %}
+      {% if quote.notes %}<h3 class="h6">{% trans "Notes" %}</h3><p>{{ quote.notes|linebreaksbr }}</p>{% endif %}
+    </div></section>
+  </div>
+  <div class="col-lg-4">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">{% trans "Quote for" %}</h2>
+      {% include "billing/_billto.html" with doc=quote %}
+    </div></section>
+  </div>
 </div>
 {% endblock %}

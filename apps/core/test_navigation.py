@@ -109,11 +109,11 @@ def test_a_customer_with_an_account_sees_the_full_customer_menu(owner):
     menus = navigation.build(request_for(owner), "client")
     assert labels(menus, "main") == ["Home", "Services", "Domains", "Billing", "Support", "Open Ticket", "Affiliates"]
     services = next(e for e in menus["main"] if e.key == "client.services")
-    assert [c.label for c in services.children] == ["My Hosting", "My Orders", "Order New Services"]
+    assert [c.label for c in services.children] == ["My Hosting", "My Orders", "Order New Services", "View Available Addons"]
     assert labels(menus, "right") == ["Cart", "Notifications"]
     account = menus["account"][0]
-    assert [c.label for c in account.children] == ["Your profile", "Your account", "Cancellation requests",
-                                                   "Change password", "Notification preferences"]
+    assert [c.label for c in account.children] == ["Your profile", "Your account", "Contacts", "Cancellation requests",
+                                                   "Change password", "Email history", "Notification preferences"]
     assert account.label == owner.get_short_name()
 
 

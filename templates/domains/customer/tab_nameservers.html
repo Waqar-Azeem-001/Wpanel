@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ domain.name }} · {% trans "Nameservers" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "domains/customer/_header.html" %}
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Nameservers" %}</h2>
+  {% if can_edit %}
+  <form method="post" action="{% url 'domains_customer:nameservers' domain.pk %}">{% csrf_token %}
+    {% include "partials/form.html" with form=nameservers_form %}
+    <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
+  </form>
+  {% else %}
+  <ul class="mb-0">{% for ns in domain.nameservers %}<li>{{ ns }}</li>{% empty %}<li>—</li>{% endfor %}</ul>
+  {% endif %}
+</div></section>
+{% endblock %}

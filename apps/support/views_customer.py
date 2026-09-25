@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.clients.models import Client
+from apps.core import portal
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text
 
@@ -20,12 +21,24 @@ def _own_ticket(request, pk):
 
 @login_required
 def ticket_list(request):
-    view = request.GET.get("view", "open")
     tickets = services.visible_tickets_for_user(request.user)
-    tickets = (tickets.filter(status=TicketStatus.CLOSED) if view == "closed"
-               else tickets.exclude(status=TicketStatus.CLOSED))
+    legacy = {"open": "active", "closed": "closed"}.get(request.GET.get("view", ""))  # the older ?view=open|closed
+    choices = [("active", "Open"), (TicketStatus.AGENT_REPLY, "Answered"), (TicketStatus.CUSTOMER_REPLY, "Your reply sent"),
+               (TicketStatus.PENDING, "Pending"), (TicketStatus.RESOLVED, "Resolved"), (TicketStatus.CLOSED, "Closed"),
+               ("all", "All tickets")]
+
+    def apply(rows, value):
+        if value == "active":
+            return rows.exclude(status=TicketStatus.CLOSED)
+        return rows if value == "all" else rows.filter(status=value)
+
+    tickets, view_panel = portal.status_filter(
+        request, tickets, choices, url_name="support_customer:list", all_label=None, apply=apply, default="active",
+        current=request.GET.get("status") or legacy)
+    support_panel = portal.actions_panel(request, "Support", [
+        ("Open a ticket", "support_customer:new", "bi-plus-circle"), ("Knowledgebase", "help:index", "bi-book")])
     page = Paginator(tickets.order_by("-last_activity_at", "-id"), 25).get_page(request.GET.get("page"))
-    return render(request, "support/customer/list.html", {"page": page, "view": view})
+    return render(request, "support/customer/list.html", {"page": page, "sidebar": [view_panel, support_panel]})
 
 
 @login_required

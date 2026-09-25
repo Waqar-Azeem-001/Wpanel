@@ -1,37 +1,38 @@
 {% extends "base.html" %}
-{% block title %}Search Domains · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Search Domains" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <h1>Find your domain</h1>
+<section class="card mx-auto narrow-card mb-3"><div class="card-body p-4">
+  <h1 class="h4">{% trans "Find your domain" %}</h1>
   <form method="get" novalidate>
     {% include "partials/form.html" %}
-    <button type="submit" class="btn">Search</button>
+    <button type="submit" class="btn btn-primary">{% trans "Search" %}</button>
   </form>
-</section>
+</div></section>
 
 {% if result %}
-<section class="card narrow">
+<section class="card mx-auto narrow-card"><div class="card-body p-4">
   {% if result.available %}
-    <h2>{{ result.domain }} is available!</h2>
-    <p class="price">{{ result.pricing.register_price }} <span class="muted">/ year</span></p>
-    <dl class="meta">
-      <dt>Renewal</dt><dd>{{ result.pricing.renew_price }} / year</dd>
-      <dt>Transfer</dt><dd>{{ result.pricing.transfer_price }}</dd>
+    <h2 class="h5">{{ result.domain }} {% trans "is available!" %}</h2>
+    <p class="fs-4 fw-bold">{{ result.pricing.register_price|money }} <span class="fs-6 fw-normal text-secondary">/ {% trans "year" %}</span></p>
+    <dl class="row">
+      <dt class="col-sm-4">{% trans "Renewal" %}</dt><dd class="col-sm-8">{{ result.pricing.renew_price|money }} / {% trans "year" %}</dd>
+      <dt class="col-sm-4">{% trans "Transfer" %}</dt><dd class="col-sm-8">{{ result.pricing.transfer_price|money }}</dd>
     </dl>
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'orders_customer:cart_add_domain' %}">{% csrf_token %}
         <input type="hidden" name="domain" value="{{ result.domain }}">
         <input type="hidden" name="years" value="{{ result.years }}">
-        <button class="btn" type="submit">Add to cart ({{ result.years }} year{{ result.years|pluralize }})</button>
+        <button class="btn btn-primary" type="submit">{% trans "Add to cart" %} ({{ result.years }} year{{ result.years|pluralize }})</button>
       </form>
     {% else %}
-      <p><a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Sign in</a> or
-        <a href="{% url 'accounts:register' %}">create an account</a> to order it.</p>
+      <p class="mb-0"><a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">{% trans "Sign in" %}</a> {% trans "or" %}
+        <a href="{% url 'accounts:register' %}">{% trans "create an account" %}</a> {% trans "to order it." %}</p>
     {% endif %}
   {% else %}
-    <h2>{{ result.domain }} is taken</h2>
-    <p class="muted">Do you own it? You can <a href="{% url 'orders_customer:cart' %}">transfer it in</a> from your cart.</p>
+    <h2 class="h5">{{ result.domain }} {% trans "is taken" %}</h2>
+    <p class="text-secondary mb-0">{% trans "Do you own it? You can" %} <a href="{% url 'orders_customer:cart' %}">{% trans "transfer it in" %}</a> {% trans "from your cart." %}</p>
   {% endif %}
-</section>
+</div></section>
 {% endif %}
 {% endblock %}

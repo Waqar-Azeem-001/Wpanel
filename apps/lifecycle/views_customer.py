@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.core import portal
 from apps.core.web import ACTION_ERRORS, apply_form_error, run_action
 from apps.domains import services as domain_services
 from apps.hosting import services as hosting_services
@@ -54,7 +55,8 @@ def cancellation_new(request, kind, pk):
             return redirect("lifecycle_customer:detail", pk=cr.pk)
     return render(request, "lifecycle/customer/new.html", {
         "form": form, "service": service, "kind": kind, "name": service.name if is_domain else service.domain,
-        "timeline": services.timeline(service)})
+        "timeline": services.timeline(service),
+        "sidebar": (portal.domain_sidebar if is_domain else portal.service_sidebar)(request, service)})
 
 
 @login_required

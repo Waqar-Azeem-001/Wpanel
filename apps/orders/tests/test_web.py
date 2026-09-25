@@ -283,8 +283,12 @@ def test_staff_list_search_detail_and_cancel(client, owner, shop, manager):
     listing = client.get("/staff/orders/")
     assert order.reference.encode() in listing.content and b"Acme Ltd" in listing.content
     assert order.reference.encode() in client.get(f"/staff/orders/?q={order.reference}").content
-    assert order.reference.encode() not in client.get("/staff/orders/?q=zzz-none").content
-    assert order.reference.encode() not in client.get("/staff/orders/?status=paid").content
+    # Look for the row's link, not the reference text: the search box's placeholder is an example reference (O000123),
+    # which is this order's reference whenever its id happens to be 123 on a database whose sequence has advanced.
+    row_link = f'href="/staff/orders/{order.pk}/"'.encode()
+    assert row_link in listing.content
+    assert row_link not in client.get("/staff/orders/?q=zzz-none").content
+    assert row_link not in client.get("/staff/orders/?status=paid").content
 
     detail = client.get(f"/staff/orders/{order.pk}/")
     assert detail.status_code == 200 and b"Cancel order" in detail.content and b"Bank transfer" in detail.content

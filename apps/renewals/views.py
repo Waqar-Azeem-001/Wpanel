@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
+from apps.core import portal
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, run_action
@@ -73,8 +74,8 @@ def hosting_upgrade(request, pk):
         previews = services.available_upgrades(account)
     except ServiceError as exc:
         error = exc.message
-    return render(request, "renewals/customer/upgrade.html", {"account": account, "previews": previews,
-                                                              "error": error})
+    return render(request, "renewals/customer/upgrade.html", {
+        "account": account, "previews": previews, "error": error, "sidebar": portal.service_sidebar(request, account)})
 
 
 @require_POST

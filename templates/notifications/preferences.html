@@ -1,22 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Notification preferences · {{ SITE_NAME }}{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Notification preferences" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<p><a href="{% url 'notifications:inbox' %}">&larr; Notifications</a></p>
-<h1>Notification preferences</h1>
-<p class="muted">Choose how you hear about optional updates. Messages about your account security, invoices and payments, and the state of your services are always sent - they cannot be switched off.</p>
+<p class="mb-2"><a href="{% url 'notifications:inbox' %}">&larr; {% trans "Notifications" %}</a></p>
+<h1>{% trans "Notification preferences" %}</h1>
+<p class="text-secondary">{% trans "Choose how you hear about optional updates. Messages about your account security, invoices and payments, and the state of your services are always sent - they cannot be switched off." %}</p>
 <form method="post" novalidate>{% csrf_token %}
   {% for row in rows %}
-  <section class="card">
-    <h2>{{ row.label }}</h2>
-    <ul class="event-list">{% for event in row.events %}<li>{{ event.label }}</li>{% endfor %}</ul>
-    <label class="check"><input type="checkbox" name="email_{{ row.category }}"{% if row.email_enabled %} checked{% endif %}> Email me</label>
-    <label class="check"><input type="checkbox" name="in_app_{{ row.category }}"{% if row.in_app_enabled %} checked{% endif %}> Show in my notifications</label>
-  </section>
+  <section class="card mb-3"><div class="card-body">
+    <h2 class="h5">{{ row.label }}</h2>
+    <ul class="text-secondary">{% for event in row.events %}<li>{{ event.label }}</li>{% endfor %}</ul>
+    <div class="form-check"><input class="form-check-input" type="checkbox" id="email_{{ row.category }}" name="email_{{ row.category }}"{% if row.email_enabled %} checked{% endif %}><label class="form-check-label" for="email_{{ row.category }}">{% trans "Email me" %}</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" id="in_app_{{ row.category }}" name="in_app_{{ row.category }}"{% if row.in_app_enabled %} checked{% endif %}><label class="form-check-label" for="in_app_{{ row.category }}">{% trans "Show in my notifications" %}</label></div>
+  </div></section>
   {% endfor %}
-  <div class="actions"><button class="btn" type="submit">Save preferences</button></div>
+  <button class="btn btn-primary mb-4" type="submit">{% trans "Save preferences" %}</button>
 </form>
-<section class="card">
-  <h2>Always sent</h2>
-  <ul class="event-list">{% for event in essential %}<li>{{ event.label }} <small class="muted">({{ event.category }})</small></li>{% endfor %}</ul>
-</section>
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Always sent" %}</h2>
+  <ul class="text-secondary mb-0">{% for event in essential %}<li>{{ event.label }} <small>({{ event.category }})</small></li>{% endfor %}</ul>
+</div></section>
 {% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load ui lifecycle i18n %}
+{% block title %}{{ domain.name }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "domains/customer/_header.html" %}
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{% trans "Details" %}</h2>
+  <dl class="row mb-0">
+    <dt class="col-sm-4">{% trans "Registered" %}</dt><dd class="col-sm-8">{{ domain.registered_at|fdate|default:_("Not yet") }}</dd>
+    <dt class="col-sm-4">{% trans "Expires" %}</dt><dd class="col-sm-8">{{ domain.expires_at|fdate|default:"—" }}</dd>
+    <dt class="col-sm-4">{% trans "Auto-renew" %}</dt><dd class="col-sm-8">{{ domain.auto_renew|yesno:_("On,Off") }}</dd>
+    <dt class="col-sm-4">{% trans "Registrar lock" %}</dt><dd class="col-sm-8">{{ domain.is_locked|yesno:_("Locked,Unlocked") }}</dd>
+    <dt class="col-sm-4">{% trans "Nameservers" %}</dt><dd class="col-sm-8">{% for ns in domain.nameservers %}{{ ns }}{% if not forloop.last %}<br>{% endif %}{% empty %}—{% endfor %}</dd>
+  </dl>
+</div></section>
+{% lifecycle_card domain %}
+{% endblock %}

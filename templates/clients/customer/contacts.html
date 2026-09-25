@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Contacts" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Contacts" %}</h1></div>
+<p class="text-secondary">{% trans "People who can sign in and act for your account. Contact our support team to add or remove someone." %}</p>
+{% for client, contacts in accounts %}
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h2 class="h6 mb-0">{{ client.display_name }} <small class="text-secondary">{{ client.reference }}</small></h2>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'clients_customer:detail' client.pk %}">{% trans "Account details" %}</a>
+  </div>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Name" %}</th><th>{% trans "Email" %}</th><th>{% trans "Role" %}</th></tr></thead>
+    <tbody>{% for contact in contacts %}
+      <tr><td>{{ contact.user.get_full_name|default:"—" }}</td><td>{{ contact.user.email }}</td><td>{% status_badge contact.role contact.get_role_display %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% empty %}
+  {% url 'catalog:product_list' as plans_url %}
+  {% include "components/empty_state.html" with message=_("You do not have a client account yet.") action_url=plans_url action_label=_("Browse plans") icon="bi-people" %}
+{% endfor %}
+{% endblock %}

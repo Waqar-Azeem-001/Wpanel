@@ -1,29 +1,26 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}My Domains · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "My Domains" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>My Domains</h1>
-  <div class="actions">
-    <a href="{% url 'domains_public:search' %}">Search domains</a>
-    <a class="btn secondary" href="{% url 'orders_customer:cart' %}">Transfer a domain in</a>
-  </div>
+  <h1>{% trans "My Domains" %}</h1>
+  <a class="btn btn-primary" href="{% url 'domains_public:search' %}">{% trans "Register a new domain" %}</a>
 </div>
-<div class="table-wrap">
-<table class="table">
-  <thead><tr><th>Domain</th><th>Status</th><th>Expires</th><th>Auto-renew</th></tr></thead>
-  <tbody>
-  {% for domain in domains %}
-    <tr>
-      <td><a href="{% url 'domains_customer:detail' domain.pk %}">{{ domain.name }}</a></td>
-      <td>{% status_badge domain.status domain.get_status_display %}</td>
-      <td>{{ domain.expires_at|date:"Y-m-d"|default:"—" }}</td>
-      <td>{{ domain.auto_renew|yesno:"Yes,No" }}</td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="4" class="muted">You have no domains yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card">
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Domain" %}</th><th>{% trans "Status" %}</th><th>{% trans "Expires" %}</th><th>{% trans "Auto-renew" %}</th></tr></thead>
+    <tbody>
+    {% for domain in domains %}
+      <tr>
+        <td><a href="{% url 'domains_customer:detail' domain.pk %}">{{ domain.name }}</a></td>
+        <td>{% status_badge domain.status domain.get_status_display %}</td>
+        <td>{{ domain.expires_at|fdate|default:"—" }}</td>
+        <td>{{ domain.auto_renew|yesno:_("Yes,No") }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-secondary">{% trans "No domains match." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
 </div>
 {% endblock %}

@@ -7,12 +7,13 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.core import portal
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, error_text, run_action
 
 from . import forms, invoicing, payments, pdf
 from .gateways import PaymentError, get_adapter
-from .models import PaymentMethod, Transaction, TransactionStatus
+from .models import OPEN_STATUSES, InvoiceStatus, PaymentMethod, QuoteStatus, Transaction, TransactionStatus
 
 
 def _pdf_response(content, filename):
@@ -25,6 +26,13 @@ def _invoice_or_404(request, pk):
     return get_object_or_404(invoicing.visible_invoices_for_user(request.user), pk=pk)
 
 
+def _billing_panel(request):
+    return portal.actions_panel(request, "Billing", [
+        ("My invoices", "billing_customer:invoice_list", "bi-receipt"),
+        ("My quotes", "billing_customer:quote_list", "bi-file-earmark-text"),
+        ("Payment methods", "billing_customer:payment_methods", "bi-credit-card")])
+
+
 def _quote_or_404(request, pk):
     return get_object_or_404(invoicing.visible_quotes_for_user(request.user), pk=pk)
 
@@ -34,8 +42,19 @@ def _quote_or_404(request, pk):
 @login_required
 def invoice_list(request):
     queryset = invoicing.visible_invoices_for_user(request.user).order_by("-created_at", "-id")
+    choices = [("unpaid", "Unpaid"), ("overdue", "Overdue"), (InvoiceStatus.PAID, "Paid"),
+               (InvoiceStatus.CANCELLED, "Cancelled"), (InvoiceStatus.REFUNDED, "Refunded")]
+
+    def apply(rows, value):  # "unpaid" is everything still owing, including a part payment; "overdue" is derived
+        if value == "unpaid":
+            return rows.filter(status__in=OPEN_STATUSES)
+        return invoicing.filter_invoices_by_status(rows, value)
+
+    queryset, view_panel = portal.status_filter(request, queryset, choices, url_name="billing_customer:invoice_list",
+                                                all_label="All invoices", apply=apply)
     return render(request, "billing/customer/invoice_list.html", {
-        "page": Paginator(queryset, 25).get_page(request.GET.get("page"))})
+        "page": Paginator(queryset, 25).get_page(request.GET.get("page")),
+        "sidebar": [view_panel, _billing_panel(request)]})
 
 
 @login_required
@@ -119,8 +138,13 @@ def test_gateway(request, external_id):
 @login_required
 def quote_list(request):
     queryset = invoicing.visible_quotes_for_user(request.user).order_by("-created_at", "-id")
+    choices = [(QuoteStatus.SENT, "Sent"), (QuoteStatus.ACCEPTED, "Accepted"), (QuoteStatus.DECLINED, "Declined"),
+               (QuoteStatus.CANCELLED, "Cancelled")]
+    queryset, view_panel = portal.status_filter(request, queryset, choices, url_name="billing_customer:quote_list",
+                                                all_label="All quotes")
     return render(request, "billing/customer/quote_list.html", {
-        "page": Paginator(queryset, 25).get_page(request.GET.get("page"))})
+        "page": Paginator(queryset, 25).get_page(request.GET.get("page")),
+        "sidebar": [view_panel, _billing_panel(request)]})
 
 
 @login_required
@@ -158,3 +182,10 @@ def quote_decline(request, pk):
         return "Quote declined."
 
     return run_action(request, action, "billing_customer:quote_detail", pk=pk)
+
+
+@login_required
+def payment_methods(request):
+    """How to pay us: the methods a customer can use, with the instructions for each."""
+    offline, online = payments.active_payment_methods()
+    return render(request, "billing/customer/payment_methods.html", {"offline_methods": offline, "online_methods": online})

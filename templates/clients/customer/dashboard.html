@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Client area" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% blocktrans with name=user.get_short_name %}Welcome back, {{ name }}{% endblocktrans %}</h1>
+</div>
+
+{% if not client %}
+  {% url 'catalog:product_list' as plans_url %}
+  {% include "components/empty_state.html" with message=_("You do not have a client account yet. Browse our plans to get started.") action_url=plans_url action_label=_("Browse plans") icon="bi-box" %}
+{% else %}
+
+<div class="stat-tiles mb-4">
+  {% for tile in tiles %}{% include "components/stat_tile.html" with value=tile.value label=tile.label url=tile.url icon=tile.icon %}{% endfor %}
+</div>
+
+{% if overdue_count %}
+<div class="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+  <span><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+    {% blocktrans count n=overdue_count %}You have {{ n }} overdue invoice{% plural %}You have {{ n }} overdue invoices{% endblocktrans %}
+    ({% for currency, total in overdue_totals %}{{ total|money:currency }}{% if not forloop.last %}, {% endif %}{% endfor %}).</span>
+  <a class="btn btn-danger btn-sm" href="{% if overdue_count == 1 %}{% url 'billing_customer:invoice_detail' overdue_first.pk %}{% else %}{% url 'billing_customer:invoice_list' %}?status=overdue{% endif %}">{% trans "Pay now" %}</a>
+</div>
+{% endif %}
+
+<section class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h2 class="h6 mb-0"><a class="text-decoration-none" href="{% url 'hosting_customer:list' %}">{% trans "Your active products / services" %}</a></h2>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'hosting_customer:list' %}">{% trans "View all" %}</a>
+  </div>
+  {% if services %}
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Product" %}</th><th>{% trans "Domain" %}</th><th>{% trans "Status" %}</th><th>{% trans "Next due" %}</th><th></th></tr></thead>
+    <tbody>{% for account in services %}
+      <tr><td>{{ account.product.name }}</td><td>{{ account.domain }}</td><td>{% status_badge account.status account.get_status_display %}</td>
+        <td>{{ account.expires_at|fdate|default:"—" }}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_customer:detail' account.pk %}">{% trans "Manage" %}</a></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <div class="card-body">{% url 'catalog:product_list' as plans_url %}{% include "components/empty_state.html" with message=_("No active services yet.") action_url=plans_url action_label=_("Order new services") icon="bi-hdd-network" %}</div>
+  {% endif %}
+</section>
+
+<section class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h2 class="h6 mb-0"><a class="text-decoration-none" href="{% url 'support_customer:list' %}">{% trans "Recent support tickets" %}</a></h2>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'support_customer:new' %}">{% trans "Open new" %}</a>
+  </div>
+  {% if recent_tickets %}
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>#</th><th>{% trans "Subject" %}</th><th>{% trans "Status" %}</th><th>{% trans "Last reply" %}</th></tr></thead>
+    <tbody>{% for ticket in recent_tickets %}
+      <tr><td>{{ ticket.reference }}</td><td><a href="{% url 'support_customer:ticket' ticket.pk %}">{{ ticket.subject }}</a></td>
+        <td>{% status_badge ticket.status ticket.get_status_display %}</td><td>{{ ticket.last_activity_at|fdatetime }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <div class="card-body">{% url 'support_customer:new' as new_url %}{% include "components/empty_state.html" with message=_("No tickets yet. We are here when you need us.") action_url=new_url action_label=_("Open a ticket") icon="bi-life-preserver" %}</div>
+  {% endif %}
+</section>
+
+<section class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6">{% trans "Register a new domain" %}</h2>
+    <form method="get" action="{% url 'domains_public:search' %}" class="row g-2">
+      <input type="hidden" name="years" value="1">
+      <div class="col"><label class="visually-hidden" for="dash_domain">{% trans "Domain name" %}</label><input class="form-control" id="dash_domain" name="domain" placeholder="example.com" required></div>
+      <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Search" %}</button></div>
+    </form>
+  </div>
+</section>
+
+<section class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6">{% trans "Affiliate program" %}</h2>
+    {% if affiliate and affiliate.status == "active" %}
+      <p class="mb-2">{% blocktrans with approved=affiliate_balances.approved pending=affiliate_balances.pending %}Ready to pay: {{ approved }} · Pending: {{ pending }}{% endblocktrans %}</p>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'affiliates_customer:dashboard' %}">{% trans "View" %}</a>
+    {% elif affiliate %}
+      <p class="mb-2">{% blocktrans with status=affiliate.get_status_display %}Your application is: {{ status }}.{% endblocktrans %}</p>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'affiliates_customer:dashboard' %}">{% trans "View" %}</a>
+    {% else %}
+      <p class="mb-2">{% trans "Earn commission by referring customers to us." %}</p>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'affiliates_customer:dashboard' %}">{% trans "Join the program" %}</a>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

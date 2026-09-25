@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ domain.name }} · DNS · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "domains/customer/_header.html" %}
+<section class="card mb-3">
+  <div class="card-header"><h2 class="h6 mb-0">{% trans "DNS zone" %}</h2></div>
+  <div class="card-body pb-0"><p class="text-secondary">{% trans "These records only take effect while the domain uses our nameservers." %}</p></div>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Type" %}</th><th>{% trans "Name" %}</th><th>{% trans "Content" %}</th><th>TTL</th><th>{% trans "Priority" %}</th><th></th></tr></thead>
+    <tbody>
+    {% for record in domain.dns_records.all %}
+      <tr>
+        <td>{{ record.record_type }}</td><td>{{ record.name|default:"@" }}</td><td>{{ record.content }}</td><td>{{ record.ttl }}</td><td>{{ record.priority|default:"—" }}</td>
+        <td class="text-end">{% if can_edit %}<form method="post" action="{% url 'domains_customer:dns_remove' domain.pk record.pk %}" data-confirm="{% trans 'Remove this DNS record?' %}">{% csrf_token %}
+          <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Remove" %}</button></form>{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-secondary">{% trans "No records yet." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% if can_edit %}
+<section class="card"><div class="card-body">
+  <h2 class="h6">{% trans "Add a record" %}</h2>
+  <form method="post" action="{% url 'domains_customer:dns_add' domain.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+    <div class="col-6 col-md-2"><label class="form-label" for="id_record_type">{% trans "Type" %}</label>{{ dns_form.record_type|bs_field }}</div>
+    <div class="col-6 col-md-2"><label class="form-label" for="id_name">{% trans "Name" %}</label>{{ dns_form.name|bs_field }}</div>
+    <div class="col-12 col-md"><label class="form-label" for="id_content">{% trans "Content" %}</label>{{ dns_form.content|bs_field }}</div>
+    <div class="col-6 col-md-2"><label class="form-label" for="id_ttl">TTL</label>{{ dns_form.ttl|bs_field }}</div>
+    <div class="col-6 col-md-2"><label class="form-label" for="id_priority">{% trans "Priority" %}</label>{{ dns_form.priority|bs_field }}</div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Add" %}</button></div>
+  </form>
+</div></section>
+{% endif %}
+{% endblock %}

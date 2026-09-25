@@ -15,5 +15,6 @@ urlpatterns = [
     path("quotes/<int:pk>/pdf/", views.quote_pdf, name="quote_pdf"),
     path("quotes/<int:pk>/accept/", views.quote_accept, name="quote_accept"),
     path("quotes/<int:pk>/decline/", views.quote_decline, name="quote_decline"),
+    path("payment-methods/", views.payment_methods, name="payment_methods"),
     path("test-gateway/<str:external_id>/", views.test_gateway, name="test_gateway"),
 ]

@@ -189,7 +189,7 @@ def test_upgrade_page_for_an_account_without_a_term(client, owner, account):
 
 def test_customer_domain_renewal(client, manager, owner, domain):
     client.force_login(owner)
-    assert b"Renew (creates an invoice)" in client.get(f"/account/domains/{domain.pk}/").content
+    assert b"Renew (creates an invoice)" in client.get(f"/account/domains/{domain.pk}/renew/").content
     response = client.post(f"/account/renewals/domains/{domain.pk}/renew/", {"years": 2})
     invoice = Invoice.objects.get()
     assert response["Location"] == f"/account/billing/invoices/{invoice.pk}/"

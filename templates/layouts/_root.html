@@ -17,9 +17,12 @@
   <a class="skip-link" href="#main">{% trans "Skip to content" %}</a>
   {% block navbar %}{% endblock %}
   {% block breadcrumbs %}{% if breadcrumbs %}{% include "components/breadcrumbs.html" %}{% endif %}{% endblock %}
-  <main id="main" class="page {% block container %}{% endblock %}" tabindex="-1">
+  <main id="main" class="page {% block container %}{% endblock %}{% if sidebar %} wide{% endif %}" tabindex="-1">
     {% include "components/messages.html" %}
+    {# A view that supplies `sidebar` (panels, see apps/core/portal.py) gets the two-column layout; the sidebar sits under the page on a phone. #}
+    {% if sidebar %}<div class="row g-4"><aside class="col-lg-3 order-2 order-lg-1" aria-label="{% trans 'Sidebar' %}">{% include "components/sidebar.html" with panels=sidebar %}</aside><div class="col-lg-9 order-1 order-lg-2">{% endif %}
     {% block content %}{% endblock %}
+    {% if sidebar %}</div></div>{% endif %}
   </main>
   {% block footer %}{% include "components/footer.html" %}{% endblock %}
   {% include "components/confirm_modal.html" %}

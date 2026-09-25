@@ -1,50 +1,50 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Affiliate · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Affiliate" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Affiliate</h1>{% status_badge affiliate.status affiliate.get_status_display %}</div>
+<div class="page-head"><h1>{% trans "Affiliate" %}</h1>{% status_badge affiliate.status affiliate.get_status_display %}</div>
 {% if affiliate.status == "pending" %}
-<section class="card"><p>Your application is being reviewed. We will email you as soon as it is approved.</p></section>
+<section class="card"><div class="card-body"><p class="mb-0">{% trans "Your application is being reviewed. We will email you as soon as it is approved." %}</p></div></section>
 {% elif affiliate.status == "rejected" %}
-<section class="card"><p>Your application was not accepted.{% if affiliate.review_note %} Reason: {{ affiliate.review_note }}{% endif %}</p></section>
+<section class="card"><div class="card-body"><p class="mb-0">{% trans "Your application was not accepted." %}{% if affiliate.review_note %} {% trans "Reason:" %} {{ affiliate.review_note }}{% endif %}</p></div></section>
 {% else %}
-{% if affiliate.status == "suspended" %}<div class="errors"><p>Your affiliate account is suspended: no new commissions are earned and payouts are on hold.{% if affiliate.review_note %} {{ affiliate.review_note }}{% endif %}</p></div>{% endif %}
-<section class="card">
-  <h2>Your referral link</h2>
-  <p><input type="text" class="copy" readonly value="{{ link }}" aria-label="Your referral link" onclick="this.select()"></p>
-  <p class="muted">Your code is <strong>{{ affiliate.code }}</strong>. A visitor is remembered for {{ config.cookie_days }} days; the commission is yours if they sign up in that time and pay.</p>
-</section>
-<div class="stats">
-  <div class="stat"><strong>{{ balances.approved }}</strong><span>Approved, ready to pay</span></div>
-  <div class="stat"><strong>{{ balances.pending }}</strong><span>Pending (in the hold period)</span></div>
-  <div class="stat"><strong>{{ balances.paid }}</strong><span>Paid to you</span></div>
-  <div class="stat"><strong>{{ stats.visits }}</strong><span>Visits</span></div>
-  <div class="stat"><strong>{{ stats.signups }}</strong><span>Sign-ups</span></div>
-  <div class="stat"><strong>{{ stats.customers_who_paid }}</strong><span>Customers who paid</span></div>
+{% if affiliate.status == "suspended" %}<div class="alert alert-danger" role="alert">{% trans "Your affiliate account is suspended: no new commissions are earned and payouts are on hold." %}{% if affiliate.review_note %} {{ affiliate.review_note }}{% endif %}</div>{% endif %}
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{% trans "Your referral link" %}</h2>
+  <p><input type="text" class="form-control font-monospace" readonly value="{{ link }}" aria-label="Your referral link" onclick="this.select()"></p>
+  <p class="text-secondary mb-0">Your code is <strong>{{ affiliate.code }}</strong>. A visitor is remembered for {{ config.cookie_days }} days; the commission is yours if they sign up in that time and pay.</p>
+</div></section>
+<div class="stat-tiles mb-3">
+  {% include "components/stat_tile.html" with value=balances.approved label=_("Approved, ready to pay") %}
+  {% include "components/stat_tile.html" with value=balances.pending label=_("Pending (in the hold period)") %}
+  {% include "components/stat_tile.html" with value=balances.paid label=_("Paid to you") %}
+  {% include "components/stat_tile.html" with value=stats.visits label=_("Visits") %}
+  {% include "components/stat_tile.html" with value=stats.signups label=_("Sign-ups") %}
+  {% include "components/stat_tile.html" with value=stats.customers_who_paid label=_("Customers who paid") %}
 </div>
-<p class="muted">Payouts are made once your approved commissions reach {{ config.minimum_payout }}. A commission is reduced or cancelled if the sale is refunded.</p>
-<section class="card">
-  <h2>Recent commissions <small><a href="{% url 'affiliates_customer:commissions' %}">All</a></small></h2>
-  <div class="table-wrap"><table class="table">
-    <thead><tr><th>Date</th><th>Customer</th><th>Status</th><th class="num">Amount</th></tr></thead>
+<p class="text-secondary">Payouts are made once your approved commissions reach {{ config.minimum_payout }}. A commission is reduced or cancelled if the sale is refunded.</p>
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">{% trans "Recent commissions" %}</h2><a href="{% url 'affiliates_customer:commissions' %}">{% trans "All" %}</a></div>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Customer" %}</th><th>{% trans "Status" %}</th><th class="text-end">{% trans "Amount" %}</th></tr></thead>
     <tbody>{% for c in recent_commissions %}
-      <tr><td>{{ c.created_at|date:"j M Y" }}</td><td>{{ c.referral.label }}</td><td>{% status_badge c.status c.get_status_display %}</td><td class="num">{{ c.currency }} {{ c.amount }}</td></tr>
-    {% empty %}<tr><td colspan="4" class="muted">No commissions yet. Share your link to get started.</td></tr>{% endfor %}</tbody></table></div>
+      <tr><td>{{ c.created_at|fdate }}</td><td>{{ c.referral.label }}</td><td>{% status_badge c.status c.get_status_display %}</td><td class="text-end">{{ c.amount|money:c.currency }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="text-secondary">{% trans "No commissions yet. Share your link to get started." %}</td></tr>{% endfor %}</tbody></table></div>
 </section>
-<section class="card">
-  <h2>Payouts <small><a href="{% url 'affiliates_customer:payouts' %}">All</a></small></h2>
-  <div class="table-wrap"><table class="table">
-    <thead><tr><th>Date</th><th>Method</th><th>Reference</th><th class="num">Amount</th></tr></thead>
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">{% trans "Payouts" %}</h2><a href="{% url 'affiliates_customer:payouts' %}">{% trans "All" %}</a></div>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Method" %}</th><th>{% trans "Reference" %}</th><th class="text-end">{% trans "Amount" %}</th></tr></thead>
     <tbody>{% for p in recent_payouts %}
-      <tr><td>{{ p.paid_on|date:"j M Y" }}</td><td>{{ p.method }}</td><td>{{ p.reference|default:"&mdash;" }}</td><td class="num">{{ p.currency }} {{ p.amount }}</td></tr>
-    {% empty %}<tr><td colspan="4" class="muted">No payouts yet.</td></tr>{% endfor %}</tbody></table></div>
+      <tr><td>{{ p.paid_on|fdate }}</td><td>{{ p.method }}</td><td>{{ p.reference|default:"&mdash;" }}</td><td class="text-end">{{ p.amount|money:p.currency }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="text-secondary">{% trans "No payouts yet." %}</td></tr>{% endfor %}</tbody></table></div>
 </section>
 {% endif %}
-<section class="card">
-  <h2>Payout details</h2>
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Payout details" %}</h2>
   <form method="post" action="{% url 'affiliates_customer:details' %}">{% csrf_token %}
     {% include "partials/form.html" with form=details_form %}
-    <div class="actions"><button class="btn secondary" type="submit">Save</button></div>
+    <button class="btn btn-outline-primary" type="submit">{% trans "Save" %}</button>
   </form>
-</section>
+</div></section>
 {% endblock %}

@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Cancellation requests · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Cancellation requests" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<h1>Cancellation requests</h1>
-<div class="table-wrap"><table class="table">
-  <thead><tr><th>Request</th><th>Service</th><th>When</th><th>Status</th><th>Sent</th></tr></thead>
+<div class="page-head"><h1>{% trans "Cancellation requests" %}</h1></div>
+<div class="card"><div class="table-responsive"><table class="table mb-0 align-middle">
+  <thead><tr><th>{% trans "Request" %}</th><th>{% trans "Service" %}</th><th>{% trans "When" %}</th><th>{% trans "Status" %}</th><th>{% trans "Sent" %}</th></tr></thead>
   <tbody>
   {% for cr in page %}
     <tr><td><a href="{% url 'lifecycle_customer:detail' cr.pk %}">{{ cr.code }}</a></td><td>{{ cr.service_name }}</td>
         <td>{{ cr.get_timing_display }}</td><td>{% status_badge cr.status cr.get_status_display %}</td>
-        <td>{{ cr.created_at|date:"j M Y" }}</td></tr>
-  {% empty %}<tr><td colspan="5" class="muted">You have not asked to cancel anything.</td></tr>{% endfor %}
-  </tbody></table></div>
+        <td>{{ cr.created_at|fdate }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="text-secondary">{% trans "You have not asked to cancel anything." %}</td></tr>{% endfor %}
+  </tbody></table></div></div>
 {% include "components/pager.html" %}
 {% endblock %}

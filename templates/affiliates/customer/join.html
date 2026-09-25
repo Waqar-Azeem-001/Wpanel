@@ -1,21 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Affiliate programme · {{ SITE_NAME }}{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Affiliate programme" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<h1>Affiliate programme</h1>
+<h1>{% trans "Affiliate programme" %}</h1>
 {% if not config.enabled %}
-<section class="card"><p>The affiliate programme is not open right now. Please check back later.</p></section>
+<section class="card"><div class="card-body"><p class="mb-0">{% trans "The affiliate programme is not open right now. Please check back later." %}</p></div></section>
 {% else %}
-<section class="card">
-  <h2>Earn by referring customers</h2>
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Earn by referring customers" %}</h2>
   <p>Share your personal link. When someone signs up through it and pays, you earn
     {% if config.commission_kind == "percentage" %}<strong>{{ config.commission_value|floatformat:"-2" }}%</strong> of what they pay (excluding tax){% else %}<strong>{{ config.commission_value }}</strong> for each sale{% endif %}{% if config.recurring_months %}, on every payment for {{ config.recurring_months }} month{{ config.recurring_months|pluralize }}{% else %}, on their first paid invoice{% endif %}.
     Commissions are approved after {{ config.hold_days }} days and paid out once you have at least {{ config.minimum_payout }}.</p>
-  {% if config.program_terms %}<h3>Terms</h3><p>{{ config.program_terms|linebreaksbr }}</p>{% endif %}
+  {% if config.program_terms %}<h3 class="h6">{% trans "Terms" %}</h3><p>{{ config.program_terms|linebreaksbr }}</p>{% endif %}
   <form method="post" novalidate>{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions"><button class="btn" type="submit">{% if config.require_approval %}Apply to join{% else %}Join now{% endif %}</button></div>
+    <button class="btn btn-primary" type="submit">{% if config.require_approval %}{% trans "Apply to join" %}{% else %}{% trans "Join now" %}{% endif %}</button>
   </form>
-  {% if config.require_approval %}<p class="muted">Applications are reviewed by our team.</p>{% endif %}
-</section>
+  {% if config.require_approval %}<p class="text-secondary mt-3 mb-0">{% trans "Applications are reviewed by our team." %}</p>{% endif %}
+</div></section>
 {% endif %}
 {% endblock %}

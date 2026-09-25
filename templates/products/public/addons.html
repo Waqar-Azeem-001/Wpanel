@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Available addons" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% trans "Available addons" %}</h1>
+  <a class="btn btn-primary" href="{% url 'catalog:product_list' %}">{% trans "Order new services" %}</a>
+</div>
+<p class="text-secondary">{% trans "Addons are chosen when you order a hosting plan." %}</p>
+<div class="row g-3">
+  {% for addon in addons %}
+  <div class="col-md-6 col-lg-4">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">{{ addon.name }}</h2>
+      {% if addon.description %}<p>{{ addon.description|linebreaksbr }}</p>{% endif %}
+      <ul class="list-unstyled mb-0">
+        {% for price in addon.prices.all %}{% if price.is_active %}<li>{{ price.price|money }} <span class="text-secondary">/ {{ price.get_billing_cycle_display }}</span></li>{% endif %}{% endfor %}
+      </ul>
+    </div></section>
+  </div>
+  {% empty %}
+  <div class="col-12">{% url 'catalog:product_list' as plans_url %}{% include "components/empty_state.html" with message=_("No addons are available right now.") action_url=plans_url action_label=_("See plans") icon="bi-plus-square" %}</div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,74 +1,76 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Invoice {{ invoice.number }} · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Invoice" %} {{ invoice.number }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<p><a href="{% url 'billing_customer:invoice_list' %}">&larr; My invoices</a></p>
+<p class="mb-2"><a href="{% url 'billing_customer:invoice_list' %}">&larr; {% trans "My invoices" %}</a></p>
 <div class="page-head">
-  <h1>Invoice {{ invoice.number }}</h1>
+  <h1>{% trans "Invoice" %} {{ invoice.number }}</h1>
   {% status_badge invoice.display_status invoice.display_status_label %}
 </div>
-<p class="muted">Issued {{ invoice.issue_date|date:"j M Y" }} &middot; due {{ invoice.due_date|date:"j M Y" }}
-  &middot; <a href="{% url 'billing_customer:invoice_pdf' invoice.pk %}">Download PDF</a></p>
+<p class="text-secondary">{% trans "Issued" %} {{ invoice.issue_date|fdate }} &middot; {% trans "due" %} {{ invoice.due_date|fdate }}
+  &middot; <a href="{% url 'billing_customer:invoice_pdf' invoice.pk %}">{% trans "Download PDF" %}</a></p>
 
 {% if invoice.can_be_paid %}
-<section class="card">
-  <h2>Pay this invoice</h2>
-  <p>Amount due: <strong>{{ invoice.currency }} {{ invoice.balance_due }}</strong></p>
-  {% if pending_report %}<p class="muted">You have reported a payment. We will confirm it as soon as it arrives.</p>{% endif %}
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{% trans "Pay this invoice" %}</h2>
+  <p>{% trans "Amount due:" %} <strong>{{ invoice.balance_due|money:invoice.currency }}</strong></p>
+  {% if pending_report %}<p class="text-secondary">{% trans "You have reported a payment. We will confirm it as soon as it arrives." %}</p>{% endif %}
   {% if online_methods or offline_methods %}
-  <form method="post" action="{% url 'billing_customer:invoice_pay' invoice.pk %}" class="grid-form">{% csrf_token %}
-    <div class="field">
-      <label for="id_method">Payment method</label>
-      <select name="method" id="id_method" required>
+  <form method="post" action="{% url 'billing_customer:invoice_pay' invoice.pk %}" class="row g-3">{% csrf_token %}
+    <div class="col-md-6">
+      <label class="form-label" for="id_method">{% trans "Payment method" %}</label>
+      <select class="form-select" name="method" id="id_method" required>
         {% for method in online_methods %}<option value="{{ method.code }}">{{ method.name }} - online</option>{% endfor %}
         {% for method in offline_methods %}<option value="{{ method.code }}">{{ method.name }} - offline</option>{% endfor %}
       </select>
     </div>
-    <div class="field"><label for="id_amount">Amount (offline payments)</label>{{ form.amount }}</div>
-    <div class="field"><label for="id_reference">Your payment reference</label>{{ form.reference }}<small>e.g. the bank transfer reference. Optional.</small></div>
-    <div class="field"><label for="id_note">Note</label>{{ form.note }}</div>
-    <div class="actions"><button class="btn" type="submit">Continue</button></div>
+    <div class="col-md-6"><label class="form-label" for="id_amount">{% trans "Amount (offline payments)" %}</label>{{ form.amount|bs_field }}</div>
+    <div class="col-md-6"><label class="form-label" for="id_reference">{% trans "Your payment reference" %}</label>{{ form.reference|bs_field }}<div class="form-text">{% trans "e.g. the bank transfer reference. Optional." %}</div></div>
+    <div class="col-md-6"><label class="form-label" for="id_note">{% trans "Note" %}</label>{{ form.note|bs_field }}</div>
+    <div class="col-12"><button class="btn btn-primary" type="submit">{% trans "Continue" %}</button></div>
   </form>
-  {% for method in offline_methods %}{% if method.instructions %}<h3>{{ method.name }}</h3><p>{{ method.instructions|linebreaksbr }}</p>{% endif %}{% endfor %}
-  {% else %}<p class="muted">No payment methods are available right now. Please contact us.</p>{% endif %}
-</section>
+  {% for method in offline_methods %}{% if method.instructions %}<h3 class="h6 mt-3">{{ method.name }}</h3><p class="mb-0">{{ method.instructions|linebreaksbr }}</p>{% endif %}{% endfor %}
+  {% else %}<p class="text-secondary mb-0">{% trans "No payment methods are available right now. Please contact us." %}</p>{% endif %}
+</div></section>
 {% endif %}
 
-<div class="cols">
-  <section class="card">
-    <h2>Lines</h2>
-    {% include "billing/_items.html" %}
-    {% include "billing/_totals.html" with doc=invoice invoice_totals=True %}
-    {% if invoice.notes %}<h3>Notes</h3><p>{{ invoice.notes|linebreaksbr }}</p>{% endif %}
-  </section>
-  <section class="card">
-    <h2>Bill to</h2>
-    {% include "billing/_billto.html" with doc=invoice %}
-    {% if invoice.status == "cancelled" and invoice.cancel_reason %}<p class="muted">Cancelled: {{ invoice.cancel_reason }}</p>{% endif %}
-  </section>
+<div class="row g-4 mb-3">
+  <div class="col-lg-8">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">{% trans "Lines" %}</h2>
+      {% include "billing/_items.html" %}
+      {% include "billing/_totals.html" with doc=invoice invoice_totals=True %}
+      {% if invoice.notes %}<h3 class="h6">{% trans "Notes" %}</h3><p>{{ invoice.notes|linebreaksbr }}</p>{% endif %}
+    </div></section>
+  </div>
+  <div class="col-lg-4">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">{% trans "Bill to" %}</h2>
+      {% include "billing/_billto.html" with doc=invoice %}
+      {% if invoice.status == "cancelled" and invoice.cancel_reason %}<p class="text-secondary">{% trans "Cancelled:" %} {{ invoice.cancel_reason }}</p>{% endif %}
+    </div></section>
+  </div>
 </div>
 
 {% include "renewals/_invoice_changes.html" %}
 
 <section class="card">
-  <h2>Payments</h2>
-  <div class="table-wrap">
-  <table class="table">
-    <thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Status</th><th class="num">Amount</th></tr></thead>
+  <div class="card-header"><h2 class="h6 mb-0">{% trans "Payments" %}</h2></div>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Type" %}</th><th>{% trans "Method" %}</th><th>{% trans "Status" %}</th><th class="text-end">{% trans "Amount" %}</th></tr></thead>
     <tbody>
     {% for tx in transactions %}
       <tr>
-        <td>{{ tx.occurred_at|date:"Y-m-d" }}</td><td>{{ tx.get_type_display }}</td>
+        <td>{{ tx.occurred_at|fdate }}</td><td>{{ tx.get_type_display }}</td>
         <td>{{ tx.method_name|default:"&mdash;" }}</td>
         <td>{% status_badge tx.status tx.get_status_display %}</td>
-        <td class="num">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
+        <td class="text-end">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.amount|money:tx.currency }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="5" class="muted">No payments yet.</td></tr>
+      <tr><td colspan="5" class="text-secondary">{% trans "No payments yet." %}</td></tr>
     {% endfor %}
     </tbody>
-  </table>
-  </div>
+  </table></div>
 </section>
 {% endblock %}

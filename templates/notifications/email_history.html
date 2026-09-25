@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Email history" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Email history" %}</h1>
+  <a class="btn btn-outline-primary" href="{% url 'notifications:preferences' %}">{% trans "Notification preferences" %}</a></div>
+<p class="text-secondary">{% trans "Emails we have sent you. Messages that contain a private link are not kept here." %}</p>
+<div class="card">
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Subject" %}</th><th>{% trans "Status" %}</th></tr></thead>
+    <tbody>{% for message in page %}
+      <tr><td>{{ message.created_at|fdatetime }}</td><td><a href="{% url 'notifications:email' message.pk %}">{{ message.subject }}</a></td>
+        <td>{% status_badge message.status message.get_status_display %}</td></tr>
+    {% empty %}
+      <tr><td colspan="3" class="text-secondary">{% trans "No emails yet." %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</div>
+{% include "components/pager.html" %}
+{% endblock %}

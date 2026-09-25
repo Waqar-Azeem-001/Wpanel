@@ -100,6 +100,20 @@ h1 { font-size: var(--fs-24); } h2 { font-size: 1.15rem; } h3 { font-size: var(-
 a.stat-tile:hover { border-color: var(--accent); }
 .stat-tile strong { font-size: 1.6rem; color: var(--text); line-height: 1.2; }
 .stat-tile .bi { font-size: 1.25rem; color: var(--accent); margin-bottom: var(--space-1); }
+.app-navbar .badge.unread { background: #fff; color: var(--brand-primary-dark); border-color: #fff; }
+.narrow-card { max-width: 32rem; }
+.pre-wrap { white-space: pre-wrap; }
+.page-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.page-head h1, .page-head h2 { margin: 0; }
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4); }
+.sidebar-panel { --bs-card-bg: var(--surface); border-color: var(--border); box-shadow: var(--shadow-panel); }
+.sidebar-panel .card-header { background: var(--surface-2); font-weight: 600; }
+.sidebar-panel .list-group-item { background: transparent; }
+.sidebar-panel a { color: var(--text); text-decoration: none; }
+.sidebar-panel a:hover { background: var(--surface-2); }
+.sidebar-panel a.active { background: var(--brand-primary-subtle); color: var(--accent); }
+[data-bs-theme="dark"] .sidebar-panel a.active { background: var(--surface-2); }
+.sidebar-panel .btn-link { color: var(--text); text-decoration: none; border-radius: 0; }
 .empty-state { text-align: center; padding: var(--space-6) var(--space-4); color: var(--muted); }
 .empty-state .bi { font-size: 2rem; display: block; margin-bottom: var(--space-2); color: var(--accent); }
 .breadcrumb-bar { background: var(--surface); border-bottom: 1px solid var(--border); }

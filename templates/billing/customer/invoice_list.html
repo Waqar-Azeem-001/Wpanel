@@ -1,29 +1,26 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}My invoices · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "My Invoices" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<div class="page-head">
-  <h1>My invoices</h1>
-  <a class="btn secondary" href="{% url 'billing_customer:quote_list' %}">My quotes</a>
-</div>
-<div class="table-wrap">
-<table class="table">
-  <thead><tr><th>Invoice</th><th>Issued</th><th>Due</th><th>Status</th><th class="num">Total</th><th class="num">Balance</th></tr></thead>
-  <tbody>
-  {% for invoice in page %}
-    <tr>
-      <td><a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{{ invoice.number }}</a></td>
-      <td>{{ invoice.issue_date|date:"Y-m-d" }}</td>
-      <td>{{ invoice.due_date|date:"Y-m-d" }}</td>
-      <td>{% status_badge invoice.display_status invoice.display_status_label %}</td>
-      <td class="num">{{ invoice.currency }} {{ invoice.total }}</td>
-      <td class="num">{{ invoice.balance_due }}</td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="6" class="muted">You have no invoices yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="page-head"><h1>{% trans "My Invoices" %}</h1></div>
+<div class="card">
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Invoice" %}</th><th>{% trans "Issued" %}</th><th>{% trans "Due" %}</th><th>{% trans "Status" %}</th><th class="text-end">{% trans "Total" %}</th><th class="text-end">{% trans "Balance" %}</th></tr></thead>
+    <tbody>
+    {% for invoice in page %}
+      <tr>
+        <td><a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{{ invoice.number }}</a></td>
+        <td>{{ invoice.issue_date|fdate }}</td>
+        <td>{{ invoice.due_date|fdate }}</td>
+        <td>{% status_badge invoice.display_status invoice.display_status_label %}</td>
+        <td class="text-end">{{ invoice.total|money:invoice.currency }}</td>
+        <td class="text-end">{{ invoice.balance_due|money:invoice.currency }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-secondary">{% trans "No invoices match." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
 </div>
 {% include "components/pager.html" %}
 {% endblock %}

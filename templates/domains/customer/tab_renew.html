@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ domain.name }} · {% trans "Renew" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "domains/customer/_header.html" %}
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Renew" %}</h2>
+  {% if domain.status == "active" %}
+  <p class="text-secondary">{% trans "Renewing creates an invoice. The new period starts when it is paid." %}</p>
+  <form method="post" action="{% url 'renewals_customer:domain_renew' domain.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+    <div class="col-auto"><label class="form-label" for="id_renew_years">{% trans "Years" %}</label>
+      <select class="form-select" name="years" id="id_renew_years">{% for n in years %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Renew (creates an invoice)" %}</button></div>
+  </form>
+  {% else %}
+  <p class="mb-0 text-secondary">{% trans "Only an active domain can be renewed." %}</p>
+  {% endif %}
+</div></section>
+{% endblock %}

@@ -1,26 +1,26 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Account details · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Account details" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card">
+<section class="card"><div class="card-body">
   <div class="page-head">
-    <h1>{{ client.display_name }} <small class="muted">{{ client.reference }}</small></h1>
+    <h1>{{ client.display_name }} <small class="text-secondary fs-6">{{ client.reference }}</small></h1>
     {% status_badge client.status client.get_status_display %}
   </div>
-  <p class="muted">Your role on this account: {{ my_role|capfirst }}. Billing currency: {{ client.currency }}.</p>
+  <p class="text-secondary">{% trans "Your role on this account:" %} {{ my_role|capfirst }}. {% trans "Billing currency:" %} {{ client.currency }}. <a href="{% url 'clients_customer:contacts' %}">{% trans "Contacts" %}</a></p>
   {% if can_edit %}
-    <form method="post" novalidate class="grid-form">{% csrf_token %}
+    <form method="post" novalidate>{% csrf_token %}
       {% include "partials/form.html" %}
-      <div class="actions"><button type="submit" class="btn">Save</button></div>
+      <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
     </form>
   {% else %}
-    <dl class="meta">
-      <dt>Company</dt><dd>{{ client.company_name|default:"—" }}</dd>
-      <dt>Contact</dt><dd>{{ client.contact_name }}</dd>
-      <dt>Email</dt><dd>{{ client.email }}</dd>
-      <dt>Phone</dt><dd>{{ client.phone|default:"—" }}</dd>
+    <dl class="row">
+      <dt class="col-sm-3">{% trans "Company" %}</dt><dd class="col-sm-9">{{ client.company_name|default:"—" }}</dd>
+      <dt class="col-sm-3">{% trans "Contact" %}</dt><dd class="col-sm-9">{{ client.contact_name }}</dd>
+      <dt class="col-sm-3">{% trans "Email" %}</dt><dd class="col-sm-9">{{ client.email }}</dd>
+      <dt class="col-sm-3">{% trans "Phone" %}</dt><dd class="col-sm-9">{{ client.phone|default:"—" }}</dd>
     </dl>
-    <p class="muted">Only owner and billing contacts can change account details.</p>
+    <p class="text-secondary mb-0">{% trans "Only owner and billing contacts can change account details." %}</p>
   {% endif %}
-</section>
+</div></section>
 {% endblock %}

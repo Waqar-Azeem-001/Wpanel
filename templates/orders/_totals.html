@@ -1,10 +1,11 @@
-<table class="totals">
-  <tr><th>Subtotal</th><td>{{ currency }} {{ subtotal }}</td></tr>
+{% load ui i18n %}
+<table class="table table-sm mb-2">
+  <tr><th class="fw-normal text-secondary">{% trans "Subtotal" %}</th><td class="text-end">{{ subtotal|money:currency }}</td></tr>
   {% if discount_total and discount_total != 0 %}
-  <tr><th>Discount{% if coupon_code %} ({{ coupon_code }}){% endif %}</th><td>&minus; {{ currency }} {{ discount_total }}</td></tr>
+  <tr><th class="fw-normal text-secondary">{% trans "Discount" %}{% if coupon_code %} ({{ coupon_code }}){% endif %}</th><td class="text-end">&minus; {{ discount_total|money:currency }}</td></tr>
   {% endif %}
   {% if tax_name %}
-  <tr><th>{{ tax_name }} ({{ tax_rate }}%)</th><td>{{ currency }} {{ tax_total }}</td></tr>
+  <tr><th class="fw-normal text-secondary">{{ tax_name }} ({{ tax_rate }}%)</th><td class="text-end">{{ tax_total|money:currency }}</td></tr>
   {% endif %}
-  <tr class="grand"><th>Total due now</th><td>{{ currency }} {{ total }}</td></tr>
+  <tr class="fw-bold"><th>{% trans "Total due now" %}</th><td class="text-end">{{ total|money:currency }}</td></tr>
 </table>

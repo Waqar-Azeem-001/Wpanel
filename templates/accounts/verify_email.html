@@ -1,21 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Email verification · {{ SITE_NAME }}{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Email verification" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card narrow">
+<section class="card mx-auto narrow-card"><div class="card-body p-4">
   {% if ok %}
-    <h1>Email verified</h1>
-    <p>Thanks, your email address is confirmed.</p>
-    <a class="btn" href="{% url 'accounts:profile' %}">Continue</a>
+    <h1 class="h4">{% trans "Email verified" %}</h1>
+    <p>{% trans "Thanks, your email address is confirmed." %}</p>
+    <a class="btn btn-primary" href="{% url 'accounts:profile' %}">{% trans "Continue" %}</a>
   {% else %}
-    <h1>Verification failed</h1>
+    <h1 class="h4">{% trans "Verification failed" %}</h1>
     <p>{{ message }}</p>
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'accounts:resend_verification' %}">{% csrf_token %}
-        <button class="btn" type="submit">Send a new link</button>
+        <button class="btn btn-primary" type="submit">{% trans "Send a new link" %}</button>
       </form>
     {% else %}
-      <p><a href="{% url 'accounts:login' %}">Sign in</a> to request a new link.</p>
+      <p class="mb-0"><a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a> {% trans "to request a new link." %}</p>
     {% endif %}
   {% endif %}
-</section>
+</div></section>
 {% endblock %}

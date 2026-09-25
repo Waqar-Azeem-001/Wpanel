@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Create account · {{ SITE_NAME }}{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Create account" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <h1>Create your account</h1>
+<section class="card mx-auto narrow-card"><div class="card-body p-4">
+  <h1 class="h4">{% trans "Create your account" %}</h1>
   <form method="post" novalidate>{% csrf_token %}
     {% include "partials/form.html" %}
-    <button type="submit" class="btn">Create account</button>
+    <button type="submit" class="btn btn-primary w-100">{% trans "Create account" %}</button>
   </form>
-  <p class="muted">Already have an account? <a href="{% url 'accounts:login' %}">Sign in</a></p>
-</section>
+  <p class="text-secondary mt-3 mb-0">{% trans "Already have an account?" %} <a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></p>
+</div></section>
 {% endblock %}

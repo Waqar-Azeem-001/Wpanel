@@ -93,6 +93,7 @@ def build_world():
     products.set_product_status(manager, product, "active")
     addon = products.create_addon(manager, {"name": "Backups", "description": "Daily"})
     products.set_price(manager, addon, billing_cycle=BillingCycle.ANNUAL, price="20.00")
+    products.set_addon_status(manager, addon, "active")
     RegistrarProvider.objects.create(name="Test", kind="manual", is_active=True)
     domains.set_tld_pricing(manager, ".com", register_price="12.00", renew_price="14.00", transfer_price="9.00")
     method = billing.save_payment_method(manager, "bank-transfer", name="Bank transfer")

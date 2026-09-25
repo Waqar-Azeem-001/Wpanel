@@ -1,21 +1,21 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Test payment · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n %}
+{% block title %}{% trans "Test payment" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Test payment gateway</h1>
-  <p class="muted">This is a simulated checkout for development and testing. No money moves.</p>
-  <dl class="meta">
-    <dt>Invoice</dt><dd>{{ tx.invoice.number }}</dd>
-    <dt>Amount</dt><dd>{{ tx.currency }} {{ tx.amount }}</dd>
-    <dt>Status</dt><dd>{% status_badge tx.status tx.get_status_display %}</dd>
+<section class="card mx-auto narrow-card"><div class="card-body">
+  <h1 class="h4">{% trans "Test payment gateway" %}</h1>
+  <p class="text-secondary">{% trans "This is a simulated checkout for development and testing. No money moves." %}</p>
+  <dl class="row">
+    <dt class="col-sm-4">{% trans "Invoice" %}</dt><dd class="col-sm-8">{{ tx.invoice.number }}</dd>
+    <dt class="col-sm-4">{% trans "Amount" %}</dt><dd class="col-sm-8">{{ tx.amount|money:tx.currency }}</dd>
+    <dt class="col-sm-4">{% trans "Status" %}</dt><dd class="col-sm-8">{% status_badge tx.status tx.get_status_display %}</dd>
   </dl>
   {% if tx.status == "pending" %}
-  <div class="actions">
-    <form method="post">{% csrf_token %}<input type="hidden" name="outcome" value="succeeded"><button class="btn" type="submit">Pay {{ tx.currency }} {{ tx.amount }}</button></form>
-    <form method="post">{% csrf_token %}<input type="hidden" name="outcome" value="failed"><button class="btn secondary" type="submit">Decline</button></form>
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <form method="post">{% csrf_token %}<input type="hidden" name="outcome" value="succeeded"><button class="btn btn-primary" type="submit">{% trans "Pay" %} {{ tx.amount|money:tx.currency }}</button></form>
+    <form method="post">{% csrf_token %}<input type="hidden" name="outcome" value="failed"><button class="btn btn-outline-secondary" type="submit">{% trans "Decline" %}</button></form>
   </div>
   {% endif %}
-  <p><a href="{% url 'billing_customer:invoice_detail' tx.invoice_id %}">&larr; Back to the invoice</a></p>
-</section>
+  <p class="mb-0"><a href="{% url 'billing_customer:invoice_detail' tx.invoice_id %}">&larr; {% trans "Back to the invoice" %}</a></p>
+</div></section>
 {% endblock %}

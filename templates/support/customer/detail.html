@@ -1,28 +1,28 @@
 {% extends "base.html" %}
-{% load ui %}
+{% load ui i18n %}
 {% block title %}{{ ticket.reference }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<p><a href="{% url 'support_customer:list' %}">&larr; Support</a></p>
+<p class="mb-2"><a href="{% url 'support_customer:list' %}">&larr; {% trans "Support" %}</a></p>
 <div class="page-head"><h1>{{ ticket.subject }}</h1>
   {% status_badge ticket.status ticket.get_status_display %}</div>
-<p class="muted">{{ ticket.reference }} &middot; {{ ticket.department.name }} &middot; opened {{ ticket.created_at|date:"j M Y" }}
-  {% if ticket.hosting_account %}&middot; hosting: <a href="{% url 'hosting_customer:detail' ticket.hosting_account_id %}">{{ ticket.hosting_account.domain }}</a>{% endif %}
-  {% if ticket.domain %}&middot; domain: <a href="{% url 'domains_customer:detail' ticket.domain_id %}">{{ ticket.domain.name }}</a>{% endif %}</p>
+<p class="text-secondary">{{ ticket.reference }} &middot; {{ ticket.department.name }} &middot; {% trans "opened" %} {{ ticket.created_at|fdate }}
+  {% if ticket.hosting_account %}&middot; {% trans "hosting:" %} <a href="{% url 'hosting_customer:detail' ticket.hosting_account_id %}">{{ ticket.hosting_account.domain }}</a>{% endif %}
+  {% if ticket.domain %}&middot; {% trans "domain:" %} <a href="{% url 'domains_customer:detail' ticket.domain_id %}">{{ ticket.domain.name }}</a>{% endif %}</p>
 {% include "support/_conversation.html" %}
 {% if can_reply %}
-<section class="card">
-  <h2>{% if ticket.status == "closed" %}Reopen with a reply{% else %}Reply{% endif %}</h2>
-  <form method="post" enctype="multipart/form-data" novalidate class="grid-form">{% csrf_token %}
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% if ticket.status == "closed" %}{% trans "Reopen with a reply" %}{% else %}{% trans "Reply" %}{% endif %}</h2>
+  <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
     {% include "partials/form.html" %}
-    <div class="actions"><button class="btn" type="submit">Send reply</button></div>
+    <button class="btn btn-primary" type="submit">{% trans "Send reply" %}</button>
   </form>
   {% if ticket.status != "closed" %}
-  <form method="post" action="{% url 'support_customer:close' ticket.pk %}" onsubmit="return confirm('Close this ticket? You can reply within a week to reopen it.');">{% csrf_token %}
-    <button class="btn small secondary" type="submit">Close this ticket</button></form>
+  <form method="post" action="{% url 'support_customer:close' ticket.pk %}" class="mt-3" data-confirm="{% trans 'Close this ticket? You can reply within a week to reopen it.' %}">{% csrf_token %}
+    <button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Close this ticket" %}</button></form>
   {% endif %}
-</section>
+</div></section>
 {% else %}
-<section class="card"><p class="muted">This ticket was closed a while ago. If you still need help, please <a href="{% url 'support_customer:new' %}">open a new ticket</a> and mention {{ ticket.reference }}.</p></section>
+<section class="card"><div class="card-body"><p class="text-secondary mb-0">{% trans "This ticket was closed a while ago. If you still need help, please" %} <a href="{% url 'support_customer:new' %}">{% trans "open a new ticket" %}</a> {% trans "and mention" %} {{ ticket.reference }}.</p></div></section>
 {% endif %}
 {% endblock %}
