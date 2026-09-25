@@ -874,7 +874,7 @@ Before marking any phase 🟢:
 | D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | ee8a609 | — |
 | D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | da099e8 | — |
 | D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | 03ba01b | — |
-| D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | pending | — |
+| D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | ef7a6ce | — |
 | D4 Staff Area Parity | ⬜ | — | — | — | — | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
