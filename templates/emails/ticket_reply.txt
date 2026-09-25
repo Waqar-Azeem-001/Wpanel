@@ -1,0 +1,12 @@
+{% autoescape off %}Hello,
+
+{{ message.author_name }} replied to your ticket {{ ticket.reference }} ({{ ticket.subject }}):
+
+{{ message.body }}
+{% if message.attachments.all %}
+Attachments: {% for a in message.attachments.all %}{{ a.original_name }}{% if not forloop.last %}, {% endif %}{% endfor %} (sign in to download)
+{% endif %}
+Reply, or see the whole conversation: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

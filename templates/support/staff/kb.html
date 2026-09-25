@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Knowledgebase · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<h1>Support</h1>
+{% include "support/staff/_nav.html" %}
+<p class="muted">The public <a href="{% url 'help:index' %}">help centre</a> shows published articles in active categories.</p>
+<div class="cols">
+  <section class="card">
+    <h2>Categories</h2>
+    <table class="table"><tbody>
+    {% for c in categories %}<tr><td>{{ c.name }}{% if not c.is_active %} <small class="muted">(hidden)</small>{% endif %}</td>
+      {% if can_manage %}<td><a href="?category={{ c.pk }}">Edit</a></td>{% endif %}</tr>{% endfor %}
+    </tbody></table>
+    {% if category_form %}
+    <h3>{% if edit_category %}Edit {{ edit_category.name }}{% else %}Add a category{% endif %}</h3>
+    <form method="post" action="{% url 'support_staff:kb_category_save' %}" class="grid-form">{% csrf_token %}
+      {% if edit_category %}<input type="hidden" name="id" value="{{ edit_category.pk }}">{% endif %}
+      {% include "partials/form.html" with form=category_form %}
+      <div class="actions"><button class="btn secondary" type="submit">Save category</button></div>
+    </form>
+    {% endif %}
+  </section>
+  <section class="card">
+    <h2>Articles</h2>
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Title</th><th>Category</th><th>Status</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+      {% for a in articles %}
+        <tr><td>{{ a.title }}</td><td>{{ a.category.name }}</td>
+            <td>{% if a.is_published %}<span class="badge status-done">Published</span>{% else %}<span class="badge status-draft">Draft</span>{% endif %}</td>
+            {% if can_manage %}<td><a href="?article={{ a.pk }}">Edit</a>
+              <form method="post" action="{% url 'support_staff:kb_article_delete' a.pk %}" class="inline-form" onsubmit="return confirm('Delete this article?');">{% csrf_token %}<button class="btn small danger" type="submit">Delete</button></form></td>{% endif %}</tr>
+      {% empty %}<tr><td colspan="4" class="muted">No articles yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+  </section>
+</div>
+{% if article_form %}
+<section class="card">
+  <h2>{% if edit_article %}Edit {{ edit_article.title }}{% else %}Write an article{% endif %}</h2>
+  <form method="post" action="{% url 'support_staff:kb_article_save' %}" class="grid-form">{% csrf_token %}
+    {% if edit_article %}<input type="hidden" name="id" value="{{ edit_article.pk }}">{% endif %}
+    {% include "partials/form.html" with form=article_form %}
+    <div class="actions"><button class="btn" type="submit">Save article</button>{% if edit_article %}<a href="{% url 'support_staff:kb' %}">Cancel</a>{% endif %}</div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

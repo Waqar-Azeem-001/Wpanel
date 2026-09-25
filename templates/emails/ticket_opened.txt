@@ -1,0 +1,11 @@
+{% autoescape off %}Hello,
+
+We have received your request and opened ticket {{ ticket.reference }}: {{ ticket.subject }}
+
+Department: {{ ticket.department.name }}
+
+We will reply as soon as we can. You can follow the conversation and add to it here:
+{{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

@@ -37,6 +37,7 @@ services:
     volumes:
       - static:/app/staticfiles
       - media:/app/media
+      - private_media:/app/private_media
 
   worker:
     build: .
@@ -68,3 +69,4 @@ volumes:
   redisdata:
   static:
   media:
+  private_media:

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} · Help centre · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'help:index' %}">&larr; Help centre</a></p>
+<h1>{{ category.name }}</h1>
+{% if category.description %}<p class="muted">{{ category.description }}</p>{% endif %}
+<section class="card"><ul>
+{% for a in articles %}<li><a href="{% url 'help:article' category.slug a.slug %}">{{ a.title }}</a></li>{% endfor %}
+</ul></section>
+{% endblock %}

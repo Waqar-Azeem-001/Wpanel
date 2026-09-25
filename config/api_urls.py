@@ -15,6 +15,7 @@ from apps.notifications.api import NotificationViewSet
 from apps.orders import api as orders_api
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
 from apps.renewals import api as renewals_api
+from apps.support import api as support_api
 
 router = DefaultRouter()
 router.register("users", accounts_api.UserAdminViewSet, basename="user")
@@ -33,6 +34,11 @@ router.register("tax-rules", TaxRuleViewSet, basename="tax-rule")
 router.register("coupons", CouponViewSet, basename="coupon")
 router.register("orders", orders_api.OrderViewSet, basename="order")
 router.register("invoices", billing_docs.InvoiceViewSet, basename="invoice")
+router.register("tickets", support_api.TicketViewSet, basename="ticket")
+router.register("departments", support_api.DepartmentViewSet, basename="department")
+router.register("canned-replies", support_api.CannedReplyViewSet, basename="canned-reply")
+router.register("kb/categories", support_api.KBCategoryViewSet, basename="kb-category")
+router.register("kb/articles", support_api.KBArticleViewSet, basename="kb-article")
 router.register("service-changes", renewals_api.ServiceChangeViewSet, basename="service-change")
 router.register("transactions", billing_docs.TransactionViewSet, basename="transaction")
 router.register("quotes", billing_docs.QuoteViewSet, basename="quote")

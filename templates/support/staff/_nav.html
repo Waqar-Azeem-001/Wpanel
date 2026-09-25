@@ -1,0 +1,7 @@
+<nav class="subnav">
+  <a href="{% url 'support_staff:overview' %}"{% if section == "overview" %} class="active"{% endif %}>Overview</a>
+  <a href="{% url 'support_staff:tickets' %}"{% if section == "tickets" %} class="active"{% endif %}>Tickets</a>
+  <a href="{% url 'support_staff:departments' %}"{% if section == "departments" %} class="active"{% endif %}>Departments</a>
+  <a href="{% url 'support_staff:replies' %}"{% if section == "replies" %} class="active"{% endif %}>Predefined replies</a>
+  <a href="{% url 'support_staff:kb' %}"{% if section == "kb" %} class="active"{% endif %}>Knowledgebase</a>
+</nav>

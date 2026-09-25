@@ -1,0 +1,20 @@
+<div class="conversation">
+{% for message in messages_ %}
+  <article class="msg {{ message.kind }}{% if message.is_internal %} internal{% endif %}">
+    <header>
+      <strong>{{ message.author_name|default:"System" }}</strong>
+      {% if message.kind == "staff" and not staff %}<span class="badge">Support team</span>{% endif %}
+      {% if message.is_internal %}<span class="badge status-fraud">Internal note</span>{% endif %}
+      <span class="muted">{{ message.created_at|date:"j M Y, H:i" }}</span>
+    </header>
+    <div class="body">{{ message.body|linebreaks }}</div>
+    {% if message.attachments.all %}
+    <ul class="attachments">
+      {% for a in message.attachments.all %}
+      <li><a href="{% url 'support_customer:attachment' a.pk %}">{{ a.original_name }}</a> <small class="muted">{{ a.size|filesizeformat }}</small></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </article>
+{% endfor %}
+</div>

@@ -1617,7 +1617,7 @@ If UI changed:
   07 Billing & Invoices          🟢       622 ✅  ✅        ac37961  ---
   08 Renewals & Upgrades         🟢       729 ✅  ✅        4d00e37  ---
   09 Orders & Lifecycle          🟢       788 ✅  ✅        8d83271  ---
-  10 Support                     ⬜       ---     ---       ---      ---
+  10 Support                     🟡       885 ✅  ✅        ---      ---
   11 Notifications & Email       ⬜       ---     ---       ---      ---
   12 Cancellation                ⬜       ---     ---       ---      ---
   13 Affiliates                  ⬜       ---     ---       ---      ---
@@ -1661,8 +1661,10 @@ postponed.
   Require verified email before      Deferred  Verification tracked; purchase   Phase 06
   purchase                                     gating belongs to checkout
 
-  Client profile record sections     Deferred  Orders/services/domains/etc.    Phases 04-13
-  (orders, invoices, tickets...)               models do not exist yet
+  Client profile record sections     Partly    Orders, invoices, payments, quotes,   Phases 12-13
+  (orders, invoices, tickets...)     closed    domains, hosting and tickets are shown;
+                                               cancellations and affiliates await
+                                               their phases
 
   Customer self-service sub-user     Deferred  Staff manage contacts; needs     Phase 15/16
   invitations                                  customer-side permission design
@@ -1726,6 +1728,19 @@ postponed.
   hosting request)                              system only, in the service layer
 
   Guest (anonymous) carts             Deferred  Cart requires a signed-in user    Post-MVP
+
+  Antivirus scanning of ticket        Open      Uploads are type/content checked,    Before launch
+  attachments                                   stored privately and only downloaded,
+                                                but not scanned (e.g. ClamAV)
+
+  Reply-by-email / email-to-ticket;   Deferred  Customers reply in the portal;      Phase 11
+  team notifications for unassigned             only an assignee is notified
+  tickets
+
+  SLA timers, escalation, ticket      Deferred  Not in the roadmap's Phase 10      Post-MVP
+  merge, satisfaction rating                    list
+
+  Attachment retention / cleanup      Deferred  Files are kept with their ticket   Phase 16/17
 
   Add-on provisioning; add-ons and    Deferred  Add-ons are recorded against the  Post-MVP
   custom cycles in staff Add Order              plan, not provisioned separately
@@ -1979,6 +1994,19 @@ Record permanent technical decisions here.
   Customers cannot create hosting     One way to buy: through the  Active
   or domains outside checkout (the    cart, invoice and payment
   service layer refuses them)
+
+  Ticket attachments are validated    Uploads are untrusted input; Active
+  (type, content signature, size)     a customer's files must never
+  before anything is written, stored  be public or run in a browser
+  outside every web-served path, and
+  served only as authenticated
+  downloads
+
+  Internal notes are excluded from    A note must never reach a    Active
+  every customer path (page, API,     customer, and staff must not
+  email, download) by one function;   be shown to customers by
+  customers never see a staff email   email address
+  address
 
   Renewals/upgrades are invoices      One financial record; a     Active
   (apps.renewals): figures frozen on  browser never supplies a

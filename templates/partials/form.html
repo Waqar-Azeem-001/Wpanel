@@ -1,6 +1,6 @@
 {% if form.non_field_errors %}<div class="errors">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
 {% for field in form %}
-  {% if field.is_hidden %}{{ field }}{% else %}
+  {% if field.is_hidden %}{{ field }}{% elif field.name != exclude_field %}
   <div class="field">
     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
     {{ field }}

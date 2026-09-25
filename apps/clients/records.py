@@ -57,4 +57,13 @@ def account_records(user, client):
                                    "status": h.get_status_display(), "status_key": h.status, "amount": "",
                                    "date": h.created_at} for h in rows[:LIMIT]]})
 
+    if user.has_perm(perm("view_support")):
+        rows = client.tickets.order_by("-last_activity_at", "-id")
+        sections.append({"title": "Tickets", "total": rows.count(),
+                         "list_url": reverse("support_staff:tickets") + f"?q={client.email}",
+                         "rows": [{"label": f"{t.reference} {t.subject[:40]}",
+                                   "url": reverse("support_staff:ticket", args=[t.pk]),
+                                   "status": t.get_status_display(), "status_key": t.status, "amount": "",
+                                   "date": t.last_activity_at} for t in rows[:LIMIT]]})
+
     return sections

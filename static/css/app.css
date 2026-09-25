@@ -133,3 +133,20 @@ input.short { width: 6rem; }
 .actions { flex-wrap: wrap; }
 .inline-form { flex-wrap: wrap; max-width: 100%; }
 .inline-form input[type="text"] { min-width: 0; flex: 1 1 10rem; max-width: 100%; }
+
+/* Phase 10: support */
+.conversation { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.msg { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+.msg.staff { border-left: 4px solid var(--accent); }
+.msg.internal { border-left: 4px solid var(--warn); background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.msg header { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 6px; }
+.msg .body { overflow-wrap: anywhere; }
+.msg .body p { margin: 0 0 .6em; }
+.attachments { margin: 8px 0 0; padding-left: 18px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 12px 0 16px; }
+.stat { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; text-decoration: none; }
+.stat strong { font-size: 1.6rem; color: var(--text); } .stat span { color: var(--muted); }
+.badge.priority-urgent { color: var(--danger); } .badge.priority-high { color: var(--warn); }
+.badge.priority-low { color: var(--muted); }
+.badge.status-open, .badge.status-customer_reply { color: var(--warn); }
+.badge.status-agent_reply, .badge.status-resolved { color: var(--ok); }

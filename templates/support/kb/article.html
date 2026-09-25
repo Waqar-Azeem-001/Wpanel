@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title }} · Help centre · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'help:index' %}">Help centre</a> &rsaquo; <a href="{% url 'help:category' article.category.slug %}">{{ article.category.name }}</a></p>
+<article class="card">
+  <h1>{{ article.title }}</h1>
+  {% for paragraph in paragraphs %}<p>{{ paragraph|linebreaksbr }}</p>{% endfor %}
+  <p class="muted">Updated {{ article.updated_at|date:"j M Y" }}</p>
+</article>
+<p>Still stuck? <a href="{% url 'support_customer:new' %}">Open a support ticket</a>.</p>
+{% endblock %}

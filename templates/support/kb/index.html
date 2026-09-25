@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Help centre · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>Help centre</h1>
+<form class="filters" method="get" role="search">
+  <div class="field grow"><label for="id_q">{{ form.q.label }}</label><input type="search" name="q" id="id_q" value="{{ term }}" placeholder="e.g. change nameservers"></div>
+  <div class="field"><button class="btn" type="submit">Search</button></div>
+</form>
+{% if results is not None %}
+<section class="card">
+  <h2>{{ results|length }} result{{ results|length|pluralize }} for &ldquo;{{ term }}&rdquo;</h2>
+  <ul>{% for a in results %}<li><a href="{% url 'help:article' a.category.slug a.slug %}">{{ a.title }}</a> <small class="muted">{{ a.category.name }}</small></li>
+  {% empty %}<li class="muted">Nothing found. Try different words, or <a href="{% url 'support_customer:list' %}">contact support</a>.</li>{% endfor %}</ul>
+</section>
+{% else %}
+<div class="cols">
+{% for c in categories %}
+  <section class="card"><h2><a href="{% url 'help:category' c.slug %}">{{ c.name }}</a></h2>
+    {% if c.description %}<p class="muted">{{ c.description }}</p>{% endif %}
+    <p class="muted">{{ c.article_count }} article{{ c.article_count|pluralize }}</p></section>
+{% empty %}
+  <section class="card"><p class="muted">The help centre is being written. In the meantime, <a href="{% url 'support_customer:list' %}">contact support</a>.</p></section>
+{% endfor %}
+</div>
+{% endif %}
+<p class="muted">Cannot find what you need? <a href="{% url 'support_customer:new' %}">Open a support ticket</a>.</p>
+{% endblock %}

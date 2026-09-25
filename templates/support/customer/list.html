@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Support · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Support</h1>
+  <span><a class="btn secondary" href="{% url 'help:index' %}">Help centre</a> <a class="btn" href="{% url 'support_customer:new' %}">New ticket</a></span></div>
+<nav class="tabs" aria-label="Ticket view">
+  <a href="?view=open"{% if view != "closed" %} class="active" aria-current="page"{% endif %}>Open</a>
+  <a href="?view=closed"{% if view == "closed" %} class="active" aria-current="page"{% endif %}>Closed</a>
+</nav>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Ticket</th><th>Subject</th><th>Department</th><th>Status</th><th>Last activity</th></tr></thead>
+  <tbody>
+  {% for ticket in page %}
+    <tr>
+      <td><a href="{% url 'support_customer:ticket' ticket.pk %}">{{ ticket.reference }}</a></td>
+      <td>{{ ticket.subject }}</td>
+      <td>{{ ticket.department.name }}</td>
+      <td><span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
+      <td>{{ ticket.last_activity_at|date:"j M Y, H:i" }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="muted">{% if view == "closed" %}No closed tickets.{% else %}You have no open tickets. <a href="{% url 'support_customer:new' %}">Open one</a> if you need help.{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "billing/_pager.html" %}
+{% endblock %}

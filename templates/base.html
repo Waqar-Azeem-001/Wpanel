@@ -13,6 +13,7 @@
     <nav>
       <a href="{% url 'catalog:product_list' %}">Plans</a>
       <a href="{% url 'domains_public:search' %}">Domains</a>
+      <a href="{% url 'help:index' %}">Help</a>
       {% if user.is_authenticated %}
         {% if perms.accounts.view_products %}<a href="{% url 'catalog_staff:product_list' %}">Products</a>{% endif %}
         {% if perms.accounts.view_clients %}<a href="{% url 'clients_staff:list' %}">Clients</a>{% endif %}
@@ -20,11 +21,13 @@
         {% if perms.accounts.view_hosting %}<a href="{% url 'hosting_staff:list' %}">Hosting Admin</a>{% endif %}
         {% if perms.accounts.view_orders %}<a href="{% url 'orders_staff:list' %}">Orders</a>{% endif %}
         {% if perms.accounts.view_billing %}<a href="{% url 'billing_staff:index' %}">Billing</a>{% endif %}
+        {% if perms.accounts.view_support %}<a href="{% url 'support_staff:overview' %}">Support</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'clients_customer:list' %}">Account</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'domains_customer:list' %}">My Domains</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'hosting_customer:list' %}">My Hosting</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'orders_customer:list' %}">My Orders</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'billing_customer:invoice_list' %}">Invoices</a>{% endif %}
+        {% if user.client_contacts.exists %}<a href="{% url 'support_customer:list' %}">Support</a>{% endif %}
         {% if user.client_contacts.exists %}<a href="{% url 'orders_customer:cart' %}">Cart{% if cart_item_count %} ({{ cart_item_count }}){% endif %}</a>{% endif %}
         <a href="{% url 'accounts:profile' %}">{{ user.get_short_name }}</a>
         {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}

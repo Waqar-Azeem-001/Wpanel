@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.billing",
     "apps.orders",
     "apps.renewals",
+    "apps.support",
 ]
 
 MIDDLEWARE = [
@@ -132,6 +133,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Ticket attachments live here, NOT under MEDIA_ROOT (which nginx serves publicly): they are only reachable
+# through an authenticated view. Keep it out of any web-served path.
+PRIVATE_MEDIA_ROOT = env("PRIVATE_MEDIA_ROOT", default=str(BASE_DIR / "private_media"))
+SUPPORT_MAX_ATTACHMENT_MB = 5
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -214,6 +219,9 @@ SPECTACULAR_SETTINGS = {
         "TransactionStatusEnum": "apps.billing.models.TransactionStatus",
         "TransactionTypeEnum": "apps.billing.models.TransactionType",
         "FulfilmentStatusEnum": "apps.orders.models.FulfilmentStatus",
+        "TicketStatusEnum": "apps.support.models.TicketStatus",
+        "TicketPriorityEnum": "apps.support.models.TicketPriority",
+        "TicketMessageKindEnum": "apps.support.models.MessageKind",
         "ServiceChangeKindEnum": "apps.renewals.models.ChangeKind",
         "ServiceChangeStatusEnum": "apps.renewals.models.ChangeStatus",
     },
@@ -232,6 +240,10 @@ CELERY_BEAT_SCHEDULE = {
     "generate-renewal-invoices": {
         "task": "apps.renewals.tasks.generate_renewal_invoices_task",
         "schedule": crontab(hour=3, minute=0),
+    },
+    "auto-close-resolved-tickets": {
+        "task": "apps.support.tasks.auto_close_resolved_tickets_task",
+        "schedule": crontab(hour=4, minute=0),
     },
     "sweep-stuck-orders": {
         "task": "apps.orders.tasks.sweep_stuck_orders_task",
