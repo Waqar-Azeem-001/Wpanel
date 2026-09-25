@@ -83,7 +83,7 @@ Cancellation request, reason, immediate or end-of-term choice, admin review, app
 | Authorization tested; full suite green on SQLite and real PostgreSQL | ✅ 1046 |
 | Migrations, `makemigrations --check`, OpenAPI with no warnings | ✅ |
 | Browser check (desktop, tablet, mobile) | ✅ |
-| CI green on PostgreSQL + Redis | pending at time of writing |
+| CI green on PostgreSQL + Redis | ✅ Run 36153201765 on `d3f9b82` (first run) |
 
 ## Known limitations / deferred
 

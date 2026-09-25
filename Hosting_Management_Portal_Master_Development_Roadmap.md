@@ -1619,7 +1619,7 @@ If UI changed:
   09 Orders & Lifecycle          🟢       788 ✅  ✅        8d83271  ---
   10 Support                     🟢       885 ✅  ✅        e425a85  ---
   11 Notifications & Email       🟢       945 ✅  ✅        7d4026a  ---
-  12 Cancellation                🟡       1046 ✅ ✅        ---      ---
+  12 Cancellation                🟢       1046 ✅ ✅        d3f9b82  ---
   13 Affiliates                  ⬜       ---     ---       ---      ---
   14 Reports                     ⬜       ---     ---       ---      ---
   15 Admin Operations            ⬜       ---     ---       ---      ---
