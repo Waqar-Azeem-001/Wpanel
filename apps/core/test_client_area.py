@@ -47,7 +47,7 @@ def test_a_customer_lands_on_the_dashboard_and_everyone_else_on_the_profile(worl
     for role in ("customer owner", "billing contact", "technical contact"):
         assert browser(world.people[role]).get("/").headers["Location"] == reverse("dashboard"), role
     assert browser(world.people["manager"]).get("/").headers["Location"] == reverse("accounts:profile")
-    assert browser().get("/").headers["Location"] == reverse("accounts:profile")  # which sends visitors to sign in
+    assert browser().get("/").status_code == 200  # a visitor sees the storefront, not a sign-in page
 
 
 def test_a_customer_without_an_account_is_not_sent_to_a_page_that_needs_one(world, make_user):

@@ -29,3 +29,6 @@ REST_FRAMEWORK = {
     **REST_FRAMEWORK,
     "DEFAULT_THROTTLE_RATES": {"anon": "1000/min", "user": "1000/min", "auth": "1000/min"},
 }
+
+# Tests do not depend on the developer's local .env (which may set another store currency).
+STORE_CURRENCY = "USD"

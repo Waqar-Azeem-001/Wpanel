@@ -1,38 +1,61 @@
 {% extends "base.html" %}
 {% load ui i18n %}
 {% block title %}{% trans "Search Domains" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide flush{% endblock %}
+{% block breadcrumbs %}{% endblock %}
 {% block content %}
-<section class="card mx-auto narrow-card mb-3"><div class="card-body p-4">
-  <h1 class="h4">{% trans "Find your domain" %}</h1>
-  <form method="get" novalidate>
-    {% include "partials/form.html" %}
-    <button type="submit" class="btn btn-primary">{% trans "Search" %}</button>
-  </form>
-</div></section>
+<section class="hero">
+  <div class="container-xxl">
+    <h1>{% trans "Find your domain" %}</h1>
+    <p class="lead">{% trans "Your address on the internet. Check whether the name you want is available." %}</p>
+    <form method="get" novalidate class="hero-search mt-4" role="search">
+      <label class="visually-hidden" for="{{ form.domain.id_for_label }}">{{ form.domain.label }}</label>
+      <input type="text" name="domain" id="{{ form.domain.id_for_label }}" value="{{ form.domain.value|default:'' }}" placeholder="example.com" required{% if form.domain.errors %} aria-invalid="true"{% endif %}>
+      <input type="hidden" name="years" value="{{ form.years.value|default:1 }}">
+      <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Search" %}</button>
+    </form>
+    {% for error in form.domain.errors %}<p class="text-warning mt-2 mb-0">{{ error }}</p>{% endfor %}
+    {% for error in form.years.errors %}<p class="text-warning mt-2 mb-0">{{ error }}</p>{% endfor %}
+  </div>
+</section>
 
+<div class="container-xxl {% if result %}hero-overlap{% else %}pt-5{% endif %}">
 {% if result %}
-<section class="card mx-auto narrow-card"><div class="card-body p-4">
+<section class="card mb-4"><div class="card-body p-4">
   {% if result.available %}
-    <h2 class="h5">{{ result.domain }} {% trans "is available!" %}</h2>
-    <p class="fs-4 fw-bold">{{ result.pricing.register_price|money }} <span class="fs-6 fw-normal text-secondary">/ {% trans "year" %}</span></p>
-    <dl class="row">
-      <dt class="col-sm-4">{% trans "Renewal" %}</dt><dd class="col-sm-8">{{ result.pricing.renew_price|money }} / {% trans "year" %}</dd>
-      <dt class="col-sm-4">{% trans "Transfer" %}</dt><dd class="col-sm-8">{{ result.pricing.transfer_price|money }}</dd>
-    </dl>
-    {% if user.is_authenticated %}
-      <form method="post" action="{% url 'orders_customer:cart_add_domain' %}">{% csrf_token %}
-        <input type="hidden" name="domain" value="{{ result.domain }}">
-        <input type="hidden" name="years" value="{{ result.years }}">
-        <button class="btn btn-primary" type="submit">{% trans "Add to cart" %} ({{ result.years }} year{{ result.years|pluralize }})</button>
-      </form>
-    {% else %}
-      <p class="mb-0"><a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">{% trans "Sign in" %}</a> {% trans "or" %}
-        <a href="{% url 'accounts:register' %}">{% trans "create an account" %}</a> {% trans "to order it." %}</p>
-    {% endif %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <h2 class="h4 mb-1"><i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i> {{ result.domain }} {% trans "is available!" %}</h2>
+        <p class="text-secondary mb-0">{% trans "Renewal" %} {{ result.pricing.renew_price|money:STORE_CURRENCY }} / {% trans "year" %} &middot; {% trans "Transfer" %} {{ result.pricing.transfer_price|money:STORE_CURRENCY }}</p>
+      </div>
+      <div class="text-end">
+        <div class="fs-3 fw-bold">{{ result.pricing.register_price|money:STORE_CURRENCY }} <small class="fs-6 fw-normal text-secondary">/ {% trans "year" %}</small></div>
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'orders_customer:cart_add_domain' %}" class="mt-2">{% csrf_token %}
+            <input type="hidden" name="domain" value="{{ result.domain }}">
+            <input type="hidden" name="years" value="{{ result.years }}">
+            <button class="btn btn-primary" type="submit">{% trans "Add to cart" %} ({{ result.years }} year{{ result.years|pluralize }})</button>
+          </form>
+        {% else %}
+          <p class="mb-0 mt-2"><a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">{% trans "Sign in" %}</a> {% trans "or" %}
+            <a href="{% url 'accounts:register' %}">{% trans "create an account" %}</a> {% trans "to order it." %}</p>
+        {% endif %}
+      </div>
+    </div>
   {% else %}
-    <h2 class="h5">{{ result.domain }} {% trans "is taken" %}</h2>
+    <h2 class="h4"><i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i> {{ result.domain }} {% trans "is taken" %}</h2>
     <p class="text-secondary mb-0">{% trans "Do you own it? You can" %} <a href="{% url 'orders_customer:cart' %}">{% trans "transfer it in" %}</a> {% trans "from your cart." %}</p>
   {% endif %}
 </div></section>
 {% endif %}
+
+{% if tlds %}
+<section class="mb-5">
+  <h2 class="h5 mb-3">{% trans "Domain prices" %} <small class="text-secondary fw-normal">{% trans "per year" %}</small></h2>
+  <div class="tld-grid">
+    {% for tld in tlds %}<div class="tld-tile"><strong>{{ tld.tld }}</strong><span>{{ tld.register_price|money:STORE_CURRENCY }}</span>{% if tld.renew_price != tld.register_price %}<em>{% trans "renews at" %} {{ tld.renew_price|money:STORE_CURRENCY }}</em>{% endif %}</div>{% endfor %}
+  </div>
+</section>
+{% endif %}
+</div>
 {% endblock %}

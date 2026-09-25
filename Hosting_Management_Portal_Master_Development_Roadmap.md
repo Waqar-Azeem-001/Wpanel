@@ -874,6 +874,7 @@ Before marking any phase 🟢:
 | D1 Design System & Shell | 🟢 | 1293 ✅ | ✅ | nav links: 6 visitor kinds, 0 broken | ee8a609 | — |
 | D2 Link Integrity Harness | 🟢 | 1399 ✅ | ✅ | CI crawler: 8 roles x every status, 0 broken; emails, PDFs, redirects, `next` | da099e8 | — |
 | D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | 03ba01b | — |
+| D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | pending | — |
 | D4 Staff Area Parity | ⬜ | — | — | — | — | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
@@ -975,6 +976,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Runtime CDN dependency; unbranded errors; hand-coloured status badges; unlabelled form fields; no focus styles; brand not configurable | D1 | Assets vendored; branded error pages; one status-badge tag; labels added and tested; focus rings; brand settings in the database (colours checked for contrast) |
 | Static files on default storage; vanity paths; hand-written navbars; no link crawler in CI; emailed links and PDFs untested; a Support Agent shown a link to Products | D2 | `ManifestStaticFilesStorage` in production (a missing file fails the build); `/login/`, `/register/`, `/store/`, `/knowledgebase/` answer 301 via one `RETIRED` map; all menus from `apps/core/navigation.py` with a startup check; crawler for 8 roles on a world with one object in every status as a CI gate; email, PDF, redirect and safe-`next` tests; deploy check that `SITE_URL` is https |
 | Customer dashboard, sidebars with counts, service and domain tabs, addons/payment methods/email history/contacts pages, re-skin of every customer screen | D3 | Section 10 delivered; `legacy.css` rules only the customer area used deleted; see `docs/d3-client-area.md` |
+| Basic-looking design; no storefront front page; brand not the owner's | D3b | Modern theme (Plus Jakarta Sans vendored, light logo bar, pricing cards, hero); storefront front page; `seed_webhostera` loads the Web Host Era brand, 8 plans and 35 domain prices; see `docs/d3b-modern-look.md` |
 | Server errors from junk or NUL characters in the address or forms; two "create" pages that 404 without `?client=`; hand-built internal URLs | D0 | `query_id` helper, `StripNullBytesMiddleware`, redirects to the client chooser, `reverse()` everywhere; regression tests |
 
 ------------------------------------------------------------------------
@@ -1049,6 +1051,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Status colour is decided in one template tag (`{% status_badge %}`) from the roadmap map; a text label is always shown | One vocabulary; unknown statuses are neutral, never uncoloured | Active |
 | Brand (name, logo, favicon, colours, footer, formats) is a database record; primary colour must give 4.5:1 contrast with white; images are validated by content and never SVG | Rule 6; readable buttons; an uploaded file must never run as script | Active |
 | `static/css/legacy.css` is a bridge for the old class names and receives no new rules | Retired screen by screen in D3/D4 (customer screens done in D3; the rest goes with D4) | Active |
+| The Web Host Era brand, plans and prices are loaded by `manage.py seed_webhostera` into the database (editable in Setup); the accent colour must carry white or dark text; the front page is the storefront for visitors | Brand is configuration (Rule 6); the owner's site is the source of the catalogue | Active |
 | A view that supplies `sidebar` panels (built in `apps/core/portal.py` from URL names) gets a two-column page; every count on a link equals the rows it opens | One sidebar mechanism; a number never disagrees with its list | Active |
 | Service and domain pages are tab bars (each tab its own URL); the tab for an action is shown only when the person can use it (`portal.can_cancel`) | Rule 5.6: a visible link always opens something usable | Active |
 | Customer contacts are read-only pages; staff manage contacts | Self-service contact management stays deferred | Active |

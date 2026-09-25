@@ -106,7 +106,7 @@ def test_a_colour_white_text_cannot_be_read_on_is_refused(admin):
             services.save_settings(admin, values={"primary_color": light})
         assert "too light" in str(exc.value) and "contrast" in str(exc.value)
     with pytest.raises(ValidationError):
-        services.save_settings(admin, values={"accent_color": "#ffff00"})
+        services.save_settings(admin, values={"accent_color": "#808080"})  # a mid-tone: neither white nor dark text reads on it
     assert services.get().primary == "#2459d6"
     services.save_settings(admin, values={"primary_color": "#1a1a1a"})  # dark is fine
     assert services.contrast_ratio("#2459d6", "#ffffff") >= 4.5

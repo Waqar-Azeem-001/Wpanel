@@ -6,16 +6,7 @@
 <section class="card"><div class="card-body">
   <h1>{{ product.name }}</h1>
   <p class="text-secondary">{{ product.get_type_display }}</p>
-  {% if product.description %}<p>{{ product.description|linebreaksbr }}</p>{% endif %}
-
-  {% if product.resource_limits %}
-  <h2 class="h5">{% trans "What's included" %}</h2>
-  <ul>
-    {% for key, value in product.resource_limits.items %}
-      <li><strong>{{ key|cut:"_"|title }}:</strong> {% if value == None %}Unlimited{% else %}{{ value }}{% endif %}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
+  {% if product.description %}<ul class="plan-features list-unstyled row row-cols-1 row-cols-md-2 mb-4">{% for line in product.description|feature_lines %}<li class="col d-flex gap-2 py-1"><i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i><span>{{ line }}</span></li>{% endfor %}</ul>{% endif %}
 
   <h2 class="h5">{% trans "Pricing" %}</h2>
   <div class="table-responsive">
@@ -25,8 +16,8 @@
     {% for entry in prices %}
       <tr>
         <td>{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %}</td>
-        <td>{{ entry.price|money }}</td>
-        <td>{{ entry.setup_fee|money }}</td>
+        <td>{{ entry.price|money:STORE_CURRENCY }}</td>
+        <td>{{ entry.setup_fee|money:STORE_CURRENCY }}</td>
       </tr>
     {% empty %}
       <tr><td colspan="3" class="text-secondary">{% trans "Pricing is not published yet." %}</td></tr>

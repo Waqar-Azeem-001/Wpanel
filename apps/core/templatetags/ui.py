@@ -107,3 +107,9 @@ def bs_field(field):
 @register.filter
 def is_checkbox(field):
     return isinstance(field.field.widget, forms.CheckboxInput)
+
+
+@register.filter
+def feature_lines(text):
+    """A plan's description as a list: one feature per non-empty line."""
+    return [line.strip() for line in (text or "").splitlines() if line.strip()]

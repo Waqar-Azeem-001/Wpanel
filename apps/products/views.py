@@ -38,8 +38,25 @@ def _redirect_back(request, item, action):
 # --- Public catalog --------------------------------------------------------------------
 
 def public_product_list(request):
-    products = Product.objects.filter(status=CatalogStatus.ACTIVE).prefetch_related("prices")
-    return render(request, "products/public/list.html", {"products": products})
+    return render(request, "products/public/list.html", {"products": _cheapest_first(_active_products())})
+
+
+def _active_products():
+    return Product.objects.filter(status=CatalogStatus.ACTIVE).prefetch_related("prices")
+
+
+def _cheapest_first(products):
+    """Plans in the order a shopper reads them: by their lowest price, then name."""
+    def lowest(product):
+        prices = [p.price for p in product.prices.all()]
+        return (min(prices) if prices else float("inf"), product.name)
+
+    return sorted(products, key=lowest)
+
+
+def public_home(request):
+    """The front page for visitors: a search box for a domain, the plans, and why to choose us."""
+    return render(request, "public/home.html", {"products": _cheapest_first(_active_products())[:4]})
 
 
 def public_addon_list(request):

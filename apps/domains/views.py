@@ -53,7 +53,8 @@ def domain_search(request):
         else:
             result = {"available": available, "pricing": pricing, "domain": form.cleaned_data["domain"].lower(),
                      "years": form.cleaned_data["years"]}
-    return render(request, "domains/public/search.html", {"form": form, "result": result})
+    tlds = TldPricing.objects.filter(is_active=True).order_by("tld")
+    return render(request, "domains/public/search.html", {"form": form, "result": result, "tlds": tlds})
 
 
 # --- Customer self-service -----------------------------------------------------------------

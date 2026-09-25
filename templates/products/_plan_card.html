@@ -1,0 +1,20 @@
+{% load ui i18n %}
+{# One plan as a pricing card: {% include "products/_plan_card.html" with product=product featured=False %} #}
+<article class="plan-card{% if featured %} featured{% endif %}">
+  {% if featured %}<span class="ribbon">{% trans "Most popular" %}</span>{% endif %}
+  <div class="plan-body">
+    <div class="plan-type">{{ product.get_type_display }}</div>
+    <h2 class="plan-name">{{ product.name }}</h2>
+    {% with lowest=product.prices.all|dictsort:"price"|first %}
+      {% if lowest %}
+        <div class="plan-price">{{ lowest.price|money:STORE_CURRENCY }} <small>{% trans "billed" %} {{ lowest.get_billing_cycle_display|lower }}</small></div>
+      {% endif %}
+    {% endwith %}
+    <ul class="plan-features">
+      {% for line in product.description|feature_lines %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>{{ line }}</span></li>{% endfor %}
+    </ul>
+  </div>
+  <div class="plan-foot">
+    <a class="btn {% if featured %}btn-primary{% else %}btn-outline-primary{% endif %} w-100" href="{% url 'catalog:product_detail' product.slug %}">{% trans "View plan" %}</a>
+  </div>
+</article>

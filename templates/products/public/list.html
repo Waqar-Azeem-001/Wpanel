@@ -1,26 +1,23 @@
 {% extends "base.html" %}
 {% load ui i18n %}
 {% block title %}{% trans "Hosting Plans" %} · {{ SITE_NAME }}{% endblock %}
-{% block container %}wide{% endblock %}
+{% block container %}wide flush{% endblock %}
+{% block breadcrumbs %}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{% trans "Hosting Plans" %}</h1></div>
-<div class="row g-3">
-  {% for product in products %}
-  <div class="col-md-6 col-lg-4 col-xl-3">
-    <section class="card h-100"><div class="card-body d-flex flex-column">
-      <h2 class="h5">{{ product.name }}</h2>
-      <p class="text-secondary">{{ product.get_type_display }}</p>
-      {% if product.description %}<p>{{ product.description|linebreaksbr }}</p>{% endif %}
-      {% with lowest=product.prices.all|dictsort:"price"|first %}
-        {% if lowest %}
-          <p class="fs-4 fw-bold mb-3">{{ lowest.price|money }} <span class="fs-6 fw-normal text-secondary">/ {{ lowest.get_billing_cycle_display }}</span></p>
-        {% endif %}
-      {% endwith %}
-      <a class="btn btn-primary mt-auto align-self-start" href="{% url 'catalog:product_detail' product.slug %}">{% trans "View plan" %}</a>
-    </div></section>
+<section class="hero">
+  <div class="container-xxl">
+    <span class="eyebrow">{{ SITE_NAME }}</span>
+    <h1>{% trans "Hosting Plans" %}</h1>
+    <p class="lead">{% trans "Pick the plan that fits your website today. Upgrade any time as you grow." %}</p>
   </div>
-  {% empty %}
-  <div class="col-12"><p class="text-secondary">{% trans "No plans are available yet. Check back soon." %}</p></div>
-  {% endfor %}
+</section>
+<div class="container-xxl hero-overlap">
+  <div class="row g-4">
+    {% for product in products %}
+    <div class="col-md-6 col-xl-3">{% include "products/_plan_card.html" with product=product featured=False %}</div>
+    {% empty %}
+    <div class="col-12"><div class="card"><div class="card-body text-secondary">{% trans "No plans are available yet. Check back soon." %}</div></div></div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

@@ -79,6 +79,7 @@ class Brand:
     primary_rgb: str
     primary_subtle: str
     primary_light_rgb: str
+    accent_text: str
     accent: str
     support_email: str
     footer_text: str
@@ -95,7 +96,7 @@ def _brand_from(row, has_logo, has_favicon):
         name=row["site_name"] or settings.SITE_NAME, primary=primary, primary_dark=mix(primary, "#000000", 0.18),
         primary_rgb=", ".join(str(c) for c in _rgb(primary)), primary_subtle=mix(primary, "#ffffff", 0.9),
         primary_light_rgb=", ".join(str(c) for c in _rgb(mix(primary, "#ffffff", 0.45))),
-        accent=row["accent_color"], support_email=row["support_email"], footer_text=row["footer_text"],
+        accent=row["accent_color"], accent_text=readable_text(row["accent_color"]), support_email=row["support_email"], footer_text=row["footer_text"],
         date_format=row["date_format"], money_format=row["money_format"], has_logo=has_logo,
         has_favicon=has_favicon, version=row["version"])
 
@@ -159,13 +160,24 @@ def validate_image(kind, data):
     return content_type
 
 
+DARK_TEXT = "#14213d"
+
+
+def readable_text(color):
+    """The text colour to put on ``color``: white, or the dark ink when white would not be readable."""
+    return "#ffffff" if contrast_ratio(color, "#ffffff") >= MIN_CONTRAST else DARK_TEXT
+
+
 def _check_colors(values):
-    for field, label in (("primary_color", "primary"), ("accent_color", "accent")):
-        color = values.get(field)
-        if color and contrast_ratio(color, "#ffffff") < MIN_CONTRAST:
-            raise ValidationError({field: f"The {label} colour is too light: white text on it would be hard to read "
-                                          f"(contrast {contrast_ratio(color, '#ffffff'):.1f}:1, at least "
-                                          f"{MIN_CONTRAST}:1 needed). Choose a darker colour."})
+    color = values.get("primary_color")
+    if color and contrast_ratio(color, "#ffffff") < MIN_CONTRAST:
+        raise ValidationError({"primary_color": f"The primary colour is too light: white text on it would be hard to read "
+                                                f"(contrast {contrast_ratio(color, '#ffffff'):.1f}:1, at least "
+                                                f"{MIN_CONTRAST}:1 needed). Choose a darker colour."})
+    accent = values.get("accent_color")  # the accent carries white text, or dark text if it is light; a mid-tone carries neither
+    if accent and max(contrast_ratio(accent, "#ffffff"), contrast_ratio(accent, DARK_TEXT)) < MIN_CONTRAST:
+        raise ValidationError({"accent_color": "The accent colour is a mid-tone: neither white nor dark text is easy to "
+                                               f"read on it (at least {MIN_CONTRAST}:1 needed). Choose a lighter or darker colour."})
 
 
 @transaction.atomic

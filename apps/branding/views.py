@@ -33,7 +33,7 @@ def brand_css(request):
            f"  --brand-primary: {b.primary};\n  --brand-primary-dark: {b.primary_dark};\n"
            f"  --brand-primary-rgb: {b.primary_rgb};\n  --brand-primary-light-rgb: {b.primary_light_rgb};\n"
            f"  --brand-primary-subtle: {b.primary_subtle};\n"
-           f"  --brand-accent: {b.accent};\n}}\n")
+           f"  --brand-accent: {b.accent};\n  --brand-accent-text: {b.accent_text};\n}}\n")
     return _cached(request, css, "text/css; charset=utf-8", b.version, 300)
 
 

@@ -5,11 +5,14 @@ from django.urls import include, path
 from apps.clients.views_dashboard import dashboard
 from apps.core.redirects import retired_urlpatterns
 from apps.notifications import views as notification_views
+from apps.products.views import public_home
 
 
 def home(request):
-    """The site's front door: customers land on their dashboard, staff and visitors as before."""
-    if request.user.is_authenticated and not request.user.is_staff and request.user.client_contacts.exists():
+    """The site's front door: visitors see the storefront, customers their dashboard, staff their profile."""
+    if not request.user.is_authenticated:
+        return public_home(request)
+    if not request.user.is_staff and request.user.client_contacts.exists():
         return redirect("dashboard")
     return redirect("accounts:profile")
 

@@ -31,9 +31,9 @@ class BrandSettings(models.Model):
 
     site_name = models.CharField(max_length=100, blank=True, help_text="Blank = the SITE_NAME setting.")
     primary_color = models.CharField(max_length=7, default="#2459d6", validators=[validate_hex],
-                                     help_text="Buttons, links and the navigation bar. Must be dark enough for white text.")
+                                     help_text="Buttons, links and highlights. Must be dark enough for white text.")
     accent_color = models.CharField(max_length=7, default="#1f7a4d", validators=[validate_hex],
-                                    help_text="Highlights and positive actions.")
+                                    help_text="Highlights and call-to-action buttons; white or dark text is chosen to suit it.")
     support_email = models.EmailField(blank=True)
     footer_text = models.CharField(max_length=300, blank=True)
     date_format = models.CharField(max_length=12, choices=DATE_FORMATS, default="%d %b %Y")
