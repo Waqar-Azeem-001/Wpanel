@@ -4,24 +4,31 @@
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content %}
-<section class="hero">
+<section class="hero hero-compact">
   <div class="container-xxl">
-    <span class="eyebrow">{{ SITE_NAME }}</span>
     <h1>{% if chosen %}{{ chosen.label }}{% else %}{% trans "Everything you need to get online" %}{% endif %}</h1>
-    <p class="lead">{% if chosen %}{{ chosen.blurb }}{% else %}{% trans "Pick the plan that fits your website today. Upgrade any time as you grow." %}{% endif %}</p>
+    <p class="lead">{% if chosen %}{{ chosen.blurb }}{% else %}{% trans "Hosting for every kind of site, servers when you outgrow it, and the security and domains that go with it." %}{% endif %}</p>
+    {% if not chosen %}
+    <form method="get" action="{% url 'domains_public:search' %}" class="hero-search mt-3" role="search">
+      <input type="hidden" name="years" value="1">
+      <label class="visually-hidden" for="store_domain">{% trans "Domain name" %}</label>
+      <input id="store_domain" type="text" name="domain" placeholder="{% trans 'Find your domain: yourbusiness.com' %}" required>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Search" %}</button>
+    </form>
+    {% endif %}
   </div>
 </section>
 <div class="container-xxl hero-overlap">
   <nav class="cat-nav" aria-label="{% trans 'Categories' %}">
     <a href="{% url 'catalog:product_list' %}"{% if not chosen %} aria-current="page" class="is-current"{% endif %}>{% trans "All" %}</a>
-    {% for c in nav %}<a href="{% if c.url_name %}{% url c.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ c.key }}{% endif %}"{% if chosen and chosen.key == c.key %} aria-current="page" class="is-current"{% endif %}><i class="bi {{ c.icon }}" aria-hidden="true"></i> {{ c.label }}</a>{% endfor %}
+    {% for c in nav %}<a href="{% if c.url_name %}{% url c.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ c.key }}{% endif %}"{% if chosen and chosen.key == c.key %} aria-current="page" class="is-current"{% endif %}><i class="bi {{ c.icon }}" aria-hidden="true"></i> {{ c.short }}</a>{% endfor %}
   </nav>
   {% for group, entries in sections %}
   <section class="cat-group" aria-labelledby="g-{{ forloop.counter }}">
     {% if not chosen %}<h2 id="g-{{ forloop.counter }}" class="cat-group-title">{{ group }}</h2>{% endif %}
     {% for category, items in entries %}
     <div class="cat-block" id="{{ category.key }}">
-      {% if not chosen %}<div class="cat-block-head"><span class="chip" aria-hidden="true"><i class="bi {{ category.icon }}"></i></span><div><h3>{{ category.label }}</h3><p class="text-secondary mb-0">{{ category.blurb }}</p></div></div>{% endif %}
+      {% if not chosen %}<div class="cat-block-head"><span class="chip" aria-hidden="true"><i class="bi {{ category.icon }}"></i></span><div class="grow"><h3>{{ category.label }}</h3><p class="text-secondary mb-0">{{ category.blurb }}</p></div>{% if items and not category.url_name %}<a class="cat-all" href="{% url 'catalog:product_list' %}?category={{ category.key }}">{% trans "See all" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}</div>{% endif %}
       {% if category.url_name %}
         <form method="get" action="{% url category.url_name %}" class="search-line cat-search" role="search">
           <input type="hidden" name="years" value="1">
@@ -31,7 +38,7 @@
         </form>
       {% elif items %}
         <div class="row g-4">
-          {% for item in items %}<div class="col-md-6 col-xl-3">{% if category.addon_kind %}{% include "products/_addon_card.html" with addon=item %}{% else %}{% include "products/_plan_card.html" with product=item featured=False %}{% endif %}</div>{% endfor %}
+          {% for item in items %}<div class="col-md-6 {% if items|length > 3 %}col-xl-3{% else %}col-xl-4{% endif %}">{% if category.addon_kind %}{% include "products/_addon_card.html" with addon=item %}{% else %}{% include "products/_plan_card.html" with product=item featured=False %}{% endif %}</div>{% endfor %}
         </div>
       {% else %}
         <p class="cat-soon"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {% trans "Coming soon. Open a ticket or contact us if you need this now." %}</p>
@@ -40,5 +47,10 @@
     {% endfor %}
   </section>
   {% endfor %}
+  <section class="help-banner">
+    <i class="bi bi-chat-dots" aria-hidden="true"></i>
+    <div class="grow"><strong>{% trans "Not sure which is right for you?" %}</strong><p class="text-secondary mb-0">{% trans "Read our help articles, or ask our team before you order." %}</p></div>
+    <a class="btn btn-outline-primary" href="{% url 'help:index' %}">{% trans "Visit the help centre" %}</a>
+  </section>
 </div>
 {% endblock %}

@@ -5,7 +5,7 @@ A category is a view over the catalogue, not stored data: hosting categories lis
 the SSL and WHOIS categories list the active add-ons of that kind, and Domains leads to the domain search. Staff fill a category
 by creating products or add-ons of the right type or kind; an empty one says so instead of pretending.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, replace
 
 from django.utils.translation import gettext_lazy as _
 
@@ -22,12 +22,12 @@ class Category:
     product_types: tuple = ()
     addon_kind: str = ""
     url_name: str = ""  # a category that is a page of its own (Domains)
-    audience: str = field(default="")
+    short: object = ""  # the label in the one-row category bar
 
 
 HOSTING, SERVERS, SECURITY = _("Hosting"), _("Servers"), _("Security and domains")
 
-CATEGORIES = (
+_ALL = (
     Category("wordpress", _("WordPress hosting"), _("Tuned for WordPress, ready in minutes."), "bi-wordpress", HOSTING,
              product_types=(ProductType.WORDPRESS_HOSTING,)),
     Category("shared", _("Shared hosting"), _("Everything a first website needs, at the lowest price."), "bi-hdd-stack", HOSTING,
@@ -49,6 +49,10 @@ CATEGORIES = (
     Category("domains", _("Domains"), _("Search, register or transfer a domain name."), "bi-globe2", SECURITY,
              url_name="domains_public:search"),
 )
+_SHORT = {"wordpress": _("WordPress"), "shared": _("Shared"), "business": _("Business"), "ecommerce": _("E-commerce"),
+          "reseller": _("Reseller"), "vps": _("VPS"), "dedicated": _("Dedicated"), "ssl": _("SSL"),
+          "whois": _("WHOIS privacy"), "domains": _("Domains")}
+CATEGORIES = tuple(replace(c, short=_SHORT.get(c.key, c.label)) for c in _ALL)
 BY_KEY = {c.key: c for c in CATEGORIES}
 GROUPS = tuple(dict.fromkeys(c.group for c in CATEGORIES))
 

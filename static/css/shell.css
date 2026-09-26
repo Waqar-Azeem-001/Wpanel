@@ -624,3 +624,26 @@ body.auth-body { display: block; background: var(--bg); }
 .cat-tile .chip { margin-bottom: .35rem; }
 .cat-tile span.text-secondary { font-size: .85rem; line-height: 1.4; }
 .cat-from { margin-top: auto; padding-top: .5rem; font-size: .85rem; font-weight: 650; color: var(--accent-ink); }
+
+/* --- Store polish: a compact hero, one-row category bar, shorter cards, a helper card --------------------------------------- */
+.hero-compact { padding: 2.75rem 0 4.75rem; }
+.hero-compact h1 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); margin-bottom: .5rem; }
+.hero-compact .lead { font-size: 1rem; max-width: 42rem; margin-bottom: 0; }
+.cat-nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; scroll-snap-type: x proximity; }
+.cat-nav a { flex: none; white-space: nowrap; scroll-snap-align: start; }
+.cat-nav a .bi { color: var(--accent); margin-right: .25rem; }
+.cat-nav a.is-current .bi { color: inherit; }
+.cat-block-head .grow { flex: 1; min-width: 0; }
+.cat-all { flex: none; font-size: .85rem; font-weight: 600; text-decoration: none; }
+.plan-card .plan-price .per { margin-left: .15rem; font-size: 1rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.plan-card .plan-price small { display: inline; margin-left: .35rem; }
+.plan-card .plan-more { display: inline-block; margin-top: .35rem; font-size: .85rem; font-weight: 600; text-decoration: none; }
+.help-card { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: .35rem; height: 100%; padding: 1.5rem; border: 1px dashed var(--border-strong); border-radius: 20px; }
+.help-card > .bi { font-size: 1.4rem; color: var(--accent); }
+
+.help-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin: 1rem 0 2.5rem; padding: 1.25rem 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.help-banner > .bi { font-size: 1.6rem; color: var(--accent); }
+.help-banner .grow { flex: 1; min-width: 14rem; }
+.plan-card .plan-price { font-size: 1.85rem; }
+.plan-card .plan-price small { display: block; margin-left: 0; }
+.cat-nav { justify-content: flex-start; }

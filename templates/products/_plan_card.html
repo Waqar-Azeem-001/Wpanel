@@ -7,12 +7,15 @@
     <h2 class="plan-name">{{ product.name }}</h2>
     {% with lowest=product.prices.all|dictsort:"price"|first %}
       {% if lowest %}
-        <div class="plan-price">{{ lowest.price|money:STORE_CURRENCY }} <small>{% trans "billed" %} {{ lowest.get_billing_cycle_display|lower }}</small></div>
+        <div class="plan-price">{{ lowest.price|money:STORE_CURRENCY }}{% if lowest.billing_cycle == "monthly" %}<span class="per">/{% trans "mo" %}</span>{% elif lowest.billing_cycle == "annual" %}<span class="per">/{% trans "yr" %}</span>{% endif %} <small>{% trans "billed" %} {{ lowest.get_billing_cycle_display|lower }}</small></div>
       {% endif %}
     {% endwith %}
+    {% with lines=product.description|feature_lines %}
     <ul class="plan-features">
-      {% for line in product.description|feature_lines %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>{{ line }}</span></li>{% endfor %}
+      {% for line in lines|slice:":6" %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>{{ line }}</span></li>{% endfor %}
     </ul>
+    {% if lines|length > 6 %}<a class="plan-more" href="{% url 'catalog:product_detail' product.slug %}">+ {{ lines|length|add:"-6" }} {% trans "more included" %}</a>{% endif %}
+    {% endwith %}
   </div>
   <div class="plan-foot">
     <a class="btn {% if featured %}btn-primary{% else %}btn-outline-primary{% endif %} w-100" href="{% url 'catalog:product_detail' product.slug %}">{% trans "View plan" %}</a>
