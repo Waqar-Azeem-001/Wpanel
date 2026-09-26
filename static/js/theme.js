@@ -1,6 +1,6 @@
 /*
- * Runs before the page paints (loaded in the head): the theme (the person's choice, else the system setting) and the
- * collapsed or expanded rail, so neither flashes the wrong way. shell.js binds the buttons that change them.
+ * Runs before the page paints (loaded in the head): the theme (the person's choice, else the system setting), so it never
+ * flashes the wrong way. shell.js binds the buttons that change it.
  */
 (function () {
   var root = document.documentElement;
@@ -19,5 +19,4 @@
   if (query && query.addEventListener) { query.addEventListener("change", apply); }
   window.wpTheme = { get: choice, set: function (pick) { write("wp.theme", pick); apply(); } };
 
-  root.setAttribute("data-rail", read("wp.rail") === "collapsed" ? "collapsed" : "expanded");
 })();

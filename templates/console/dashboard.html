@@ -3,11 +3,12 @@
 {% block title %}{% trans "Overview" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
+<section class="hero-band" aria-label="{% trans 'Summary' %}">
 <div class="page-head">
   <h1>{{ greeting }}{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
   <p class="page-sub">{% trans "What is happening across the business, and what needs a person right now." %}</p>
   <div class="page-actions">
-    {% for label, name in shortcuts %}<a class="btn btn-sm {% if forloop.first %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url name %}">{{ label }}</a>{% endfor %}
+    {% for label, name in shortcuts %}<a class="btn btn-sm {% if forloop.first %}btn-accent{% else %}btn-hero{% endif %}" href="{% url name %}">{{ label }}</a>{% endfor %}
   </div>
 </div>
 
@@ -19,6 +20,7 @@
   <div class="kpi"><span class="skeleton"></span><span class="skeleton"></span></div>
 </div>
 {% endif %}{% endfor %}
+</section>
 
 <div class="dash-grid">
   {% for w in widgets %}{% if w.size != "strip" %}

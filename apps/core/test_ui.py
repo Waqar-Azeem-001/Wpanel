@@ -173,13 +173,13 @@ def hrefs(html, container_class):
 
 def test_each_kind_of_visitor_gets_their_shell(client, owner, manager):
     page = client.get("/").content.decode()
-    assert "navbar-public" in page and "rail-client" not in page and "rail-staff" not in page
+    assert "navbar-public" in page and "shell-client" not in page and "shell-staff" not in page
     client.force_login(owner)
     page = client.get(reverse("accounts:profile")).content.decode()
-    assert "rail-client" in page and "rail-staff" not in page and "navbar-public" not in page
+    assert "shell-client" in page and "shell-staff" not in page and "navbar-public" not in page
     client.force_login(manager)
     page = client.get(reverse("accounts:profile")).content.decode()
-    assert "rail-staff" in page and "rail-client" not in page
+    assert "shell-staff" in page and "shell-client" not in page
 
 
 def test_every_shell_has_the_shared_furniture(client, manager):
@@ -201,7 +201,7 @@ def test_every_link_in_the_navigation_opens_for_the_person_who_sees_it(client, w
     start = "/" if who == "anonymous" else reverse("accounts:profile")
     page = client.get(start, follow=True).content.decode()
     links = set()
-    for part in ("app-navbar", "rail-nav", "topbar", "tabbar", "groupnav"):  # the store bar, the rail, the top bar, the phone bar, the group strip
+    for part in ("app-navbar", "chrome", "tabbar"):  # the store bar, the header (menus, actions, group strip), the phone bar
         links |= set(hrefs(page, part))
     assert len(links) >= 5, links
     broken = {}
@@ -272,7 +272,7 @@ def test_the_403_page_explains_and_links_back(client, owner):
     client.force_login(owner)
     response = client.get(reverse("clients_staff:list"))
     page = response.content.decode()
-    assert response.status_code == 403 and "do not have access" in page and "rail-client" in page
+    assert response.status_code == 403 and "do not have access" in page and "shell-client" in page
     assert f'href="{reverse("home")}">Back to the dashboard</a>' in page  # the page's own way back, not just the brand link
     client.logout()
     assert b"Sign in" in client.get(reverse("clients_staff:list"), follow=True).content  # anonymous users go to sign in

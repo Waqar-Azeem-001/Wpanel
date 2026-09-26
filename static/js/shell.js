@@ -1,6 +1,6 @@
 /*
  * Behaviour of the application shell and the sign-in screens. No business rules live here (roadmap Rule 3): it opens and
- * closes things, remembers whether the rail is collapsed, filters the "jump to" list and shows or hides a password.
+ * closes the menus, filters the "jump to" list and shows or hides a password.
  */
 (function () {
   var doc = document;
@@ -12,32 +12,53 @@
     return null;
   }
 
-  // --- The rail: collapse (wide screens), drawer (phones), groups -------------------------------------------------
-  var rail = doc.getElementById("rail");
-  if (rail) {
-    var collapse = rail.querySelector("[data-rail-collapse]");
-    function syncCollapse() {
-      var collapsed = root.getAttribute("data-rail") === "collapsed";
-      if (collapse) { collapse.setAttribute("aria-pressed", collapsed ? "true" : "false"); }
-    }
-    syncCollapse();
-    if (collapse) {
-      collapse.addEventListener("click", function () {
-        var next = root.getAttribute("data-rail") === "collapsed" ? "expanded" : "collapsed";
-        root.setAttribute("data-rail", next);
-        store("wp.rail", next);
-        syncCollapse();
-      });
-    }
-
-    var opener = doc.querySelector("[data-rail-open]");
-    function openDrawer() { body.classList.add("rail-open"); if (opener) { opener.setAttribute("aria-expanded", "true"); } var first = rail.querySelector("a"); if (first) { first.focus(); } }
-    function closeDrawer() { if (!body.classList.contains("rail-open")) { return; } body.classList.remove("rail-open"); if (opener) { opener.setAttribute("aria-expanded", "false"); opener.focus(); } }
-    if (opener) { opener.addEventListener("click", openDrawer); }
-    doc.querySelectorAll("[data-rail-close]").forEach(function (el) { el.addEventListener("click", closeDrawer); });
-    doc.addEventListener("keydown", function (event) { if (event.key === "Escape") { closeDrawer(); } });
-    rail.addEventListener("click", function (event) { if (event.target.closest("a") && body.classList.contains("rail-open")) { body.classList.remove("rail-open"); } });
+  // --- The menus: a section opens a panel; on a phone the same markup is a sheet ---------------------------------------
+  var items = Array.prototype.slice.call(doc.querySelectorAll(".topnav-item"));
+  var wide = window.matchMedia ? window.matchMedia("(min-width: 992px)") : { matches: true };
+  var hoverTimer = null;
+  function setOpen(item, open) {
+    var button = item.querySelector("[data-mega]");
+    if (!button) { return; }
+    item.classList.toggle("is-open", open);
+    button.setAttribute("aria-expanded", open ? "true" : "false");
   }
+  function closeMenus(except) { items.forEach(function (item) { if (item !== except) { setOpen(item, false); } }); }
+  items.forEach(function (item) {
+    var button = item.querySelector("[data-mega]");
+    if (!button) { return; }
+    button.addEventListener("click", function () {
+      if (!wide.matches) { return; }
+      if (Date.now() - (item.hoverOpenedAt || 0) < 500) { return; } // the pointer arrived and the menu opened on hover: this click is the same intent
+      var open = !item.classList.contains("is-open");
+      closeMenus(item);
+      setOpen(item, open);
+    });
+    item.addEventListener("mouseenter", function () {
+      if (!wide.matches) { return; }
+      window.clearTimeout(hoverTimer);
+      if (doc.querySelector(".topnav-item.is-open")) { closeMenus(item); setOpen(item, true); item.hoverOpenedAt = Date.now(); }
+    });
+    item.addEventListener("mouseleave", function () {
+      if (!wide.matches) { return; }
+      hoverTimer = window.setTimeout(function () { setOpen(item, false); }, 220);
+    });
+  });
+  doc.addEventListener("click", function (event) { if (!event.target.closest(".topnav-item")) { closeMenus(null); } });
+
+  var opener = doc.querySelector("[data-menu-open]");
+  function openSheet() { body.classList.add("menu-open"); if (opener) { opener.setAttribute("aria-expanded", "true"); } var first = doc.querySelector("#topnav a"); if (first) { first.focus(); } }
+  function closeSheet() { if (!body.classList.contains("menu-open")) { return; } body.classList.remove("menu-open"); if (opener) { opener.setAttribute("aria-expanded", "false"); opener.focus(); } }
+  if (opener) { opener.addEventListener("click", openSheet); }
+  doc.querySelectorAll("[data-menu-close]").forEach(function (el) { el.addEventListener("click", closeSheet); });
+  doc.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") { return; }
+    var open = doc.querySelector(".topnav-item.is-open");
+    closeMenus(null);
+    if (open) { var trigger = open.querySelector("[data-mega]"); if (trigger) { trigger.focus(); } }
+    closeSheet();
+  });
+  var topnav = doc.getElementById("topnav");
+  if (topnav) { topnav.addEventListener("click", function (event) { if (event.target.closest("a") && body.classList.contains("menu-open")) { body.classList.remove("menu-open"); } }); }
 
   // --- Search or jump to ---------------------------------------------------------------------------------------------
   var dialog = doc.getElementById("quick-nav");

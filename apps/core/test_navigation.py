@@ -271,7 +271,7 @@ def test_the_breadcrumb_bar_is_drawn_on_registry_pages_only(client, manager):
 # --- No menu is written by hand ---------------------------------------------------------------------------------------
 
 def test_no_navigation_template_contains_a_link_of_its_own():
-    for name in ("navbar_public", "nav_items", "rail", "topbar", "tabbar", "crumbs", "quick_nav", "subnav", "account_menu"):
+    for name in ("navbar_public", "nav_items", "topnav", "tabbar", "crumbs", "quick_nav", "subnav", "account_menu"):
         text = (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")
         assert 'href="/' not in text, name
         urls = [u for u in text.replace("\n", " ").split("{% url ")[1:]]
@@ -279,9 +279,9 @@ def test_no_navigation_template_contains_a_link_of_its_own():
 
 
 def test_the_old_navigation_bars_are_gone():
-    for name in ("navbar_account", "navbar_client", "navbar_staff"):
+    for name in ("navbar_account", "navbar_client", "navbar_staff", "rail", "topbar"):
         assert not (TEMPLATES / "components" / f"{name}.html").exists(), name
     base = (TEMPLATES / "base.html").read_text(encoding="utf-8")
     assert "perms.accounts" not in base and "client_contacts" not in base
-    for name in ("navbar_public", "rail", "topbar"):
+    for name in ("navbar_public", "topnav"):
         assert "perms.accounts" not in (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")

@@ -1,17 +1,9 @@
 {% load i18n %}
-{# The person's menu: who they are, light/dark/system, the account pages (from the registry) and sign out (a POST). Drawn once in the rail (wide screens) and once in the top bar (phones); the other copy is hidden by CSS. #}
+{# The person's menu in the header: who they are, light/dark/auto, the account pages (from the registry) and sign out (a POST). #}
 {% for menu in nav.account %}
-<div class="dropdown{% if where == 'rail' %} dropup{% endif %}">
-  {% if where == "rail" %}
-  <button class="account-card" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Account menu' %}: {{ user.get_full_name }}" title="{{ user.get_full_name }}">
-    <span class="avatar" aria-hidden="true">{{ user.get_short_name|slice:":1"|upper }}</span>
-    <span class="who"><strong>{{ user.get_full_name }}</strong><small>{{ user.get_role_display }}</small></span>
-    <i class="bi bi-chevron-expand" aria-hidden="true"></i>
-  </button>
-  {% else %}
-  <button class="profile-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Account menu' %}"><span class="avatar" aria-hidden="true">{{ user.get_short_name|slice:":1"|upper }}</span></button>
-  {% endif %}
-  <ul class="dropdown-menu profile-menu{% if where != 'rail' %} dropdown-menu-end{% endif %}">
+<div class="dropdown">
+  <button class="chrome-account" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Account menu' %}: {{ user.get_full_name }}" title="{{ user.get_full_name }}"><span class="avatar" aria-hidden="true">{{ user.get_short_name|slice:":1"|upper }}</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+  <ul class="dropdown-menu dropdown-menu-end profile-menu">
     <li class="profile-head">{% if user.full_name %}<strong>{{ user.full_name }}</strong>{% endif %}<span>{{ user.email }}</span><span class="profile-role">{{ user.get_role_display }}</span></li>
     <li><hr class="dropdown-divider"></li>
     <li><span class="theme-label" id="theme-label-{{ where }}">{% trans "Appearance" %}</span>

@@ -1,0 +1,57 @@
+{% load i18n %}
+{# The header: one navy block holding the brand, the menus, search, the bell and the account, and under it the pages of the area you are in. Every entry comes from the menu registry (apps/core/navigation.py): a section is a menu, an area in it lists its pages. Phones get the same markup as a sheet. #}
+<header class="chrome">
+  <div class="menu-backdrop" data-menu-close></div>
+  <div class="chrome-bar">
+    <button class="chrome-icon chrome-burger" type="button" data-menu-open aria-controls="topnav" aria-expanded="false" aria-label="{% trans 'Open menu' %}"><i class="bi bi-list" aria-hidden="true"></i></button>
+    <a class="chrome-brand" href="{% url 'home' %}">
+      {# The small mark (favicon) if there is one; else the uploaded logo on a light plate; else the first letter. #}
+      {% if brand.has_favicon %}<img class="brand-mark" src="{% url 'brand_favicon' %}?v={{ brand.version }}" alt="">{% elif brand.has_logo %}<img class="brand-logo" src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="">{% else %}<span class="brand-mark is-letter" aria-hidden="true">{{ SITE_NAME|slice:":1"|upper }}</span>{% endif %}
+      <span class="brand-text"><strong>{{ SITE_NAME }}</strong><small>{% if ui_area == "staff" %}{% trans "Staff console" %}{% else %}{% trans "Client area" %}{% endif %}</small></span>
+    </a>
+
+    <nav class="topnav" id="topnav" aria-label="{% trans 'Main' %}">
+      <div class="topnav-head"><strong>{{ SITE_NAME }}</strong><button class="chrome-icon" type="button" data-menu-close aria-label="{% trans 'Close menu' %}"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
+      <ul class="topnav-list">
+        {% for s in nav_sections %}
+          {% if s.label %}
+          <li class="topnav-item">
+            <button class="topnav-link{% if s.active %} is-current{% endif %}" type="button" aria-expanded="false" aria-controls="mega-{{ s.key }}" data-mega>{{ s.label }}<i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+            <div class="mega" id="mega-{{ s.key }}">
+              <p class="mega-title">{{ s.label }}</p>
+              <div class="mega-grid" data-cols="{{ s.entries|length }}">
+                {% for e in s.entries %}
+                <div class="mega-col">
+                  <a class="mega-head{% if e.active %} is-current{% endif %}" href="{% if e.is_group %}{{ e.landing }}{% else %}{{ e.url }}{% endif %}"><i class="bi {{ e.icon }}" aria-hidden="true"></i>{{ e.label }}</a>
+                  {% if e.is_group %}<ul>{% for c in e.children %}<li><a href="{{ c.url }}"{% if c.active %} class="is-current" aria-current="page"{% endif %}>{{ c.label }}</a></li>{% endfor %}</ul>{% endif %}
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </li>
+          {% else %}
+            {% for e in s.entries %}
+              {% if e.is_group %}
+              <li class="topnav-item">
+                <button class="topnav-link{% if e.active %} is-current{% endif %}" type="button" aria-expanded="false" aria-controls="mega-{{ e.key|slugify }}" data-mega>{{ e.label }}<i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+                <div class="mega is-small" id="mega-{{ e.key|slugify }}"><ul>{% for c in e.children %}<li><a href="{{ c.url }}"{% if c.active %} class="is-current" aria-current="page"{% endif %}>{{ c.label }}</a></li>{% endfor %}</ul></div>
+              </li>
+              {% else %}
+              <li class="topnav-item"><a class="topnav-link{% if e.active %} is-current{% endif %}" href="{{ e.url }}"{% if e.active %} aria-current="page"{% endif %}>{{ e.label }}</a></li>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <div class="chrome-actions">
+      <button class="chrome-search" type="button" data-quick-open aria-haspopup="dialog" title="{% trans 'Search or jump to a page' %}"><i class="bi bi-search" aria-hidden="true"></i><span>{% if ui_area == "staff" %}{% trans "Search…" %}{% else %}{% trans "Jump to…" %}{% endif %}</span><kbd>Ctrl K</kbd></button>
+      {% for e in nav.right %}
+      <a class="chrome-icon" href="{{ e.url }}" title="{{ e.label }}"{% if e.active %} aria-current="page"{% endif %}><i class="bi {{ e.icon }}" aria-hidden="true"></i><span class="visually-hidden">{{ e.label }}</span>{% if e.badge %}<span class="icon-badge">{{ e.badge }}<span class="visually-hidden"> {% trans "new" %}</span></span>{% endif %}</a>
+      {% endfor %}
+      {% include "components/account_menu.html" with where="top" %}
+    </div>
+  </div>
+  {% include "components/subnav.html" %}
+</header>

@@ -1,15 +1,13 @@
 {% extends "layouts/_root.html" %}
 {% load i18n %}
-{# The signed-in application shell (customers and every kind of staff): a left rail generated from the menu registry, a top bar with breadcrumbs, search, notifications and the profile menu, and on a phone a drawer (plus a bottom bar for customers). #}
+{# The signed-in application shell (customers and every kind of staff): one navy header (brand, menus, search, bell, account, and the pages of the area you are in), the page on a light canvas, and on a phone the same menus as a sheet plus a bottom bar for customers. #}
 {% block body_class %}has-shell shell-{{ ui_area }}{% endblock %}
 {% block frame %}
 <div class="shell">
-  {% include "components/rail.html" %}
-  <div class="rail-backdrop" data-rail-close></div>
-  <div class="shell-main">
-    {% include "components/topbar.html" %}
-    {% include "components/subnav.html" %}
+  {% include "components/topnav.html" %}
+  <div class="canvas">
     <main id="main" class="page {% block container %}{% endblock %}{% if sidebar %} wide{% endif %}" tabindex="-1">
+      {% if breadcrumbs %}<div class="crumbs-line">{% include "components/crumbs.html" %}</div>{% endif %}
       {% include "components/messages.html" %}
       {% if sidebar %}<div class="row g-4"><aside class="col-lg-3 order-2 order-lg-1" aria-label="{% trans 'Sidebar' %}">{% include "components/sidebar.html" with panels=sidebar %}</aside><div class="col-lg-9 order-1 order-lg-2">{% endif %}
       {% block content %}{% endblock %}

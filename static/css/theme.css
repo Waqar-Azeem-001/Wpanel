@@ -17,7 +17,7 @@
   --brand-primary-subtle: #eaf0fe; --brand-accent: #c8fc35; --brand-accent-text: #14213d;
 
   /* Neutrals: page, panel, raised panel (menus, modals), hairlines, text */
-  --bg: #f5f6fa; --surface: #ffffff; --surface-2: #eff1f6; --elevated: #ffffff; --text: #121829; --muted: #566079; --border: #e2e6ee;
+  --bg: #f3f5fa; --surface: #ffffff; --surface-2: #eff1f6; --elevated: #ffffff; --text: #121829; --muted: #566079; --border: #e2e6ee;
   --border-strong: #cdd3e0;
 
   /* Status: the colour is the text and the tint behind it; used through the status badge, the alert and the dot */
@@ -40,13 +40,17 @@
 
   /* Spacing (4px base), radii (panels 12, controls 8), elevation (hairline first, shadow only for what floats) */
   --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-5: 1.5rem; --space-6: 2rem;
-  --radius-panel: 12px; --radius-button: 8px; --radius-input: 8px; --radius-modal: 14px;
+  --radius-panel: 14px; --radius-button: 8px; --radius-input: 8px; --radius-modal: 14px;
   --shadow-panel: 0 1px 0 rgba(18, 24, 41, .03); --shadow-hover: 0 4px 16px rgba(18, 24, 41, .10);
   --shadow-modal: 0 20px 50px rgba(10, 16, 40, .28);
   --layout-max: 1180px; --layout-narrow: 880px; --sidebar-w: 260px; --navbar-h: 68px;
   --staff-bar: var(--navy); --footer-bg: var(--navy);
   --focus-ring: 3px solid color-mix(in srgb, var(--accent) 55%, white);
   --ease: cubic-bezier(.2, .7, .2, 1); --t-fast: 120ms; --logo-plate: #ffffff;
+
+  /* The header and the hero band: the brand navy in both themes (deeper in dark), with the brand's lime as the one highlight */
+  --chrome-bg: #0b1a3d; --chrome-fg: #ffffff; --chrome-muted: #b9c6e6; --chrome-hover: rgba(255, 255, 255, .1); --chrome-pill: rgba(255, 255, 255, .07);
+  --chrome-line: rgba(255, 255, 255, .14); --hero-a: #0b1a3d; --hero-b: #132b66; --hero-bad: #ffa898;
 }
 
 [data-bs-theme="dark"] {
@@ -57,7 +61,7 @@
   --danger-bg: color-mix(in srgb, var(--danger) 13%, var(--surface)); --info-bg: color-mix(in srgb, var(--info) 13%, var(--surface));
   --accent: color-mix(in srgb, var(--brand-primary) 55%, white); --accent-text: #0a1226;
   --accent-subtle: color-mix(in srgb, var(--accent) 14%, var(--surface)); --accent-ink: var(--accent);
-  --staff-bar: #070b15; --footer-bg: #070b15; --shadow-panel: none; --shadow-hover: 0 8px 24px rgba(0, 0, 0, .5);
+  --staff-bar: #070b15; --footer-bg: #070b15; --chrome-bg: #060a16; --hero-a: #070c1a; --hero-b: #0e1c40; --shadow-panel: none; --shadow-hover: 0 8px 24px rgba(0, 0, 0, .5);
   --shadow-modal: 0 24px 60px rgba(0, 0, 0, .65);
 }
 

@@ -91,6 +91,17 @@ def test_the_brand_colour_used_as_text_reads_on_white_and_on_its_own_tint():
     assert DARK["--accent-ink"] == "var(--accent)"  # in dark the lightened accent is already text-safe (tested above)
 
 
+@pytest.mark.parametrize("name", ["light", "dark"])
+def test_the_header_and_the_hero_band_are_readable_on_the_brand_navy(name):
+    """White text and the muted header text on the header colour and on both ends of the hero gradient; lime and the warning tone on it."""
+    v = theme(name)
+    for background in (v["--chrome-bg"], v["--hero-a"], v["--hero-b"]):
+        assert contrast(v["--chrome-fg"], background) >= 7, (name, background)
+        assert contrast(v["--chrome-muted"], background) >= 4.5, (name, "muted", background)
+        assert contrast(v["--hero-bad"], background) >= 4.5, (name, "warning tone", background)
+        assert contrast("#c8fc35", background) >= 7, (name, "lime")
+
+
 def test_both_themes_define_the_semantic_tokens_the_components_use():
     for name in ("--primary", "--secondary", "--success", "--warning", "--danger", "--info", "--bg", "--surface", "--elevated",
                  "--border", "--text", "--muted", "--ok-bg", "--warn-bg", "--danger-bg", "--info-bg", "--accent-subtle"):
@@ -104,11 +115,11 @@ def test_the_application_components_use_tokens_not_colours():
     """Everything above the sign-in section of shell.css: no hex or rgb colours except the dim page overlay (a shade of black)."""
     body = SHELL.split("/* --- Sign in")[0]
     assert re.findall(r"#[0-9a-fA-F]{3,8}\b", body) == []
-    assert set(re.findall(r"rgba?\(([^)]*)\)", body)) <= {"6, 10, 22, .55", "0, 0, 0, .12", "0, 0, 0, .1"}
+    assert set(re.findall(r"rgba?\(([^)]*)\)", body)) <= {"6, 10, 22, .55", "0, 0, 0, .12", "0, 0, 0, .1", "var(--brand-primary-rgb"}
 
 
 def test_focus_is_visible_and_motion_can_be_switched_off():
-    assert ":focus-visible" in CSS and ".rail a:focus-visible" in SHELL
+    assert ":focus-visible" in CSS and ".chrome a:focus-visible" in SHELL
     assert "prefers-reduced-motion: reduce" in SHELL
 
 
@@ -125,13 +136,13 @@ def test_theme_js_offers_light_dark_and_system_and_remembers_it():
         assert needle in js, needle
 
 
-def test_the_account_menu_offers_the_three_choices_in_the_rail_and_the_top_bar(world):
+def test_the_account_menu_offers_the_three_choices_in_the_header(world):
     html = HttpClient(HTTP_HOST="localhost")
     html.force_login(world.people["manager"])
     page = html.get(reverse("console:dashboard")).content.decode()
     for choice in ("light", "dark", "system"):
-        assert page.count(f'data-theme-choice="{choice}"') == 2  # the rail's menu and the phone's top-bar menu
-    assert 'role="group" aria-labelledby="theme-label-rail"' in page and 'aria-pressed="false"' in page
+        assert page.count(f'data-theme-choice="{choice}"') == 1
+    assert 'role="group" aria-labelledby="theme-label-top"' in page and 'aria-pressed="false"' in page
 
 
 def test_the_sign_in_screen_follows_the_saved_theme_too():

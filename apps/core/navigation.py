@@ -363,14 +363,16 @@ def pages(menus):
 
 
 def sections(entries):
-    """The top-level rail entries grouped under their headings: [{"label", "key", "entries"}]; the first group may have no label."""
+    """The top-level entries grouped under their headings: [{"label", "key", "active", "entries"}]. A heading (People,
+    Commerce ...) is a menu in the header; entries under no heading are direct links."""
     from django.utils.text import slugify
 
     grouped = []
     for entry in entries:
         if not grouped or grouped[-1]["label"] != entry.section:
-            grouped.append({"label": entry.section, "key": slugify(entry.section) or "top", "entries": []})
+            grouped.append({"label": entry.section, "key": slugify(entry.section) or "top", "active": False, "entries": []})
         grouped[-1]["entries"].append(entry)
+        grouped[-1]["active"] = grouped[-1]["active"] or entry.active
     return grouped
 
 

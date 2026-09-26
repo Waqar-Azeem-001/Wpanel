@@ -112,7 +112,7 @@ def test_the_logo_is_in_the_navigation_bar_for_every_kind_of_visitor(client, sto
     for user in (customer, staff(Role.MANAGER)):
         client.force_login(user)
         page = client.get(reverse("accounts:profile")).content.decode()
-        assert re.search(r'<img src="/brand/logo/\?v=\d+" alt="">', page) and "Web Host Era" in page
+        assert 'class="chrome-brand"' in page and "Web Host Era" in page  # the mark and the name (the wide logo is for the store and sign-in)
 
 
 def test_visitors_and_customers_get_the_light_bar_and_staff_the_dark_one(client, store, customer, staff):
@@ -121,9 +121,9 @@ def test_visitors_and_customers_get_the_light_bar_and_staff_the_dark_one(client,
     assert "navbar-public" in client.get("/").content.decode()
     client.force_login(customer)
     page = client.get(reverse("accounts:profile")).content.decode()
-    assert "rail-client" in page and "navbar-dark" not in page
+    assert "shell-client" in page and "navbar-dark" not in page
     client.force_login(staff(Role.MANAGER))
-    assert "rail-staff" in client.get(reverse("accounts:profile")).content.decode()
+    assert "shell-staff" in client.get(reverse("accounts:profile")).content.decode()
 
 
 def test_without_a_logo_the_name_is_the_brand(client):

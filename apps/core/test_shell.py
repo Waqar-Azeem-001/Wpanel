@@ -27,8 +27,9 @@ def page_of(person, name, *args, follow=False):
     return browser(person).get(reverse(name, args=args), follow=follow)
 
 
-def rail_of(html):
-    return html.split('<div id="rail"')[1].split("</nav>")[0]
+def nav_of(html):
+    """The header's menus: from the start of the nav to its end."""
+    return html.split('<nav class="topnav"')[1].split("</nav>")[0]
 
 
 # --- Sign in and create account -------------------------------------------------------------------------------------
@@ -101,38 +102,39 @@ def test_password_reset_and_the_link_it_sends_still_work(make_user, mailoutbox):
     assert changed.status_code == 302 and User.objects.get(pk=person.pk).check_password("An0ther-Passw0rd!x")
 
 
-def test_the_store_keeps_its_own_top_bar_and_visitors_get_no_rail():
+def test_the_store_keeps_its_own_top_bar_and_visitors_get_no_app_header():
     html = HttpClient(**HOST).get("/").content.decode()
-    assert "navbar-public" in html and 'id="rail"' not in html
+    assert "navbar-public" in html and 'class="chrome"' not in html
 
 
 # --- The shell -------------------------------------------------------------------------------------------------------
 
-def test_signed_in_people_get_the_rail_the_top_bar_and_the_search(world):
+def test_signed_in_people_get_the_header_the_menus_and_the_search(world):
     for who, area in (("customer owner", "client"), ("support agent", "staff"), ("technical staff", "staff"),
                       ("manager", "staff"), ("admin", "staff"), ("super admin", "staff")):
         html = page_of(world.people[who], "home", follow=True).content.decode()
-        assert f'class="rail rail-{area}"' in html, who
-        assert 'class="topbar"' in html and 'id="quick-nav"' in html and "data-rail-collapse" in html, who
+        assert f"shell-{area}" in html and '<header class="chrome">' in html and 'class="topnav"' in html, who
+        assert 'id="quick-nav"' in html and "data-menu-open" in html and 'id="rail"' not in html, who
         assert "navbar-client" not in html and "navbar-staff" not in html, who
         assert ('data-search-url="' + reverse("console:search") + '"' in html) == (area == "staff"), who
 
 
-def test_the_rail_is_one_flat_list_and_marks_the_group_you_are_in(world):
+def test_the_header_marks_the_section_and_the_area_you_are_in(world):
     page = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
-    html = rail_of(page)
-    assert re.search(r'<a class="rail-link is-current" href="/staff/billing/" title="Billing" aria-current="page">', html)
-    assert html.count("is-current") == 1
-    assert "rail-toggle" not in html and "rail-sub" not in html and "chevron" not in html  # nothing to expand or fold
+    menus = nav_of(page)
+    assert re.search(r'<button class="topnav-link is-current" type="button" aria-expanded="false" aria-controls="mega-commerce" data-mega>Commerce', menus)
+    assert re.search(r'<a class="mega-head is-current" href="/staff/billing/">', menus)
+    assert menus.count("topnav-link is-current") == 1 and menus.count("mega-head is-current") == 1  # one section, one area
+    assert 'class="is-current" aria-current="page">Invoices' in menus
 
 
-def test_the_pages_of_the_group_are_a_strip_under_the_top_bar_with_the_current_one_marked(world):
+def test_the_pages_of_the_group_are_a_strip_in_the_header_with_the_current_one_marked(world):
     page = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
     strip = page.split('<nav class="groupnav"')[1].split("</nav>")[0]
     assert re.findall(r'>([^<]+)</a></li>', strip) == ["Overview", "Invoices", "Transactions", "Quotes", "Billable items",
                                                        "Renewals &amp; upgrades", "Coupons"]
     assert 'class="is-current" href="/staff/billing/invoices/" aria-current="page">Invoices' in strip
-    assert page.index('<header class="topbar">') < page.index('<nav class="groupnav"') < page.index('<main id="main"')
+    assert page.index('<header class="chrome">') < page.index('<nav class="groupnav"') < page.index("</header>") < page.index('<main id="main"')
 
 
 def test_a_detail_page_keeps_its_own_page_in_the_strip_lit(world):
@@ -155,15 +157,15 @@ def test_the_customer_strip_lists_only_customer_pages(world):
     assert re.findall(r'>([^<]+)</a></li>', strip) == ["Invoices", "Quotes", "Payment methods"]
 
 
-def test_the_brand_in_the_rail_is_the_mark_and_the_name_not_a_pasted_logo(world):
-    html = rail_of(page_of(world.people["manager"], "console:dashboard").content.decode())
-    assert 'class="brand-mark"' in html or 'class="brand-mark is-letter"' in html
-    assert "Staff console" in html and 'class="brand-text"' in html and "logo" not in html.lower()
+def test_the_brand_in_the_header_is_the_mark_and_the_name(world):
+    html = page_of(world.people["manager"], "console:dashboard").content.decode().split('<a class="chrome-brand"')[1].split("</a>")[0]
+    assert 'class="brand-mark"' in html or 'class="brand-mark is-letter"' in html or 'class="brand-logo"' in html
+    assert "Staff console" in html and 'class="brand-text"' in html
 
 
 def test_the_menus_list_only_what_the_person_can_open(world):
     page = page_of(world.people["technical staff"], "console:dashboard").content.decode()
-    menus = rail_of(page) + page.split('id="quick-pages" type="application/json">')[1].split("</script>")[0]
+    menus = nav_of(page) + page.split('id="quick-pages" type="application/json">')[1].split("</script>")[0]
     for hidden in (reverse("billing_staff:invoice_list"), reverse("console:users"), reverse("reports_staff:index"),
                    reverse("console:email_providers"), reverse("catalog_staff:product_list")):
         assert hidden not in menus, hidden
@@ -171,10 +173,19 @@ def test_the_menus_list_only_what_the_person_can_open(world):
         assert shown in menus, shown
 
 
-def test_the_sections_and_their_headings_are_drawn(world):
-    html = rail_of(page_of(world.people["admin"], "console:dashboard").content.decode())
-    headings = re.findall(r'<p class="rail-section"><span>([^<]+)</span></p>', html)
-    assert headings == ["People", "Commerce", "Operations", "Insights", "System"]
+def test_the_sections_are_the_menus_and_their_areas_are_listed_inside(world):
+    menus = nav_of(page_of(world.people["admin"], "console:dashboard").content.decode())
+    assert re.findall(r'data-mega>([^<]+)<i', menus) == ["People", "Commerce", "Operations", "Insights", "System"]
+    people = menus.split('id="mega-people"')[1].split('id="mega-commerce"')[0]
+    assert re.findall(r'class="mega-head[^"]*" href="[^"]+"><i class="bi [a-z0-9-]+" aria-hidden="true"></i>([^<]+)</a>', people) == ["Clients", "Users", "Affiliates"]
+    assert 'href="/staff/clients/new/"' in people and 'href="/staff/affiliates/payouts/"' in people  # the pages under each area
+    assert '<a class="topnav-link is-current" href="/staff/" aria-current="page">Overview</a>' in page_of(world.people["admin"], "console:dashboard").content.decode()
+
+
+def test_a_detail_page_keeps_exactly_one_menu_lit(world):
+    invoice = world.objects["invoices"]["unpaid"]
+    menus = nav_of(page_of(world.people["manager"], "billing_staff:invoice_detail", invoice.pk).content.decode())
+    assert menus.count("topnav-link is-current") == 1 and 'mega-head is-current" href="/staff/billing/"' in menus
 
 
 def test_the_profile_menu_shows_who_you_are_and_signs_out_with_a_post(world):
@@ -191,28 +202,24 @@ def test_the_notification_bell_shows_the_unread_count_in_the_top_bar(world):
     assert re.search(r'class="icon-badge">\d+<span class="visually-hidden"> new</span>', html)
 
 
-def test_a_detail_page_keeps_exactly_one_rail_entry_lit(world):
-    invoice = world.objects["invoices"]["unpaid"]
-    html = rail_of(page_of(world.people["manager"], "billing_staff:invoice_detail", invoice.pk).content.decode())
-    assert html.count("is-current") == 1 and 'is-current" href="/staff/billing/"' in html
-
 
 def test_the_customer_sidebar_no_longer_repeats_the_sign_out_link(world):
     html = page_of(world.people["customer owner"], "dashboard").content.decode()
     assert "Sign out" not in html.split('class="span-4 side-panels"')[1]  # the account menu is the one place
 
 
-def test_the_top_bar_carries_the_breadcrumbs_of_registry_pages(world):
+def test_the_breadcrumbs_of_registry_pages_are_the_first_line_of_the_page(world):
     html = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
-    top = html.split('<header class="topbar">')[1].split("</header>")[0]
-    assert 'aria-label="Breadcrumb"' in top and 'aria-current="page">Invoices<' in top
+    line = html.split('<div class="crumbs-line">')[1].split("</nav>")[0]
+    assert 'aria-label="Breadcrumb"' in line and 'aria-current="page">Invoices<' in line
+    assert html.index('<main id="main"') < html.index('class="crumbs-line"')
 
 
-def test_the_collapsed_state_is_read_before_the_page_paints():
-    """theme.js is loaded in the head, ahead of the stylesheet, so a collapsed rail never flashes open."""
+def test_the_theme_is_read_before_the_page_paints():
+    """theme.js is loaded in the head, ahead of the stylesheets, so the chosen theme never flashes the wrong way."""
     html = HttpClient(**HOST).get(reverse("accounts:login")).content.decode()
     assert html.index("js/theme.js") < html.index("css/shell.css")
-    assert "wp.rail" in open("static/js/theme.js", encoding="utf-8").read()
+    assert "wp.theme" in open("static/js/theme.js", encoding="utf-8").read()
 
 
 # --- The technical role ----------------------------------------------------------------------------------------------

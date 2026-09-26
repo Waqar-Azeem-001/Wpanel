@@ -3,22 +3,25 @@
 {% block title %}{% trans "Overview" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
+<section class="hero-band">
 <div class="page-head">
   <h1>{% if user.first_name %}{% blocktrans with name=user.first_name %}Welcome back, {{ name }}{% endblocktrans %}{% else %}{% trans "Welcome back" %}{% endif %}</h1>
   <p class="page-sub">{% trans "Your services, domains, invoices and support requests at a glance." %}</p>
-  {% if client %}<div class="page-actions"><a class="btn btn-sm btn-primary" href="{% url 'catalog:product_list' %}">{% trans "Order services" %}</a><a class="btn btn-sm btn-outline-secondary" href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a></div>{% endif %}
+  {% if client %}<div class="page-actions"><a class="btn btn-sm btn-accent" href="{% url 'catalog:product_list' %}">{% trans "Order services" %}</a><a class="btn btn-sm btn-hero" href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a></div>{% endif %}
 </div>
-
-{% if not client %}
-  {% url 'catalog:product_list' as plans_url %}
-  {% include "components/empty_state.html" with message=_("You do not have a client account yet. Browse our plans to get started.") action_url=plans_url action_label=_("Browse plans") icon="bi-box" %}
-{% else %}
-
+{% if client %}
 <div class="kpi-strip">
   {% for tile in tiles %}
   <a class="kpi" href="{{ tile.url }}"><span class="kpi-icon" aria-hidden="true"><i class="bi {{ tile.icon }}"></i></span><span class="kpi-label">{{ tile.label }}</span><strong class="kpi-value">{{ tile.value }}</strong></a>
   {% endfor %}
 </div>
+{% endif %}
+</section>
+
+{% if not client %}
+  {% url 'catalog:product_list' as plans_url %}
+  {% include "components/empty_state.html" with message=_("You do not have a client account yet. Browse our plans to get started.") action_url=plans_url action_label=_("Browse plans") icon="bi-box" %}
+{% else %}
 
 {% if overdue_count %}
 <div class="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4" role="alert">

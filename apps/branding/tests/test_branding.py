@@ -215,7 +215,7 @@ def test_saving_the_brand_from_the_page_including_an_upload(client, admin):
     assert b"Brand settings saved." in response.content and b"Page Hosting" in response.content
     brand = services.get()
     assert (brand.name, brand.date_format, brand.has_logo) == ("Page Hosting", "%Y-%m-%d", True)
-    assert b'<img src="/brand/logo/?v=' in response.content  # the navigation now shows the logo
+    assert b'class="brand-logo" src="/brand/logo/?v=' in response.content  # the header now shows the logo (there is no favicon to use as the mark)
 
 
 def test_the_page_explains_a_refused_colour_or_image(client, admin):
