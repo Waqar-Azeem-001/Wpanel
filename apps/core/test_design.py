@@ -91,15 +91,20 @@ def test_the_brand_colour_used_as_text_reads_on_white_and_on_its_own_tint():
     assert DARK["--accent-ink"] == "var(--accent)"  # in dark the lightened accent is already text-safe (tested above)
 
 
+def test_the_header_is_the_page_surface_so_it_is_readable_by_the_same_tokens_in_both_themes():
+    """The minimal header uses no colours of its own: its names alias the surface tokens, which are tested above."""
+    assert LIGHT["--chrome-bg"] == "var(--surface)" and LIGHT["--chrome-fg"] == "var(--text)"
+    assert LIGHT["--chrome-muted"] == "var(--muted)" and LIGHT["--chrome-line"] == "var(--border)"
+    for key in ("--chrome-bg", "--chrome-fg", "--chrome-muted", "--chrome-line"):
+        assert key not in DARK, f"dark must not override {key}: it follows the surface tokens"
+
+
 @pytest.mark.parametrize("name", ["light", "dark"])
-def test_the_header_and_the_hero_band_are_readable_on_the_brand_navy(name):
-    """White text and the muted header text on the header colour and on both ends of the hero gradient; lime and the warning tone on it."""
+def test_the_muted_text_and_the_borders_keep_their_roles_on_the_minimal_palette(name):
     v = theme(name)
-    for background in (v["--chrome-bg"], v["--hero-a"], v["--hero-b"]):
-        assert contrast(v["--chrome-fg"], background) >= 7, (name, background)
-        assert contrast(v["--chrome-muted"], background) >= 4.5, (name, "muted", background)
-        assert contrast(v["--hero-bad"], background) >= 4.5, (name, "warning tone", background)
-        assert contrast("#c8fc35", background) >= 7, (name, "lime")
+    assert contrast(v["--muted"], v["--surface-2"]) >= 4.5
+    assert 1.05 <= contrast(v["--border"], v["--bg"]) <= 2.0  # a hairline: visible, never heavy
+    assert contrast(v["--border-strong"], v["--surface"]) >= 1.4  # an input edge can be found
 
 
 def test_both_themes_define_the_semantic_tokens_the_components_use():

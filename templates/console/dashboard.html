@@ -8,7 +8,7 @@
   <h1>{{ greeting }}{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
   <p class="page-sub">{% trans "What is happening across the business, and what needs a person right now." %}</p>
   <div class="page-actions">
-    {% for label, name in shortcuts %}<a class="btn btn-sm {% if forloop.first %}btn-accent{% else %}btn-hero{% endif %}" href="{% url name %}">{{ label }}</a>{% endfor %}
+    {% for label, name in shortcuts %}<a class="btn btn-sm {% if forloop.first %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url name %}">{{ label }}</a>{% endfor %}
   </div>
 </div>
 

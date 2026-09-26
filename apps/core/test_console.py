@@ -236,7 +236,7 @@ def test_the_dashboard_greets_by_time_of_day_and_puts_the_main_action_first(worl
     response = browser(world.people["manager"]).get(reverse("console:dashboard"))
     assert response.context["greeting"] in ("Good morning", "Good afternoon", "Good evening")
     page = response.content.decode()
-    assert 'class="btn btn-sm btn-accent" href="/staff/clients/new/"' in page and 'class="page-sub"' in page
+    assert 'class="btn btn-sm btn-primary" href="/staff/clients/new/"' in page and 'class="page-sub"' in page
 
 
 def test_the_dashboard_script_can_show_an_error_with_a_retry():

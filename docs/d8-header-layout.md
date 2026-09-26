@@ -65,3 +65,17 @@ under each area; customising which KPI tiles show.
   search/filter forms above a list are one tidy panel; the bulk bar has matching controls.
 * Browser-tested: create a client and a ticket by submitting from the bar, validation errors, GET forms untouched, the bar
   spanning a wide grid form, phones; a scan of 260 pages found no bar with a stray field, without a button, or outside a form.
+
+## 7. Minimal skin (owner: "more modern, keen, minimal, with the full structure")
+
+Same structure (header menus, area strip, page header, panels, forms), a different skin, done mostly by tokens:
+
+* **White header** on the page surface with a hairline (dark surface in dark mode) instead of the navy block; the active section is
+  ink text with a 2px accent underline; the avatar is an ink circle; the brand mark stays small. No hero band: a dashboard opens with
+  its heading, the actions and one row of numbers.
+* **Neutral palette** (near-white canvas, hairline borders `#e6e8ec`, ink text; near-black canvas in dark) with the brand blue as the
+  single accent (links, the main button, the active underline, focus).
+* **Sharper shapes:** panels 10px, controls 8px, no shadows (a hairline instead; only menus and modals float).
+* **Lighter type:** weights 550-600 instead of 650-750, 14px base, quiet icons (no coloured chips) on numbers, table header without a
+  fill, data links without underline (running text keeps it).
+* The header colour tokens (`--chrome-*`) now alias the surface tokens, so the header is readable by the same contrast tests.
