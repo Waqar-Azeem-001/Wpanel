@@ -78,6 +78,10 @@ class EmailMessage(TimeStampedModel):
     last_error = models.TextField(blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     last_attempt_at = models.DateTimeField(null=True, blank=True)
+    # A PDF of the invoice or quote the email is about is made when the email is sent and attached; the name is kept for the log.
+    attachment_kind = models.CharField(max_length=10, blank=True, choices=[("invoice", "Invoice"), ("quote", "Quote")])
+    attachment_id = models.PositiveIntegerField(null=True, blank=True)
+    attachment_name = models.CharField(max_length=120, blank=True)
     # How it left: the active provider's mail server, or the fallback (no provider is set up: the console in development, or a
     # refusal in production). A fallback message is never really delivered, and the log says so.
     message_id = models.CharField(max_length=255, blank=True, help_text="The Message-ID header, to find it in a mail server's log.")
@@ -154,6 +158,42 @@ class EmailLink(models.Model):
 
     def __str__(self):
         return self.url[:80]
+
+
+class NotificationSettings(models.Model):
+    """
+    Single row (pk=1): where mail replies go, and the addresses that get a copy of the alerts staff care about (a new order, a
+    customer saying they paid, a new ticket...), whatever each staff member's own preferences are.
+    """
+
+    reply_to = models.EmailField(blank=True, help_text="Customers who reply to an email write to this address. Blank = the From address.")
+    alert_emails = models.TextField(blank=True, help_text="One address per line (or separated by commas).")
+    alert_new_order = models.BooleanField(default=True, verbose_name="A new order is placed")
+    alert_payment_reported = models.BooleanField(default=True, verbose_name="A customer says they have paid")
+    alert_tickets = models.BooleanField(default=True, verbose_name="A new ticket or a customer reply")
+    alert_new_client = models.BooleanField(default=True, verbose_name="Someone creates an account")
+    alert_affiliates = models.BooleanField(default=True, verbose_name="Someone applies to be an affiliate")
+    alert_cancellations = models.BooleanField(default=True, verbose_name="A customer asks to cancel a service")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "notification settings"
+
+    def __str__(self):
+        return "Notification settings"
+
+    @classmethod
+    def load(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    @property
+    def addresses(self):
+        found = []
+        for raw in self.alert_emails.replace(",", "\n").splitlines():
+            address = raw.strip().lower()
+            if address and address not in found:
+                found.append(address)
+        return found
 
 
 class EmailTemplateOverride(TimeStampedModel):

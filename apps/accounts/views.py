@@ -28,20 +28,29 @@ def _safe_next(request, default="accounts:profile"):
     return default
 
 
+REMEMBER_ME_SECONDS = 60 * 60 * 24 * 30
+
+
 @sensitive_post_parameters("password")
 def login_view(request):
     if request.user.is_authenticated:
         return redirect("accounts:profile")
     form = forms.LoginForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
+        remember = form.cleaned_data.pop("remember", False)
         try:
             user = services.authenticate_user(request=request, **form.cleaned_data)
         except ServiceError as exc:
             _apply_error(form, exc)
         else:
             login(request, user)
+            # Ticked: stay signed in for 30 days. Not ticked: until the browser is closed (and never longer than the session age).
+            request.session.set_expiry(REMEMBER_ME_SECONDS if remember else 0)
             return redirect(_safe_next(request))
-    return render(request, "accounts/login.html", {"form": form, "next": request.GET.get("next", "")})
+    from apps.support import kb
+
+    return render(request, "accounts/login.html", {"form": form, "next": request.GET.get("next", ""),
+                                                   "help_articles": list(kb.public_articles()[:3])})
 
 
 @require_POST

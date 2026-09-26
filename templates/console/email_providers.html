@@ -6,6 +6,32 @@
 <div class="page-head"><h1>{% trans "Email provider" %}</h1>
   <p class="page-sub">How the platform sends email.</p></div>
 <p class="text-secondary">{% trans "The mail server every message is sent through. Only one can be in use. Its password is encrypted and is never shown again; leave it blank when editing to keep it." %}</p>
+<section class="shop-card mb-4">
+  <h2 class="shop-title">Sending and receiving</h2>
+  <div class="row g-3">
+    <div class="col-md-6"><p class="small text-secondary mb-1">Emails are sent <strong>from</strong></p>
+      <p class="mb-2">{% if active_provider %}<strong>{{ active_provider.from_email }}</strong> <a class="small" href="{% url 'console:email_providers' %}?edit={{ active_provider.pk }}">change</a>{% else %}<span class="text-danger">no provider is in use yet</span>{% endif %}</p>
+      <p class="small text-secondary mb-0">The address is set on the provider below. Customers who reply write to the &ldquo;Replies go to&rdquo; address, if you set one.</p></div>
+    <div class="col-md-6"><p class="small text-secondary mb-1">Orders, payments and tickets that need a person</p>
+      <p class="small mb-0">Staff see them in the bell and the dashboard. To also get an <strong>email copy</strong> at a shared address (orders@, billing@ or your own), add it below.</p></div>
+  </div>
+  {% if can_manage %}
+  <form method="post" action="{% url 'console:email_settings_save' %}" novalidate class="mt-3">{% csrf_token %}
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=settings_form.reply_to wide=True %}
+      {% include "orders/_field.html" with field=settings_form.alert_emails wide=True %}
+      <div class="col-12"><p class="small text-secondary mb-1">Copy an email to those addresses when:</p></div>
+      {% include "orders/_field.html" with field=settings_form.alert_new_order %}
+      {% include "orders/_field.html" with field=settings_form.alert_payment_reported %}
+      {% include "orders/_field.html" with field=settings_form.alert_tickets %}
+      {% include "orders/_field.html" with field=settings_form.alert_new_client %}
+      {% include "orders/_field.html" with field=settings_form.alert_affiliates %}
+      {% include "orders/_field.html" with field=settings_form.alert_cancellations %}
+    </div>
+    <button class="btn btn-primary mt-2" type="submit">Save</button>
+  </form>
+  {% endif %}
+</section>
 {% if not providers %}<div class="alert alert-warning" role="alert">{% trans "No email provider is set up, so no email (invoices, password links, ticket replies) can be delivered." %}</div>{% endif %}
 <div class="row g-4">
   <div class="col-lg-6">

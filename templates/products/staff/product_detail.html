@@ -22,7 +22,7 @@
       <dt>Auto-renew default</dt><dd>{{ product.default_auto_renew|yesno:"Yes,No" }}</dd>
       <dt>Resource limits</dt><dd>
         {% if product.resource_limits %}
-          <ul class="limits">{% for k,v in product.resource_limits.items %}<li>{{ k }}: {% if v == None %}unlimited{% else %}{{ v }}{% endif %}</li>{% endfor %}</ul>
+          <ul class="limits">{% for title, value in product.limit_items %}<li>{{ title }}: {{ value }}</li>{% endfor %}</ul>
         {% else %}—{% endif %}
       </dd>
     </dl>

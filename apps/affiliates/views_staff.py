@@ -132,7 +132,7 @@ def change_code(request, affiliate):
 
 @_affiliate_action
 def payout_details(request, affiliate):
-    services.update_payout_details(request.user, affiliate, request.POST.get("payout_details", ""), request=request)
+    services.set_payout_account(request.user, affiliate, request.POST, request=request)
     return "Payout details saved."
 
 

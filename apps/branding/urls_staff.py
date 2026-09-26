@@ -7,4 +7,5 @@ app_name = "brand_staff"
 
 urlpatterns = [
     path("", views.settings_page, name="settings"),
+    path("menu/", views.menu_page, name="menu"),
 ]

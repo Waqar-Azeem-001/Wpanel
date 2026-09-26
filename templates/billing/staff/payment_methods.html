@@ -2,40 +2,49 @@
 {% block title %}Payment methods · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<h1>Billing</h1>
-<div class="table-responsive">
-<table class="table">
-  <thead><tr><th>Name</th><th>Code</th><th>Instructions</th><th>Online gateway</th><th>Order</th><th>Active</th></tr></thead>
-  <tbody>
-  {% for method in methods %}
-    <tr>
-      <td>{{ method.name }}</td>
-      <td>{{ method.code }}</td>
-      <td>{{ method.instructions|truncatechars:80|default:"—" }}</td>
-      <td>{{ method.provider.name|default:"—" }}</td>
-      <td>{{ method.sort_order }}</td>
-      <td>
-        {% if can_manage %}
-        <form method="post" action="{% url 'billing_staff:payment_method_status' method.pk %}">{% csrf_token %}
-          <label><input type="checkbox" name="is_active" {% if method.is_active %}checked{% endif %} onchange="this.form.submit()"> </label>
-        </form>
-        {% else %}{{ method.is_active|yesno:"Yes,No" }}{% endif %}
-      </td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="6" class="text-secondary">No payment methods yet. Customers cannot check out until one is active.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="page-head"><h1>Payment methods</h1>
+  <p class="page-sub">Where customers send money: your bank accounts, JazzCash, EasyPaisa and so on. Add as many as you like; they are shown at checkout, on orders, on invoices and in the invoice PDF.</p></div>
+<div class="row g-4">
+  <div class="col-lg-7">
+    {% for method in methods %}
+    <section class="shop-card mb-3{% if not method.is_active %} pay-off{% endif %}">
+      <header class="shop-card-head">
+        <span class="chip" aria-hidden="true"><i class="bi {% if method.kind == 'bank' %}bi-bank{% elif method.kind == 'jazzcash' or method.kind == 'easypaisa' %}bi-phone{% else %}bi-credit-card{% endif %}"></i></span>
+        <div class="grow"><h2 class="shop-title">{{ method.name }}</h2><p class="text-secondary mb-0">{{ method.get_kind_display }}{% if method.provider %} &middot; online through {{ method.provider.name }}{% endif %}</p></div>
+        {% if can_manage %}<div class="d-flex gap-2 align-items-center">
+          <form method="post" action="{% url 'billing_staff:payment_method_status' method.pk %}">{% csrf_token %}
+            <label class="d-flex align-items-center gap-2 mb-0 small"><input class="form-check-input" type="checkbox" name="is_active" {% if method.is_active %}checked{% endif %} data-submit-on-change> {% if method.is_active %}Shown{% else %}Hidden{% endif %}</label></form>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'billing_staff:payment_methods' %}?edit={{ method.pk }}">Edit</a></div>{% endif %}
+      </header>
+      {% if method.detail_rows %}<dl class="facts">{% for label, value in method.detail_rows %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>{% endif %}
+      {% if method.instructions %}<p class="text-secondary mb-0">{{ method.instructions|linebreaksbr }}</p>{% endif %}
+      {% if not method.detail_rows and not method.instructions %}<p class="text-secondary mb-0">No details yet: customers will not know where to send money. Edit it to add them.</p>{% endif %}
+    </section>
+    {% empty %}
+    <section class="shop-card"><p class="text-secondary mb-0">No payment methods yet. Customers cannot check out until one is shown. Add your bank account or wallet on the right.</p></section>
+    {% endfor %}
+  </div>
+  {% if can_manage %}
+  <div class="col-lg-5">
+    <section class="shop-card">
+      <h2 class="shop-title mb-3">{% if editing %}Edit {{ editing.name }}{% else %}Add a payment method{% endif %}</h2>
+      <form method="post" action="{% url 'billing_staff:payment_method_save' %}" novalidate>{% csrf_token %}
+        <div class="row g-3">
+          {% include "orders/_field.html" with field=form.kind wide=True %}
+          {% include "orders/_field.html" with field=form.name wide=True %}
+          {% include "orders/_field.html" with field=form.bank_name wide=True %}
+          {% include "orders/_field.html" with field=form.account_title wide=True %}
+          {% include "orders/_field.html" with field=form.account_number wide=True %}
+          {% include "orders/_field.html" with field=form.swift_code wide=True %}
+          {% include "orders/_field.html" with field=form.instructions wide=True %}
+          {% include "orders/_field.html" with field=form.sort_order %}
+          {% include "orders/_field.html" with field=form.provider %}
+          {% include "orders/_field.html" with field=form.code wide=True %}
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mt-2"><button class="btn btn-primary" type="submit">Save</button>{% if editing %}<a href="{% url 'billing_staff:payment_methods' %}">Cancel</a>{% endif %}</div>
+      </form>
+    </section>
+  </div>
+  {% endif %}
 </div>
-{% if can_manage %}
-<section class="card"><div class="card-body">
-  <h2>Add / update a payment method</h2>
-  <p class="text-secondary">Saving with an existing code updates that method.</p>
-  <form method="post" action="{% url 'billing_staff:payment_method_save' %}" class="grid-form">{% csrf_token %}
-    {% include "partials/form.html" %}
-    <div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save</button></div>
-  </form></div>
-</section>
-{% endif %}
 {% endblock %}

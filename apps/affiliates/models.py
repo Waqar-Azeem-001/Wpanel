@@ -79,8 +79,18 @@ class Affiliate(TimeStampedModel):
     commission_kind = models.CharField(max_length=12, choices=CommissionKind.choices, blank=True,
                                        help_text="Blank = the programme's default rule.")
     commission_value = models.DecimalField(null=True, blank=True, validators=[MinValueValidator(0)], **MONEY)
+    class PayoutMethod(models.TextChoices):
+        BANK = "bank", "Bank account"
+        JAZZCASH = "jazzcash", "JazzCash"
+        EASYPAISA = "easypaisa", "EasyPaisa"
+        OTHER = "other", "Other"
+
+    payout_method = models.CharField(max_length=12, choices=PayoutMethod.choices, blank=True)
+    payout_bank_name = models.CharField(max_length=100, blank=True)
+    payout_account_title = models.CharField(max_length=150, blank=True)
+    payout_account_number = models.CharField(max_length=64, blank=True, help_text="Account number or IBAN, or the wallet's mobile number.")
     payout_details = models.TextField(blank=True, max_length=1000,
-                                      help_text="Where to send payouts (bank account, wallet number...). "
+                                      help_text="Anything else staff need to pay you (a note). "
                                                 "Visible to the affiliate and to staff who manage affiliates.")
     visit_count = models.PositiveIntegerField(default=0, help_text="Visitors who followed the link (a rough count).")
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
@@ -100,6 +110,21 @@ class Affiliate(TimeStampedModel):
 
     def __str__(self):
         return f"Affiliate {self.code}"
+
+    @property
+    def payout_summary(self):
+        """Where to send this affiliate's money, as plain lines: the method, the account and any note."""
+        number_label = {"jazzcash": "JazzCash number", "easypaisa": "EasyPaisa number"}.get(self.payout_method, "Account number / IBAN")
+        rows = [("Method", self.get_payout_method_display() if self.payout_method else ""), ("Bank", self.payout_bank_name),
+                ("Account title", self.payout_account_title), (number_label, self.payout_account_number)]
+        lines = [f"{label}: {value}" for label, value in rows if value]
+        if self.payout_details:
+            lines.append(self.payout_details)
+        return "\n".join(lines)
+
+    @property
+    def has_payout_account(self):
+        return bool(self.payout_account_number or self.payout_details)
 
     @property
     def is_active(self):

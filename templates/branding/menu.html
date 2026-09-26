@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Customer menu · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Customer menu</h1><p class="page-sub">What customers see in their menu. Hide an entry, give it another name, or change the order (lower numbers come first). Store categories appear under Services so customers can order by category.</p></div>
+<form method="post" novalidate>{% csrf_token %}
+<section class="card"><div class="table-responsive"><table class="table mb-0 align-middle">
+  <thead><tr><th>Entry</th><th>Shown</th><th>Name shown to customers</th><th>Order</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{% if row.indent %}<span class="text-secondary ps-3">&#8627;</span> {% endif %}<strong>{{ row.standard }}</strong>{% if row.locked %} <small class="text-secondary">(always shown)</small>{% endif %}</td>
+      <td><label class="visually-hidden" for="v_{{ row.key }}">Show {{ row.standard }}</label>
+        {% if row.locked %}<input class="form-check-input" type="checkbox" id="v_{{ row.key }}" checked disabled><input type="hidden" name="visible_{{ row.key }}" value="on">
+        {% else %}<input class="form-check-input" type="checkbox" id="v_{{ row.key }}" name="visible_{{ row.key }}"{% if row.visible %} checked{% endif %}{% if not can_manage %} disabled{% endif %}>{% endif %}</td>
+      <td><label class="visually-hidden" for="l_{{ row.key }}">Name for {{ row.standard }}</label><input class="form-control form-control-sm" id="l_{{ row.key }}" name="label_{{ row.key }}" value="{{ row.label }}" maxlength="60" placeholder="{{ row.standard }}"{% if not can_manage %} disabled{% endif %}></td>
+      <td style="width:7rem"><label class="visually-hidden" for="o_{{ row.key }}">Order for {{ row.standard }}</label><input class="form-control form-control-sm" type="number" min="0" max="31999" id="o_{{ row.key }}" name="order_{{ row.key }}" value="{{ row.order }}"{% if not can_manage %} disabled{% endif %}></td>
+    </tr>
+  {% endfor %}
+  </tbody></table></div></section>
+{% if can_manage %}<div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-primary" type="submit" name="do" value="save">Save the menu</button>
+  <button class="btn btn-outline-danger ms-auto" type="submit" name="do" value="reset" data-confirm="Put the customer menu back to the standard?">Reset to standard</button></div>{% endif %}
+</form>
+{% endblock %}

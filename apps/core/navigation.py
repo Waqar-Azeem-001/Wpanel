@@ -194,6 +194,8 @@ ITEMS = [
     item("staff.settings", _("Settings"), areas=STAFF, section=_("System"), icon="bi-sliders"),
     item("staff.settings.brand", _("Brand"), "brand_staff:settings", areas=STAFF, parent="staff.settings",
          permission="view_settings"),
+    item("staff.settings.menu", _("Customer menu"), "brand_staff:menu", areas=STAFF, parent="staff.settings",
+         permission="view_settings"),
     item("staff.settings.billing", _("Billing"), "billing_staff:settings", areas=STAFF, parent="staff.settings",
          permission="view_billing"),
     item("staff.settings.tax", _("Tax rules"), "billing_staff:tax_rules", areas=STAFF, parent="staff.settings",
@@ -322,6 +324,8 @@ def build(request, area):
         children = [c for c in ITEMS if c.parent == top.key and area in c.areas]
         if children or not top.url_name:
             shown = [leaf(c) for c in children if is_visible(user, c, has_client=has_client)]
+            if area == "client" and top.key == "client.services" and shown:
+                shown += _category_entries(request, current_name)
             if not shown or not is_visible(user, top, has_client=has_client):
                 continue
             group_ns = {c.url_name.split(":")[0] for c in children if ":" in c.url_name}
@@ -338,7 +342,55 @@ def build(request, area):
     for position, groups in same_screen_family.items():
         if groups and not any(e.active for e in menus[position]):
             groups[0].active = True
+    if area == "client":
+        _apply_menu_settings(menus["main"])
     return menus
+
+
+def _category_entries(request, current_name):
+    """The store's plan categories as entries under Services (WordPress hosting, VPS...), so a customer can order by category."""
+    from apps.products.models import CategoryKind, StoreCategory
+
+    try:
+        rows = list(StoreCategory.objects.filter(is_active=True, kind=CategoryKind.PLANS).order_by("sort_order", "name"))
+    except Exception:  # noqa: BLE001 - the menu must render even if the catalogue cannot be read
+        return []
+    current = getattr(request, "GET", {}).get("category", "")
+    listing = reverse("catalog:product_list")
+    entries = []
+    for index, category in enumerate(rows):
+        url = f"{listing}?category={category.slug}"
+        entries.append(Entry(key=f"client.services.cat.{category.slug}", label=category.name, url=url, landing=url, icon=category.icon,
+                             active=current_name == "catalog:product_list" and current == category.slug, divider_before=index == 0))
+    return entries
+
+
+def _apply_menu_settings(entries):
+    """A Super Admin's changes to the customer menu: hidden entries go, new names apply, and the order they chose is kept."""
+    from apps.branding import services as branding
+
+    chosen = branding.menu_settings("client")
+    if not chosen:
+        return
+
+    def process(items):
+        kept = []
+        for index, entry in enumerate(items):
+            label, visible, order = chosen.get(entry.key, ("", True, None))
+            if not visible and entry.key != "client.home":
+                continue
+            if label:
+                entry.label = label
+            if entry.children is not None:
+                entry.children = process(entry.children)
+                if not entry.children:
+                    continue
+                entry.url = entry.landing = entry.children[0].url
+                entry.active = entry.active and any(c.active or True for c in entry.children)
+            kept.append((order if order is not None else index * 10, index, entry))
+        return [entry for _order, _index, entry in sorted(kept, key=lambda row: (row[0], row[1]))]
+
+    entries[:] = process(entries)
 
 
 def subnav(menus, path):

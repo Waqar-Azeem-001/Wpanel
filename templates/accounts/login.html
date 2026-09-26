@@ -1,6 +1,11 @@
 {% extends "layouts/auth.html" %}
 {% load i18n %}
 {% block title %}{% trans "Sign in" %} · {{ SITE_NAME }}{% endblock %}
+{% block art_extra %}{% if help_articles %}
+<section class="auth-news" aria-label="{% trans 'From our help centre' %}">
+  <h2>{% trans "From our help centre" %}</h2>
+  <ul>{% for article in help_articles %}<li><a href="{% url 'help:article' article.category.slug article.slug %}">{{ article.title }}</a><small>{{ article.category.name }}</small></li>{% endfor %}</ul>
+</section>{% endif %}{% endblock %}
 {% block content %}
 <h1>{% trans "Welcome back" %}</h1>
 <p class="auth-sub">{% trans "Sign in to manage your services, domains and billing." %}</p>
@@ -10,8 +15,9 @@
   {% url 'accounts:password_reset' as reset_url %}
   {% include "partials/auth_field.html" with field=form.email %}
   {% include "partials/auth_field.html" with field=form.password toggle=True link_url=reset_url link_text=_("Forgot password?") %}
+  <label class="auth-remember"><input class="form-check-input" type="checkbox" name="remember" id="id_remember"{% if form.remember.value %} checked{% endif %}> {{ form.remember.label }}</label>
   <button type="submit" class="btn btn-primary auth-submit">{% trans "Sign in" %}</button>
 </form>
-<p class="auth-alt">{% trans "New here?" %} <a href="{% url 'accounts:register' %}">{% trans "Create an account" %}</a></p>
+<p class="auth-alt">{% trans "Not registered yet?" %} <a href="{% url 'accounts:register' %}">{% trans "Create a new account" %}</a></p>
 <p class="auth-legal">{% trans "By signing in you agree to our terms of service and privacy policy." %}</p>
 {% endblock %}

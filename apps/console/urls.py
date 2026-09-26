@@ -24,6 +24,7 @@ urlpatterns = [
     path("setup/staff/<int:pk>/status/", views_setup.staff_user_status, name="staff_user_status"),
     path("setup/email/", views_setup.email_providers, name="email_providers"),
     path("setup/email/save/", views_setup.email_provider_save, name="email_provider_save"),
+    path("setup/email/settings/", views_setup.email_settings_save, name="email_settings_save"),
     path("setup/email/<int:pk>/delete/", views_setup.email_provider_delete, name="email_provider_delete"),
     path("setup/email/<int:pk>/test/", views_setup.email_provider_test, name="email_provider_test"),
     path("setup/email/<int:pk>/check/", views_setup.email_provider_check, name="email_provider_check"),

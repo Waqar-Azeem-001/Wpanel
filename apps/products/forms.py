@@ -6,7 +6,7 @@ import json
 
 from django import forms
 
-from .models import (CATEGORY_ICONS, KNOWN_RESOURCE_LIMITS, Addon, AddonKind, BillingCycle, CategoryKind, StoreCategory, CatalogStatus, Product, ProductType, Server,
+from .models import (CATEGORY_ICONS, KNOWN_RESOURCE_LIMITS, LIMIT_LABELS, Addon, AddonKind, BillingCycle, CategoryKind, StoreCategory, CatalogStatus, Product, ProductType, Server,
                      ServerStatus)
 
 
@@ -35,13 +35,6 @@ class ResourceLimitsField(forms.CharField):
         if isinstance(value, dict):
             return json.dumps(value, indent=2)
         return value
-
-
-LIMIT_LABELS = {
-    "disk_mb": "Disk space (MB)", "bandwidth_mb": "Bandwidth (MB)", "email_accounts": "Email accounts", "databases": "Databases",
-    "ftp_accounts": "FTP accounts", "subdomains": "Subdomains", "parked_domains": "Parked domains",
-    "addon_domains": "Addon domains", "websites": "Websites",
-}
 
 
 class FirstPriceMixin:
@@ -76,7 +69,7 @@ class ProductForm(FirstPriceMixin, forms.Form):
     category = forms.ModelChoiceField(queryset=StoreCategory.objects.filter(kind=CategoryKind.PLANS), required=False,
                                       empty_label="From the type, automatically",
                                       help_text="Where it is listed on the store. Add categories under Products › Categories.")
-    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 6}), required=False,
+    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 5}), required=False, label="Features",
                                   help_text="One feature per line: each line shows as a tick on the plan card.")
     whm_package_name = forms.CharField(max_length=100, required=False, label="WHM package name")
     auto_setup = forms.BooleanField(required=False, initial=True, label="Auto-provision on payment")
@@ -89,31 +82,57 @@ class ProductForm(FirstPriceMixin, forms.Form):
 
     def __init__(self, *args, existing_limits=None, with_price=False, **kwargs):
         super().__init__(*args, **kwargs)
+        starter = existing_limits is None  # a new plan begins with the usual few lines, ready to fill in
         self.existing_limits = dict(existing_limits or {})
-        for key in KNOWN_RESOURCE_LIMITS:
-            self.fields[f"limit_{key}"] = forms.IntegerField(
-                min_value=0, required=False, label=LIMIT_LABELS.get(key, key), initial=self.existing_limits.get(key))
         self.with_price = with_price
         if with_price:
             self.add_price_fields()
         self.fields["recommended_addons"].label_from_instance = lambda addon: f"{addon.name} ({addon.price_summary})"
-
-    @property
-    def limit_fields(self):
-        return [self[f"limit_{key}"] for key in KNOWN_RESOURCE_LIMITS]
+        # The limits are rows of a title and a value that staff add and remove; a bound form shows what was posted.
+        if self.is_bound:
+            titles, values = self.data.getlist("limit_title"), self.data.getlist("limit_value")
+            self.limit_rows = [{"title": title, "value": values[i] if i < len(values) else ""} for i, title in enumerate(titles)]
+        else:
+            self.limit_rows = [{"title": LIMIT_LABELS.get(key, key), "value": "" if value is None else value}
+                               for key, value in self.existing_limits.items()]
+            if starter:
+                self.limit_rows = [{"title": LIMIT_LABELS[key], "value": ""} for key in ("disk_mb", "email_accounts", "databases")]
+        self.limit_choices = list(LIMIT_LABELS.values())
 
     @property
     def price_fields(self):
         return [self[name] for name in ("billing_cycle", "custom_months", "price", "setup_fee")] if self.with_price else []
 
+    def _limits_from_rows(self):
+        """{key: value} from the rows: a known title (Disk space (MB)) becomes its key, any other title is kept as written."""
+        by_label = {label.lower(): key for key, label in LIMIT_LABELS.items()}
+        limits, seen = {}, set()
+        for row in self.limit_rows:
+            title = (row["title"] or "").strip()
+            if not title:
+                continue  # an empty row is ignored
+            key = by_label.get(title.lower(), title)
+            if key in seen:
+                raise forms.ValidationError(f"\"{title}\" is listed twice.")
+            seen.add(key)
+            raw = str(row["value"]).strip()
+            if raw == "" or raw.lower() in ("unlimited", "none", "no limit"):
+                limits[key] = None
+            elif raw.isdigit():
+                limits[key] = int(raw)
+            elif key in KNOWN_RESOURCE_LIMITS:
+                raise forms.ValidationError(f"\"{title}\" needs a whole number, or leave it empty for no limit.")
+            else:
+                limits[key] = raw[:100]  # a free-form limit such as "Unlimited*" or "10 GB"
+        return limits
+
     def clean(self):
         data = super().clean()
-        limits = {k: v for k, v in self.existing_limits.items() if k not in KNOWN_RESOURCE_LIMITS}  # keep keys the form does not show
-        for key in KNOWN_RESOURCE_LIMITS:
-            value = data.get(f"limit_{key}")
-            if value is not None:
-                limits[key] = value
-        data["resource_limits"] = limits
+        try:
+            data["resource_limits"] = self._limits_from_rows()
+        except forms.ValidationError as exc:
+            self.add_error(None, exc)
+            data["resource_limits"] = {}
         return self.clean_price_fields(data) if self.with_price else data
 
 

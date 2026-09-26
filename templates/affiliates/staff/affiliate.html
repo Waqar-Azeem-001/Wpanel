@@ -21,7 +21,7 @@
       <dt>Link</dt><dd><small>{{ link }}</small></dd>
       <dt>Joined</dt><dd>{{ affiliate.created_at|date:"j M Y" }}</dd>
       <dt>Rule</dt><dd>{% if rule.0 == "percentage" %}{{ rule.1|floatformat:"-2" }}%{% else %}{{ rule.1 }} per sale{% endif %} {% if affiliate.has_override %}<span class="badge text-bg-primary">Own rule</span>{% else %}<small class="text-secondary">(programme default)</small>{% endif %}</dd>
-      <dt>Payout details</dt><dd>{{ affiliate.payout_details|linebreaksbr|default:"&mdash;" }}</dd>
+      <dt>Pay to</dt><dd>{% if affiliate.payout_summary %}{{ affiliate.payout_summary|linebreaksbr }}{% else %}<span class="text-warning">Not given yet: ask the affiliate to add it before you record a payout.</span>{% endif %}</dd>
       {% if affiliate.review_note %}<dt>Note</dt><dd>{{ affiliate.review_note }}</dd>{% endif %}
     </dl>
     {% if can_manage %}

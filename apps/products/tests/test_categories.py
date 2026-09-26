@@ -114,15 +114,15 @@ def test_the_categories_page_and_menu_entry(manager):
 
 def test_the_product_form_is_in_sections_with_structured_limits_and_a_first_price(manager):
     page = browser(manager).get("/staff/products/new/").content.decode()
-    for heading in ("Basics", "First price", "Provisioning", "Resource limits", "Selling more"):
+    for heading in ("Basics", "First price", "Limits", "More options"):
         assert heading in page
-    assert "Disk space (MB)" in page and "Resource limits (JSON)" not in page
+    assert 'value="Disk space (MB)"' in page and "Resource limits (JSON)" not in page and "Add a limit" in page
     made = browser(manager).post("/staff/products/new/", {
         "name": "Fast VPS", "type": "vps", "description": "2 vCPU\n4 GB RAM", "whm_package_name": "fast", "auto_setup": "on",
-        "limit_disk_mb": "80000", "limit_databases": "", "billing_cycle": "monthly", "price": "2500", "setup_fee": "100"})
+        "limit_title": ["Disk space (MB)", "Databases", "", "Free SSL"], "limit_value": ["80000", "", "5", "Included"], "billing_cycle": "monthly", "price": "2500", "setup_fee": "100"})
     assert made.status_code == 302
     p = Product.objects.get(name="Fast VPS")
-    assert p.resource_limits == {"disk_mb": 80000} and p.category.slug == "vps"
+    assert p.resource_limits == {"disk_mb": 80000, "databases": None, "Free SSL": "Included"} and p.category.slug == "vps"
     row = p.prices.get()
     assert (row.billing_cycle, row.price, row.setup_fee) == ("monthly", Decimal("2500.00"), Decimal("100.00"))
 
@@ -135,14 +135,33 @@ def test_a_price_needs_its_cycle_and_a_custom_cycle_needs_months(manager):
     assert custom.status_code == 200 and b"number of months" in custom.content
 
 
-def test_editing_a_product_keeps_limits_the_form_does_not_show(manager):
-    p = plan(manager, "Keeper", resource_limits={"disk_mb": 5000, "custom_note": 7})
+def test_editing_limits_adds_changes_and_removes_lines(manager):
+    p = plan(manager, "Keeper", resource_limits={"disk_mb": 5000, "custom_note": 7, "old": 1})
     b = browser(manager)
     page = b.get(f"/staff/products/{p.slug}/edit/").content.decode()
-    assert 'value="5000"' in page
-    b.post(f"/staff/products/{p.slug}/edit/", {"name": "Keeper", "type": "shared_hosting", "limit_disk_mb": "9000", "whm_package_name": "pkg"})
+    assert 'value="5000"' in page and 'value="custom_note"' in page
+    b.post(f"/staff/products/{p.slug}/edit/", {"name": "Keeper", "type": "shared_hosting", "whm_package_name": "pkg",
+                                              "limit_title": ["Disk space (MB)", "custom_note", "Backups"], "limit_value": ["9000", "7", "Daily"]})
     p.refresh_from_db()
-    assert p.resource_limits == {"disk_mb": 9000, "custom_note": 7} and p.prices.count() == 1  # a price box is only on the create form
+    assert p.resource_limits == {"disk_mb": 9000, "custom_note": 7, "Backups": "Daily"}  # "old" had no row, so it is gone
+    assert p.prices.count() == 1  # a price box is only on the create form
+    assert p.limit_items == [("Disk space (MB)", 9000), ("custom_note", 7), ("Backups", "Daily")]
+
+
+def test_a_limit_listed_twice_or_with_a_word_for_a_number_is_refused(manager):
+    b = browser(manager)
+    twice = b.post("/staff/products/new/", {"name": "Dup", "type": "vps", "limit_title": ["Databases", "databases"], "limit_value": ["1", "2"]})
+    assert twice.status_code == 200 and b"listed twice" in twice.content and not Product.objects.filter(name="Dup").exists()
+    word = b.post("/staff/products/new/", {"name": "Word", "type": "vps", "limit_title": ["Databases"], "limit_value": ["lots"]})
+    assert word.status_code == 200 and b"whole number" in word.content
+    assert b'value="lots"' in word.content  # what was typed is kept on the page
+
+
+def test_the_limits_are_shown_on_the_public_plan_page(manager):
+    p = plan(manager, "Shown", resource_limits={"email_accounts": 10, "databases": None})
+    product_services.set_product_status(manager, p, "active")
+    page = Client().get(f"/products/{p.slug}/").content.decode()
+    assert "What is included" in page and "Email accounts" in page and "Unlimited" in page
 
 
 def test_an_addon_is_created_with_its_price_and_shows_it(manager):

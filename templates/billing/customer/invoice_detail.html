@@ -30,7 +30,7 @@
     <div class="col-md-6"><label class="form-label" for="id_note">{% trans "Note" %}</label>{{ form.note|bs_field }}</div>
     <div class="col-12"><button class="btn btn-primary" type="submit">{% trans "Continue" %}</button></div>
   </form>
-  {% for method in offline_methods %}{% if method.instructions %}<h3 class="h6 mt-3">{{ method.name }}</h3><p class="mb-0">{{ method.instructions|linebreaksbr }}</p>{% endif %}{% endfor %}
+  {% for method in offline_methods %}{% if method.how_to_pay %}<h3 class="h6 mt-3">{{ method.name }}</h3><p class="mb-0">{{ method.how_to_pay|linebreaksbr }}</p>{% endif %}{% endfor %}
   {% else %}<p class="text-secondary mb-0">{% trans "No payment methods are available right now. Please contact us." %}</p>{% endif %}
 </div></section>
 {% endif %}

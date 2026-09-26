@@ -679,3 +679,40 @@ table.lines .line-row[hidden] { display: none; }
 .rep-card strong { font-size: 1rem; font-weight: 600; }
 .rep-card .text-secondary { font-size: .84rem; line-height: 1.4; }
 .rep-open { margin-top: auto; padding-top: .5rem; font-size: .84rem; font-weight: 600; color: var(--accent-ink); }
+
+.pay-off { opacity: .65; }
+
+/* --- Side cards next to a form (open a ticket) ------------------------------------------------------------------------------------- */
+.side-stack { display: grid; gap: 1rem; }
+.side-stack .shop-title { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; font-size: .95rem; }
+.side-stack .shop-title .bi { color: var(--accent); }
+.side-list { list-style: none; margin: 0 0 .5rem; padding: 0; font-size: .875rem; }
+.side-list li { display: flex; flex-direction: column; gap: .15rem; padding: .5rem 0; border-top: 1px solid var(--border); }
+.side-list li:first-child { border-top: 0; }
+.side-list.tips li { display: list-item; list-style: none; position: relative; padding-left: 1.1rem; color: var(--muted); }
+.side-list.tips li::before { content: "\F26A"; font-family: "bootstrap-icons"; position: absolute; left: 0; top: .5rem; font-size: .75rem; color: var(--ok); }
+
+/* --- Sign in, refined: a card on a soft dotted field, the brand above it, a help-centre list on the dark side ------------------------ */
+.auth-panel { background-image: radial-gradient(var(--border-strong) 1px, transparent 1px); background-size: 22px 22px; background-color: var(--bg); }
+.auth-card { padding: 2rem 2rem 1.6rem; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 18px 50px rgba(15, 23, 42, .08); }
+.auth-card-logo { display: block; margin: 0 0 1.4rem; font-weight: 800; font-size: 1.15rem; color: var(--text); text-decoration: none; }
+.auth-card-logo img { height: 34px; width: auto; max-width: 200px; }
+.auth-remember { display: flex; align-items: center; gap: .55rem; margin: -.15rem 0 1rem; font-size: .875rem; color: var(--muted); cursor: pointer; }
+.auth-alt { margin: 1.4rem -2rem -1.6rem; padding: 1rem 2rem; border-top: 1px solid var(--border); background: var(--surface-2); border-radius: 0 0 18px 18px; }
+.auth-legal { margin-top: 1.3rem; padding-top: 0; }
+.auth-card > .auth-legal { margin-bottom: 0; }
+.auth-news { margin-top: 2rem; max-width: 28rem; }
+.auth-news h2 { margin: 0 0 .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #a3b1d4; }
+.auth-news ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.auth-news li { padding: .7rem .9rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px; background: rgba(255, 255, 255, .06); }
+.auth-news a { display: block; color: #fff; font-weight: 600; font-size: .9rem; text-decoration: none; }
+.auth-news a:hover { text-decoration: underline; }
+.auth-news small { color: #a3b1d4; }
+@media (max-width: 900px) { .auth-card-logo { display: none; } .auth-card { padding: 1.5rem 1.25rem 1.25rem; } .auth-alt { margin: 1.2rem -1.25rem -1.25rem; padding: .9rem 1.25rem; } }
+
+/* --- Product form: limit rows, and the collapsed "More options" ---------------------------------------------------------------- */
+.limit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; margin-bottom: .5rem; }
+.more-options > summary { display: flex; align-items: center; gap: .75rem; cursor: pointer; list-style: none; }
+.more-options > summary::-webkit-details-marker { display: none; }
+.more-options[open] > summary { padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+@media (max-width: 575px) { .limit-row { grid-template-columns: 1fr auto; } .limit-row input:first-child { grid-column: 1 / -1; } }

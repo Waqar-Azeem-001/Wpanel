@@ -13,11 +13,13 @@
         <li><i class="bi bi-receipt" aria-hidden="true"></i><span><strong>{% trans "Billing that is easy to follow" %}</strong>{% trans "Invoices, quotes and payment history whenever you need them." %}</span></li>
         <li><i class="bi bi-life-preserver" aria-hidden="true"></i><span><strong>{% trans "Support that follows up" %}</strong>{% trans "Open a ticket and track every reply in one thread." %}</span></li>
       </ul>
+      {% block art_extra %}{% endblock %}
     </div>
     <p class="auth-art-foot">{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}{% endif %}{% if brand.support_email %} &middot; {{ brand.support_email }}{% endif %}</p>
   </aside>
   <main id="main" class="auth-panel" tabindex="-1">
     <div class="auth-card{% block card_class %}{% endblock %}">
+      <a class="auth-card-logo" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="{{ SITE_NAME }}">{% else %}{{ SITE_NAME }}{% endif %}</a>
       {% include "components/messages.html" %}
       {% block content %}{% endblock %}
     </div>

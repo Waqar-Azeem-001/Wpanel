@@ -76,7 +76,7 @@ def test_create_edit_and_status_via_web(client, manager):
 
     client.post(f"/staff/products/{product.slug}/edit/", {
         "name": "Web VPS", "type": "vps", "whm_package_name": "vps_pkg",
-        "limit_disk_mb": "10000", "auto_setup": "on", "default_auto_renew": "on",
+        "limit_title": ["Disk space (MB)"], "limit_value": ["10000"], "auto_setup": "on", "default_auto_renew": "on",
     })
     product.refresh_from_db()
     assert product.whm_package_name == "vps_pkg" and product.resource_limits == {"disk_mb": 10000}
@@ -88,8 +88,8 @@ def test_create_edit_and_status_via_web(client, manager):
 
 def test_a_negative_resource_limit_shows_a_form_error(client, manager):
     client.force_login(manager)
-    response = client.post("/staff/products/new/", {"name": "Bad limit", "type": "vps", "limit_disk_mb": "-5"})
-    assert response.status_code == 200 and b"greater than or equal to 0" in response.content
+    response = client.post("/staff/products/new/", {"name": "Bad limit", "type": "vps", "limit_title": ["Disk space (MB)"], "limit_value": ["-5"]})
+    assert response.status_code == 200 and b"needs a whole number" in response.content
 
 
 def test_price_add_toggle_remove_via_web(client, manager, active_product):

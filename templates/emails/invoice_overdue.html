@@ -1,0 +1,5 @@
+{% extends "layouts/email.html" %}
+{% block content %}<p style="margin:0 0 12px 0">Hello {{ invoice.billing_name|default:"there" }},</p>
+<p style="margin:0 0 4px 0">Invoice <strong>{{ invoice.number }}</strong> for <strong>{{ invoice.currency }} {{ invoice.balance_due }}</strong> was due on {{ invoice.due_date|date:"j M Y" }} and is now <strong style="color:#b42323">{{ days_overdue }} day{{ days_overdue|pluralize }} overdue</strong>. Please pay it as soon as you can to keep your services running without interruption.</p>
+{% include "emails/_invoice_table.html" with doc=invoice %}
+<p style="margin:12px 0 0 0;color:#5d6677;font-size:13px">If you have already paid, it may not have reached us yet. If you have a question, reply to this email or open a support ticket. The unpaid invoice is attached as a PDF.</p>{% endblock %}

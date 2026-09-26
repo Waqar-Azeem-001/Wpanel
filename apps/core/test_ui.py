@@ -350,8 +350,9 @@ def test_the_old_stylesheet_is_gone():
 def test_the_document_and_email_shells_render_without_navigation():
     document = render_to_string("layouts/document.html", {"brand": branding.get(), "SITE_NAME": "Doc Co"})
     assert "Doc Co" in document and "<nav" not in document and "navbar" not in document
-    email = render_to_string("layouts/email.html", {"brand": branding.get(), "body": "<p>Hello</p>", "logo_url": ""})
-    assert "<p>Hello</p>" in email and "background:#2459d6" in email and "<script" not in email
+    email = render_to_string("layouts/email.html", {"brand": branding.get(), "body": "<p>Hello</p>", "logo_url": "",
+                                                        "cta_url": "/go/", "cta_label": "Open it"})
+    assert "<p>Hello</p>" in email and "background:#2459d6" in email and "Open it" in email and "<script" not in email
 
 
 # --- Accessibility: every control has a label -------------------------------------------------------------------------

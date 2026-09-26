@@ -54,7 +54,8 @@ def tax_rule_for_client(client):
 # --- Payment methods ------------------------------------------------------------------------
 
 @transaction.atomic
-def save_payment_method(actor, code, *, name, instructions="", sort_order=0, provider=KEEP, request=None):
+def save_payment_method(actor, code, *, name, instructions="", sort_order=0, provider=KEEP, kind="other", bank_name="",
+                        account_title="", account_number="", swift_code="", request=None):
     """Create or update a payment method (upsert by code)."""
     _require(actor, "manage_billing")
     # Look up, then validate, then write - never get_or_create-then-validate, which would INSERT
@@ -64,6 +65,8 @@ def save_payment_method(actor, code, *, name, instructions="", sort_order=0, pro
     if created:
         method = PaymentMethod(code=code)
     method.name, method.instructions, method.sort_order = name, instructions, sort_order
+    method.kind, method.bank_name, method.account_title = kind or "other", bank_name, account_title
+    method.account_number, method.swift_code = account_number, swift_code
     if provider is not KEEP:
         if provider is not None and not provider.is_active:
             raise ValidationError({"provider": "Choose an active payment gateway."})
@@ -73,6 +76,17 @@ def save_payment_method(actor, code, *, name, instructions="", sort_order=0, pro
     audit.record("payment_method.created" if created else "payment_method.updated", actor=actor, target=method,
                  metadata={"code": code}, request=request)
     return method
+
+
+def unique_method_code(name):
+    """A short identifier made from a name ("Meezan Bank" -> "meezan-bank"), numbered if it is taken."""
+    from django.utils.text import slugify
+
+    base = (slugify(name) or "method")[:44]
+    code, n = base, 2
+    while PaymentMethod.objects.filter(code=code).exists():
+        code, n = f"{base}-{n}", n + 1
+    return code
 
 
 def set_payment_method_active(actor, method, is_active, *, request=None):

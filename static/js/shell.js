@@ -271,6 +271,47 @@
     recalc();
   })();
 
+  // --- A checkbox marked data-submit-on-change sends its form when it changes (no inline script needed) -------------------------
+  doc.addEventListener("change", function (event) {
+    if (event.target.matches("input[data-submit-on-change]") && event.target.form) { event.target.form.submit(); }
+  });
+
+  // --- Copy a value to the clipboard: <button data-copy="#field"> (the field is selected too, so it works without clipboard access) ---
+  doc.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-copy]");
+    if (!button) { return; }
+    var field = doc.querySelector(button.getAttribute("data-copy"));
+    if (!field) { return; }
+    field.select();
+    var label = button.querySelector("span");
+    var done = function () { if (label) { var old = label.textContent; label.textContent = "Copied"; setTimeout(function () { label.textContent = old; }, 1600); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(field.value).then(done, function () { try { doc.execCommand("copy"); done(); } catch (e) {} }); }
+    else { try { doc.execCommand("copy"); done(); } catch (e) {} }
+  });
+
+  // --- Rows the user adds and removes (a plan's limits): <div data-rows> with a <template data-rows-template>, [data-rows-add] buttons
+  //     (data-title pre-fills the first box) and [data-rows-remove] on each row. The boxes repeat their names, so nothing is numbered. ----
+  doc.addEventListener("click", function (event) {
+    var add = event.target.closest("[data-rows-add]");
+    var remove = event.target.closest("[data-rows-remove]");
+    var box = event.target.closest("[data-rows]");
+    if (!box) { return; }
+    if (add) {
+      var holder = doc.createElement("div");
+      holder.innerHTML = box.querySelector("[data-rows-template]").innerHTML;
+      var row = holder.firstElementChild;
+      var title = add.getAttribute("data-title");
+      var first = row.querySelector("input");
+      if (title && first) { first.value = title; }
+      box.querySelector("[data-rows-body]").appendChild(row);
+      var next = title ? row.querySelectorAll("input")[1] : first;
+      if (next) { next.focus(); }
+    } else if (remove) {
+      var target = remove.closest("[data-row]");
+      if (target) { target.remove(); }
+    }
+  });
+
   // --- Generate a strong password in the browser (never sent anywhere until the form is submitted) -------------------------
   doc.addEventListener("click", function (event) {
     var button = event.target.closest("[data-generate-password]");

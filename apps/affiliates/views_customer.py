@@ -1,4 +1,7 @@
 """The affiliate's own pages. Every rule lives in ``services``; an affiliate sees only their own numbers."""
+from urllib.parse import quote
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -21,7 +24,7 @@ def dashboard(request):
         if request.method == "POST" and form.is_valid():
             try:
                 services.enrol(request.user, accept_terms=form.cleaned_data["accept_terms"],
-                               payout_details=form.cleaned_data["payout_details"], request=request)
+                               payout_details=form.cleaned_data["payout_details"], payout=form.cleaned_data, request=request)
             except ACTION_ERRORS as exc:
                 apply_form_error(form, exc)
             else:
@@ -32,7 +35,8 @@ def dashboard(request):
     context = {"affiliate": affiliate, "config": config, "active": affiliate.status == AffiliateStatus.ACTIVE,
                "balances": services.balances(affiliate), "stats": services.affiliate_stats(affiliate),
                "link": services.referral_url(affiliate),
-               "details_form": forms.PayoutDetailsForm(initial={"payout_details": affiliate.payout_details}),
+               "share_links": [(label, icon, target + quote(services.referral_url(affiliate), safe="")) for label, icon, target in settings.SHARE_TARGETS],
+               "details_form": forms.PayoutDetailsForm(initial={f: getattr(affiliate, f) for f in services.PAYOUT_FIELDS}),
                "recent_commissions": affiliate.commissions.select_related("referral")[:10],
                "recent_payouts": affiliate.payouts.all()[:5]}
     return render(request, "affiliates/customer/dashboard.html", context)
@@ -48,8 +52,8 @@ def update_details(request):
         if affiliate is None:
             raise ServiceError("Join the programme first.", code="not_affiliate")
         if not form.is_valid():
-            raise ServiceError("Payout details are too long.", code="invalid")
-        services.update_payout_details(request.user, affiliate, form.cleaned_data["payout_details"], request=request)
+            raise ServiceError(next(iter(form.errors.values()))[0], code="invalid")
+        services.set_payout_account(request.user, affiliate, form.cleaned_data, request=request)
         return "Payout details saved."
 
     return run_action(request, action, "affiliates_customer:dashboard")

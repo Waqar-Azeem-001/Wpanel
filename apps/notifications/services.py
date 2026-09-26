@@ -77,11 +77,38 @@ def _provider_connection(provider):
     )
 
 
+CTA_LABELS = {
+    "invoice_issued": "View and pay the invoice", "invoice_due_soon": "Pay the invoice", "invoice_overdue": "Pay the invoice now",
+    "quote_sent": "Review the quote", "payment_received": "View the invoice", "payment_refunded": "View the invoice",
+}
+# Emails that carry a PDF of the document they are about, made when the email is sent: an invoice email carries the invoice as it
+# stands (unpaid while something is owed, paid once it is settled), a quote email the quote.
+INVOICE_PDF_TEMPLATES = {"invoice_issued", "invoice_due_soon", "invoice_overdue", "payment_received", "payment_refunded"}
+QUOTE_PDF_TEMPLATES = {"quote_sent"}
+
+
+def _brand_context():
+    from apps.branding import services as branding
+
+    brand = branding.get()
+    logo_url = (settings.SITE_URL.rstrip("/") + reverse("brand_logo") + f"?v={brand.version}") if brand.has_logo else ""
+    return {"brand": brand, "logo_url": logo_url}
+
+
 def render_email(template, context):
     """Render ``emails/<template>_subject.txt``, ``.txt`` and optional ``.html``."""
     from apps.branding import services as branding
 
-    ctx = {"site_name": branding.get().name, "site_url": settings.SITE_URL, **context}
+    ctx = {"site_name": branding.get().name, "site_url": settings.SITE_URL, **_brand_context(), **context}
+    invoice = ctx.get("invoice")
+    if invoice is not None and getattr(invoice, "pk", None) and "pay_methods" not in ctx:
+        from apps.billing.models import PaymentMethod
+
+        if getattr(invoice, "balance_due", 0):  # only while something is owed: where to send the money
+            ctx["pay_methods"] = [m for m in PaymentMethod.objects.filter(is_active=True, provider__isnull=True) if m.detail_rows or m.instructions]
+    if ctx.get("link") and template in CTA_LABELS:
+        ctx["cta_url"] = settings.SITE_URL.rstrip("/") + ctx["link"]
+        ctx["cta_label"] = CTA_LABELS[template]
     from . import mail_templates
 
     override = mail_templates.customised(template)
@@ -92,6 +119,7 @@ def render_email(template, context):
         except ServiceError:  # the wording no longer renders (say a variable it needed is gone): send the default, never nothing
             logger.exception("Customised wording for %s failed; the default was used", template)
     subject = " ".join(render_to_string(f"emails/{template}_subject.txt", ctx).split())
+    ctx["heading"] = subject
     body_text = render_to_string(f"emails/{template}.txt", ctx)
     try:
         body_html = render_to_string(f"emails/{template}.html", ctx)
@@ -100,20 +128,38 @@ def render_email(template, context):
     return subject, body_text, body_html
 
 
-def html_from_text(text):
-    """A safe HTML version of a plain-text email in the branded email layout: escaped, paragraphs kept, links live."""
+def _split_cta(text):
+    """
+    Take the first line that holds an address off the text to become the email's button: ``Label: <address>`` gives the label and
+    the address, a line that is only an address gives the address. Returns ``(text without that line, address, label)``.
+    """
+    lines = text.replace("\r", "").split("\n")
+    for index, line in enumerate(lines):
+        match = re.fullmatch(r"\s*(?:(?P<label>[^:]{3,60}?)\s*:\s*)?(?P<url>https?://\S+)\s*", line)
+        if match:
+            label = (match.group("label") or "").strip().rstrip(":")
+            rest = lines[:index] + lines[index + 1:]
+            return "\n".join(rest), match.group("url"), (label[:1].upper() + label[1:]) if label else "Open the link"
+    return text, "", ""
+
+
+def html_from_text(text, *, heading=""):
+    """A safe HTML version of a plain-text email in the branded email layout: escaped, paragraphs kept, links live, the main link a button."""
     from django.template.loader import render_to_string
 
-    from apps.branding import services as branding
-
+    body, cta_url, cta_label = _split_cta(text)
     paragraphs = []
-    for block in text.replace("\r", "").strip().split("\n\n"):
-        escaped = html.escape(block.strip())
+    for block in re.split(r"\n\s*\n", body.strip()):
+        block = block.strip()
+        if not block:
+            continue
+        if not any(line.lstrip().startswith(("- ", "* ")) for line in block.splitlines()):
+            block = " ".join(part.strip() for part in block.splitlines())  # a hard-wrapped paragraph flows as one
+        escaped = html.escape(block)
         linked = URL_RE.sub(lambda m: f'<a href="{m.group(1)}">{m.group(1)}</a>', escaped)
-        paragraphs.append(f"<p>{linked.replace(chr(10), '<br>')}</p>")
-    brand = branding.get()
-    logo_url = (settings.SITE_URL.rstrip("/") + reverse("brand_logo") + f"?v={brand.version}") if brand.has_logo else ""
-    return render_to_string("layouts/email.html", {"brand": brand, "logo_url": logo_url, "body": "".join(paragraphs)})
+        paragraphs.append(f'<p style="margin:0 0 14px 0">{linked.replace(chr(10), "<br>")}</p>')
+    return render_to_string("layouts/email.html", {**_brand_context(), "heading": heading, "body": "".join(paragraphs),
+                                                     "cta_url": cta_url, "cta_label": cta_label})
 
 
 def _with_open_pixel(body_html, token):
@@ -165,7 +211,7 @@ def _enqueue(message_id):
 def send_email(*, to_email, template, context=None, user=None, event=""):
     """Record an email and queue it for delivery once the current transaction commits."""
     subject, body_text, body_html = render_email(template, context or {})
-    body_html = body_html or html_from_text(body_text)
+    body_html = body_html or html_from_text(body_text, heading=subject)
     sensitive = template in events.sensitive_templates()
     token = uuid.uuid4()
     fields = {}
@@ -176,8 +222,12 @@ def send_email(*, to_email, template, context=None, user=None, event=""):
                   "body_text": SENSITIVE_PLACEHOLDER, "body_html": ""}
     else:
         fields = {"body_text": body_text, "body_html": _with_open_pixel(body_html, token)}
+    attach = {}
+    document = (context or {}).get("invoice") if template in INVOICE_PDF_TEMPLATES else (context or {}).get("quote") if template in QUOTE_PDF_TEMPLATES else None
+    if document is not None and getattr(document, "pk", None):
+        attach = {"attachment_kind": "invoice" if template in INVOICE_PDF_TEMPLATES else "quote", "attachment_id": document.pk}
     message = EmailMessage.objects.create(user=user, event=event, template=template, to_email=to_email,
-                                          subject=subject, track_token=token, **fields)
+                                          subject=subject, track_token=token, **fields, **attach)
     _track_links(message)
     log_event(message, EmailEvent.Kind.QUEUED)
     transaction.on_commit(lambda: _enqueue(message.pk))
@@ -192,6 +242,33 @@ def _content(message):
         data = json.loads(crypto.decrypt(message.sensitive_body))
         return data["text"], data["html"]
     return message.body_text, message.body_html
+
+
+def _attach_pdf(mail, message):
+    """
+    Attach the invoice or quote PDF the email is about, made now from the stored document: an unpaid invoice goes out marked UNPAID, a
+    settled one PAID. A document that cannot be found or drawn never stops the email: it is sent without the file. Returns the name.
+    """
+    if not message.attachment_kind or not message.attachment_id:
+        return ""
+    try:
+        from apps.billing import pdf
+        from apps.billing.models import Invoice, Quote
+
+        if message.attachment_kind == "invoice":
+            invoice = Invoice.objects.select_related("client", "order").get(pk=message.attachment_id)
+            content = pdf.render_invoice_pdf(invoice)
+            state = {"paid": "paid", "partially_paid": "partly-paid", "unpaid": "unpaid"}.get(invoice.status, invoice.status)
+            name = f"{invoice.number or invoice.reference}-{state}.pdf"
+        else:
+            quote = Quote.objects.select_related("client").get(pk=message.attachment_id)
+            content = pdf.render_quote_pdf(quote)
+            name = f"{quote.number or quote.reference}.pdf"
+        mail.attach(name, content, "application/pdf")
+        return name
+    except Exception:  # noqa: BLE001 - see the docstring
+        logger.exception("Could not attach the PDF to email %s", message.pk)
+        return ""
 
 
 def deliver(message_id):
@@ -212,6 +289,9 @@ def deliver(message_id):
         body_text, body_html = _content(message)
         connection, sender = _connection_and_sender()
         message_id = message.message_id or make_msgid(domain=(sender.rsplit("@", 1)[-1].strip("> ") or None))
+        from .models import NotificationSettings
+
+        reply_to = NotificationSettings.load().reply_to
         mail = EmailMultiAlternatives(
             subject=message.subject,
             body=body_text,
@@ -219,9 +299,11 @@ def deliver(message_id):
             to=[message.to_email],
             connection=connection,
             headers={"Message-ID": message_id},
+            reply_to=[reply_to] if reply_to else None,
         )
         if body_html:
             mail.attach_alternative(body_html, "text/html")
+        attachment_name = _attach_pdf(mail, message)
         mail.send(fail_silently=False)
     except Exception as exc:
         message.status = EmailMessage.Status.FAILED
@@ -236,10 +318,11 @@ def deliver(message_id):
     message.status = EmailMessage.Status.SENT
     message.from_email = sender
     message.message_id = message_id
+    message.attachment_name = attachment_name
     message.delivery = "smtp" if get_active_provider() is not None else "fallback"
     message.sent_at = timezone.now()
     message.last_error = ""
-    update = ["status", "from_email", "sent_at", "last_error", "message_id", "delivery", "updated_at"]
+    update = ["status", "from_email", "sent_at", "last_error", "message_id", "delivery", "attachment_name", "updated_at"]
     if message.is_sensitive:  # delivered: the secret is no longer kept anywhere in our database
         message.sensitive_body = ""
         message.body_text = SENSITIVE_PLACEHOLDER
@@ -383,13 +466,37 @@ def staff_with(codename):
     return [u for u in User.objects.filter(is_active=True).exclude(role=Role.CUSTOMER) if u.has_perm(perm(codename))]
 
 
+ALERT_SETTINGS = {
+    "order.new": "alert_new_order", "order.failed": "alert_new_order", "payment.reported": "alert_payment_reported",
+    "ticket.unassigned": "alert_tickets", "ticket.customer_reply": "alert_tickets", "client.new": "alert_new_client",
+    "affiliate.applied": "alert_affiliates", "cancellation.requested_team": "alert_cancellations",
+}
+
+
+def alert_addresses(event, *, title, body="", link=""):
+    """Copy an alert to the addresses set in Setup > Email provider (if that kind of alert is switched on). Never raises."""
+    from .models import NotificationSettings
+
+    try:
+        setting = NotificationSettings.load()
+        flag = ALERT_SETTINGS.get(event)
+        if not flag or not getattr(setting, flag) or not setting.addresses:
+            return []
+        return [send_email(to_email=address, template="team_alert", event="team.alert",
+                           context={"title": title, "body": body, "link": link}) for address in setting.addresses]
+    except Exception:  # noqa: BLE001 - an alert copy must never break the action that caused it
+        logger.exception("Could not copy the %s alert to the alert addresses", event)
+        return []
+
+
 def notify_team(event, codename, *, title, body="", link="", context=None, exclude=None):
-    """A team alert to every staff member holding ``codename``, each honouring their own preferences."""
+    """A team alert to every staff member holding ``codename`` (each honouring their own preferences), and to the alert addresses."""
     sent = []
     for person in staff_with(codename):
         if exclude is not None and person.pk == getattr(exclude, "pk", None):
             continue
         sent.append(dispatch(event, user=person, title=title, body=body, link=link, context=context))
+    alert_addresses(event, title=title, body=body, link=link)
     return sent
 
 

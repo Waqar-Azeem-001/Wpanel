@@ -117,6 +117,10 @@ EVENTS = _events(
           default_email=False),
     Event("cancellation.requested_team", "A customer asked to cancel a service", C.TEAM, default_email=False),
     Event("email.failed", "Emails are failing to send", C.TEAM, default_email=False),
+    Event("order.new", "A new order was placed", C.TEAM, default_email=False),
+    Event("client.new", "Someone created an account", C.TEAM, default_email=False),
+    # The email sent to the alert addresses chosen in Setup > Email provider (see services.alert_addresses).
+    Event("team.alert", "An alert copied to the team's alert addresses", C.ACCOUNT, "team_alert", default_email=False),
 )
 
 

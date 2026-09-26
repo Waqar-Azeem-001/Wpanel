@@ -1,0 +1,8 @@
+{% autoescape off %}{{ title }}
+{% if body %}
+{{ body }}
+{% endif %}
+Open it: {{ site_url }}{{ link }}
+
+{{ site_name }} team alert
+{% endautoescape %}

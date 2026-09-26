@@ -114,7 +114,8 @@ def test_a_customer_with_an_account_sees_the_full_customer_menu(owner):
     menus = navigation.build(request_for(owner), "client")
     assert labels(menus, "main") == ["Overview", "Services", "Domains", "Orders", "Billing", "Support", "Affiliates"]
     services = next(e for e in menus["main"] if e.key == "client.services")
-    assert [c.label for c in services.children] == ["My hosting", "Order new services", "Add-ons"]
+    assert [c.label for c in services.children][:3] == ["My hosting", "Order new services", "Add-ons"]
+    assert [c.label for c in services.children][3:6] == ["WordPress hosting", "Shared hosting", "Business hosting"]  # store categories
     assert labels(menus, "right") == ["Cart", "Notifications"]
     account = menus["account"][0]
     assert [c.label for c in account.children] == ["Profile & security", "Your account", "Contacts", "Cancellation requests",
@@ -178,7 +179,7 @@ def test_a_group_appears_only_when_something_in_it_can_be_opened(agent, technica
     assert group(technical, "staff.billing") is None and group(technical, "staff.catalog") is None
     assert [c.label for c in group(technical, "staff.providers").children] == ["Servers"]  # no registrar, email, payments
     assert [c.label for c in group(admin, "staff.settings").children] == [
-        "Brand", "Billing", "Tax rules", "Lifecycle timings", "Affiliate programme"]
+        "Brand", "Customer menu", "Billing", "Tax rules", "Lifecycle timings", "Affiliate programme"]
     assert [c.label for c in group(agent, "staff.settings").children] == ["Billing", "Tax rules"]
 
 

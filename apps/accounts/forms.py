@@ -4,6 +4,7 @@ from django import forms
 class LoginForm(forms.Form):
     email = forms.EmailField(widget=forms.EmailInput(attrs={"autocomplete": "email", "autofocus": True}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}))
+    remember = forms.BooleanField(required=False, label="Keep me signed in on this device")
 
 
 class RegisterForm(forms.Form):

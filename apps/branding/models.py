@@ -23,6 +23,26 @@ def validate_hex(value):
         raise ValidationError("Use a colour like #2459d6 (a # and six letters or digits).")
 
 
+class MenuSetting(models.Model):
+    """
+    A Super Admin's choice for one entry of the customer menu (see ``navigation``): hide it, call it something else, or move it. No row
+    means the entry is shown as the code defines it. Entries are named by their registry key (``client.services``,
+    ``client.services.cat.vps`` for a store category shown under Services).
+    """
+
+    area = models.CharField(max_length=10, default="client")
+    key = models.CharField(max_length=80)
+    label = models.CharField(max_length=60, blank=True, help_text="Blank = the standard name.")
+    is_visible = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Lower numbers come first. Blank = the standard order.")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["area", "key"], name="unique_menu_setting")]
+
+    def __str__(self):
+        return f"{self.area}:{self.key}"
+
+
 class BrandSettings(models.Model):
     """
     Single row (pk=1): how the portal presents itself. Brand is configuration, never hard-coded (roadmap Rule 6): name,

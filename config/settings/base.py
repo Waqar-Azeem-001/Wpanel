@@ -39,6 +39,12 @@ EMAIL_OPEN_TRACKING = env.bool("EMAIL_OPEN_TRACKING", default=True)
 EMAIL_CLICK_TRACKING = env.bool("EMAIL_CLICK_TRACKING", default=True)
 # Used only by Setup > Email provider > Check deliverability, when this server cannot reach DNS directly (some networks block port 53).
 DNS_OVER_HTTPS_URL = env("DNS_OVER_HTTPS_URL", default="https://dns.google/resolve")
+# Where an affiliate can share their link from (the link is added to the end): a label, an icon and the address that opens the share box.
+SHARE_TARGETS = [
+    ("WhatsApp", "bi-whatsapp", "https://wa.me/?text="),
+    ("Facebook", "bi-facebook", "https://www.facebook.com/sharer/sharer.php?u="),
+    ("X", "bi-twitter-x", "https://twitter.com/intent/tweet?url="),
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",

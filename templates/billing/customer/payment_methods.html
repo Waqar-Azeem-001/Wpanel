@@ -7,7 +7,7 @@
 {% for method in offline_methods %}
 <section class="card mb-3"><div class="card-body">
   <h2 class="h5">{{ method.name }}</h2>
-  {% if method.instructions %}<p class="mb-0">{{ method.instructions|linebreaksbr }}</p>{% else %}<p class="mb-0 text-secondary">{% trans "Contact us for details." %}</p>{% endif %}
+  {% if method.how_to_pay %}<p class="mb-0">{{ method.how_to_pay|linebreaksbr }}</p>{% else %}<p class="mb-0 text-secondary">{% trans "Contact us for details." %}</p>{% endif %}
 </div></section>
 {% endfor %}
 {% for method in online_methods %}

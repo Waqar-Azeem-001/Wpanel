@@ -272,6 +272,13 @@ def attention_widget(user):
         if counts["unassigned"]:
             add("warning", "bi-inbox", "Unassigned tickets", f"{counts['unassigned']} open ticket(s) have nobody looking at them.",
                 reverse("support_staff:tickets") + "?status=active&assigned=none")
+    if _can(user, "view_affiliates"):
+        from apps.affiliates.models import Affiliate, AffiliateStatus
+
+        waiting = Affiliate.objects.filter(status=AffiliateStatus.PENDING).count()
+        if waiting:
+            add("warning", "bi-share", "Affiliate applications", f"{waiting} application(s) are waiting for approval.",
+                reverse("affiliates_staff:affiliates") + "?status=pending", go="Review")
     if _can(user, "view_hosting", "view_domains"):
         overview = lifecycle.overview()
         if overview["pending_cancellations"]:

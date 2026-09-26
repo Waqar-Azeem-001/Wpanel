@@ -25,7 +25,11 @@ def index(request):
 @portal_permission_required(perm("view_billing"))
 def payment_methods(request):
     context = _context(request, methods=PaymentMethod.objects.all(), section="payment_methods")
-    context["form"] = forms.PaymentMethodForm() if context["can_manage"] else None
+    editing = PaymentMethod.objects.filter(pk=request.GET.get("edit") or 0).first()
+    initial = ({f: getattr(editing, f) for f in ("kind", "name", "bank_name", "account_title", "account_number", "swift_code",
+                                                 "instructions", "code", "sort_order", "provider")} if editing else None)
+    context["form"] = forms.PaymentMethodForm(initial=initial) if context["can_manage"] else None
+    context["editing"] = editing
     return render(request, "billing/staff/payment_methods.html", context)
 
 
@@ -38,9 +42,9 @@ def payment_method_save(request):
         if not form.is_valid():
             raise ServiceError("Enter a valid payment method.")
         data = dict(form.cleaned_data)
-        code = data.pop("code")
+        code = data.pop("code") or services.unique_method_code(data["name"])
         services.save_payment_method(request.user, code, request=request, **data)
-        return f"Saved '{code}'."
+        return f"Saved '{data['name']}'."
 
     return run_action(request, action, "billing_staff:payment_methods")
 

@@ -314,3 +314,63 @@ def test_the_dashboard_has_the_second_rank_of_numbers(boss):
     for label in ("Active domains", "Income this year", "Refunds this month", "Payments to confirm", "Average order",
                   "New customers today", "Tickets resolved"):
         assert label in page
+
+
+# --- The customer menu and store categories under Services ---------------------------------------------------------------------------
+
+@pytest.fixture
+def owner_user(acme):
+    return acme.contacts.get().user
+
+
+def request_for(user, path="/account/profile/"):
+    from django.test import RequestFactory
+    from django.urls import resolve
+
+    request = RequestFactory().get(path)
+    request.user = user
+    request.resolver_match = resolve(path)
+    return request
+
+
+def test_the_customer_menu_lists_the_store_categories_under_services(owner_user):
+    from apps.core import navigation
+
+    menus = navigation.build(request_for(owner_user), "client")
+    services = next(e for e in menus["main"] if e.key == "client.services")
+    kids = {c.key: c for c in services.children}
+    assert "client.services.cat.wordpress" in kids and kids["client.services.cat.wordpress"].url == "/products/?category=wordpress"
+    assert kids["client.services.cat.wordpress"].divider_before
+
+
+def test_a_super_admin_hides_renames_and_reorders_customer_menu_entries(boss, owner_user):
+    from apps.branding import services as branding
+    from apps.core import navigation
+
+    branding.save_menu(boss, {"client.affiliates": {"label": "", "visible": False, "order": None},
+                              "client.support": {"label": "Help desk", "visible": True, "order": 5},
+                              "client.services.cat.vps": {"label": "", "visible": False, "order": None},
+                              "client.home": {"label": "", "visible": False, "order": None}})
+    menus = navigation.build(request_for(owner_user), "client")
+    names = [e.label for e in menus["main"]]
+    assert "Affiliates" not in names and "Help desk" in names and names[0] == "Overview"  # the way home is never hidden
+    assert names.index("Help desk") < names.index("Services")  # order 5 comes before the others
+    services = next(e for e in menus["main"] if e.key == "client.services")
+    assert "client.services.cat.vps" not in [c.key for c in services.children]
+    branding.reset_menu(boss)
+    assert "Affiliates" in [e.label for e in navigation.build(request_for(owner_user), "client")["main"]]
+
+
+def test_only_people_who_manage_settings_change_the_customer_menu(boss, manager, owner_user):
+    url = reverse("brand_staff:menu")
+    assert browser(boss).get(url).status_code == 200 and b"Customer menu" in browser(boss).get(url).content
+    assert browser(manager).post(url, {"do": "reset"}).status_code == 403
+    saved = browser(boss).post(url, {"do": "save", "visible_client.home": "on", "label_client.support": "Help desk",
+                                     "visible_client.support": "on", "order_client.support": "5"})
+    assert saved.status_code == 302
+    from apps.branding.models import MenuSetting
+
+    assert MenuSetting.objects.filter(key="client.support", label="Help desk").exists()
+    assert MenuSetting.objects.get(key="client.orders").is_visible is False  # unticked in the form = hidden
+    assert browser(owner_user).get("/account/").status_code in (200, 302)
+    assert browser().get(url).status_code == 302

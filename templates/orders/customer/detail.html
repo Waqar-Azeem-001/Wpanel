@@ -13,7 +13,7 @@
 <section class="card mb-3"><div class="card-body">
   <h2 class="h5">{% trans "Awaiting payment" %}</h2>
   <p>{% trans "Payment method:" %} <strong>{{ order.payment_method_name }}</strong></p>
-  {% if payment_method and payment_method.instructions %}<p>{{ payment_method.instructions|linebreaksbr }}</p>{% endif %}
+  {% if payment_method and payment_method.how_to_pay %}<p>{{ payment_method.how_to_pay|linebreaksbr }}</p>{% endif %}
   <p class="text-secondary mb-0">{% trans "Quote your invoice number with your payment. Your services are set up once payment is confirmed." %}</p>
 </div></section>
 {% endif %}

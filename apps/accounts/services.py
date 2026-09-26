@@ -53,6 +53,8 @@ def register_user(*, email, password, first_name="", last_name="", phone="", com
     client = create_client_for_registration(user, company_name=company_name, request=request)
     _attribute_referral(user, client, referral_code, request)
     send_verification_email(user)
+    notifications.notify_team("client.new", "view_clients", exclude=user, title=f"New account: {user.email}",
+                              body=client.display_name, link=reverse("clients_staff:detail", args=[client.pk]))
     return user
 
 

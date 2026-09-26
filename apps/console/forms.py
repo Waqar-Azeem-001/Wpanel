@@ -80,6 +80,31 @@ class EmailProviderForm(forms.Form):
         return data
 
 
+class NotificationSettingsForm(forms.Form):
+    reply_to = forms.EmailField(required=False, label="Replies go to",
+                                help_text="When a customer replies to an email, it goes here. Blank = the From address.")
+    alert_emails = forms.CharField(required=False, label="Send team alerts to", widget=forms.Textarea(attrs={"rows": 3}),
+                                   help_text="One address per line. Each gets an email for the alerts ticked below, in addition to "
+                                             "staff notifications.")
+    alert_new_order = forms.BooleanField(required=False, label="A new order is placed")
+    alert_payment_reported = forms.BooleanField(required=False, label="A customer says they have paid")
+    alert_tickets = forms.BooleanField(required=False, label="A new ticket or a customer reply")
+    alert_new_client = forms.BooleanField(required=False, label="Someone creates an account")
+    alert_affiliates = forms.BooleanField(required=False, label="Someone applies to be an affiliate")
+    alert_cancellations = forms.BooleanField(required=False, label="A customer asks to cancel a service")
+
+    def clean_alert_emails(self):
+        from django.core.validators import validate_email
+
+        found = []
+        for raw in (self.cleaned_data.get("alert_emails") or "").replace(",", "\n").splitlines():
+            address = raw.strip().lower()
+            if address:
+                validate_email(address)  # a mistyped address is refused, not silently dropped
+                found.append(address)
+        return "\n".join(dict.fromkeys(found))
+
+
 class TestEmailForm(forms.Form):
     to_email = forms.EmailField(label="Send a test message to")
 

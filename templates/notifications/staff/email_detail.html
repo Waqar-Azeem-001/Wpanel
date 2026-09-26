@@ -21,6 +21,7 @@
       <dt>Created</dt><dd>{{ message.created_at|date:"j M Y H:i" }}</dd>
       <dt>Sent</dt><dd>{{ message.sent_at|date:"j M Y H:i"|default:"&mdash;" }}</dd>
       <dt>Attempts</dt><dd>{{ message.attempts }}{% if message.last_attempt_at %} (last {{ message.last_attempt_at|date:"j M H:i" }}){% endif %}</dd>
+      <dt>Attachment</dt><dd>{{ message.attachment_name|default:"&mdash;" }}</dd>
       <dt>Message-ID</dt><dd class="text-break">{{ message.message_id|default:"&mdash;" }}</dd>
       <dt>Opened</dt><dd>{% if message.is_sensitive %}not tracked{% elif message.opened_at %}{{ message.opened_at|date:"j M Y H:i" }} ({{ message.open_count }} time{{ message.open_count|pluralize }}){% else %}not (yet){% endif %}</dd>
       <dt>Clicked</dt><dd>{% if message.is_sensitive %}not tracked{% elif message.first_clicked_at %}{{ message.first_clicked_at|date:"j M Y H:i" }} ({{ message.click_count }} click{{ message.click_count|pluralize }}){% else %}not (yet){% endif %}</dd>

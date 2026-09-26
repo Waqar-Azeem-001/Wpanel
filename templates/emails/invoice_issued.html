@@ -1,0 +1,5 @@
+{% extends "layouts/email.html" %}
+{% block content %}<p style="margin:0 0 12px 0">Hello {{ invoice.billing_name|default:"there" }},</p>
+<p style="margin:0 0 4px 0">Invoice <strong>{{ invoice.number }}</strong> has been issued{% if invoice.balance_due %}. The amount due is <strong>{{ invoice.currency }} {{ invoice.balance_due }}</strong>, payable by <strong>{{ invoice.due_date|date:"j M Y" }}</strong>{% endif %}.</p>
+{% include "emails/_invoice_table.html" with doc=invoice %}
+<p style="margin:12px 0 0 0;color:#5d6677;font-size:13px">A PDF copy of the invoice is attached.</p>{% endblock %}

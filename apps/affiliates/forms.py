@@ -1,19 +1,36 @@
 from django import forms
 
-from .models import AffiliateSettings, CommissionKind
+from .models import Affiliate, AffiliateSettings, CommissionKind
 
 
-class JoinForm(forms.Form):
+class PayoutAccountForm(forms.Form):
+    """Where a payout is sent: how you want to be paid, and the account. Optional when joining, needed before a payout."""
+
+    payout_method = forms.ChoiceField(choices=[("", "Choose how you want to be paid"), *Affiliate.PayoutMethod.choices], required=False,
+                                      label="How do you want to be paid?")
+    payout_bank_name = forms.CharField(max_length=100, required=False, label="Bank name",
+                                       help_text="For a bank account only.")
+    payout_account_title = forms.CharField(max_length=150, required=False, label="Account title")
+    payout_account_number = forms.CharField(max_length=64, required=False, label="Account number / IBAN / mobile number",
+                                            help_text="The bank account or IBAN, or the JazzCash / EasyPaisa mobile number.")
+    payout_details = forms.CharField(label="Anything else we should know", required=False, max_length=1000,
+                                     widget=forms.Textarea(attrs={"rows": 2}))
+
+    def clean(self):
+        data = super().clean()
+        if data.get("payout_account_number") and not data.get("payout_method"):
+            self.add_error("payout_method", "Choose how you want to be paid.")
+        return data
+
+
+class JoinForm(PayoutAccountForm):
     accept_terms = forms.BooleanField(label="I have read and accept the programme terms")
-    payout_details = forms.CharField(
-        label="Where should we send your payouts? (optional now)", required=False, max_length=1000,
-        widget=forms.Textarea(attrs={"rows": 3}),
-        help_text="For example your bank account or wallet number. You can add or change this later.")
+    field_order = ["accept_terms", "payout_method", "payout_bank_name", "payout_account_title", "payout_account_number",
+                   "payout_details"]
 
 
-class PayoutDetailsForm(forms.Form):
-    payout_details = forms.CharField(label="Payout details", required=False, max_length=1000,
-                                     widget=forms.Textarea(attrs={"rows": 3}))
+class PayoutDetailsForm(PayoutAccountForm):
+    pass
 
 
 class NoteForm(forms.Form):

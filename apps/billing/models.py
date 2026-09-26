@@ -32,9 +32,21 @@ class PaymentMethod(TimeStampedModel):
     customer-facing label plus instructions.
     """
 
+    class Kind(models.TextChoices):
+        BANK = "bank", "Bank account"
+        JAZZCASH = "jazzcash", "JazzCash"
+        EASYPAISA = "easypaisa", "EasyPaisa"
+        OTHER = "other", "Other"
+
     code = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
-    instructions = models.TextField(blank=True, help_text="Shown to the customer at checkout and on their order.")
+    kind = models.CharField(max_length=12, choices=Kind.choices, default=Kind.OTHER)
+    # Where to send the money (your own account, shown to customers): filled in for a bank account or a wallet.
+    bank_name = models.CharField(max_length=100, blank=True)
+    account_title = models.CharField(max_length=150, blank=True)
+    account_number = models.CharField(max_length=64, blank=True, help_text="Account number or IBAN, or the wallet's mobile number.")
+    swift_code = models.CharField(max_length=32, blank=True)
+    instructions = models.TextField(blank=True, help_text="Extra words shown to the customer at checkout, on their order and on invoices.")
     provider = models.ForeignKey("billing.PaymentProvider", null=True, blank=True, on_delete=models.SET_NULL,
                                  related_name="payment_methods",
                                  help_text="Optional. Lets customers pay this way online through the gateway.")
@@ -46,6 +58,22 @@ class PaymentMethod(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+    @property
+    def detail_rows(self):
+        """[(label, value)] of the account details that are filled in, labelled for the kind of account."""
+        number_label = {"jazzcash": "JazzCash number", "easypaisa": "EasyPaisa number"}.get(self.kind, "Account number / IBAN")
+        rows = [("Bank", self.bank_name), ("Account title", self.account_title), (number_label, self.account_number),
+                ("SWIFT / BIC", self.swift_code)]
+        return [(label, value) for label, value in rows if value]
+
+    @property
+    def how_to_pay(self):
+        """Everything a customer needs to pay this way, as plain text: the account details, then the extra instructions."""
+        lines = [f"{label}: {value}" for label, value in self.detail_rows]
+        if self.instructions:
+            lines.append(self.instructions)
+        return "\n".join(lines)
 
 
 class TaxRule(TimeStampedModel):

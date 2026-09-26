@@ -12,7 +12,7 @@ from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text
 
 from . import forms, services
-from .models import TicketAttachment, TicketStatus
+from .models import Ticket, TicketAttachment, TicketStatus
 
 
 def _own_ticket(request, pk):
@@ -62,7 +62,11 @@ def ticket_new(request):
         else:
             messages.success(request, f"Ticket {ticket.reference} opened. We will reply as soon as we can.")
             return redirect("support_customer:ticket", pk=ticket.pk)
-    return render(request, "support/customer/new.html", {"form": form})
+    from . import kb
+
+    recent = list(Ticket.objects.filter(client__in=clients).order_by("-created_at")[:3])
+    articles = list(kb.public_articles().select_related("category")[:4])
+    return render(request, "support/customer/new.html", {"form": form, "recent": recent, "articles": articles})
 
 
 @login_required

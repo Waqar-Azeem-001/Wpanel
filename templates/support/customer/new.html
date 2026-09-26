@@ -1,15 +1,50 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load ui i18n %}
 {% block title %}{% trans "New ticket" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide shop-page{% endblock %}
 {% block content %}
 <p class="mb-2"><a href="{% url 'support_customer:list' %}">&larr; {% trans "Support" %}</a></p>
-<section class="card"><div class="card-body">
-  <h1 class="h4">{% trans "New ticket" %}</h1>
-  <p class="text-secondary">{% trans "Many questions are answered in our" %} <a href="{% url 'help:index' %}">{% trans "help centre" %}</a>. {% trans "If you cannot find what you need, tell us here." %}</p>
-  <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
-    {% include "partials/form.html" %}
-    <div class="d-flex gap-2 align-items-center"><button class="btn btn-primary" type="submit">{% trans "Open ticket" %}</button>
-      <a href="{% url 'support_customer:list' %}">{% trans "Cancel" %}</a></div>
-  </form>
-</div></section>
+<div class="page-head"><h1>{% trans "Open a ticket" %}</h1><p class="page-sub">{% trans "Tell us what you need and we will reply by email and in your account." %}</p></div>
+<div class="shop-layout">
+  <div class="shop-main">
+    <form method="post" enctype="multipart/form-data" novalidate class="shop-card">{% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+      <div class="row g-3">
+        {% for field in form %}{% include "orders/_field.html" with field=field wide=True %}{% endfor %}
+      </div>
+      <div class="d-flex flex-wrap gap-2 align-items-center justify-content-end mt-3">
+        <a href="{% url 'support_customer:list' %}">{% trans "Cancel" %}</a>
+        <button class="btn btn-primary" type="submit">{% trans "Open ticket" %}</button>
+      </div>
+    </form>
+  </div>
+  <aside class="shop-side side-stack" aria-label="{% trans 'Help with tickets' %}">
+    <section class="shop-card">
+      <h2 class="shop-title"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Look for an answer first" %}</h2>
+      <form method="get" action="{% url 'help:index' %}" class="search-line mb-2" role="search">
+        <label class="visually-hidden" for="help_q">{% trans "Search the help centre" %}</label>
+        <input id="help_q" type="search" name="q" placeholder="{% trans 'Search the help centre' %}">
+        <button class="btn btn-outline-primary btn-sm" type="submit">{% trans "Search" %}</button>
+      </form>
+      {% if articles %}<ul class="side-list">{% for article in articles %}<li><a href="{% url 'help:article' article.category.slug article.slug %}">{{ article.title }}</a><small class="text-secondary">{{ article.category.name }}</small></li>{% endfor %}</ul>
+      {% else %}<p class="text-secondary small mb-0">{% trans "Many questions are answered in the" %} <a href="{% url 'help:index' %}">{% trans "help centre" %}</a>.</p>{% endif %}
+    </section>
+    {% if recent %}
+    <section class="shop-card">
+      <h2 class="shop-title"><i class="bi bi-ticket-detailed" aria-hidden="true"></i> {% trans "Your recent tickets" %}</h2>
+      <ul class="side-list">{% for t in recent %}<li><a href="{% url 'support_customer:ticket' t.pk %}">{{ t.reference }} &middot; {{ t.subject|truncatechars:40 }}</a><small>{% status_badge t.status t.get_status_display %}</small></li>{% endfor %}</ul>
+      <a class="small" href="{% url 'support_customer:list' %}">{% trans "See all your tickets" %}</a>
+    </section>
+    {% endif %}
+    <section class="shop-card">
+      <h2 class="shop-title"><i class="bi bi-lightbulb" aria-hidden="true"></i> {% trans "For a faster answer" %}</h2>
+      <ul class="side-list tips">
+        <li>{% trans "Choose the department that matches your question." %}</li>
+        <li>{% trans "Pick the hosting account or domain it is about." %}</li>
+        <li>{% trans "Write what you did, what you expected and what happened, with any error message." %}</li>
+        <li>{% trans "Attach a screenshot if it helps." %}</li>
+      </ul>
+    </section>
+  </aside>
+</div>
 {% endblock %}

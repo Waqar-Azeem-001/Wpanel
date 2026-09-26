@@ -429,6 +429,9 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
                                "coupon": order.coupon_code, "payment_method": method.code}, request=request)
         invoice = create_invoice_for_order(order, actor=actor)
         _notify_order_placed(actor, order, method, invoice)
+        notifications.notify_team("order.new", "view_orders", exclude=actor, title=f"New order {order.reference}",
+                                  body=f"{order.client.display_name}: {order.currency} {order.total}, {method.name}.",
+                                  link=reverse("orders_staff:detail", args=[order.pk]))
     order.refresh_from_db()  # a zero-total order is settled (and marked paid) as its invoice is issued
     return order
 

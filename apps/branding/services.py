@@ -28,6 +28,7 @@ from .models import BrandSettings
 logger = logging.getLogger(__name__)
 
 CACHE_KEY = "branding.settings.v1"
+MENU_CACHE_KEY = "branding.menu.v1"
 TEXT_FIELDS = ("site_name", "primary_color", "accent_color", "support_email", "footer_text", "date_format",
                "money_format")
 MIN_CONTRAST = 4.5
@@ -210,3 +211,73 @@ def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=Fa
         cache.delete(CACHE_KEY)
         audit.record("brand.updated", actor=actor, target=row, metadata={"changed": changed}, request=request)
     return row
+
+
+# --- The customer menu (Super Admin) -------------------------------------------------------------------------------------------
+
+def menu_settings(area="client"):
+    """{key: (label, is_visible, sort_order)} for the entries a Super Admin changed. Cached; cleared on every save."""
+    from .models import MenuSetting
+
+    try:
+        cached = cache.get(MENU_CACHE_KEY)
+        if cached is None:
+            cached = {}
+            for row in MenuSetting.objects.all():
+                cached.setdefault(row.area, {})[row.key] = (row.label, row.is_visible, row.sort_order)
+            cache.set(MENU_CACHE_KEY, cached, 300)
+        return cached.get(area, {})
+    except Exception:  # noqa: BLE001 - a menu must never fail because its settings could not be read
+        logger.exception("Could not read the menu settings; the standard menu is used")
+        return {}
+
+
+def save_menu(actor, rows, *, area="client", request=None):
+    """
+    ``rows``: ``{key: {"label", "visible", "order"}}``. Only entries that differ from the standard are stored. The Overview entry cannot be
+    hidden (a customer must always have a way home). Needs ``manage_settings``.
+    """
+    from django.db import transaction
+
+    from apps.audit import services as audit
+
+    from .models import MenuSetting
+
+    _require_settings(actor)
+    changed = 0
+    with transaction.atomic():
+        for key, row in rows.items():
+            label = (row.get("label") or "").strip()[:60]
+            visible = bool(row.get("visible")) or key == "client.home"
+            order = row.get("order")
+            if label or not visible or order is not None:
+                MenuSetting.objects.update_or_create(area=area, key=key, defaults={"label": label, "is_visible": visible,
+                                                                                     "sort_order": order})
+                changed += 1
+            else:
+                MenuSetting.objects.filter(area=area, key=key).delete()
+    cache.delete(MENU_CACHE_KEY)
+    audit.record("menu.saved", actor=actor, metadata={"area": area, "customised": changed}, request=request)
+    return changed
+
+
+def reset_menu(actor, *, area="client", request=None):
+    from apps.audit import services as audit
+
+    from .models import MenuSetting
+
+    _require_settings(actor)
+    MenuSetting.objects.filter(area=area).delete()
+    cache.delete(MENU_CACHE_KEY)
+    audit.record("menu.reset", actor=actor, metadata={"area": area}, request=request)
+
+
+def _require_settings(actor):
+    from rest_framework import status
+
+    from apps.accounts.roles import perm
+    from apps.core.exceptions import ServiceError
+
+    if not actor.has_perm(perm("manage_settings")):
+        raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)

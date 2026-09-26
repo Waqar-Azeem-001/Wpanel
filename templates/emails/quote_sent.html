@@ -1,0 +1,5 @@
+{% extends "layouts/email.html" %}
+{% block content %}<p style="margin:0 0 12px 0">Hello {{ quote.billing_name|default:"there" }},</p>
+<p style="margin:0 0 4px 0">We have prepared quote <strong>{{ quote.number }}</strong> for you{% if quote.valid_until %}. It is valid until <strong>{{ quote.valid_until|date:"j M Y" }}</strong>{% endif %}. You can review, accept or decline it online.</p>
+{% include "emails/_invoice_table.html" with doc=quote %}
+<p style="margin:12px 0 0 0;color:#5d6677;font-size:13px">A PDF copy of the quote is attached.</p>{% endblock %}

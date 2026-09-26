@@ -12,6 +12,13 @@ KNOWN_RESOURCE_LIMITS = (
     "subdomains", "parked_domains", "addon_domains", "websites",
 )
 
+# What each known key is called on screen; a limit with any other key is shown under its own title.
+LIMIT_LABELS = {
+    "disk_mb": "Disk space (MB)", "bandwidth_mb": "Bandwidth (MB)", "email_accounts": "Email accounts", "databases": "Databases",
+    "ftp_accounts": "FTP accounts", "subdomains": "Subdomains", "parked_domains": "Parked domains",
+    "addon_domains": "Addon domains", "websites": "Websites",
+}
+
 
 class ProductType(models.TextChoices):
     """
@@ -228,6 +235,12 @@ class Product(CatalogItem):
                                        related_name="upsold_from", help_text="A bigger plan to suggest in the cart.")
     recommended_addons = models.ManyToManyField("products.Addon", blank=True, related_name="recommended_for",
                                                 help_text="Add-ons to highlight with this plan.")
+
+    @property
+    def limit_items(self):
+        """[(title, value)] for showing the limits: an empty limit reads Unlimited."""
+        limits = self.resource_limits if isinstance(self.resource_limits, dict) else {}
+        return [(LIMIT_LABELS.get(key, key), "Unlimited" if value is None else value) for key, value in limits.items()]
 
     def clean(self):
         if self.upsell_product_id and self.pk and self.upsell_product_id == self.pk:

@@ -5,14 +5,19 @@ from django import forms
 
 from apps.core import currencies
 
-from .models import DiscountType
+from .models import DiscountType, PaymentMethod
 
 
 class PaymentMethodForm(forms.Form):
-    code = forms.SlugField(max_length=50, help_text='Short identifier, e.g. "bank-transfer".')
-    name = forms.CharField(max_length=100)
-    instructions = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}),
-                                   help_text="Shown to the customer at checkout and on their order.")
+    kind = forms.ChoiceField(choices=PaymentMethod.Kind.choices, initial=PaymentMethod.Kind.BANK, label="Type", required=False)
+    name = forms.CharField(max_length=100, help_text='What the customer sees, e.g. "Meezan Bank" or "JazzCash".')
+    bank_name = forms.CharField(max_length=100, required=False, label="Bank name")
+    account_title = forms.CharField(max_length=150, required=False, label="Account title")
+    account_number = forms.CharField(max_length=64, required=False, label="Account number / IBAN / mobile number")
+    swift_code = forms.CharField(max_length=32, required=False, label="SWIFT / BIC code")
+    instructions = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}), label="Payment note",
+                                   help_text="e.g. Please include the invoice number as the payment reference.")
+    code = forms.SlugField(max_length=50, required=False, help_text="Leave blank to make it from the name.")
     sort_order = forms.IntegerField(min_value=0, initial=0)
     provider = forms.ModelChoiceField(queryset=None, required=False, empty_label="None (offline payment)",
                                       help_text="Lets customers pay this way online.")

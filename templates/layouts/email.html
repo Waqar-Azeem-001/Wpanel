@@ -1,11 +1,27 @@
-{# HTML email shell: table-based with inline styles (mail programs ignore stylesheets). Rendered by notifications.html_from_text. #}
+{# HTML email shell: table-based with inline styles (mail programs ignore stylesheets). A message is this shell around a heading, content and an optional button. #}
 <!doctype html>
-<html lang="en"><body style="margin:0;padding:0;background:#f5f6f8">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f6f8"><tr><td align="center" style="padding:24px 12px">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1d2330">
-    <tr><td style="background:{{ brand.primary }};padding:16px 24px;color:#ffffff;font-size:18px;font-weight:bold">{% if logo_url %}<img src="{{ logo_url }}" alt="" height="32" style="vertical-align:middle;margin-right:8px">{% endif %}{{ brand.name }}</td></tr>
-    <tr><td style="padding:24px;font-size:15px;line-height:1.5">{{ body|safe }}</td></tr>
-    <tr><td style="padding:16px 24px;background:#f5f6f8;color:#5d6677;font-size:12px">{% if brand.footer_text %}{{ brand.footer_text }}{% else %}{{ brand.name }}{% endif %}{% if brand.support_email %}<br>{{ brand.support_email }}{% endif %}</td></tr>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ heading|default:brand.name }}</title></head>
+<body style="margin:0;padding:0;background:#f3f4fa">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4fa"><tr><td align="center" style="padding:28px 12px">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;font-family:Arial,Helvetica,sans-serif;color:#1d2330">
+    <tr><td style="padding:0 8px 18px 8px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="font-size:20px;font-weight:bold;color:{{ brand.primary }}">{% if logo_url %}<img src="{{ logo_url }}" alt="{{ brand.name }}" height="34" style="vertical-align:middle;border:0">{% else %}{{ brand.name }}{% endif %}</td>
+        {% if brand.support_email %}<td align="right" style="font-size:12px;color:#5d6677">{{ brand.support_email }}</td>{% endif %}
+      </tr></table>
+    </td></tr>
+    <tr><td style="background:#ffffff;border-radius:14px;padding:32px 32px 28px 32px;border:1px solid #e6e8f2">
+      {% if heading %}<h1 style="margin:0 0 18px 0;font-size:26px;line-height:1.25;color:#14213d;font-weight:bold">{{ heading }}</h1>{% endif %}
+      <div style="font-size:15px;line-height:1.6;color:#2b3345">{% block content %}{{ body|safe }}{% endblock %}</div>
+      {% if cta_url %}<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 6px 0"><tr><td style="background:{{ brand.primary }};border-radius:8px"><a href="{{ cta_url }}" style="display:inline-block;padding:13px 26px;color:#ffffff;font-size:15px;font-weight:bold;text-decoration:none">{{ cta_label|default:"Open" }}</a></td></tr></table>
+      <p style="margin:10px 0 0 0;font-size:12px;color:#7a8296;word-break:break-all">If the button does not work, copy this address into your browser:<br>{{ cta_url }}</p>{% endif %}
+    </td></tr>
+    <tr><td style="padding:22px 8px 0 8px;font-size:12px;line-height:1.6;color:#5d6677">
+      <strong style="color:#14213d;font-size:14px">{{ brand.name }}</strong><br>
+      You have received this email because you have an account with {{ brand.name }}, to keep you informed about your orders, invoices and services.
+      {% if brand.support_email %}<br>Questions? Reply to this email or write to {{ brand.support_email }}.{% endif %}
+      {% if brand.footer_text %}<br>{{ brand.footer_text }}{% endif %}
+    </td></tr>
   </table>
 </td></tr></table>
 </body></html>

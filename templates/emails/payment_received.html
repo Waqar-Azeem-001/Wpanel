@@ -1,0 +1,6 @@
+{% extends "layouts/email.html" %}
+{% block content %}<p style="margin:0 0 12px 0">Hello {{ invoice.billing_name|default:"there" }},</p>
+<p style="margin:0 0 12px 0">We have received your payment of <strong>{{ payment.currency }} {{ payment.amount }}</strong> for invoice <strong>{{ invoice.number }}</strong>{% if payment.method_name %} ({{ payment.method_name }}){% endif %}.</p>
+{% if invoice.balance_due %}<p style="margin:0 0 12px 0">The remaining balance is <strong>{{ invoice.currency }} {{ invoice.balance_due }}</strong>.</p>
+{% else %}<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px 0"><tr><td style="background:#e7f5ec;color:#0f6e3f;font-weight:bold;font-size:13px;padding:6px 14px;border-radius:6px">PAID IN FULL</td></tr></table>{% endif %}
+<p style="margin:0;color:#5d6677;font-size:13px">A PDF copy of the invoice{% if not invoice.balance_due %}, marked paid,{% endif %} is attached. Thank you for your business.</p>{% endblock %}

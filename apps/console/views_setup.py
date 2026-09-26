@@ -93,9 +93,16 @@ def _provider_initial(provider):
 
 
 @portal_permission_required(VIEW_PROVIDERS)
-def email_providers(request, form=None, editing=None):
+def email_providers(request, form=None, editing=None, kwargs_form=None):
     editing = editing or EmailProvider.objects.filter(pk=request.GET.get("edit") or 0).first()
+    from apps.notifications.models import NotificationSettings
+
+    current = NotificationSettings.load()
+    active = EmailProvider.objects.filter(is_active=True).first()
     return render(request, "console/email_providers.html", {
+        "settings_form": kwargs_form or forms.NotificationSettingsForm(initial={
+            f: getattr(current, f) for f in forms.NotificationSettingsForm.base_fields}),
+        "active_provider": active,
         "providers": EmailProvider.objects.order_by("-is_active", "name"), "editing": editing,
         "form": form or forms.EmailProviderForm(initial=_provider_initial(editing) if editing else None),
         "test_form": forms.TestEmailForm(), "can_manage": request.user.has_perm(perm("manage_providers"))})
@@ -117,6 +124,27 @@ def email_provider_save(request):
             messages.success(request, f"{provider.name} saved{' and now in use' if provider.is_active else ''}.")
             return redirect("console:email_providers")
     return email_providers(request, form=form, editing=editing)
+
+
+@require_POST
+@portal_permission_required(perm("manage_providers"))
+def email_settings_save(request):
+    """Where replies go and who gets a copy of the team alerts (Super Admin or anyone who manages providers)."""
+    from apps.audit import services as audit
+    from apps.notifications.models import NotificationSettings
+
+    form = forms.NotificationSettingsForm(request.POST)
+    if not form.is_valid():
+        return email_providers(request, kwargs_form=form)
+    settings_row = NotificationSettings.load()
+    changed = sorted(k for k, v in form.cleaned_data.items() if getattr(settings_row, k) != v)
+    for key, value in form.cleaned_data.items():
+        setattr(settings_row, key, value)
+    settings_row.save()
+    if changed:
+        audit.record("notification_settings.updated", actor=request.user, metadata={"fields": changed}, request=request)
+    messages.success(request, "Email settings saved.")
+    return redirect("console:email_providers")
 
 
 @require_POST

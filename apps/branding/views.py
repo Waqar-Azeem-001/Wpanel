@@ -81,3 +81,61 @@ def settings_page(request):
                 return redirect("brand_staff:settings")
     return render(request, "branding/settings.html", {"form": form, "can_manage": can_manage,
                                                       "current": services.get(), "section": "brand"})
+
+
+def _menu_rows():
+    """Every entry of the customer menu with what a Super Admin changed: [{key, label, standard, indent, visible, order}]."""
+    from apps.core import navigation
+    from apps.products.models import CategoryKind, StoreCategory
+
+    chosen = services.menu_settings("client")
+    rows = []
+
+    def add(key, standard, indent, position):
+        label, visible, order = chosen.get(key, ("", True, None))
+        rows.append({"key": key, "standard": standard, "label": label, "indent": indent, "visible": visible,
+                     "order": order if order is not None else position * 10, "locked": key == "client.home"})
+
+    tops = [e for e in navigation.ITEMS if "client" in e.areas and not e.parent and e.position == "main"
+            and e.requires in ("", "client_contact")]
+    for position, top in enumerate(tops):
+        add(top.key, str(top.label).replace("{name}", "").strip() or "Overview", 0, position)
+        kids = [c for c in navigation.ITEMS if c.parent == top.key and "client" in c.areas]
+        for sub, child in enumerate(kids):
+            add(child.key, str(child.label), 1, sub)
+        if top.key == "client.services":
+            for sub, category in enumerate(StoreCategory.objects.filter(is_active=True, kind=CategoryKind.PLANS).order_by("sort_order", "name"),
+                                            start=len(kids)):
+                add(f"client.services.cat.{category.slug}", f"{category.name} (store category)", 1, sub)
+    return rows
+
+
+def menu_page(request):
+    """Super Admin: which entries of the customer menu are shown, what they are called and in what order."""
+    if not request.user.is_authenticated:
+        return redirect_to_login(request.get_full_path())
+    if not request.user.has_perm(perm("view_settings")):
+        raise PermissionDenied
+    can_manage = request.user.has_perm(perm("manage_settings"))
+    if request.method == "POST":
+        if not can_manage:
+            raise PermissionDenied
+        try:
+            if request.POST.get("do") == "reset":
+                services.reset_menu(request.user, request=request)
+                messages.success(request, "The customer menu is back to the standard.")
+            else:
+                rows = {}
+                for row in _menu_rows():
+                    key = row["key"]
+                    raw_order = request.POST.get(f"order_{key}", "").strip()
+                    order = int(raw_order) if raw_order.isdigit() and int(raw_order) < 32000 else None
+                    standard_order = row["order"] if key not in services.menu_settings("client") else None
+                    rows[key] = {"label": request.POST.get(f"label_{key}", ""), "visible": request.POST.get(f"visible_{key}") == "on",
+                                 "order": None if order is not None and order == standard_order else order}
+                services.save_menu(request.user, rows, request=request)
+                messages.success(request, "The customer menu was saved.")
+        except ACTION_ERRORS as exc:
+            messages.error(request, str(getattr(exc, "message", exc)))
+        return redirect("brand_staff:menu")
+    return render(request, "branding/menu.html", {"rows": _menu_rows(), "can_manage": can_manage})

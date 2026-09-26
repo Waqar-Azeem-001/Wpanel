@@ -116,7 +116,10 @@ def get_affiliate(user):
     return Affiliate.objects.filter(user=user).first() if user and user.is_authenticated else None
 
 
-def enrol(user, *, accept_terms, payout_details="", request=None):
+PAYOUT_FIELDS = ("payout_method", "payout_bank_name", "payout_account_title", "payout_account_number", "payout_details")
+
+
+def enrol(user, *, accept_terms, payout_details="", payout=None, request=None):
     """A signed-in person joins the programme. Active at once, or awaiting approval if the programme asks for it."""
     if not (user and user.is_authenticated):
         raise _denied()
@@ -135,6 +138,7 @@ def enrol(user, *, accept_terms, payout_details="", request=None):
             with transaction.atomic():
                 affiliate = Affiliate.objects.create(
                     user=user, code=_new_code(), payout_details=payout_details, terms_accepted_at=timezone.now(),
+                    **{k: (payout or {}).get(k, "") for k in PAYOUT_FIELDS if k != "payout_details"},
                     status=AffiliateStatus.PENDING if config.require_approval else AffiliateStatus.ACTIVE)
         except IntegrityError:  # two requests at once, or a code collision: the caller can simply retry
             raise ServiceError("You are already part of the affiliate programme.", code="already_affiliate")
@@ -142,8 +146,9 @@ def enrol(user, *, accept_terms, payout_details="", request=None):
                      metadata={"status": affiliate.status, "code": affiliate.code}, request=request)
     if affiliate.status == AffiliateStatus.PENDING:
         link = reverse("affiliates_staff:affiliate", args=[affiliate.pk])
-        notifications.notify_team("affiliate.applied", "manage_affiliates", title="New affiliate application",
-                                  body=f"{user.email} wants to join the affiliate programme.", link=link)
+        notifications.notify_team("affiliate.applied", "view_affiliates", title="New affiliate application",
+                                  body=f"{user.email} wants to join the affiliate programme. Approve or decline it under "
+                                       "People > Affiliates.", link=link)
     return affiliate
 
 
@@ -226,6 +231,22 @@ def set_code(actor, affiliate, code, *, request=None):
     affiliate.save(update_fields=["code", "updated_at"])
     audit.record("affiliate.code_changed", actor=actor, target=affiliate, metadata={"from": previous, "to": code},
                  request=request)
+    return affiliate
+
+
+def set_payout_account(actor, affiliate, data, *, request=None):
+    """The affiliate (or staff who manage affiliates) says where payouts go: the method, the account and a note."""
+    if not (actor and actor.is_authenticated and (actor.pk == affiliate.user_id or can_manage(actor))):
+        raise _denied()
+    clean = {k: (data.get(k) or "").strip() for k in PAYOUT_FIELDS}
+    if len(clean["payout_details"]) > 1000:
+        raise ValidationError("Payout details are too long.")
+    if clean["payout_account_number"] and not clean["payout_method"]:
+        raise ServiceError("Choose how you want to be paid.", code="payout_method_required")
+    for key, value in clean.items():
+        setattr(affiliate, key, value)
+    affiliate.save(update_fields=[*PAYOUT_FIELDS, "updated_at"])
+    audit.record("affiliate.payout_details_changed", actor=actor, target=affiliate, request=request)
     return affiliate
 
 

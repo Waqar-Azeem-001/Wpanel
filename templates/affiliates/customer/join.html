@@ -13,7 +13,14 @@
     Commissions are approved after {{ config.hold_days }} days and paid out once you have at least {{ config.minimum_payout }}.</p>
   {% if config.program_terms %}<h3 class="h6">{% trans "Terms" %}</h3><p>{{ config.program_terms|linebreaksbr }}</p>{% endif %}
   <form method="post" novalidate>{% csrf_token %}
-    {% include "partials/form.html" %}
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.payout_method wide=True %}
+      {% include "orders/_field.html" with field=form.payout_bank_name %}
+      {% include "orders/_field.html" with field=form.payout_account_title %}
+      {% include "orders/_field.html" with field=form.payout_account_number wide=True %}
+      {% include "orders/_field.html" with field=form.payout_details wide=True %}
+      {% include "orders/_field.html" with field=form.accept_terms wide=True %}
+    </div>
     <button class="btn btn-primary" type="submit">{% if config.require_approval %}{% trans "Apply to join" %}{% else %}{% trans "Join now" %}{% endif %}</button>
   </form>
   {% if config.require_approval %}<p class="text-secondary mt-3 mb-0">{% trans "Applications are reviewed by our team." %}</p>{% endif %}
