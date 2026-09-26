@@ -144,8 +144,73 @@ class CatalogItem(TimeStampedModel):
     def __str__(self):
         return self.name
 
+    @property
+    def price_summary(self):
+        """The lowest active price in words ("PKR 100.00 monthly"), or "no price yet": what staff and shoppers see beside a name."""
+        from django.conf import settings
+
+        rows = [p for p in self.prices.all() if p.is_active]
+        if not rows:
+            return "no price yet"
+        low = min(rows, key=lambda p: p.price)
+        cycle = "one-time" if low.billing_cycle == BillingCycle.ONE_TIME else low.get_billing_cycle_display().lower()
+        return f"{settings.STORE_CURRENCY} {low.price} {cycle}"
+
+
+CATEGORY_ICONS = (
+    ("bi-hdd-stack", "Server stack"), ("bi-wordpress", "WordPress"), ("bi-briefcase", "Briefcase"), ("bi-bag-check", "Shop bag"),
+    ("bi-people", "People"), ("bi-cpu", "Chip"), ("bi-server", "Server"), ("bi-shield-lock", "Shield"), ("bi-eye-slash", "Privacy"),
+    ("bi-globe2", "Globe"), ("bi-cloud", "Cloud"), ("bi-lightning-charge", "Lightning"), ("bi-box-seam", "Box"),
+    ("bi-envelope", "Email"), ("bi-cart", "Cart"), ("bi-star", "Star"), ("bi-rocket", "Rocket"), ("bi-database", "Database"),
+    ("bi-code-slash", "Code"), ("bi-tools", "Tools"),
+)
+
+
+class CategoryKind(models.TextChoices):
+    PLANS = "plans", "Plans (hosting, servers)"
+    ADDONS = "addons", "Add-ons sold on their own (SSL, privacy...)"
+    DOMAINS = "domains", "Domain search"
+
+
+class StoreCategory(TimeStampedModel):
+    """
+    A heading on the store (WordPress hosting, VPS, SSL...). Staff add, rename, reorder and hide them; products and add-ons are put
+    in one. ``group`` is the bigger heading a category sits under on the store page (Hosting, Servers, Security and domains).
+    """
+
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=60, unique=True)
+    short_name = models.CharField(max_length=40, blank=True, help_text="A shorter label for the category bar. Blank = the name.")
+    blurb = models.CharField(max_length=200, blank=True, help_text="One line under the name.")
+    icon = models.CharField(max_length=40, choices=CATEGORY_ICONS, default="bi-box-seam")
+    group = models.CharField(max_length=60, default="Hosting", help_text="The heading it sits under, e.g. Hosting or Servers.")
+    kind = models.CharField(max_length=16, choices=CategoryKind.choices, default=CategoryKind.PLANS)
+    sort_order = models.PositiveSmallIntegerField(default=100, help_text="Lower numbers come first.")
+    is_active = models.BooleanField(default=True, help_text="Hidden categories are not shown on the store.")
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+        verbose_name_plural = "store categories"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def label(self):
+        return self.short_name or self.name
+
+    @property
+    def url_name(self):
+        return "domains_public:search" if self.kind == CategoryKind.DOMAINS else ""
+
+    @property
+    def addon_kind(self):
+        return self.kind == CategoryKind.ADDONS
+
 
 class Product(CatalogItem):
+    category = models.ForeignKey(StoreCategory, null=True, blank=True, on_delete=models.SET_NULL, related_name="products",
+                                 help_text="Where it is listed on the store.")
     type = models.CharField(max_length=32, choices=ProductType.choices, db_index=True)
     resource_limits = models.JSONField(
         default=dict, blank=True,
@@ -186,6 +251,8 @@ class AddonKind(models.TextChoices):
 
 
 class Addon(CatalogItem):
+    category = models.ForeignKey(StoreCategory, null=True, blank=True, on_delete=models.SET_NULL, related_name="addons",
+                                 help_text="Only needed to list it on the store as a product of its own (SSL, WHOIS privacy).")
     kind = models.CharField(max_length=20, choices=AddonKind.choices, default=AddonKind.GENERAL, db_index=True)
 
     @property

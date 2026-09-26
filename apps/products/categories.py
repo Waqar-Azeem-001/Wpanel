@@ -1,68 +1,44 @@
 """
-The storefront's categories: what a visitor can shop for, in the order and grouping they expect.
+The storefront's categories: what a visitor can shop for, in the order and grouping staff chose.
 
-A category is a view over the catalogue, not stored data: hosting categories list the active plans of one or more product types,
-the SSL and WHOIS categories list the active add-ons of that kind, and Domains leads to the domain search. Staff fill a category
-by creating products or add-ons of the right type or kind; an empty one says so instead of pretending.
+Categories are data (``StoreCategory``): staff add, rename, reorder and hide them under Products › Categories, and put each product
+or add-on in one. A plans category lists the active products in it, an add-ons category (SSL, WHOIS privacy) the active add-ons in
+it, and a domains category leads to the domain search. An empty one says so instead of pretending. A product with no category is
+still listed, under "More plans", so nothing is ever hidden by forgetting to file it.
 """
-from dataclasses import dataclass, replace
-
 from django.utils.translation import gettext_lazy as _
 
-from .models import Addon, AddonKind, CatalogStatus, Product, ProductType
+from .models import Addon, CatalogStatus, CategoryKind, Product, StoreCategory
+
+# What a new product or add-on is filed under when staff do not choose: its type or kind, matched to the standard categories.
+DEFAULT_BY_TYPE = {"wordpress_hosting": "wordpress", "shared_hosting": "shared", "business_hosting": "business",
+                   "ecommerce_hosting": "ecommerce", "reseller_hosting": "reseller", "vps": "vps", "dedicated_server": "dedicated"}
+DEFAULT_BY_KIND = {"ssl": "ssl", "whois_privacy": "whois"}
 
 
-@dataclass(frozen=True)
-class Category:
-    key: str
-    label: object
-    blurb: object
-    icon: str
-    group: str
-    product_types: tuple = ()
-    addon_kind: str = ""
-    url_name: str = ""  # a category that is a page of its own (Domains)
-    short: object = ""  # the label in the one-row category bar
+def default_for_type(product_type):
+    return StoreCategory.objects.filter(slug=DEFAULT_BY_TYPE.get(product_type, ""), is_active=True).first()
 
 
-HOSTING, SERVERS, SECURITY = _("Hosting"), _("Servers"), _("Security and domains")
+def default_for_kind(addon_kind):
+    return StoreCategory.objects.filter(slug=DEFAULT_BY_KIND.get(addon_kind, ""), is_active=True).first()
 
-_ALL = (
-    Category("wordpress", _("WordPress hosting"), _("Tuned for WordPress, ready in minutes."), "bi-wordpress", HOSTING,
-             product_types=(ProductType.WORDPRESS_HOSTING,)),
-    Category("shared", _("Shared hosting"), _("Everything a first website needs, at the lowest price."), "bi-hdd-stack", HOSTING,
-             product_types=(ProductType.SHARED_HOSTING,)),
-    Category("business", _("Business hosting"), _("More power and headroom for a growing business site."), "bi-briefcase", HOSTING,
-             product_types=(ProductType.BUSINESS_HOSTING,)),
-    Category("ecommerce", _("E-commerce hosting"), _("Built for online shops: fast pages, safe checkouts."), "bi-bag-check", HOSTING,
-             product_types=(ProductType.ECOMMERCE_HOSTING,)),
-    Category("reseller", _("Reseller hosting"), _("Host your own clients under your brand."), "bi-people", HOSTING,
-             product_types=(ProductType.RESELLER_HOSTING,)),
-    Category("vps", _("VPS servers"), _("Your own virtual server with full control."), "bi-cpu", SERVERS,
-             product_types=(ProductType.VPS,)),
-    Category("dedicated", _("Dedicated servers"), _("A whole machine, only yours."), "bi-server", SERVERS,
-             product_types=(ProductType.DEDICATED_SERVER,)),
-    Category("ssl", _("SSL certificates"), _("Encrypt your site and show the padlock."), "bi-shield-lock", SECURITY,
-             addon_kind=AddonKind.SSL),
-    Category("whois", _("WHOIS privacy"), _("Keep your personal details out of the public domain record."), "bi-eye-slash", SECURITY,
-             addon_kind=AddonKind.WHOIS_PRIVACY),
-    Category("domains", _("Domains"), _("Search, register or transfer a domain name."), "bi-globe2", SECURITY,
-             url_name="domains_public:search"),
-)
-_SHORT = {"wordpress": _("WordPress"), "shared": _("Shared"), "business": _("Business"), "ecommerce": _("E-commerce"),
-          "reseller": _("Reseller"), "vps": _("VPS"), "dedicated": _("Dedicated"), "ssl": _("SSL"),
-          "whois": _("WHOIS privacy"), "domains": _("Domains")}
-CATEGORIES = tuple(replace(c, short=_SHORT.get(c.key, c.label)) for c in _ALL)
-BY_KEY = {c.key: c for c in CATEGORIES}
-GROUPS = tuple(dict.fromkeys(c.group for c in CATEGORIES))
+
+def active():
+    """The categories shown on the store, in order."""
+    return list(StoreCategory.objects.filter(is_active=True).order_by("sort_order", "name"))
+
+
+def get(slug):
+    return StoreCategory.objects.filter(slug=slug, is_active=True).first()
 
 
 def items(category):
     """The active products (or add-ons) of a category, cheapest first."""
-    if category.product_types:
-        found = list(Product.objects.filter(status=CatalogStatus.ACTIVE, type__in=category.product_types).prefetch_related("prices"))
-    elif category.addon_kind:
-        found = list(Addon.objects.filter(status=CatalogStatus.ACTIVE, kind=category.addon_kind).prefetch_related("prices"))
+    if category.kind == CategoryKind.PLANS:
+        found = list(Product.objects.filter(status=CatalogStatus.ACTIVE, category=category).prefetch_related("prices"))
+    elif category.kind == CategoryKind.ADDONS:
+        found = list(Addon.objects.filter(status=CatalogStatus.ACTIVE, category=category).prefetch_related("prices"))
     else:
         return []
 
@@ -78,9 +54,22 @@ def lowest_price(entry):
     return min(prices, key=lambda p: p.price) if prices else None
 
 
+def uncategorised():
+    """Active products nobody filed under a category (or filed under a hidden one): shown as "More plans"."""
+    hidden = StoreCategory.objects.filter(is_active=False).values_list("pk", flat=True)
+    found = Product.objects.filter(status=CatalogStatus.ACTIVE).prefetch_related("prices")
+    found = [p for p in found if p.category_id is None or p.category_id in set(hidden)]
+    return sorted(found, key=lambda p: (min([x.price for x in p.prices.all() if x.is_active] or [float("inf")]), p.name))
+
+
 def sections():
-    """[(group, [(category, items)])] for the whole storefront."""
-    out = {group: [] for group in GROUPS}
-    for category in CATEGORIES:
-        out[category.group].append((category, items(category)))
+    """[(group, [(category, items)])] for the whole store, groups in the order of their first category."""
+    out = {}
+    for category in active():
+        out.setdefault(category.group, []).append((category, items(category)))
+    extra = uncategorised()
+    if extra:
+        more = StoreCategory(name=str(_("More plans")), slug="more", short_name="", blurb="", icon="bi-box-seam",
+                             group=str(_("More")), kind=CategoryKind.PLANS)
+        out.setdefault(more.group, []).append((more, extra))
     return list(out.items())

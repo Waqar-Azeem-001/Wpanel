@@ -2,23 +2,40 @@
 {% block title %}Reports · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Reports</h1><p class="page-sub">Figures from the same records the lists use.</p></div>
-{% if headline %}
-<div class="stat-tiles">
-  {% for label, value, slug in headline %}
-  <div class="stat-tile"><strong>{{ value }}</strong><span><a href="{% url 'reports_staff:report' slug %}">{{ label }}</a></span></div>
-  {% endfor %}
-</div>
-{% endif %}
-{% for title, reports in groups %}
-<section class="card"><div class="card-body">
-  <h2>{{ title }}</h2>
-  <ul class="ps-3">
-    {% for report in reports %}<li><a href="{% url 'reports_staff:report' report.slug %}">{{ report.title }}</a> <small class="text-secondary">{{ report.description }}</small></li>{% endfor %}
-  </ul></div>
+<div class="page-head"><h1>Reports</h1><p class="page-sub">The numbers now, and every report behind them. Figures come from the same records the lists use.</p></div>
+
+{% for title, tiles in sections %}
+<section class="rep-section" aria-labelledby="k-{{ forloop.counter }}">
+  <h2 id="k-{{ forloop.counter }}" class="rep-heading">{{ title }}</h2>
+  <div class="kpi-strip">
+    {% for t in tiles %}
+    <a class="kpi" href="{% url 'reports_staff:report' t.slug %}">
+      <span class="kpi-icon" aria-hidden="true"><i class="bi {{ t.icon }}"></i></span>
+      <span class="kpi-label">{{ t.label }}</span>
+      <strong class="kpi-value{% if t.kind == 'money' %} is-money{% endif %}">{{ t.shown }}</strong>
+      <span class="kpi-sub">{{ t.sub|default:"&nbsp;" }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+{% for title, entries in groups %}
+<section class="rep-section" aria-labelledby="g-{{ forloop.counter }}">
+  <h2 id="g-{{ forloop.counter }}" class="rep-heading">{{ title }}</h2>
+  <div class="rep-grid">
+    {% for entry in entries %}
+    <a class="rep-card" href="{% url 'reports_staff:report' entry.report.slug %}">
+      <span class="chip" aria-hidden="true"><i class="bi {{ entry.icon }}"></i></span>
+      <strong>{{ entry.report.title }}</strong>
+      <span class="text-secondary">{{ entry.report.description }}</span>
+      <span class="rep-open">Open <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+    </a>
+    {% endfor %}
+  </div>
 </section>
 {% empty %}
 <p class="text-secondary">There are no reports you can view.</p>
 {% endfor %}
-<p class="text-secondary">Every report can be downloaded as CSV, XLSX or PDF. Downloads are recorded in the audit log.</p>
+<p class="text-secondary small">Every report can be downloaded as CSV, XLSX or PDF. Downloads are recorded in the audit log. Money figures are in the store currency.</p>
 {% endblock %}

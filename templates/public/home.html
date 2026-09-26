@@ -40,9 +40,9 @@
   <p class="text-secondary mb-4">{% trans "Hosting for every kind of site, servers when you outgrow it, and the security and domains that go with it." %}</p>
   <div class="cat-grid">
     {% for tile in tiles %}
-    <a class="cat-tile" href="{% if tile.category.url_name %}{% url tile.category.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ tile.category.key }}{% endif %}">
+    <a class="cat-tile" href="{% if tile.category.url_name %}{% url tile.category.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ tile.category.slug }}{% endif %}">
       <span class="chip" aria-hidden="true"><i class="bi {{ tile.category.icon }}"></i></span>
-      <strong>{{ tile.category.label }}</strong>
+      <strong>{{ tile.category.name }}</strong>
       <span class="text-secondary">{{ tile.category.blurb }}</span>
       <span class="cat-from">{% if tile.from %}{% trans "From" %} {{ tile.from.price|money:STORE_CURRENCY }}{% elif tile.category.url_name %}{% trans "Search now" %}{% else %}{% trans "Coming soon" %}{% endif %}</span>
     </a>

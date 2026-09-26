@@ -28,6 +28,10 @@ class StaffClientForm(forms.Form):
 class NewClientForm(StaffClientForm):
     owner_email = forms.EmailField(required=False, help_text="Owner login. Defaults to the client email. "
                                                              "New users get an email to set their password.")
+    owner_password = forms.CharField(
+        required=False, strip=False, label="Set a password now (Super Admin)",
+        widget=forms.PasswordInput(render_value=False, attrs={"autocomplete": "new-password"}),
+        help_text="Optional. The owner can sign in straight away with it (give it to them yourself) and no email is sent.")
 
 
 class CustomerClientForm(forms.Form):

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Edit email · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p class="mb-2"><a href="{% url 'notifications_staff:templates' %}">&larr; Email templates</a></p>
+<div class="page-head"><h1><code>{{ key }}</code></h1><p class="page-sub">{{ labels|join:"; " }}{% if override %} &middot; <strong>customised</strong>{% endif %}</p></div>
+{% if error %}<div class="alert alert-danger" role="alert"><p class="mb-0">{{ error }}</p></div>{% endif %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="post" novalidate class="shop-card">{% csrf_token %}
+      <div class="field"><label for="id_subject">Subject</label><input id="id_subject" name="subject" class="form-control" value="{{ subject }}" maxlength="255" required></div>
+      <div class="field"><label for="id_body_text">Message text</label><textarea id="id_body_text" name="body_text" class="form-control font-monospace" rows="18" required>{{ body }}</textarea>
+        <small>Plain text. Blank lines make paragraphs and web addresses become links. The branded layout (logo, colours, footer) is added around it.</small></div>
+      {% if sensitive %}<p class="small text-secondary">This message carries a one-time link or secret. Keep <code>{% templatetag openvariable %} link {% templatetag closevariable %}</code> in the text.</p>{% endif %}
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="submit" name="do" value="save">Save wording</button>
+        <button class="btn btn-outline-secondary" type="submit" name="do" value="preview">Preview</button>
+        {% if override %}<button class="btn btn-outline-danger ms-auto" type="submit" name="do" value="reset" data-confirm="Go back to the default wording? Your changes to this message are lost.">Reset to default</button>{% endif %}
+      </div>
+    </form>
+    {% if preview %}
+    <section class="shop-card mt-3"><h2 class="shop-title">Preview</h2>
+      <p class="text-secondary small">Every variable is shown as «its name»; real emails show the real values.</p>
+      <p><strong>{{ preview.0 }}</strong></p><pre class="email-body">{{ preview.1 }}</pre></section>
+    {% endif %}
+  </div>
+  <div class="col-lg-4">
+    <section class="shop-card"><h2 class="shop-title">Variables you can use</h2>
+      <p class="text-secondary small">Write them like <code>{% templatetag openvariable %} user.get_short_name {% templatetag closevariable %}</code>. Tags such as <code>{% templatetag openblock %} if invoice.tax_total {% templatetag closeblock %}</code> work too.</p>
+      <ul class="list-unstyled mb-0">{% for name in variables %}<li><code>{{ name }}</code></li>{% endfor %}</ul>
+    </section>
+  </div>
+</div>
+{% endblock %}

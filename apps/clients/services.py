@@ -3,7 +3,9 @@ Client business logic. Staff API, customer API, staff web pages and customer
 web pages all call these functions.
 """
 from django.conf import settings
+from django.contrib.auth import password_validation
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
@@ -132,10 +134,11 @@ def _get_or_create_contact_user(email, first_name="", last_name=""):
 
 
 @transaction.atomic
-def create_client(actor, data, *, owner_email=None, request=None):
+def create_client(actor, data, *, owner_email=None, owner_password="", request=None):
     """
-    Staff: create a client. The owner contact is ``owner_email`` (defaults to the
-    client email); a new user is created and emailed a set-password link if needed.
+    Staff: create a client. The owner contact is ``owner_email`` (defaults to the client email); a new user is created and emailed
+    a set-password link if needed. A Super Admin may instead give the new owner a password right away (``owner_password``, checked
+    against the password rules); then no link is emailed and the owner can sign in at once.
     """
     _require(actor, "manage_clients")
     data = _normalise({k: v for k, v in data.items() if k in STAFF_FIELDS})
@@ -148,10 +151,25 @@ def create_client(actor, data, *, owner_email=None, request=None):
         owner_email or client.email, client.first_name, client.last_name
     )
     ClientContact.objects.create(client=client, user=owner, role=ContactRole.OWNER)
-    if created:
+    password_set = False
+    if owner_password:
+        if not actor.is_superuser:
+            raise _denied("Only a Super Admin can set a password for a new client.")
+        if not created:
+            raise ServiceError("That person already has an account, so their password is not changed here.",
+                               code="owner_exists")
+        try:
+            password_validation.validate_password(owner_password, user=owner)
+        except ValidationError as exc:
+            raise ServiceError(" ".join(exc.messages), code="weak_password")
+        owner.set_password(owner_password)
+        owner.save(update_fields=["password", "updated_at"])
+        password_set = True
+    elif created:
         _send_set_password_email(owner, client)
     audit.record("client.created", actor=actor, target=client,
-                 metadata={"client_id": client.pk, "owner": owner.email, "owner_created": created}, request=request)
+                 metadata={"client_id": client.pk, "owner": owner.email, "owner_created": created,
+                           "password_set_by_admin": password_set}, request=request)
     return client
 
 

@@ -167,6 +167,73 @@ def email_list(request):
         "section": "emails"})
 
 
+def _superuser_only(view):
+    """Email wording is a Super Admin's to change; anyone else gets the same refusal a missing permission gives."""
+    from functools import wraps
+
+    from django.contrib.auth.views import redirect_to_login
+    from django.core.exceptions import PermissionDenied
+
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+
+    return wrapped
+
+
+@_superuser_only
+def template_list(request):
+    from . import mail_templates
+
+    rows = []
+    for key, labels in sorted(mail_templates.known_templates().items(), key=lambda kv: kv[1][0]):
+        override = mail_templates.customised(key)
+        rows.append({"key": key, "labels": labels, "override": override, "sensitive": key in events.sensitive_templates()})
+    return render(request, "notifications/staff/templates.html", {"rows": rows, "section": "templates"})
+
+
+@_superuser_only
+def template_edit(request, key):
+    from django.http import Http404
+
+    from apps.core.exceptions import ServiceError
+
+    from . import mail_templates
+
+    if key not in mail_templates.known_templates():
+        raise Http404
+    default_subject, default_body = mail_templates.default_source(key)
+    override = mail_templates.customised(key)
+    subject = override.subject if override else default_subject
+    body = override.body_text if override else default_body
+    shown = None
+    error = ""
+    if request.method == "POST":
+        do = request.POST.get("do", "save")
+        subject, body = request.POST.get("subject", ""), request.POST.get("body_text", "")
+        try:
+            if do == "reset":
+                changed = services.reset_template(request.user, key, request=request)
+                messages.success(request, "Back to the default wording." if changed else "This message already uses the default.")
+                return redirect("notifications_staff:template", key=key)
+            if do == "preview":
+                shown = mail_templates.preview(key, *mail_templates.validate(key, subject, body))
+            else:
+                services.save_template(request.user, key, subject, body, request=request)
+                messages.success(request, "Saved. New emails of this kind use this wording.")
+                return redirect("notifications_staff:template", key=key)
+        except ServiceError as exc:
+            error = exc.message
+    return render(request, "notifications/staff/template_edit.html", {
+        "key": key, "labels": mail_templates.known_templates()[key], "subject": subject, "body": body,
+        "variables": mail_templates.variables(key), "override": override, "preview": shown, "error": error,
+        "sensitive": key in events.sensitive_templates(), "section": "templates"})
+
+
 @portal_permission_required(perm("view_settings"))
 def email_detail(request, pk):
     message = get_object_or_404(EmailMessage, pk=pk)

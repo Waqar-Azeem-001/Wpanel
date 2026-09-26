@@ -190,7 +190,54 @@ def summary_widget(user):
                       "tone": "danger" if failed else "ok", "bad": bool(failed),
                       "sub": f"{hosting_failed} hosting accounts failed" if hosting_failed else "Nothing failed to set up",
                       "url": reverse("orders_staff:list") + "?status=failed"})
+    tiles += _more_tiles(user, today)
     return {"tiles": tiles}
+
+
+def _more_tiles(user, today):
+    """The second rank of numbers: domains, the year's income, refunds, the average order, and what was resolved."""
+    from django.db.models import Avg
+
+    tiles = []
+    month_start = today.replace(day=1)
+    if _can(user, "view_domains"):
+        active = Domain.objects.filter(status=DomainStatus.ACTIVE)
+        soon = active.filter(expires_at__isnull=False, expires_at__lte=timezone.now() + timedelta(days=30)).count()
+        tiles.append({"label": "Active domains", "value": active.count(), "icon": "bi-globe2", "tone": "info",
+                      "sub": f"{soon} expiring in 30 days", "bad": bool(soon), "url": reverse("domains_staff:list") + "?status=active"})
+    if _can(user, "view_billing"):
+        billing = billing_widget(user)
+        refunds = Transaction.objects.filter(status=TransactionStatus.SUCCEEDED, type=TransactionType.REFUND,
+                                             occurred_at__date__gte=month_start, currency=settings.STORE_CURRENCY)
+        refunded = _money(refunds.aggregate(t=Sum("amount"))["t"])
+        tiles.append({"kpi": True, "label": "Income this year", "value": billing["year"], "money": True, "currency": billing["currency"],
+                      "icon": "bi-graph-up-arrow", "tone": "ok", "sub": f"{billing['month']} this month",
+                      "url": reverse("billing_staff:transaction_list")})
+        tiles.append({"kpi": True, "label": "Refunds this month", "value": refunded, "money": True, "currency": billing["currency"],
+                      "icon": "bi-arrow-counterclockwise", "tone": "warn", "sub": f"{refunds.count()} refund(s)",
+                      "url": reverse("billing_staff:transaction_list") + "?type=refund"})
+        tiles.append({"kpi": True, "label": "Payments to confirm", "value": billing["waiting"], "icon": "bi-hourglass-split", "tone": "warn",
+                      "bad": bool(billing["waiting"]), "sub": "reported by customers",
+                      "url": reverse("billing_staff:transaction_list") + "?status=pending"})
+    if _can(user, "view_orders"):
+        month_orders = Order.objects.filter(created_at__date__gte=month_start).exclude(
+            status__in=(OrderStatus.DRAFT, OrderStatus.CANCELLED))
+        average = month_orders.filter(currency=settings.STORE_CURRENCY).aggregate(a=Avg("total"))["a"]
+        tiles.append({"kpi": True, "label": "Average order", "value": _money(average), "money": True, "currency": settings.STORE_CURRENCY,
+                      "icon": "bi-basket", "tone": "info", "sub": f"{month_orders.count()} order(s) this month",
+                      "url": reverse("orders_staff:list")})
+    if _can(user, "view_clients"):
+        from apps.clients.models import Client
+
+        today_new = Client.objects.filter(created_at__date=today).count()
+        tiles.append({"kpi": True, "label": "New customers today", "value": today_new, "icon": "bi-person-plus", "tone": "ok",
+                      "sub": f"{Client.objects.filter(created_at__date__gte=month_start).count()} this month",
+                      "url": reverse("clients_staff:list")})
+    if _can(user, "view_support"):
+        resolved = Ticket.objects.filter(resolved_at__date__gte=today - timedelta(days=7)).count()
+        tiles.append({"kpi": True, "label": "Tickets resolved", "value": resolved, "icon": "bi-check2-circle", "tone": "ok",
+                      "sub": "in the last 7 days", "url": reverse("support_staff:tickets") + "?status=resolved"})
+    return tiles
 
 
 def attention_widget(user):

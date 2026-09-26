@@ -1,14 +1,57 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide shop-page{% endblock %}
 {% block content %}
-<section class="card"><div class="card-body">
-  <h1>{{ title }}</h1>
-  <form method="post" novalidate class="grid-form">{% csrf_token %}
-    {% include "partials/form.html" %}
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      <button type="submit" class="btn btn-primary">Save</button>
-      <a href="{% if product %}{% url 'catalog_staff:product_detail' product.slug %}{% else %}{% url 'catalog_staff:product_list' %}{% endif %}">Cancel</a>
+<p class="mb-2"><a href="{% if product %}{% url 'catalog_staff:product_detail' product.slug %}{% else %}{% url 'catalog_staff:product_list' %}{% endif %}">&larr; {% if product %}{{ product.name }}{% else %}Products{% endif %}</a></p>
+<div class="page-head"><h1>{{ title }}</h1><p class="page-sub">Basics, price, what it provisions, its limits and how to sell more with it. Only the name and type are required.</p></div>
+<form method="post" novalidate class="shop-main">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-card-text"></i></span><div class="grow"><h2 class="shop-title">Basics</h2><p class="text-secondary mb-0">What it is called, what kind it is and where the store lists it.</p></div></header>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.name %}
+      {% include "orders/_field.html" with field=form.type %}
+      {% include "orders/_field.html" with field=form.category %}
+      {% include "orders/_field.html" with field=form.description wide=True %}
     </div>
-  </form></div>
-</section>
+  </section>
+
+  {% if form.with_price %}
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-cash-coin"></i></span><div class="grow"><h2 class="shop-title">First price</h2><p class="text-secondary mb-0">Optional now: you can add more billing cycles on the plan page afterwards.</p></div></header>
+    <div class="row g-3">{% for field in form.price_fields %}{% include "orders/_field.html" with field=field %}{% endfor %}</div>
+  </section>
+  {% endif %}
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-gear"></i></span><div class="grow"><h2 class="shop-title">Provisioning</h2><p class="text-secondary mb-0">What is created on the server when the plan is paid for.</p></div></header>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.whm_package_name %}
+      <div class="col-md-6"></div>
+      {% include "orders/_field.html" with field=form.auto_setup %}
+      {% include "orders/_field.html" with field=form.default_auto_renew %}
+    </div>
+  </section>
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-speedometer2"></i></span><div class="grow"><h2 class="shop-title">Resource limits</h2><p class="text-secondary mb-0">Leave a box empty for no limit.</p></div></header>
+    <div class="row g-3">{% for field in form.limit_fields %}<div class="field col-6 col-md-4">{% include "orders/_limit.html" %}</div>{% endfor %}</div>
+  </section>
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span><div class="grow"><h2 class="shop-title">Selling more</h2><p class="text-secondary mb-0">Suggestions shown in the cart and on the plan page.</p></div></header>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.upsell_product wide=True %}
+      <div class="field col-12"><label>{{ form.recommended_addons.label }}</label>
+        <div class="check-grid">{% for option in form.recommended_addons %}<label class="check-pill">{{ option.tag }} <span>{{ option.choice_label }}</span></label>{% empty %}<p class="text-secondary mb-0">No add-ons yet. Create them under Products &rsaquo; Add-ons.</p>{% endfor %}</div>
+        <small>{{ form.recommended_addons.help_text }}</small></div>
+    </div>
+  </section>
+
+  <div class="d-flex flex-wrap gap-2 align-items-center justify-content-end">
+    <a href="{% if product %}{% url 'catalog_staff:product_detail' product.slug %}{% else %}{% url 'catalog_staff:product_list' %}{% endif %}">Cancel</a>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
 {% endblock %}

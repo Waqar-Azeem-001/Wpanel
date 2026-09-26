@@ -73,6 +73,10 @@
       </form>
       {% endif %}
       {% if can_set_password %}
+      <form method="post" action="{% url 'console:user_setup_link' person.pk %}" class="mb-3">{% csrf_token %}
+        <p class="text-secondary small">{% trans "Email not arriving? Create a one-time sign-in link and give it to them yourself." %}</p>
+        <button class="btn btn-outline-secondary" type="submit">{% trans "Show a sign-in link" %}</button>
+      </form>
       <form method="post" action="{% url 'console:user_set_password' person.pk %}" novalidate data-confirm="{% trans 'Set this password? They are signed out everywhere and told by email.' %}">{% csrf_token %}
         <p class="text-secondary small">{% trans "Or set a new password yourself and give it to them. It must pass the password rules and is never shown again." %}</p>
         <div class="field"><label for="id_new_password">{% trans "New password" %}</label>{{ password_form.new_password }}{% for e in password_form.new_password.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</div>

@@ -60,8 +60,12 @@ def _connection_and_sender():
     provider = get_active_provider()
     if provider is None:
         return get_connection(), settings.DEFAULT_FROM_EMAIL
-    connection = get_connection(
-        "django.core.mail.backends.smtp.EmailBackend",
+    return _provider_connection(provider), provider.from_email
+
+
+def _provider_connection(provider):
+    return get_connection(
+        "apps.notifications.backends.EnvelopeSMTPBackend",
         host=provider.host,
         port=provider.port,
         username=provider.username or None,
@@ -69,8 +73,8 @@ def _connection_and_sender():
         use_tls=provider.use_tls,
         use_ssl=provider.use_ssl,
         timeout=provider.timeout,
+        envelope_from=provider.envelope_from or None,
     )
-    return connection, provider.from_email
 
 
 def render_email(template, context):
@@ -78,6 +82,15 @@ def render_email(template, context):
     from apps.branding import services as branding
 
     ctx = {"site_name": branding.get().name, "site_url": settings.SITE_URL, **context}
+    from . import mail_templates
+
+    override = mail_templates.customised(template)
+    if override is not None:  # a Super Admin's own wording; the HTML layout is built from the text
+        try:
+            subject, body_text = mail_templates.render_override(override, ctx)
+            return subject, body_text, ""
+        except ServiceError:  # the wording no longer renders (say a variable it needed is gone): send the default, never nothing
+            logger.exception("Customised wording for %s failed; the default was used", template)
     subject = " ".join(render_to_string(f"emails/{template}_subject.txt", ctx).split())
     body_text = render_to_string(f"emails/{template}.txt", ctx)
     try:
@@ -248,6 +261,43 @@ def _alert_email_failing(message):
                              f"{message.last_error[:150]}", link=reverse("notifications_staff:emails") + "?status=failed")
     except Exception:  # noqa: BLE001 - an alert must never make a delivery failure worse
         logger.exception("Could not raise the email-failure alert")
+
+
+# --- Email wording (Super Admin) --------------------------------------------------------------------------------------
+
+@transaction.atomic
+def save_template(actor, key, subject, body_text, *, request=None):
+    """Super Admin only: use this wording for one email instead of the default. Checked before it is stored."""
+    from apps.audit import services as audit
+
+    from . import mail_templates
+    from .models import EmailTemplateOverride
+
+    if not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can change email wording.", code="permission_denied",
+                           status_code=http.HTTP_403_FORBIDDEN)
+    subject, body_text = mail_templates.validate(key, subject, body_text)
+    _, created = EmailTemplateOverride.objects.update_or_create(
+        template=key, defaults={"subject": subject, "body_text": body_text, "updated_by": actor})
+    audit.record("email_template.saved", actor=actor, metadata={"template": key, "first_time": created,
+                                                                 "subject": subject[:120], "characters": len(body_text)},
+                 request=request)
+
+
+@transaction.atomic
+def reset_template(actor, key, *, request=None):
+    """Super Admin only: go back to the default wording for one email."""
+    from apps.audit import services as audit
+
+    from .models import EmailTemplateOverride
+
+    if not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can change email wording.", code="permission_denied",
+                           status_code=http.HTTP_403_FORBIDDEN)
+    removed, _ = EmailTemplateOverride.objects.filter(template=key).delete()
+    if removed:
+        audit.record("email_template.reset", actor=actor, metadata={"template": key}, request=request)
+    return bool(removed)
 
 
 # --- Preferences --------------------------------------------------------------------------------------------------
@@ -560,7 +610,8 @@ def purge_sensitive(*, now=None):
 
 # --- The email provider (Setup > Email Provider) ---------------------------------------------------------------------
 
-PROVIDER_FIELDS = ("name", "kind", "host", "port", "username", "use_tls", "use_ssl", "timeout", "from_email")
+PROVIDER_FIELDS = ("name", "kind", "host", "port", "username", "use_tls", "use_ssl", "timeout", "from_email",
+                   "envelope_from")
 
 
 def _require_providers(actor, codename="manage_providers"):
@@ -629,13 +680,13 @@ def send_test_email(actor, provider, to_email, *, request=None):
         raise ServiceError("Enter a valid email address to send the test to.", code="invalid_email")
     name = branding.get().name
     try:
-        connection = get_connection("django.core.mail.backends.smtp.EmailBackend", host=provider.host, port=provider.port,
-                                    username=provider.username or None, password=provider.get_password() or None,
-                                    use_tls=provider.use_tls, use_ssl=provider.use_ssl, timeout=provider.timeout)
+        connection = _provider_connection(provider)
         sent = EmailMultiAlternatives(f"{name}: test email", f"This is a test message from {name}. If you can read it, "
                                       "your email provider settings work.", provider.from_email, [to_email],
                                       connection=connection).send()
-        ok, detail = bool(sent), "Sent." if sent else "The server accepted no message."
+        ok = bool(sent)
+        detail = ("The mail server accepted it. Accepted is not the same as delivered: if it does not arrive, look in Spam "
+                  "and run \"Check deliverability\" for this provider." if sent else "The server accepted no message.")
     except Exception as exc:  # noqa: BLE001 - the point is to report why sending failed
         ok, detail = False, f"{type(exc).__name__}: {str(exc)[:200]}"
         if provider.get_password() and provider.get_password() in detail:

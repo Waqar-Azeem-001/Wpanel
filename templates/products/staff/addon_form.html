@@ -1,14 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide shop-page{% endblock %}
 {% block content %}
-<section class="card"><div class="card-body">
-  <h1>{{ title }}</h1>
-  <form method="post" novalidate class="grid-form">{% csrf_token %}
-    {% include "partials/form.html" %}
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      <button type="submit" class="btn btn-primary">Save</button>
-      <a href="{% if addon %}{% url 'catalog_staff:addon_detail' addon.slug %}{% else %}{% url 'catalog_staff:addon_list' %}{% endif %}">Cancel</a>
+<p class="mb-2"><a href="{% if addon %}{% url 'catalog_staff:addon_detail' addon.slug %}{% else %}{% url 'catalog_staff:addon_list' %}{% endif %}">&larr; {% if addon %}{{ addon.name }}{% else %}Add-ons{% endif %}</a></p>
+<div class="page-head"><h1>{{ title }}</h1><p class="page-sub">An extra a customer can add to a plan or a domain: SSL, backups, WHOIS privacy and the like.</p></div>
+<form method="post" novalidate class="shop-main">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-plus-square"></i></span><div class="grow"><h2 class="shop-title">Basics</h2></div></header>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.name %}
+      {% include "orders/_field.html" with field=form.kind %}
+      {% include "orders/_field.html" with field=form.category wide=True %}
+      {% include "orders/_field.html" with field=form.description wide=True %}
     </div>
-  </form></div>
-</section>
+  </section>
+  {% if form.with_price %}
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-cash-coin"></i></span><div class="grow"><h2 class="shop-title">Price</h2><p class="text-secondary mb-0">What it costs. A plan add-on is billed with the plan's own cycle or once; a domain add-on per year or once. Add more cycles on its page afterwards.</p></div></header>
+    <div class="row g-3">{% for field in form.price_fields %}{% include "orders/_field.html" with field=field %}{% endfor %}</div>
+  </section>
+  {% endif %}
+  <div class="d-flex flex-wrap gap-2 align-items-center justify-content-end">
+    <a href="{% if addon %}{% url 'catalog_staff:addon_detail' addon.slug %}{% else %}{% url 'catalog_staff:addon_list' %}{% endif %}">Cancel</a>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
 {% endblock %}

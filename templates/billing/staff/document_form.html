@@ -15,22 +15,22 @@
     <h2>Lines</h2>
     {{ formset.management_form }}
     {% if formset.non_form_errors %}<div class="alert alert-danger">{% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    <div data-lines data-max="100">
     <div class="table-responsive">
     <table class="table lines">
-      <thead><tr><th>Description</th><th>Qty</th><th>Unit price (<span data-currency-code>{{ form.currency.value|default:client.currency }}</span>)</th><th>Taxable</th></tr></thead>
-      <tbody>
-      {% for line in formset %}
-        <tr>
-          <td><label class="visually-hidden" for="{{ line.description.id_for_label }}">Description, row {{ forloop.counter }}</label>{{ line.description }}{% for e in line.description.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
-          <td class="qty"><label class="visually-hidden" for="{{ line.quantity.id_for_label }}">Quantity, row {{ forloop.counter }}</label>{{ line.quantity }}{% for e in line.quantity.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
-          <td class="price"><label class="visually-hidden" for="{{ line.unit_price.id_for_label }}">Unit price, row {{ forloop.counter }}</label>{{ line.unit_price }}{% for e in line.unit_price.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
-          <td><label class="visually-hidden" for="{{ line.taxable.id_for_label }}">Taxable, row {{ forloop.counter }}</label>{{ line.taxable }}</td>
-        </tr>
-      {% endfor %}
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit price (<span data-currency-code>{{ form.currency.value|default:client.currency }}</span>)</th><th class="text-end">Amount</th><th>Taxable</th><th></th></tr></thead>
+      <tbody data-lines-body>
+      {% for line in formset %}{% include "billing/staff/_line_row.html" %}{% endfor %}
       </tbody>
     </table>
     </div>
-    <p class="text-secondary">Leave a row blank to skip it. Clear a row's description and price to remove it. Save to get more blank rows.</p></div>
+    <template data-lines-template>{% include "billing/staff/_line_row.html" with line=formset.empty_form %}</template>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <button class="btn btn-outline-primary btn-sm" type="button" data-line-add><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a line</button>
+      <p class="mb-0 lines-sum">Lines total <strong data-lines-sum>0.00</strong> <span class="text-secondary">(<span data-currency-code>{{ form.currency.value|default:client.currency }}</span>, before discount and tax)</span></p>
+    </div>
+    <p class="text-secondary small mt-2 mb-0">Add as many lines as you need and remove any with the &times;. Tax and discount are worked out when you save.</p>
+    </div></div>
 </section>
   <section class="card"><div class="card-body">
     <h2>Discount and notes</h2>

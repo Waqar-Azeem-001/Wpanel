@@ -28,6 +28,10 @@ class EmailProvider(TimeStampedModel):
     use_ssl = models.BooleanField(default=False, help_text="Implicit TLS (usually port 465).")
     timeout = models.PositiveIntegerField(default=20, help_text="Seconds.")
     from_email = models.CharField(max_length=255, help_text='e.g. "Wpanel <billing@example.com>"')
+    envelope_from = models.CharField(
+        max_length=255, blank=True,
+        help_text="The sender the mail server sees (the Return-Path). Blank = the From address. Set it to your SMTP login "
+                  "when the From domain's SPF record does not list this server, so the mail is not treated as forged.")
     is_active = models.BooleanField(default=False)
 
     class Meta:
@@ -150,6 +154,19 @@ class EmailLink(models.Model):
 
     def __str__(self):
         return self.url[:80]
+
+
+class EmailTemplateOverride(TimeStampedModel):
+    """A Super Admin's own wording for one email, used instead of the default file (see ``mail_templates``)."""
+
+    template = models.SlugField(max_length=100, unique=True)
+    subject = models.CharField(max_length=255)
+    body_text = models.TextField()
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+")
+
+    def __str__(self):
+        return f"{self.template} (customised)"
 
 
 class Notification(TimeStampedModel):

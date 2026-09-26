@@ -26,9 +26,11 @@ def index(request):
     denied = _login_and_permission(request)
     if denied:
         return denied
-    return render(request, "reports/index.html", {
-        "groups": services.grouped(request.user), "headline": [
-            (label, display(kind, value), slug) for label, kind, value, slug in services.headline(request.user)]})
+    sections = [(title, [{**t, "shown": display(t["kind"], t["value"])} for t in tiles])
+                for title, tiles in services.kpi_sections(request.user)]
+    groups = [(title, [{"report": r, "icon": services.ICONS.get(r.slug, "bi-bar-chart")} for r in reports])
+              for title, reports in services.grouped(request.user)]
+    return render(request, "reports/index.html", {"groups": groups, "sections": sections})
 
 
 def _download(request, slug, fmt):

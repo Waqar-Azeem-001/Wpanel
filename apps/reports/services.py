@@ -94,6 +94,75 @@ def _net_income(start, end):
     return calc.money((totals.get(TransactionType.PAYMENT) or 0) - (totals.get(TransactionType.REFUND) or 0))
 
 
+ICONS = {"income": "bi-cash-coin", "unpaid-invoices": "bi-receipt", "orders": "bi-bag", "new-customers": "bi-person-plus",
+         "expiring-services": "bi-hourglass-split", "open-tickets": "bi-life-preserver", "refunds-disputes": "bi-arrow-counterclockwise",
+         "active-services": "bi-hdd-rack", "suspended-services": "bi-pause-circle", "resolved-tickets": "bi-check2-circle",
+         "sales-performance": "bi-graph-up-arrow", "transactions": "bi-credit-card-2-front", "cancelled-services": "bi-x-circle",
+         "department-stats": "bi-diagram-3"}
+
+
+def kpi_sections(user):
+    """
+    The numbers at the top of Reports, in sections: ``[(title, [{label, kind, value, slug, icon, sub}])]``. A figure is included only
+    when the person may run the report it links to, so no number is a way round what they could not open.
+    """
+    from django.db.models import Avg, DecimalField, ExpressionWrapper, F
+
+    now = timezone.now()
+    today = timezone.localdate()
+    day_start = timezone.make_aware(datetime.combine(today, time.min))
+    month_start = day_start.replace(day=1)
+    year_start = month_start.replace(month=1)
+    tomorrow = day_start + timedelta(days=1)
+    currency = settings.STORE_CURRENCY
+    sections = {"Money": [], "Orders and customers": [], "Services": [], "Support": []}
+
+    def add(section, label, kind, value, slug, sub=""):
+        if can_run(user, REGISTRY[slug]):
+            sections[section].append({"label": label, "kind": kind, "value": value, "slug": slug, "sub": sub,
+                                      "icon": ICONS.get(slug, "bi-bar-chart")})
+
+    if user.has_perm(perm("view_billing")):
+        add("Money", f"Income today ({currency})", "money", _net_income(day_start, tomorrow), "income")
+        add("Money", "Income this month", "money", _net_income(month_start, tomorrow), "income")
+        add("Money", "Income this year", "money", _net_income(year_start, tomorrow), "income")
+        open_invoices = Invoice.objects.filter(status__in=OPEN_STATUSES, currency=currency)
+        owed = open_invoices.aggregate(t=Sum(ExpressionWrapper(F("total") - F("amount_paid"), output_field=DecimalField(max_digits=14, decimal_places=2))))["t"]
+        add("Money", "Unpaid balance", "money", calc.money(owed or 0), "unpaid-invoices", f"{open_invoices.count()} open invoice(s)")
+        overdue = Invoice.objects.filter(status__in=OPEN_STATUSES, due_date__lt=today)
+        add("Money", "Invoices overdue", "int", overdue.count(), "unpaid-invoices")
+        refunded = Transaction.objects.filter(status=TransactionStatus.SUCCEEDED, type=TransactionType.REFUND,
+                                              occurred_at__gte=month_start, occurred_at__lt=tomorrow, currency=currency)
+        add("Money", "Refunds this month", "money", calc.money(refunded.aggregate(t=Sum("amount"))["t"] or 0), "refunds-disputes",
+            f"{refunded.count()} refund(s)")
+    if user.has_perm(perm("view_orders")):
+        placed = Order.objects.exclude(status__in=(OrderStatus.DRAFT, OrderStatus.CANCELLED))
+        add("Orders and customers", "Orders today", "int", placed.filter(created_at__gte=day_start, created_at__lt=tomorrow).count(), "orders")
+        month_orders = placed.filter(created_at__gte=month_start)
+        add("Orders and customers", "Orders this month", "int", month_orders.count(), "orders")
+        average = month_orders.filter(currency=currency).aggregate(a=Avg("total"))["a"]
+        add("Orders and customers", "Average order", "money", calc.money(average or 0), "orders", "this month")
+        add("Orders and customers", "Orders awaiting payment", "int", Order.objects.filter(status=OrderStatus.PENDING_PAYMENT).count(), "orders")
+    if user.has_perm(perm("view_clients")):
+        add("Orders and customers", "New customers today", "int", Client.objects.filter(created_at__gte=day_start, created_at__lt=tomorrow).count(), "new-customers")
+        add("Orders and customers", "New customers this month", "int", Client.objects.filter(created_at__gte=month_start).count(), "new-customers")
+    if user.has_perm(perm("view_hosting")):
+        add("Services", "Active hosting", "int", HostingAccount.objects.filter(status=HostingStatus.ACTIVE).count(), "active-services")
+        add("Services", "Suspended hosting", "int", HostingAccount.objects.filter(status=HostingStatus.SUSPENDED).count(), "suspended-services")
+    if user.has_perm(perm("view_hosting")) and user.has_perm(perm("view_domains")):
+        horizon = now + timedelta(days=30)
+        add("Services", "Active domains", "int", Domain.objects.filter(status=DomainStatus.ACTIVE).count(), "active-services")
+        expiring = (HostingAccount.objects.filter(status__in=(HostingStatus.ACTIVE, HostingStatus.SUSPENDED), expires_at__isnull=False,
+                                                  expires_at__lte=horizon).count()
+                    + Domain.objects.filter(status=DomainStatus.ACTIVE, expires_at__isnull=False, expires_at__lte=horizon).count())
+        add("Services", "Expiring in 30 days", "int", expiring, "expiring-services", "hosting and domains")
+    if user.has_perm(perm("view_support")):
+        add("Support", "Open tickets", "int", Ticket.objects.exclude(status__in=(TicketStatus.RESOLVED, TicketStatus.CLOSED)).count(), "open-tickets")
+        add("Support", "Resolved this week", "int", Ticket.objects.filter(resolved_at__gte=now - timedelta(days=7)).count(), "resolved-tickets")
+        add("Support", "Unassigned tickets", "int", Ticket.objects.exclude(status__in=(TicketStatus.RESOLVED, TicketStatus.CLOSED)).filter(assigned_to__isnull=True).count(), "open-tickets")
+    return [(title, tiles) for title, tiles in sections.items() if tiles]
+
+
 def headline(user):
     """[(label, kind, value, link slug)] of the figures on the reports index, only for what the person may see."""
     now = timezone.now()

@@ -59,9 +59,12 @@ class CouponForm(forms.Form):
 # --- Phase 07: invoices, quotes, payments --------------------------------------------------------
 
 class LineForm(forms.Form):
-    description = forms.CharField(max_length=255, required=False)
-    quantity = forms.IntegerField(min_value=1, max_value=100000, initial=1, required=False)
-    unit_price = forms.DecimalField(min_value=0, max_digits=12, decimal_places=2, required=False)
+    description = forms.CharField(max_length=255, required=False, widget=forms.TextInput(attrs={
+        "class": "form-control", "placeholder": "What is being charged"}))
+    quantity = forms.IntegerField(min_value=1, max_value=100000, initial=1, required=False, widget=forms.NumberInput(attrs={
+        "class": "form-control", "min": 1}))
+    unit_price = forms.DecimalField(min_value=0, max_digits=12, decimal_places=2, required=False, widget=forms.NumberInput(attrs={
+        "class": "form-control", "step": "0.01", "min": 0, "placeholder": "0.00"}))
     taxable = forms.BooleanField(required=False, initial=True)
 
     def clean(self):
@@ -75,7 +78,7 @@ class LineForm(forms.Form):
         return data
 
 
-LineFormSet = forms.formset_factory(LineForm, extra=3, max_num=100, validate_max=True)
+LineFormSet = forms.formset_factory(LineForm, extra=1, max_num=100, validate_max=True)
 
 
 def line_formset(data=None, existing=()):

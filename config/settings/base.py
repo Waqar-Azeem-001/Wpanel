@@ -37,6 +37,8 @@ ORDER_AUTO_FULFIL = env.bool("ORDER_AUTO_FULFIL", default=True)
 EMAIL_OPEN_TRACKING = env.bool("EMAIL_OPEN_TRACKING", default=True)
 # Sends the links in non-security emails through a counting page (which redirects to the original address). Off = links untouched.
 EMAIL_CLICK_TRACKING = env.bool("EMAIL_CLICK_TRACKING", default=True)
+# Used only by Setup > Email provider > Check deliverability, when this server cannot reach DNS directly (some networks block port 53).
+DNS_OVER_HTTPS_URL = env("DNS_OVER_HTTPS_URL", default="https://dns.google/resolve")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

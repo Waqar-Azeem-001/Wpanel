@@ -6,7 +6,7 @@ import json
 
 from django import forms
 
-from .models import (Addon, AddonKind, BillingCycle, CatalogStatus, Product, ProductType, Server,
+from .models import (CATEGORY_ICONS, KNOWN_RESOURCE_LIMITS, Addon, AddonKind, BillingCycle, CategoryKind, StoreCategory, CatalogStatus, Product, ProductType, Server,
                      ServerStatus)
 
 
@@ -37,11 +37,47 @@ class ResourceLimitsField(forms.CharField):
         return value
 
 
-class ProductForm(forms.Form):
+LIMIT_LABELS = {
+    "disk_mb": "Disk space (MB)", "bandwidth_mb": "Bandwidth (MB)", "email_accounts": "Email accounts", "databases": "Databases",
+    "ftp_accounts": "FTP accounts", "subdomains": "Subdomains", "parked_domains": "Parked domains",
+    "addon_domains": "Addon domains", "websites": "Websites",
+}
+
+
+class FirstPriceMixin:
+    """The price box on the create forms: the first price (billing cycle, price, setup fee) is saved with the new item."""
+
+    cycle_choices = BillingCycle.choices
+
+    def add_price_fields(self):
+        self.fields["billing_cycle"] = forms.ChoiceField(choices=self.cycle_choices, required=False, label="Billing cycle",
+                                                         initial=BillingCycle.MONTHLY)
+        self.fields["custom_months"] = forms.IntegerField(min_value=1, max_value=120, required=False, label="Months",
+                                                          help_text="Only for the Custom cycle.")
+        self.fields["price"] = forms.DecimalField(min_value=0, max_digits=10, decimal_places=2, required=False, label="Price",
+                                                  help_text="Leave blank to add prices later.")
+        self.fields["setup_fee"] = forms.DecimalField(min_value=0, max_digits=10, decimal_places=2, required=False, initial=0,
+                                                      label="Setup fee")
+
+    def clean_price_fields(self, data):
+        if data.get("price") is not None:
+            if not data.get("billing_cycle"):
+                self.add_error("billing_cycle", "Choose how often this price is charged.")
+            elif data["billing_cycle"] == BillingCycle.CUSTOM and not data.get("custom_months"):
+                self.add_error("custom_months", "Enter the number of months.")
+        return data
+
+
+class ProductForm(FirstPriceMixin, forms.Form):
+    cycle_choices = [c for c in BillingCycle.choices if c[0] != BillingCycle.ONE_TIME]
+
     name = forms.CharField(max_length=150)
     type = forms.ChoiceField(choices=ProductType.choices)
-    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
-    resource_limits = ResourceLimitsField(required=False, label="Resource limits (JSON)")
+    category = forms.ModelChoiceField(queryset=StoreCategory.objects.filter(kind=CategoryKind.PLANS), required=False,
+                                      empty_label="From the type, automatically",
+                                      help_text="Where it is listed on the store. Add categories under Products › Categories.")
+    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 6}), required=False,
+                                  help_text="One feature per line: each line shows as a tick on the plan card.")
     whm_package_name = forms.CharField(max_length=100, required=False, label="WHM package name")
     auto_setup = forms.BooleanField(required=False, initial=True, label="Auto-provision on payment")
     default_auto_renew = forms.BooleanField(required=False, initial=True, label="Auto-renew by default")
@@ -50,6 +86,35 @@ class ProductForm(forms.Form):
     recommended_addons = forms.ModelMultipleChoiceField(
         queryset=Addon.objects.all(), required=False, widget=forms.CheckboxSelectMultiple, label="Recommended add-ons",
         help_text="Highlighted first in the cart and on the plan page.")
+
+    def __init__(self, *args, existing_limits=None, with_price=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.existing_limits = dict(existing_limits or {})
+        for key in KNOWN_RESOURCE_LIMITS:
+            self.fields[f"limit_{key}"] = forms.IntegerField(
+                min_value=0, required=False, label=LIMIT_LABELS.get(key, key), initial=self.existing_limits.get(key))
+        self.with_price = with_price
+        if with_price:
+            self.add_price_fields()
+        self.fields["recommended_addons"].label_from_instance = lambda addon: f"{addon.name} ({addon.price_summary})"
+
+    @property
+    def limit_fields(self):
+        return [self[f"limit_{key}"] for key in KNOWN_RESOURCE_LIMITS]
+
+    @property
+    def price_fields(self):
+        return [self[name] for name in ("billing_cycle", "custom_months", "price", "setup_fee")] if self.with_price else []
+
+    def clean(self):
+        data = super().clean()
+        limits = {k: v for k, v in self.existing_limits.items() if k not in KNOWN_RESOURCE_LIMITS}  # keep keys the form does not show
+        for key in KNOWN_RESOURCE_LIMITS:
+            value = data.get(f"limit_{key}")
+            if value is not None:
+                limits[key] = value
+        data["resource_limits"] = limits
+        return self.clean_price_fields(data) if self.with_price else data
 
 
 class ProductStatusForm(forms.Form):
@@ -61,12 +126,42 @@ class ProductServersForm(forms.Form):
                                              widget=forms.CheckboxSelectMultiple)
 
 
-class AddonForm(forms.Form):
+class AddonForm(FirstPriceMixin, forms.Form):
     name = forms.CharField(max_length=150)
     kind = forms.ChoiceField(choices=AddonKind.choices, initial=AddonKind.GENERAL, required=False,
                              help_text="An SSL certificate goes with a hosting plan, WHOIS privacy with a domain; the "
                                        "storefront lists them under their own headings.")
-    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
+    category = forms.ModelChoiceField(queryset=StoreCategory.objects.filter(kind=CategoryKind.ADDONS), required=False,
+                                      empty_label="From the kind, automatically",
+                                      help_text="Only used to list it on the store as a product of its own (SSL, WHOIS privacy).")
+    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}), required=False,
+                                  help_text="Shown to the customer. One point per line.")
+
+    def __init__(self, *args, with_price=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.with_price = with_price
+        if with_price:
+            self.add_price_fields()
+
+    @property
+    def price_fields(self):
+        return [self[name] for name in ("billing_cycle", "custom_months", "price", "setup_fee")] if self.with_price else []
+
+    def clean(self):
+        data = super().clean()
+        return self.clean_price_fields(data) if self.with_price else data
+
+
+class CategoryForm(forms.Form):
+    name = forms.CharField(max_length=100)
+    short_name = forms.CharField(max_length=40, required=False, help_text="A shorter label for the category bar. Blank = the name.")
+    blurb = forms.CharField(max_length=200, required=False, help_text="One line shown under the name.")
+    group = forms.CharField(max_length=60, initial="Hosting", help_text="The heading it sits under, e.g. Hosting, Servers, Security and domains.")
+    kind = forms.ChoiceField(choices=CategoryKind.choices, initial=CategoryKind.PLANS,
+                             help_text="Plans list products; add-ons list SSL, WHOIS privacy and the like; domains leads to the domain search.")
+    icon = forms.ChoiceField(choices=CATEGORY_ICONS, initial="bi-box-seam")
+    sort_order = forms.IntegerField(min_value=0, max_value=32000, initial=100, help_text="Lower numbers come first.")
+    is_active = forms.BooleanField(required=False, initial=True, label="Show on the store")
 
 
 class AddonStatusForm(ProductStatusForm):

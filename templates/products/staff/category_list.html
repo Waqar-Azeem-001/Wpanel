@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Store categories · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Store categories</h1><p class="page-sub">The headings of the store: WordPress hosting, VPS, SSL and so on. Add your own, rename them, change the order or hide one.</p>
+  <div class="d-flex flex-wrap gap-2 align-items-center"><a href="{% url 'catalog_staff:product_list' %}">Products</a><a href="{% url 'catalog_staff:addon_list' %}">Add-ons</a>
+    {% if can_manage %}<a class="btn btn-primary" href="{% url 'catalog_staff:category_create' %}">Add a category</a>{% endif %}</div></div>
+<section class="card"><div class="table-responsive"><table class="table mb-0 align-middle">
+  <thead><tr><th>Order</th><th>Category</th><th>Heading</th><th>Kind</th><th class="text-end">Products</th><th class="text-end">Add-ons</th><th>On the store</th><th></th></tr></thead>
+  <tbody>
+  {% for c in categories %}
+    <tr>
+      <td class="text-secondary">{{ c.sort_order }}</td>
+      <td><i class="bi {{ c.icon }} text-secondary" aria-hidden="true"></i> <strong>{{ c.name }}</strong>{% if c.blurb %}<div class="small text-secondary">{{ c.blurb }}</div>{% endif %}</td>
+      <td>{{ c.group }}</td>
+      <td>{{ c.get_kind_display }}</td>
+      <td class="text-end">{{ c.n_products }}</td><td class="text-end">{{ c.n_addons }}</td>
+      <td>{% if c.is_active %}{% status_badge "active" "Shown" %}{% else %}{% status_badge "inactive" "Hidden" %}{% endif %}</td>
+      <td class="text-end">{% if can_manage %}<div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'catalog_staff:category_edit' c.pk %}">Edit</a>
+        <form method="post" action="{% url 'catalog_staff:category_delete' c.pk %}" data-confirm="Delete the category {{ c.name }}?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form></div>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="8" class="text-secondary">No categories yet.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+<p class="text-secondary small mt-3">A category that still holds products or add-ons cannot be deleted; hide it instead, or move its items first. Products with no category still appear on the store, under &ldquo;More plans&rdquo;.</p>
+{% endblock %}

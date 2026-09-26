@@ -220,6 +220,57 @@
     if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
   });
 
+  // --- Invoice and quote lines: add, remove and a running total (the server still recomputes everything) ---------------------------
+  (function () {
+    var box = doc.querySelector("[data-lines]");
+    if (!box) { return; }
+    var body = box.querySelector("[data-lines-body]");
+    var template = box.querySelector("[data-lines-template]");
+    var counter = doc.querySelector("input[name='lines-TOTAL_FORMS']");
+    var sum = box.querySelector("[data-lines-sum]");
+    var max = parseInt(box.getAttribute("data-max"), 10) || 100;
+    function visibleRows() { return Array.prototype.filter.call(body.querySelectorAll(".line-row"), function (r) { return !r.hidden; }); }
+    function recalc() {
+      var total = 0;
+      visibleRows().forEach(function (row) {
+        var qty = parseFloat(row.querySelector("input[name$='-quantity']").value) || 0;
+        var price = parseFloat(row.querySelector("input[name$='-unit_price']").value);
+        var cell = row.querySelector("[data-line-amount]");
+        if (isNaN(price)) { cell.textContent = "\u2014"; return; }
+        var amount = (qty || 1) * price;
+        total += amount;
+        cell.textContent = amount.toFixed(2);
+      });
+      sum.textContent = total.toFixed(2);
+      box.querySelector("[data-line-add]").disabled = parseInt(counter.value, 10) >= max;
+    }
+    box.addEventListener("input", recalc);
+    box.addEventListener("click", function (event) {
+      var add = event.target.closest("[data-line-add]");
+      var remove = event.target.closest("[data-line-remove]");
+      if (add) {
+        var index = parseInt(counter.value, 10);
+        if (index >= max) { return; }
+        var holder = doc.createElement("tbody");
+        holder.innerHTML = template.innerHTML.replace(/__prefix__/g, String(index));
+        var row = holder.querySelector("tr");
+        body.appendChild(row);
+        counter.value = String(index + 1);
+        recalc();
+        var first = row.querySelector("input[name$='-description']");
+        if (first) { first.focus(); }
+      } else if (remove) {
+        var target = remove.closest(".line-row");
+        // a removed row is emptied and hidden: the server ignores a line with no description and no price
+        target.querySelectorAll("input[type=text], input[type=number]").forEach(function (input) { input.value = ""; });
+        target.hidden = true;
+        if (!visibleRows().length) { box.querySelector("[data-line-add]").click(); }
+        recalc();
+      }
+    });
+    recalc();
+  })();
+
   // --- Generate a strong password in the browser (never sent anywhere until the form is submitted) -------------------------
   doc.addEventListener("click", function (event) {
     var button = event.target.closest("[data-generate-password]");

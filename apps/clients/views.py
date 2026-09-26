@@ -52,11 +52,15 @@ def staff_client_list(request):
 @portal_permission_required(perm("manage_clients"))
 def staff_client_create(request):
     form = forms.NewClientForm(request.POST or None, initial={"currency": "USD"}, current_currency="USD")
+    if not request.user.is_superuser:
+        del form.fields["owner_password"]  # only a Super Admin may set a password for someone else
     if request.method == "POST" and form.is_valid():
         data = dict(form.cleaned_data)
         owner_email = data.pop("owner_email") or None
+        owner_password = data.pop("owner_password", "")
         try:
-            client = services.create_client(request.user, data, owner_email=owner_email, request=request)
+            client = services.create_client(request.user, data, owner_email=owner_email, owner_password=owner_password,
+                                            request=request)
         except (ServiceError, ValidationError) as exc:
             _apply_error(form, exc)
         else:

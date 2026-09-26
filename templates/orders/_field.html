@@ -1,7 +1,16 @@
 {% load ui %}
-<div class="field col-md-6">
+{# One form field in a row/col grid. wide=True makes it the full width. Checkboxes render as the switch card. #}
+{% if field|is_checkbox %}
+<div class="field form-check {% if wide %}col-12{% else %}col-md-6{% endif %}">
+  {{ field|bs_field }}
+  <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+</div>
+{% else %}
+<div class="field {% if wide %}col-12{% else %}col-md-6{% endif %}">
   <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="text-danger" aria-hidden="true"> *</span><span class="visually-hidden"> (required)</span>{% endif %}</label>
   {{ field|bs_field }}
   {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
   {% if field.errors %}<div id="{{ field.auto_id }}_errors">{% for e in field.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</div>{% endif %}
 </div>
+{% endif %}

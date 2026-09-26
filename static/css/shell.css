@@ -26,7 +26,7 @@ body.has-shell { display: block; min-height: 100vh; }
 .page-head > h1, .page-head > h2 { grid-column: 1; margin: 0; font-size: 1.7rem; font-weight: 600; letter-spacing: -.025em; overflow-wrap: anywhere; }
 .page-head > .page-sub { grid-column: 1; margin: 0; color: var(--muted); font-size: .9rem; }
 .page-head > :not(h1):not(h2):not(.page-sub) { grid-column: 2; grid-row: 1 / span 2; justify-self: end; align-self: center; }
-.page-head > .person-cell { grid-column: 1; grid-row: 1 / span 2; justify-self: start; }
+.page-head > .person-cell.person-cell { grid-column: 1; grid-row: 1 / span 2; justify-self: start; } /* doubled class: must outrank the rule above, which also matches it */
 .page-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 @media (max-width: 767.98px) {
   .page-head { grid-template-columns: minmax(0, 1fr); row-gap: .6rem; }
@@ -647,3 +647,35 @@ body.auth-body { display: block; background: var(--bg); }
 .plan-card .plan-price { font-size: 1.85rem; }
 .plan-card .plan-price small { display: block; margin-left: 0; }
 .cat-nav { justify-content: flex-start; }
+
+.check-list { list-style: none; margin: 0 0 1rem; padding: 0; }
+.check-list li { display: flex; gap: .7rem; padding: .7rem 0; border-bottom: 1px solid var(--border); }
+.check-list li:last-child { border-bottom: 0; }
+.check-list .bi { flex: none; margin-top: .15rem; }
+.check-ok .bi { color: var(--ok); } .check-warn .bi { color: var(--warn); } .check-bad .bi { color: var(--danger); }
+
+/* --- Invoice and quote lines ---------------------------------------------------------------------------------------------------- */
+table.lines td { vertical-align: middle; padding-top: .35rem; padding-bottom: .35rem; }
+table.lines .line-desc { min-width: 16rem; }
+table.lines .qty { width: 6rem; }
+table.lines .price { width: 9rem; }
+table.lines .line-amount { width: 7rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+table.lines .line-tax, table.lines .line-remove-cell { width: 3.5rem; text-align: center; }
+table.lines .line-row[hidden] { display: none; }
+.lines-sum { font-size: .95rem; }
+
+.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .5rem; }
+.check-pill { display: flex; align-items: center; gap: .6rem; padding: .6rem .8rem; border: 1px solid var(--border-strong); border-radius: 10px; cursor: pointer; font-weight: 500; }
+.check-pill:has(input:checked) { border-color: var(--accent); background: var(--accent-subtle); }
+
+/* --- Reports: sections of numbers and a grid of report cards ---------------------------------------------------------------------- */
+.rep-section { margin-bottom: 1.6rem; }
+.rep-heading { margin: 0 0 .75rem; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rep-section .kpi-strip { margin-bottom: 0; }
+.rep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem; }
+.rep-card { display: flex; flex-direction: column; gap: .3rem; padding: 1.1rem 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); color: var(--text); text-decoration: none; transition: border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.rep-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.rep-card .chip { margin-bottom: .4rem; }
+.rep-card strong { font-size: 1rem; font-weight: 600; }
+.rep-card .text-secondary { font-size: .84rem; line-height: 1.4; }
+.rep-open { margin-top: auto; padding-top: .5rem; font-size: .84rem; font-weight: 600; color: var(--accent-ink); }

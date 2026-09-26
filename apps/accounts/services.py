@@ -241,6 +241,25 @@ def admin_set_password(actor, user, new_password, *, request=None):
     return user
 
 
+def admin_setup_link(actor, user, *, request=None):
+    """
+    Super Admin only: a fresh one-time link for someone to choose their own password, returned to hand over yourself (when the email
+    did not arrive, say). It is not emailed. It works once and for a few hours; treat it like a password. The audit trail records
+    that a link was made, never the link.
+    """
+    if not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can create a sign-in link by hand.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+    _password_target(actor, user)
+    if user.status != AccountStatus.ACTIVE:
+        raise ServiceError("This account is not active. Reactivate it first.", code="account_inactive")
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    link = settings.SITE_URL.rstrip("/") + reverse("accounts:password_reset_confirm",
+                                                    args=[uid, default_token_generator.make_token(user)])
+    audit.record("account.setup_link_created", actor=actor, target=user, request=request)
+    return link
+
+
 @transaction.atomic
 def admin_send_reset_link(actor, user, *, request=None):
     """Send the person a fresh password-reset link (needs ``manage_users``, or ``manage_clients`` for a customer)."""

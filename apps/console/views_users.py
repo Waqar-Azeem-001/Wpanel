@@ -150,6 +150,21 @@ def user_set_password(request, pk):
 
 
 @require_POST
+@portal_permission_required(perm("manage_users"))
+def user_setup_link(request, pk):
+    """Super Admin only (the service refuses anyone else): a link to hand to the person, shown once on the next page."""
+    person = get_object_or_404(User, pk=pk)
+    try:
+        link = account_services.admin_setup_link(request.user, person, request=request)
+    except ACTION_ERRORS as exc:
+        messages.error(request, error_text(exc))
+    else:
+        messages.success(request, f"Give this link to {person.email}. It works once and for a few hours, so treat it like a "
+                                  f"password: {link}")
+    return redirect("console:user_detail", pk=pk)
+
+
+@require_POST
 @portal_permission_required(VIEW_USERS)
 def user_reset_link(request, pk):
     person = get_object_or_404(User, pk=pk)

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load ui i18n %}
-{% block title %}{% if chosen %}{{ chosen.label }}{% else %}{% trans "Hosting, servers, security and domains" %}{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% if chosen %}{{ chosen.name }}{% else %}{% trans "Hosting, servers, security and domains" %}{% endif %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content %}
 <section class="hero hero-compact">
   <div class="container-xxl">
-    <h1>{% if chosen %}{{ chosen.label }}{% else %}{% trans "Everything you need to get online" %}{% endif %}</h1>
+    <h1>{% if chosen %}{{ chosen.name }}{% else %}{% trans "Everything you need to get online" %}{% endif %}</h1>
     <p class="lead">{% if chosen %}{{ chosen.blurb }}{% else %}{% trans "Hosting for every kind of site, servers when you outgrow it, and the security and domains that go with it." %}{% endif %}</p>
     {% if not chosen %}
     <form method="get" action="{% url 'domains_public:search' %}" class="hero-search mt-3" role="search">
@@ -21,14 +21,14 @@
 <div class="container-xxl hero-overlap">
   <nav class="cat-nav" aria-label="{% trans 'Categories' %}">
     <a href="{% url 'catalog:product_list' %}"{% if not chosen %} aria-current="page" class="is-current"{% endif %}>{% trans "All" %}</a>
-    {% for c in nav %}<a href="{% if c.url_name %}{% url c.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ c.key }}{% endif %}"{% if chosen and chosen.key == c.key %} aria-current="page" class="is-current"{% endif %}><i class="bi {{ c.icon }}" aria-hidden="true"></i> {{ c.short }}</a>{% endfor %}
+    {% for c in nav %}<a href="{% if c.url_name %}{% url c.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ c.slug }}{% endif %}"{% if chosen and chosen.slug == c.slug %} aria-current="page" class="is-current"{% endif %}><i class="bi {{ c.icon }}" aria-hidden="true"></i> {{ c.label }}</a>{% endfor %}
   </nav>
   {% for group, entries in sections %}
   <section class="cat-group" aria-labelledby="g-{{ forloop.counter }}">
     {% if not chosen %}<h2 id="g-{{ forloop.counter }}" class="cat-group-title">{{ group }}</h2>{% endif %}
     {% for category, items in entries %}
-    <div class="cat-block" id="{{ category.key }}">
-      {% if not chosen %}<div class="cat-block-head"><span class="chip" aria-hidden="true"><i class="bi {{ category.icon }}"></i></span><div class="grow"><h3>{{ category.label }}</h3><p class="text-secondary mb-0">{{ category.blurb }}</p></div>{% if items and not category.url_name %}<a class="cat-all" href="{% url 'catalog:product_list' %}?category={{ category.key }}">{% trans "See all" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}</div>{% endif %}
+    <div class="cat-block" id="{{ category.slug }}">
+      {% if not chosen %}<div class="cat-block-head"><span class="chip" aria-hidden="true"><i class="bi {{ category.icon }}"></i></span><div class="grow"><h3>{{ category.name }}</h3><p class="text-secondary mb-0">{{ category.blurb }}</p></div>{% if items and not category.url_name %}<a class="cat-all" href="{% url 'catalog:product_list' %}?category={{ category.slug }}">{% trans "See all" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}</div>{% endif %}
       {% if category.url_name %}
         <form method="get" action="{% url category.url_name %}" class="search-line cat-search" role="search">
           <input type="hidden" name="years" value="1">

@@ -173,10 +173,14 @@ def tiles(world, role):
 
 
 def test_each_summary_tile_is_offered_only_for_areas_the_role_may_open(world):
-    assert set(tiles(world, "admin")) == {"Active clients", "Active services", "Pending orders", "Unpaid invoices",
-                                          "Income this month", "Open tickets", "Failed orders"}
+    first = {"Active clients", "Active services", "Pending orders", "Unpaid invoices", "Income this month", "Open tickets",
+             "Failed orders"}
+    second = {"Active domains", "Income this year", "Refunds this month", "Payments to confirm", "Average order",
+              "New customers today", "Tickets resolved"}
+    assert set(tiles(world, "admin")) == first | second
     assert set(tiles(world, "technical staff")) == {"Active clients", "Active services", "Pending orders", "Open tickets",
-                                                    "Failed orders"}  # no money
+                                                    "Failed orders", "Active domains", "Average order", "New customers today",
+                                                    "Tickets resolved"}  # no money
     assert "Unpaid invoices" in tiles(world, "support agent") and "Income this month" in tiles(world, "manager")
 
 
@@ -184,8 +188,8 @@ def test_a_summary_tile_equals_the_list_it_opens(world):
     """The rule since D4a: a number on the dashboard is the number of rows behind its link."""
     client = browser(world.people["admin"])
     for label, t in tiles(world, "admin").items():
-        if t.get("money"):
-            continue  # money tiles are sums; their counts are the sub-line and are covered by the billing tests
+        if t.get("money") or t.get("kpi"):
+            continue  # money tiles are sums, and "kpi" tiles are figures over a period, not the rows of a list
         response = client.get(t["url"])
         assert response.status_code == 200, label
         assert response.context["page"].paginator.count == t["value"], (label, t["value"], t["url"])

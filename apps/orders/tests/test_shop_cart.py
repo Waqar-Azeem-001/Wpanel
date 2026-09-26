@@ -44,7 +44,7 @@ def ssl(manager):
 # --- Categories on the store ----------------------------------------------------------------------------------
 
 def test_the_store_lists_every_category_in_its_group(shop):
-    keys = [c.key for c in categories.CATEGORIES]
+    keys = [c.slug for c in categories.active()]
     assert keys == ["wordpress", "shared", "business", "ecommerce", "reseller", "vps", "dedicated", "ssl", "whois", "domains"]
     page = visitor().get("/products/").content.decode()
     for label in ("WordPress hosting", "Shared hosting", "Business hosting", "E-commerce hosting", "VPS servers",

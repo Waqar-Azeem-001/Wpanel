@@ -12,13 +12,16 @@ from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 from apps.core.utils import unique_slug
 
-from .models import Addon, AddonKind, AddonPrice, CatalogStatus, Product, ProductPrice, Server
+from . import categories
+from .models import (Addon, AddonKind, AddonPrice, BillingCycle, CatalogStatus, CategoryKind, Product, ProductPrice, Server,
+                     StoreCategory)
 
 PRODUCT_FIELDS = (
     "name", "description", "type", "resource_limits", "whm_package_name", "auto_setup", "default_auto_renew",
-    "upsell_product",
+    "upsell_product", "category",
 )
-ADDON_FIELDS = ("name", "description", "kind")
+ADDON_FIELDS = ("name", "description", "kind", "category")
+CATEGORY_FIELDS = ("name", "short_name", "blurb", "icon", "group", "kind", "sort_order", "is_active")
 SERVER_FIELDS = ("name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
                  "use_ssl", "verify_ssl")
 
@@ -139,12 +142,23 @@ def create_product(actor, data, *, request=None):
     for field in PRODUCT_FIELDS:
         if field in data and field != "name":
             setattr(product, field, data[field])
+    if product.category_id is None:  # filed by its type unless staff chose otherwise, so it shows on the store
+        product.category = categories.default_for_type(product.type)
     product.full_clean()
     product.save()
     if "recommended_addons" in data:
         product.recommended_addons.set(data["recommended_addons"])
+    _first_price(actor, product, data, request)
     audit.record("product.created", actor=actor, target=product, metadata={"type": product.type}, request=request)
     return product
+
+
+def _first_price(actor, item, data, request):
+    """Creating something can include its first price (the form's price box): cycle, price, optional setup fee."""
+    if data.get("price") is None or data.get("price") == "":
+        return None
+    return set_price(actor, item, billing_cycle=data.get("billing_cycle") or BillingCycle.MONTHLY, price=data["price"],
+                     custom_months=data.get("custom_months") or 0, setup_fee=data.get("setup_fee") or 0, request=request)
 
 
 @transaction.atomic
@@ -194,9 +208,12 @@ def create_addon(actor, data, *, request=None):
     _require(actor, "manage_products")
     name = data.get("name", "")
     addon = Addon(name=name, slug=unique_slug(Addon.objects, name), description=data.get("description", ""),
-                  kind=data.get("kind") or AddonKind.GENERAL)
+                  kind=data.get("kind") or AddonKind.GENERAL, category=data.get("category"))
+    if addon.category_id is None:
+        addon.category = categories.default_for_kind(addon.kind)
     addon.full_clean()
     addon.save()
+    _first_price(actor, addon, data, request)
     audit.record("addon.created", actor=actor, target=addon, request=request)
     return addon
 
@@ -211,6 +228,36 @@ def update_addon(actor, addon, data, *, request=None):
     addon.save()
     audit.record("addon.updated", actor=actor, target=addon, metadata={"fields": sorted(changed)}, request=request)
     return addon
+
+
+# --- Store categories -----------------------------------------------------------------------------------------
+
+@transaction.atomic
+def save_category(actor, category, data, *, request=None):
+    """Create (``category=None``) or change a store category."""
+    _require(actor, "manage_products")
+    created = category is None
+    category = category or StoreCategory(slug=unique_slug(StoreCategory.objects, data.get("name", "")))
+    changed = _apply(category, data, CATEGORY_FIELDS)
+    if not created and not changed:
+        return category
+    category.full_clean()
+    category.save()
+    audit.record("store_category.created" if created else "store_category.updated", actor=actor, target=category,
+                 metadata={"fields": sorted(changed)}, request=request)
+    return category
+
+
+@transaction.atomic
+def delete_category(actor, category, *, request=None):
+    """Remove an empty category. One that still holds products or add-ons is hidden instead (its things would lose their heading)."""
+    _require(actor, "manage_products")
+    held = category.products.count() + category.addons.count()
+    if held:
+        raise ServiceError(f"{held} product(s) or add-on(s) are still in this category. Move them first, or hide the category "
+                           "instead of deleting it.", code="category_in_use")
+    audit.record("store_category.deleted", actor=actor, metadata={"name": category.name}, request=request)
+    category.delete()
 
 
 def set_addon_status(actor, addon, new_status, *, request=None):

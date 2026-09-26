@@ -139,6 +139,8 @@ ITEMS = [
     item("staff.catalog", _("Products"), areas=STAFF, section=_("Commerce"), icon="bi-box-seam"),
     item("staff.catalog.products", _("Products & plans"), "catalog_staff:product_list", areas=STAFF,
          parent="staff.catalog", permission="view_products"),
+    item("staff.catalog.categories", _("Categories"), "catalog_staff:category_list", areas=STAFF, parent="staff.catalog",
+         permission="view_products"),
     item("staff.catalog.addons", _("Add-ons"), "catalog_staff:addon_list", areas=STAFF, parent="staff.catalog",
          permission="view_products"),
 
@@ -187,6 +189,8 @@ ITEMS = [
          parent="staff.notifications", permission="view_settings"),
     item("staff.notifications.log", _("Email log"), "notifications_staff:emails", areas=STAFF,
          parent="staff.notifications", permission="view_settings"),
+    item("staff.notifications.templates", _("Email templates"), "notifications_staff:templates", areas=STAFF,
+         parent="staff.notifications", requires="superuser"),
     item("staff.settings", _("Settings"), areas=STAFF, section=_("System"), icon="bi-sliders"),
     item("staff.settings.brand", _("Brand"), "brand_staff:settings", areas=STAFF, parent="staff.settings",
          permission="view_settings"),

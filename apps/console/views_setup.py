@@ -89,7 +89,7 @@ def staff_user_status(request, pk):
 
 def _provider_initial(provider):
     return {f: getattr(provider, f) for f in ("name", "host", "port", "username", "use_tls", "use_ssl", "timeout",
-                                                "from_email", "is_active")}
+                                                "from_email", "envelope_from", "is_active")}
 
 
 @portal_permission_required(VIEW_PROVIDERS)
@@ -126,6 +126,15 @@ def email_provider_delete(request, pk):
     _flash(request, lambda: (notification_services.delete_email_provider(request.user, provider, request=request),
                              f"{provider.name} deleted.")[1])
     return redirect("console:email_providers")
+
+
+@portal_permission_required(perm("manage_providers"))
+def email_provider_check(request, pk):
+    """Why "sent" may still not mean "received": SPF, DKIM and DMARC as a receiving server sees them (public DNS only)."""
+    from apps.notifications import deliverability
+
+    provider = get_object_or_404(EmailProvider, pk=pk)
+    return render(request, "console/email_provider_check.html", {"provider": provider, "checks": deliverability.report(provider)})
 
 
 @require_POST

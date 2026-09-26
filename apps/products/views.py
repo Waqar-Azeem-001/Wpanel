@@ -2,15 +2,17 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
+from apps.core.web import run_action
 
 from . import categories, forms, services
-from .models import Addon, CatalogStatus, Product, Server
+from .models import Addon, CatalogStatus, Product, Server, StoreCategory
 
 
 def _apply_error(form, exc):
@@ -39,13 +41,17 @@ def _redirect_back(request, item, action):
 
 def public_product_list(request):
     """The store: every category a visitor can shop for, or just one (``?category=vps``)."""
-    chosen = categories.BY_KEY.get(request.GET.get("category", ""))
+    slug = request.GET.get("category", "")
+    everything = categories.sections()
+    chosen = categories.get(slug)
     if chosen is not None and chosen.url_name:
         return redirect(chosen.url_name)
-    shown = [(chosen.group, [(chosen, categories.items(chosen))])] if chosen else categories.sections()
-    return render(request, "products/public/list.html", {
-        "sections": shown, "chosen": chosen, "nav": categories.CATEGORIES,
-        "products": _cheapest_first(_active_products())})
+    if chosen is None and slug == "more":  # products nobody filed under a category
+        chosen = next((c for _group, entries in everything for c, _items in entries if c.slug == "more"), None)
+    shown = [(chosen.group, [(chosen, dict((c.slug, i) for _g, entries in everything for c, i in entries).get(chosen.slug, []))])] if chosen else everything
+    nav = [c for _group, entries in everything for c, _items in entries]
+    return render(request, "products/public/list.html", {"sections": shown, "chosen": chosen, "nav": nav,
+                                                          "products": _cheapest_first(_active_products())})
 
 
 def _active_products():
@@ -64,7 +70,7 @@ def _cheapest_first(products):
 def public_home(request):
     """The front page for visitors: a search box for a domain, the plans, and why to choose us."""
     tiles = []
-    for category in categories.CATEGORIES:
+    for category in categories.active():
         entries = categories.items(category)
         lowest = [categories.lowest_price(e) for e in entries]
         lowest = [p for p in lowest if p is not None]
@@ -107,7 +113,7 @@ def staff_product_list(request):
 
 @portal_permission_required(perm("manage_products"))
 def staff_product_create(request):
-    form = forms.ProductForm(request.POST or None)
+    form = forms.ProductForm(request.POST or None, with_price=True)
     if request.method == "POST" and form.is_valid():
         try:
             product = services.create_product(request.user, form.cleaned_data, request=request)
@@ -117,6 +123,44 @@ def staff_product_create(request):
             messages.success(request, f"Product '{product.name}' created.")
             return redirect("catalog_staff:product_detail", slug=product.slug)
     return render(request, "products/staff/product_form.html", {"form": form, "title": "Add product"})
+
+
+# --- Staff: store categories --------------------------------------------------------------------------------------
+
+@portal_permission_required(perm("view_products"))
+def staff_category_list(request):
+    rows = StoreCategory.objects.annotate(n_products=Count("products", distinct=True), n_addons=Count("addons", distinct=True))
+    return render(request, "products/staff/category_list.html", {
+        "categories": rows.order_by("sort_order", "name"), "can_manage": request.user.has_perm(perm("manage_products"))})
+
+
+@portal_permission_required(perm("manage_products"))
+def staff_category_edit(request, pk=None):
+    category = get_object_or_404(StoreCategory, pk=pk) if pk else None
+    initial = {f: getattr(category, f) for f in services.CATEGORY_FIELDS} if category else None
+    form = forms.CategoryForm(request.POST or None, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        try:
+            saved = services.save_category(request.user, category, form.cleaned_data, request=request)
+        except (ServiceError, ValidationError) as exc:
+            _apply_error(form, exc)
+        else:
+            messages.success(request, f"Category '{saved.name}' saved.")
+            return redirect("catalog_staff:category_list")
+    return render(request, "products/staff/category_form.html", {
+        "form": form, "category": category, "title": f"Edit {category.name}" if category else "Add a category"})
+
+
+@require_POST
+@portal_permission_required(perm("manage_products"))
+def staff_category_delete(request, pk):
+    category = get_object_or_404(StoreCategory, pk=pk)
+
+    def action():
+        services.delete_category(request.user, category, request=request)
+        return f"Category '{category.name}' deleted."
+
+    return run_action(request, action, "catalog_staff:category_list")
 
 
 @portal_permission_required(perm("view_products"))
@@ -139,11 +183,11 @@ def staff_product_edit(request, slug):
     product = get_object_or_404(Product, slug=slug)
     initial = {
         "name": product.name, "type": product.type, "description": product.description,
-        "resource_limits": product.resource_limits, "whm_package_name": product.whm_package_name,
+        "whm_package_name": product.whm_package_name, "category": product.category_id,
         "auto_setup": product.auto_setup, "default_auto_renew": product.default_auto_renew,
         "upsell_product": product.upsell_product_id, "recommended_addons": list(product.recommended_addons.all()),
     }
-    form = forms.ProductForm(request.POST or None, initial=initial)
+    form = forms.ProductForm(request.POST or None, initial=initial, existing_limits=product.resource_limits)
     form.fields["upsell_product"].queryset = Product.objects.exclude(pk=product.pk)
     if request.method == "POST" and form.is_valid():
         try:
@@ -245,7 +289,7 @@ def staff_addon_list(request):
 
 @portal_permission_required(perm("manage_products"))
 def staff_addon_create(request):
-    form = forms.AddonForm(request.POST or None)
+    form = forms.AddonForm(request.POST or None, with_price=True)
     if request.method == "POST" and form.is_valid():
         try:
             addon = services.create_addon(request.user, form.cleaned_data, request=request)
@@ -271,7 +315,8 @@ def staff_addon_detail(request, slug):
 @portal_permission_required(perm("manage_products"))
 def staff_addon_edit(request, slug):
     addon = get_object_or_404(Addon, slug=slug)
-    form = forms.AddonForm(request.POST or None, initial={"name": addon.name, "description": addon.description, "kind": addon.kind})
+    form = forms.AddonForm(request.POST or None, initial={"name": addon.name, "description": addon.description, "kind": addon.kind,
+                                                                  "category": addon.category_id})
     if request.method == "POST" and form.is_valid():
         try:
             services.update_addon(request.user, addon, form.cleaned_data, request=request)

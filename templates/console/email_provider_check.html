@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Check deliverability" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p class="mb-2"><a href="{% url 'console:email_providers' %}">&larr; {% trans "Email provider" %}</a></p>
+<div class="page-head"><h1>{% trans "Check deliverability" %}</h1><p class="page-sub">{{ provider.name }} &middot; {{ provider.host }} &middot; {% trans "From" %} {{ provider.from_email }}</p></div>
+<p class="text-secondary">{% trans "\"Sent\" means the mail server accepted the message. Whether Gmail or Outlook puts it in the inbox, in Spam, or nowhere depends on these checks, which any receiving server makes from public DNS records." %}</p>
+<section class="card"><div class="card-body">
+  <ul class="check-list">
+    {% for level, text in checks %}
+    <li class="check-{{ level }}"><i class="bi {% if level == 'ok' %}bi-check-circle-fill{% elif level == 'warn' %}bi-exclamation-triangle-fill{% else %}bi-x-octagon-fill{% endif %}" aria-hidden="true"></i><span>{{ text }}</span></li>
+    {% endfor %}
+  </ul>
+  <p class="text-secondary small mb-0">{% trans "DNS changes can take up to an hour to be seen. After fixing SPF or DKIM, send a test again and check the Spam folder as well as the inbox." %}</p>
+</div></section>
+{% endblock %}

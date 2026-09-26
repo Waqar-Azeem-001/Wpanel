@@ -1,0 +1,8 @@
+<tr class="line-row">
+  <td class="line-desc"><label class="visually-hidden" for="{{ line.description.id_for_label }}">Description</label>{{ line.description }}{% for e in line.description.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
+  <td class="qty"><label class="visually-hidden" for="{{ line.quantity.id_for_label }}">Quantity</label>{{ line.quantity }}{% for e in line.quantity.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
+  <td class="price"><label class="visually-hidden" for="{{ line.unit_price.id_for_label }}">Unit price</label>{{ line.unit_price }}{% for e in line.unit_price.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</td>
+  <td class="line-amount text-end" data-line-amount>&mdash;</td>
+  <td class="line-tax"><label class="visually-hidden" for="{{ line.taxable.id_for_label }}">Taxable</label>{{ line.taxable }}</td>
+  <td class="line-remove-cell"><button class="btn btn-sm btn-outline-danger" type="button" data-line-remove aria-label="Remove this line"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
+</tr>

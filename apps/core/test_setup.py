@@ -233,7 +233,7 @@ def test_a_test_email_reports_success_and_failure_and_never_echoes_the_password(
     url = reverse("console:email_provider_test", args=[provider.pk])
     monkeypatch.setattr(EmailMultiAlternatives, "send", lambda self, fail_silently=False: 1)
     ok = admin.post(url, {"to_email": "me@harness.test"})
-    assert "Sent." in " ".join(notes(admin, ok))
+    assert "accepted it" in " ".join(notes(admin, ok))
 
     def boom(self, fail_silently=False):
         raise ConnectionRefusedError("could not log in with s3cret-Pass! at smtp.harness.test")

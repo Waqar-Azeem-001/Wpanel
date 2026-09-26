@@ -7,7 +7,7 @@
   <h1>Addons</h1>
   <p class="page-sub">Extras a customer can add to an order.</p>
   <div class="d-flex flex-wrap gap-2 align-items-center">
-    <a href="{% url 'catalog_staff:product_list' %}">Products</a>
+    <a href="{% url 'catalog_staff:product_list' %}">Products</a><a href="{% url 'catalog_staff:category_list' %}">Categories</a>
     {% if perms.accounts.manage_products %}<a class="btn btn-primary" href="{% url 'catalog_staff:addon_create' %}">Add addon</a>{% endif %}
   </div>
 </div>
@@ -18,16 +18,18 @@
 </form>
 <div class="table-responsive">
 <table class="table">
-  <thead><tr><th>Name</th><th>Status</th><th>Prices</th></tr></thead>
+  <thead><tr><th>Name</th><th>Kind</th><th>Category</th><th>Status</th><th>Price</th></tr></thead>
   <tbody>
   {% for addon in page %}
     <tr>
       <td><a href="{% url 'catalog_staff:addon_detail' addon.slug %}">{{ addon.name }}</a></td>
+      <td>{{ addon.get_kind_display }}</td>
+      <td>{{ addon.category.name|default:"&mdash;" }}</td>
       <td>{% status_badge addon.status addon.get_status_display %}</td>
-      <td>{{ addon.prices.count }}</td>
+      <td>{{ addon.price_summary }}{% if addon.prices.count > 1 %} <small class="text-secondary">+{{ addon.prices.count|add:"-1" }} more</small>{% endif %}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="3" class="text-secondary">No addons match.</td></tr>
+    <tr><td colspan="5" class="text-secondary">No addons match.</td></tr>
   {% endfor %}
   </tbody>
 </table>

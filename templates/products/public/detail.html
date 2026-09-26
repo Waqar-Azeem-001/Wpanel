@@ -46,7 +46,7 @@
   {% if recommended_addons %}
   <hr>
   <h2 class="h5">{% trans "Works well with this plan" %}</h2>
-  <ul class="list-unstyled mb-0">{% for addon in recommended_addons %}<li class="py-1"><strong>{{ addon.name }}</strong>{% if addon.description %} <span class="text-secondary">&mdash; {{ addon.description|truncatechars:110 }}</span>{% endif %}</li>{% endfor %}</ul>
+  <ul class="list-unstyled mb-0">{% for addon in recommended_addons %}<li class="py-1"><strong>{{ addon.name }}</strong> <span class="text-secondary">({{ addon.price_summary }})</span>{% if addon.description %} <span class="text-secondary">&mdash; {{ addon.description|truncatechars:110 }}</span>{% endif %}</li>{% endfor %}</ul>
   <p class="small text-secondary mb-0">{% trans "You can add these in your cart." %}</p>
   {% endif %}
   {% if upsell %}

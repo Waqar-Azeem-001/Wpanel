@@ -67,6 +67,10 @@ class EmailProviderForm(forms.Form):
     use_ssl = forms.BooleanField(required=False, label="Implicit TLS (usually port 465)")
     timeout = forms.IntegerField(min_value=1, max_value=120, initial=20, help_text="Seconds.")
     from_email = forms.CharField(max_length=255, help_text='e.g. "Web Host Era <billing@example.com>"')
+    envelope_from = forms.CharField(
+        max_length=255, required=False, label="Envelope sender (optional)",
+        help_text="What the receiving server checks SPF against. Leave blank to use the From address. If mail is \"sent\" but "
+                  "never arrives, set this to your SMTP login and run Check deliverability.")
     is_active = forms.BooleanField(required=False, label="Use this provider for all outgoing email")
 
     def clean(self):
