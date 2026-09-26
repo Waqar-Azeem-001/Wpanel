@@ -64,10 +64,7 @@ def my_domain_list(request):
     domains = Domain.objects.filter(client__contacts__user=request.user).select_related("client").distinct()
     domains, view_panel = portal.status_filter(request, domains, DomainStatus.choices, url_name="domains_customer:list",
                                                all_label="All domains")
-    actions = portal.actions_panel(request, "Actions", [
-        ("Register a new domain", "domains_public:search", "bi-plus-circle"),
-        ("Transfer a domain to us", "domains_public:search", "bi-arrow-left-right")])
-    return render(request, "domains/customer/list.html", {"domains": domains, "sidebar": [view_panel, actions]})
+    return render(request, "domains/customer/list.html", {"domains": domains, "sidebar": [view_panel]})
 
 
 def _own_domain(request, pk):

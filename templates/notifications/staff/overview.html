@@ -3,7 +3,6 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Email</h1><p class="page-sub">Which emails were sent and whether they arrived.</p></div>
-{% include "notifications/staff/_nav.html" %}
 {% if failed %}<div class="alert alert-danger"><p>{{ failed }} email{{ failed|pluralize }} failed to send. <a href="{% url 'notifications_staff:emails' %}?status=failed">Review and resend</a>.</p></div>{% endif %}
 <nav aria-label="Period"><ul class="nav nav-tabs mb-3 tab-scroll">
   <li class="nav-item"><a class="nav-link{% if days == 7 %} active{% endif %}" href="?days=7"{% if days == 7 %} aria-current="page"{% endif %}>7 days</a></li>

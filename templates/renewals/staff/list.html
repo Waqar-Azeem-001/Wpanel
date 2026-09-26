@@ -6,7 +6,6 @@
 <div class="page-head"><h1>Billing</h1>
   {% if can_manage %}<form method="post" action="{% url 'renewals_staff:generate' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Create due renewal invoices now</button></form>{% endif %}
 </div>
-{% include "billing/staff/_nav.html" %}
 {% if needs_attention %}<div class="alert alert-danger"><p>{{ needs_attention }} paid change{{ needs_attention|pluralize }} could not be applied. Filter by "Paid - needs attention" and open the invoice to retry.</p></div>{% endif %}
 
 <section class="card"><div class="card-body">

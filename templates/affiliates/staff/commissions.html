@@ -4,7 +4,6 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <h1>Affiliates</h1>
-{% include "affiliates/staff/_nav.html" %}
 <form class="filters" method="get">
   <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ q }}" placeholder="Invoice, code or email"></div>
   <div class="field"><label for="id_status">Status</label>

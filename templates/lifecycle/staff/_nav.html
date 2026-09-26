@@ -1,5 +1,0 @@
-<nav><ul class="nav nav-tabs mb-3 tab-scroll">
-  <li class="nav-item"><a class="nav-link{% if section == "overview" %} active{% endif %}" href="{% url 'lifecycle_staff:overview' %}"{% if section == "overview" %} aria-current="page"{% endif %}>Overview</a></li>
-  <li class="nav-item"><a class="nav-link{% if section == "cancellations" %} active{% endif %}" href="{% url 'lifecycle_staff:cancellations' %}"{% if section == "cancellations" %} aria-current="page"{% endif %}>Cancellations</a></li>
-  {% if perms.accounts.view_settings %}<li class="nav-item"><a class="nav-link{% if section == "settings" %} active{% endif %}" href="{% url 'lifecycle_staff:settings' %}"{% if section == "settings" %} aria-current="page"{% endif %}>Timings</a></li>{% endif %}
-</ul></nav>

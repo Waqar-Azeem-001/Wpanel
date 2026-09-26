@@ -118,27 +118,63 @@ def test_signed_in_people_get_the_rail_the_top_bar_and_the_search(world):
         assert ('data-search-url="' + reverse("console:search") + '"' in html) == (area == "staff"), who
 
 
-def test_the_rail_marks_the_current_page_and_opens_its_group(world):
-    html = rail_of(page_of(world.people["manager"], "billing_staff:invoice_list").content.decode())
-    assert re.search(r'class="rail-sublink is-current" href="/staff/billing/invoices/" aria-current="page"', html)
-    assert re.search(r'class="rail-group is-open is-active">\s*<div class="rail-row">\s*<a class="rail-link is-current" href="/staff/billing/', html)
-    assert html.count("is-open") == 1  # only the group you are in is open
+def test_the_rail_is_one_flat_list_and_marks_the_group_you_are_in(world):
+    page = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
+    html = rail_of(page)
+    assert re.search(r'<a class="rail-link is-current" href="/staff/billing/" title="Billing" aria-current="page">', html)
+    assert html.count("is-current") == 1
+    assert "rail-toggle" not in html and "rail-sub" not in html and "chevron" not in html  # nothing to expand or fold
 
 
-def test_the_rail_lists_only_what_the_person_can_open(world):
-    technical = rail_of(page_of(world.people["technical staff"], "console:dashboard").content.decode())
+def test_the_pages_of_the_group_are_a_strip_under_the_top_bar_with_the_current_one_marked(world):
+    page = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
+    strip = page.split('<nav class="groupnav"')[1].split("</nav>")[0]
+    assert re.findall(r'>([^<]+)</a></li>', strip) == ["Overview", "Invoices", "Transactions", "Quotes", "Billable items",
+                                                       "Renewals &amp; upgrades", "Coupons"]
+    assert 'class="is-current" href="/staff/billing/invoices/" aria-current="page">Invoices' in strip
+    assert page.index('<header class="topbar">') < page.index('<nav class="groupnav"') < page.index('<main id="main"')
+
+
+def test_a_detail_page_keeps_its_own_page_in_the_strip_lit(world):
+    invoice = world.objects["invoices"]["unpaid"]
+    strip = page_of(world.people["manager"], "billing_staff:invoice_detail", invoice.pk).content.decode().split('<nav class="groupnav"')[1].split("</nav>")[0]
+    assert 'href="/staff/billing/invoices/" aria-current="page">Invoices' in strip
+
+
+def test_a_module_with_one_page_has_no_strip_and_a_person_sees_only_their_own_pages_in_it(world):
+    assert 'class="groupnav"' not in page_of(world.people["manager"], "hosting_staff:list").content.decode()
+    technical = page_of(world.people["technical staff"], "support_staff:tickets").content.decode()
+    strip = technical.split('<nav class="groupnav"')[1].split("</nav>")[0]
+    assert "Tickets" in strip and "Departments" in strip
+    assert 'class="groupnav"' not in page_of(world.people["technical staff"], "clients_staff:list").content.decode()  # one page: no strip
+
+
+def test_the_customer_strip_lists_only_customer_pages(world):
+    page = page_of(world.people["customer owner"], "billing_customer:invoice_list").content.decode()
+    strip = page.split('<nav class="groupnav"')[1].split("</nav>")[0]
+    assert re.findall(r'>([^<]+)</a></li>', strip) == ["Invoices", "Quotes", "Payment methods"]
+
+
+def test_the_brand_in_the_rail_is_the_mark_and_the_name_not_a_pasted_logo(world):
+    html = rail_of(page_of(world.people["manager"], "console:dashboard").content.decode())
+    assert 'class="brand-mark"' in html or 'class="brand-mark is-letter"' in html
+    assert "Staff console" in html and 'class="brand-text"' in html and "logo" not in html.lower()
+
+
+def test_the_menus_list_only_what_the_person_can_open(world):
+    page = page_of(world.people["technical staff"], "console:dashboard").content.decode()
+    menus = rail_of(page) + page.split('id="quick-pages" type="application/json">')[1].split("</script>")[0]
     for hidden in (reverse("billing_staff:invoice_list"), reverse("console:users"), reverse("reports_staff:index"),
                    reverse("console:email_providers"), reverse("catalog_staff:product_list")):
-        assert hidden not in technical
+        assert hidden not in menus, hidden
     for shown in (reverse("hosting_staff:list"), reverse("support_staff:tickets"), reverse("clients_staff:list")):
-        assert shown in technical
+        assert shown in menus, shown
 
 
 def test_the_sections_and_their_headings_are_drawn(world):
     html = rail_of(page_of(world.people["admin"], "console:dashboard").content.decode())
-    headings = re.findall(r'<button class="rail-sec-toggle" type="button" aria-expanded="true" aria-controls="rail-sec-[a-z-]+"><span>([^<]+)</span>', html)
+    headings = re.findall(r'<p class="rail-section"><span>([^<]+)</span></p>', html)
     assert headings == ["People", "Commerce", "Operations", "Insights", "System"]
-    assert 'data-section="people"' in html and 'id="rail-sec-people"' in html  # a section folds, and the state is remembered
 
 
 def test_the_profile_menu_shows_who_you_are_and_signs_out_with_a_post(world):
@@ -155,10 +191,10 @@ def test_the_notification_bell_shows_the_unread_count_in_the_top_bar(world):
     assert re.search(r'class="icon-badge">\d+<span class="visually-hidden"> new</span>', html)
 
 
-def test_a_detail_page_keeps_exactly_one_group_open(world):
+def test_a_detail_page_keeps_exactly_one_rail_entry_lit(world):
     invoice = world.objects["invoices"]["unpaid"]
     html = rail_of(page_of(world.people["manager"], "billing_staff:invoice_detail", invoice.pk).content.decode())
-    assert html.count("is-open") == 1 and re.search(r'is-open is-active">\s*<div class="rail-row">\s*<a class="rail-link is-current" href="/staff/billing/', html)
+    assert html.count("is-current") == 1 and 'is-current" href="/staff/billing/"' in html
 
 
 def test_the_customer_sidebar_no_longer_repeats_the_sign_out_link(world):

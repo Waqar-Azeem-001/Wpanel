@@ -1,0 +1,10 @@
+{% load i18n %}
+{# The pages of the group you are in (Billing: Overview, Invoices ...), from the same registry as the rail. Shown only for groups with more than one page. #}
+{% if subnav %}
+<nav class="groupnav" aria-label="{{ subnav.label }}">
+  <span class="groupnav-title">{{ subnav.label }}</span>
+  <ul>
+    {% for c in subnav.children %}<li><a class="{% if c.url == subnav.current %}is-current{% endif %}" href="{{ c.url }}"{% if c.url == subnav.current %} aria-current="page"{% endif %}>{{ c.label }}</a></li>{% endfor %}
+  </ul>
+</nav>
+{% endif %}

@@ -3,7 +3,6 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <h1>Support</h1>
-{% include "support/staff/_nav.html" %}
 <p class="text-secondary">Ready-made answers agents can insert into a reply. <code>{client}</code>, <code>{ticket}</code> and <code>{agent}</code> are filled in automatically.</p>
 <div class="table-responsive"><table class="table">
   <thead><tr><th>Title</th><th>Department</th><th>Text</th><th>Active</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>

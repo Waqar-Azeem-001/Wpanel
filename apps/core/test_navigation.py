@@ -271,11 +271,11 @@ def test_the_breadcrumb_bar_is_drawn_on_registry_pages_only(client, manager):
 # --- No menu is written by hand ---------------------------------------------------------------------------------------
 
 def test_no_navigation_template_contains_a_link_of_its_own():
-    for name in ("navbar_public", "nav_items", "rail", "topbar", "tabbar", "crumbs", "quick_nav"):
+    for name in ("navbar_public", "nav_items", "rail", "topbar", "tabbar", "crumbs", "quick_nav", "subnav", "account_menu"):
         text = (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")
         assert 'href="/' not in text, name
         urls = [u for u in text.replace("\n", " ").split("{% url ")[1:]]
-        assert all(u.startswith(("'accounts:logout'", "'console:search'", "'home'", "'brand_logo'")) for u in urls), (name, urls)
+        assert all(u.startswith(("'accounts:logout'", "'console:search'", "'home'", "'brand_logo'", "'brand_favicon'")) for u in urls), (name, urls)
 
 
 def test_the_old_navigation_bars_are_gone():

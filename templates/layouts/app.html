@@ -8,6 +8,7 @@
   <div class="rail-backdrop" data-rail-close></div>
   <div class="shell-main">
     {% include "components/topbar.html" %}
+    {% include "components/subnav.html" %}
     <main id="main" class="page {% block container %}{% endblock %}{% if sidebar %} wide{% endif %}" tabindex="-1">
       {% include "components/messages.html" %}
       {% if sidebar %}<div class="row g-4"><aside class="col-lg-3 order-2 order-lg-1" aria-label="{% trans 'Sidebar' %}">{% include "components/sidebar.html" with panels=sidebar %}</aside><div class="col-lg-9 order-1 order-lg-2">{% endif %}

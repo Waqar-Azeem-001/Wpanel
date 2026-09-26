@@ -5,7 +5,6 @@
 {% block content %}
 <div class="page-head"><h1>{% trans "Support" %}</h1>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'support_staff:ticket_new' %}">{% trans "New ticket" %}</a>{% endif %}</div>
-{% include "support/staff/_nav.html" %}
 <form class="row g-2 align-items-end mb-3" method="get">
   <div class="col-md"><label class="form-label" for="id_q">{% trans "Search" %}</label>{{ form.q|bs_field }}</div>
   <div class="col-6 col-md-2"><label class="form-label" for="id_status">{% trans "Status" %}</label>{{ form.status|bs_field }}</div>

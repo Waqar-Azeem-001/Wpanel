@@ -4,7 +4,6 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Billing</h1><p class="page-sub">Invoices, payments, quotes and everything billed.</p></div>
-{% include "billing/staff/_nav.html" %}
 <form class="filters" method="get">
   <div class="field"><label for="id_status">Status</label>
     <select name="status" id="id_status"><option value="">All</option>{% for value, label in statuses %}<option value="{{ value }}"{% if value == status_filter %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>

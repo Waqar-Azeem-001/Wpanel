@@ -35,10 +35,8 @@ def ticket_list(request):
     tickets, view_panel = portal.status_filter(
         request, tickets, choices, url_name="support_customer:list", all_label=None, apply=apply, default="active",
         current=request.GET.get("status") or legacy)
-    support_panel = portal.actions_panel(request, "Support", [
-        ("Open a ticket", "support_customer:new", "bi-plus-circle"), ("Knowledgebase", "help:index", "bi-book")])
     page = Paginator(tickets.order_by("-last_activity_at", "-id"), 25).get_page(request.GET.get("page"))
-    return render(request, "support/customer/list.html", {"page": page, "sidebar": [view_panel, support_panel]})
+    return render(request, "support/customer/list.html", {"page": page, "sidebar": [view_panel]})
 
 
 @login_required

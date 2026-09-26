@@ -35,7 +35,7 @@ link anywhere without breaking Rule 5. Add the links when the pages exist.
 `layouts/app.html` (used by `layouts/client.html` and `layouts/staff.html`, chosen per request by the existing
 context processor; pages did not change):
 
-* **Rail** (`components/rail.html`): entries come only from the menu registry. Top-level entries are single links or
+* **Rail** (`components/rail.html`; from D7 it is one flat list, see `d7-visual-system.md` §3): entries come only from the menu registry. Top-level entries are single links or
   groups; a group's own link opens its first page and a chevron button shows its other pages (only the group you are
   in starts open; without JavaScript every group is open). Sections (staff): *People, Commerce, Operations, Insights,
   System*. Dark for staff, light for customers. Collapses to icons (name shown as the tooltip) and remembers the choice

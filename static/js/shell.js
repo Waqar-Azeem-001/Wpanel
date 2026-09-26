@@ -30,35 +30,6 @@
       });
     }
 
-    rail.querySelectorAll(".rail-toggle").forEach(function (button) {
-      button.addEventListener("click", function () {
-        var group = button.closest(".rail-group");
-        var open = group.classList.toggle("is-open");
-        button.setAttribute("aria-expanded", open ? "true" : "false");
-      });
-    });
-
-    // Sections fold (People, Commerce ...); the choice is remembered, and the section you are in never starts folded.
-    var folded = [];
-    try { folded = JSON.parse(store("wp.sections") || "[]"); } catch (e) { folded = []; }
-    rail.querySelectorAll(".rail-sec").forEach(function (section) {
-      var toggle = section.querySelector(".rail-sec-toggle");
-      if (!toggle) { return; }
-      var key = section.getAttribute("data-section");
-      function set(collapsed) {
-        section.classList.toggle("is-collapsed", collapsed);
-        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
-      }
-      if (folded.indexOf(key) !== -1 && !section.querySelector("[aria-current='page'], .is-current")) { set(true); }
-      toggle.addEventListener("click", function () {
-        var collapsed = !section.classList.contains("is-collapsed");
-        set(collapsed);
-        folded = folded.filter(function (k) { return k !== key; });
-        if (collapsed) { folded.push(key); }
-        store("wp.sections", JSON.stringify(folded));
-      });
-    });
-
     var opener = doc.querySelector("[data-rail-open]");
     function openDrawer() { body.classList.add("rail-open"); if (opener) { opener.setAttribute("aria-expanded", "true"); } var first = rail.querySelector("a"); if (first) { first.focus(); } }
     function closeDrawer() { if (!body.classList.contains("rail-open")) { return; } body.classList.remove("rail-open"); if (opener) { opener.setAttribute("aria-expanded", "false"); opener.focus(); } }
@@ -81,17 +52,8 @@
 
     function collectPages() {
       pages = [];
-      var seen = {};
-      doc.querySelectorAll("#rail .rail-link, #rail .rail-sublink").forEach(function (link) {
-        var href = link.getAttribute("href");
-        var group = link.closest(".rail-group");
-        var label = link.textContent.trim();
-        var parent = group && !link.classList.contains("rail-link") ? group.querySelector(".rail-link").textContent.trim() : "";
-        if (!href || seen[href + label]) { return; }
-        seen[href + label] = true;
-        if (link.classList.contains("rail-link") && group) { return; } // a group's own link is its first page, listed below it
-        pages.push({ label: label, parent: parent, href: href });
-      });
+      try { pages = JSON.parse(doc.getElementById("quick-pages").textContent); } catch (e) { pages = []; }
+      pages = pages.map(function (p) { return { label: p.label, parent: p.group, href: p.url }; });
     }
 
     function render() {

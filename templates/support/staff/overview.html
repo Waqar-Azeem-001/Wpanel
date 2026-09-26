@@ -6,7 +6,6 @@
 <div class="page-head"><h1>Support</h1>
   <p class="page-sub">How busy the queue is, and which tickets are waiting for an answer.</p>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'support_staff:ticket_new' %}">New ticket</a>{% endif %}</div>
-{% include "support/staff/_nav.html" %}
 
 <div class="stat-tiles">
   <a class="stat-tile" href="{% url 'support_staff:tickets' %}?status=active"><strong>{{ counts.active }}</strong><span>Open tickets</span></a>

@@ -7,7 +7,6 @@
   <p class="page-sub">Invoices, payments, quotes and everything billed.</p>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'billing_staff:quote_new' %}">New quote</a>{% endif %}
 </div>
-{% include "billing/staff/_nav.html" %}
 <form class="filters" method="get">
   <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ filter_form.q.value|default:'' }}" placeholder="QUO-000123, client, email"></div>
   <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>

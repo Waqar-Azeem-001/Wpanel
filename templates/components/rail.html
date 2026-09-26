@@ -1,37 +1,22 @@
 {% load i18n %}
-{# The left rail. Every entry comes from the menu registry (apps/core/navigation.py): nothing here is a hand-written link. Sections fold; a group's own link opens its first page and its chevron shows the other pages. #}
+{# The left rail: one flat list, generated from the menu registry (apps/core/navigation.py); a group's entry opens its first page, and the pages of the group you are in are the strip under the top bar (components/subnav.html). No expanders, nothing hand-written. #}
 <div id="rail" class="rail rail-{{ ui_area }}">
   <div class="rail-head">
-    <a class="rail-brand" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt=""><span class="visually-hidden">{{ SITE_NAME }}</span>{% else %}<span class="rail-brand-text">{{ SITE_NAME }}</span>{% endif %}</a>
+    <a class="rail-brand" href="{% url 'home' %}">
+      {% if brand.has_favicon %}<img class="brand-mark" src="{% url 'brand_favicon' %}?v={{ brand.version }}" alt="">{% else %}<span class="brand-mark is-letter" aria-hidden="true">{{ SITE_NAME|slice:":1"|upper }}</span>{% endif %}
+      <span class="brand-text"><strong>{{ SITE_NAME }}</strong><small>{% if ui_area == "staff" %}{% trans "Staff console" %}{% else %}{% trans "Client area" %}{% endif %}</small></span>
+    </a>
     <button class="icon-btn-sm" type="button" data-rail-collapse aria-pressed="false" title="{% trans 'Collapse the menu' %}" aria-label="{% trans 'Collapse the menu' %}"><i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i></button>
     <button class="icon-btn-sm rail-close" type="button" data-rail-close aria-label="{% trans 'Close menu' %}"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-  </div>
-  <div class="rail-workspace" title="{% if ui_area == 'staff' %}{% trans 'Staff console' %}{% else %}{% trans 'Client area' %}{% endif %}">
-    <span class="ws-mark" aria-hidden="true"><i class="bi {% if ui_area == 'staff' %}bi-grid-1x2-fill{% else %}bi-person-workspace{% endif %}"></i></span>
-    <span class="ws-text"><strong>{% if ui_area == "staff" %}{% trans "Staff console" %}{% else %}{% trans "Client area" %}{% endif %}</strong><small>{{ user.get_role_display }}</small></span>
   </div>
   <button class="rail-search" type="button" data-quick-open aria-haspopup="dialog" title="{% trans 'Search or jump to a page' %}"><i class="bi bi-search" aria-hidden="true"></i><span>{% if ui_area == "staff" %}{% trans "Search or jump to…" %}{% else %}{% trans "Jump to…" %}{% endif %}</span><kbd>Ctrl K</kbd></button>
   <nav class="rail-nav" aria-label="{% trans 'Sections' %}">
     {% for s in nav_sections %}
-    <div class="rail-sec" data-section="{{ s.key }}">
-      {% if s.label %}<button class="rail-sec-toggle" type="button" aria-expanded="true" aria-controls="rail-sec-{{ s.key }}"><span>{{ s.label }}</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button>{% endif %}
-      <div class="rail-sec-body" id="rail-sec-{{ s.key }}">
+    <div class="rail-sec">
+      {% if s.label %}<p class="rail-section"><span>{{ s.label }}</span></p>{% endif %}
       {% for e in s.entries %}
-        {% if e.is_group %}
-        <div class="rail-group{% if e.active %} is-open is-active{% endif %}">
-          <div class="rail-row">
-            <a class="rail-link{% if e.active %} is-current{% endif %}" href="{{ e.landing }}" title="{{ e.label }}"><i class="bi {{ e.icon }}" aria-hidden="true"></i><span class="rail-label">{{ e.label }}</span></a>
-            <button class="rail-toggle" type="button" aria-expanded="{% if e.active %}true{% else %}false{% endif %}" aria-controls="rail-sub-{{ e.key|slugify }}" aria-label="{{ e.label }}: {% trans 'show pages' %}"><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
-          </div>
-          <ul class="rail-sub" id="rail-sub-{{ e.key|slugify }}">
-            {% for c in e.children %}<li><a class="rail-sublink{% if c.active %} is-current{% endif %}" href="{{ c.url }}"{% if c.active %} aria-current="page"{% endif %}>{{ c.label }}</a></li>{% endfor %}
-          </ul>
-        </div>
-        {% else %}
-        <div class="rail-row"><a class="rail-link{% if e.active %} is-current{% endif %}" href="{{ e.url }}" title="{{ e.label }}"{% if e.active %} aria-current="page"{% endif %}><i class="bi {{ e.icon }}" aria-hidden="true"></i><span class="rail-label">{{ e.label }}</span></a></div>
-        {% endif %}
+      <a class="rail-link{% if e.active %} is-current{% endif %}" href="{% if e.is_group %}{{ e.landing }}{% else %}{{ e.url }}{% endif %}" title="{{ e.label }}"{% if e.active %} aria-current="page"{% endif %}><i class="bi {{ e.icon }}" aria-hidden="true"></i><span class="rail-label">{{ e.label }}</span></a>
       {% endfor %}
-      </div>
     </div>
     {% endfor %}
   </nav>

@@ -3,7 +3,6 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Affiliates</h1><p class="page-sub">Affiliates, their referrals and what is owed to them.</p></div>
-{% include "affiliates/staff/_nav.html" %}
 {% if awaiting %}<div class="alert alert-danger"><p>{{ awaiting }} application{{ awaiting|pluralize }} waiting for approval. <a href="{% url 'affiliates_staff:affiliates' %}?status=pending">Review</a>.</p></div>{% endif %}
 {% if report.awaiting_review %}<div class="alert alert-danger"><p>{{ report.awaiting_review }} commission{{ report.awaiting_review|pluralize }} refunded after being paid out. <a href="{% url 'affiliates_staff:commissions' %}?status=paid&amp;review=1">Review</a>.</p></div>{% endif %}
 <nav aria-label="Period"><ul class="nav nav-tabs mb-3 tab-scroll">

@@ -104,8 +104,15 @@ ITEMS = [
          permission="manage_clients"),
     item("staff.users", _("Users"), "console:users", areas=STAFF, section=_("People"), permission="view_users",
          icon="bi-person-badge"),
-    item("staff.affiliates", _("Affiliates"), "affiliates_staff:overview", areas=STAFF, section=_("People"),
-         permission="view_affiliates", icon="bi-share"),
+    item("staff.affiliates", _("Affiliates"), areas=STAFF, section=_("People"), icon="bi-share"),
+    item("staff.affiliates.overview", _("Overview"), "affiliates_staff:overview", areas=STAFF, parent="staff.affiliates",
+         permission="view_affiliates"),
+    item("staff.affiliates.people", _("Affiliates"), "affiliates_staff:affiliates", areas=STAFF, parent="staff.affiliates",
+         permission="view_affiliates"),
+    item("staff.affiliates.commissions", _("Commissions"), "affiliates_staff:commissions", areas=STAFF,
+         parent="staff.affiliates", permission="view_affiliates"),
+    item("staff.affiliates.payouts", _("Payouts"), "affiliates_staff:payouts", areas=STAFF, parent="staff.affiliates",
+         permission="view_affiliates"),
 
     item("staff.orders", _("Orders"), areas=STAFF, section=_("Commerce"), icon="bi-bag"),
     item("staff.orders.list", _("All orders"), "orders_staff:list", areas=STAFF, parent="staff.orders",
@@ -326,6 +333,33 @@ def build(request, area):
         if groups and not any(e.active for e in menus[position]):
             groups[0].active = True
     return menus
+
+
+def subnav(menus, path):
+    """
+    The pages of the group you are in, for the strip under the top bar: {"label", "children", "current"} or None. A group
+    with one page has no strip. ``current`` is the child whose address is the longest start of this page's address, so
+    an invoice keeps "Invoices" lit; a page that is under none of them lights none.
+    """
+    for entry in menus["main"]:
+        if entry.is_group and entry.active and len(entry.children) > 1:
+            best = ""
+            for child in entry.children:
+                if path.startswith(child.url) and len(child.url) > len(best):
+                    best = child.url
+            return {"label": entry.label, "children": entry.children, "current": best}
+    return None
+
+
+def pages(menus):
+    """Every page the person may open, for "search or jump to": [{"label", "group", "url"}]."""
+    found = []
+    for entry in menus["main"]:
+        if entry.is_group:
+            found += [{"label": c.label, "group": entry.label, "url": c.url} for c in entry.children]
+        else:
+            found.append({"label": entry.label, "group": "", "url": entry.url})
+    return found
 
 
 def sections(entries):

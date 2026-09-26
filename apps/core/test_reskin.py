@@ -84,14 +84,16 @@ def test_the_deleted_sheet_stays_deleted():
     assert not [p for p in page_templates() if "legacy.css" in p.read_text(encoding="utf-8")]
 
 
-def test_the_navigation_tabs_are_bootstrap_tabs_with_the_current_one_marked(world):
+def test_each_module_has_one_strip_of_its_pages_with_the_current_one_marked(world):
     client = HttpClient(HTTP_HOST="localhost")
     client.force_login(world.people["admin"])
     for name in ("billing_staff:invoice_list", "support_staff:tickets", "affiliates_staff:overview", "lifecycle_staff:overview",
-                 "notifications_staff:overview", "orders_staff:list"):
+                 "notifications_staff:overview", "orders_staff:list", "domains_staff:list", "console:email_providers"):
         page = client.get(reverse(name)).content.decode()
-        assert 'class="nav nav-tabs' in page and 'class="subnav"' not in page and 'class="tabs"' not in page, name
-        assert 'aria-current="page"' in page, name
+        assert page.count('class="groupnav"') == 1 and 'class="subnav"' not in page and 'class="tabs"' not in page, name
+        strip = page.split('class="groupnav"')[1].split("</nav>")[0]
+        assert strip.count('aria-current="page"') == 1, name  # exactly one page is marked as the current one
+    assert 'class="nav nav-tabs' in client.get(reverse("orders_staff:list")).content.decode()  # its All / Pending / Active filters
 
 
 def test_priority_is_a_status_badge_everywhere(world):

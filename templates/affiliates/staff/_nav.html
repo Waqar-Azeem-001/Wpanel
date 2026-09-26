@@ -1,7 +1,0 @@
-<nav><ul class="nav nav-tabs mb-3 tab-scroll">
-  <li class="nav-item"><a class="nav-link{% if section == "overview" %} active{% endif %}" href="{% url 'affiliates_staff:overview' %}"{% if section == "overview" %} aria-current="page"{% endif %}>Overview</a></li>
-  <li class="nav-item"><a class="nav-link{% if section == "affiliates" %} active{% endif %}" href="{% url 'affiliates_staff:affiliates' %}"{% if section == "affiliates" %} aria-current="page"{% endif %}>Affiliates</a></li>
-  <li class="nav-item"><a class="nav-link{% if section == "commissions" %} active{% endif %}" href="{% url 'affiliates_staff:commissions' %}"{% if section == "commissions" %} aria-current="page"{% endif %}>Commissions</a></li>
-  <li class="nav-item"><a class="nav-link{% if section == "payouts" %} active{% endif %}" href="{% url 'affiliates_staff:payouts' %}"{% if section == "payouts" %} aria-current="page"{% endif %}>Payouts</a></li>
-  {% if perms.accounts.view_settings %}<li class="nav-item"><a class="nav-link{% if section == "settings" %} active{% endif %}" href="{% url 'affiliates_staff:settings' %}"{% if section == "settings" %} aria-current="page"{% endif %}>Settings</a></li>{% endif %}
-</ul></nav>

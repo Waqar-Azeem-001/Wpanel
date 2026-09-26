@@ -47,10 +47,7 @@ def my_hosting_list(request):
         "product", "server").distinct()
     accounts, view_panel = portal.status_filter(request, accounts, HostingStatus.choices,
                                                 url_name="hosting_customer:list", all_label="All services")
-    actions = portal.actions_panel(request, "Actions", [
-        ("Order new services", "catalog:product_list", "bi-plus-circle"),
-        ("View available addons", "catalog:addons", "bi-puzzle")])
-    return render(request, "hosting/customer/list.html", {"accounts": accounts, "sidebar": [view_panel, actions]})
+    return render(request, "hosting/customer/list.html", {"accounts": accounts, "sidebar": [view_panel]})
 
 
 def _own_account(request, pk):

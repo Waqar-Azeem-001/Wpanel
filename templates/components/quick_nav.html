@@ -1,5 +1,5 @@
 {% load i18n %}
-{# Search or jump to a page: lists the pages in the rail as you type (static/js/shell.js); staff can also search everything. #}
+{# Search or jump to a page: filters the pages this person may open (from the registry, below) as they type (static/js/shell.js); staff can also search everything. #}
 <div class="modal fade" id="quick-nav" tabindex="-1" aria-labelledby="quick-nav-title" aria-hidden="true"{% if ui_area == "staff" %} data-search-url="{% url 'console:search' %}"{% endif %}>
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable quick-dialog">
     <div class="modal-content quick">
@@ -12,3 +12,4 @@
     </div>
   </div>
 </div>
+{{ nav_pages|json_script:"quick-pages" }}

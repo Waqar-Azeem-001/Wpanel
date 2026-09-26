@@ -7,7 +7,6 @@
   <p class="page-sub">Orders as they move from payment to provisioning.</p>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'orders_staff:new' %}">Add order</a>{% endif %}
 </div>
-{% include "billing/staff/_nav.html" %}
 <nav aria-label="Order groups"><ul class="nav nav-tabs mb-3 tab-scroll">
   {% for tab in tabs %}<li class="nav-item"><a class="nav-link{% if tab.key == group %} active{% endif %}" href="?{% if tab.key %}group={{ tab.key }}{% endif %}"{% if tab.key == group %} aria-current="page"{% endif %}>{{ tab.label }} <span class="count">{{ tab.count }}</span></a></li>{% endfor %}
 </ul></nav>

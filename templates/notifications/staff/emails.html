@@ -4,7 +4,6 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <h1>Email</h1>
-{% include "notifications/staff/_nav.html" %}
 <form class="filters" method="get">
   <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ q }}" placeholder="Recipient or subject"></div>
   <div class="field"><label for="id_status">Status</label>

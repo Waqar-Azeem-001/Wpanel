@@ -34,21 +34,26 @@ Token names (both themes redefine only values): `--bg --surface --surface-2 --el
 --primary --secondary --success --warning --danger --info --ok-bg --warn-bg --danger-bg --info-bg --accent --accent-ink
 --accent-subtle`.
 
-## 3. Navigation
+## 3. Navigation (simplified after the owner's review of the first rail)
 
-Real routes only (see D6 for the information architecture). New in D7:
+The first D7 rail had expanders everywhere (a chevron on every section and on every group, a nested list with a guide line, a
+pasted-looking logo plate) and felt awkward. It was replaced the same day:
 
-* Workspace block under the logo ("Staff console" or "Client area", and the role) so the two audiences are told apart by
-  context, not by a second design.
-* "Search or jump to…" field in the rail (Ctrl/⌘ K anywhere); on phones a search icon in the top bar.
-* Sections fold (chevron), the state is remembered per browser, the section you are in never starts folded.
-* Collapsed rail keeps icons, tooltips (the name) and section dividers; expanded/collapsed is remembered and applied before paint.
-* The account card at the foot opens the account menu: name, email, role, **Light / Dark / Auto**, the account pages, Sign out.
-  Phones get the same menu from the top bar.
-* Active route: tinted row, accent text and a 3px bar; groups open on the group you are in (one only).
+* **The rail is one flat list.** Brand (the favicon as a small mark plus the site name, and "Staff console" or "Client area"),
+  a search field, quiet section headings (People, Commerce, Operations, Insights, System), one line per area, the account card at
+  the foot. Nothing folds and nothing expands. A group's entry opens its first page. Only one entry is lit: the area you are in.
+* **The pages of an area are a strip under the top bar** (`components/subnav.html`, class `groupnav`), generated from the same
+  registry: Billing shows Overview, Invoices, Transactions, Quotes, Billable items, Renewals & upgrades, Coupons; the current page is
+  underlined, an invoice keeps "Invoices" lit, and an area with a single page shows no strip. It replaced the five hand-written tab
+  bars (billing, support, lifecycle, affiliates, notifications) and the duplicate link panels on the customer list pages, so a page is
+  reachable exactly one way.
+* **Search or jump to** (rail field, Ctrl/⌘ K, or the icon on phones) lists every page the person may open (sub-pages included) from a
+  server-rendered list, so the flat rail loses nothing.
+* Collapsed rail keeps icons, tooltips and dividers and is remembered; the account card opens the menu with Light / Dark / Auto;
+  the phone drawer is the same flat list. Affiliates became a group (Overview, Affiliates, Commissions, Payouts) so its pages have a strip.
 
-Role-specific rails are unchanged from D6 and still come from the registry: Customer, Support, Technical Staff, Manager, Admin, Super
-Admin each see only what they may open, and every hidden page is requested directly in the tests and refused.
+Role-specific menus are unchanged from D6 and still come from the registry: each role sees only what it may open, and each hidden
+page is requested directly in the tests and refused.
 
 ## 4. Dashboards
 

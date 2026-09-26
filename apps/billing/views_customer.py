@@ -26,13 +26,6 @@ def _invoice_or_404(request, pk):
     return get_object_or_404(invoicing.visible_invoices_for_user(request.user), pk=pk)
 
 
-def _billing_panel(request):
-    return portal.actions_panel(request, "Billing", [
-        ("My invoices", "billing_customer:invoice_list", "bi-receipt"),
-        ("My quotes", "billing_customer:quote_list", "bi-file-earmark-text"),
-        ("Payment methods", "billing_customer:payment_methods", "bi-credit-card")])
-
-
 def _quote_or_404(request, pk):
     return get_object_or_404(invoicing.visible_quotes_for_user(request.user), pk=pk)
 
@@ -54,7 +47,7 @@ def invoice_list(request):
                                                 all_label="All invoices", apply=apply)
     return render(request, "billing/customer/invoice_list.html", {
         "page": Paginator(queryset, 25).get_page(request.GET.get("page")),
-        "sidebar": [view_panel, _billing_panel(request)]})
+        "sidebar": [view_panel]})
 
 
 @login_required
@@ -144,7 +137,7 @@ def quote_list(request):
                                                 all_label="All quotes")
     return render(request, "billing/customer/quote_list.html", {
         "page": Paginator(queryset, 25).get_page(request.GET.get("page")),
-        "sidebar": [view_panel, _billing_panel(request)]})
+        "sidebar": [view_panel]})
 
 
 @login_required

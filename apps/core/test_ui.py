@@ -201,7 +201,7 @@ def test_every_link_in_the_navigation_opens_for_the_person_who_sees_it(client, w
     start = "/" if who == "anonymous" else reverse("accounts:profile")
     page = client.get(start, follow=True).content.decode()
     links = set()
-    for part in ("app-navbar", "rail-nav", "topbar", "tabbar"):  # the store bar, the rail, the top bar, the phone bar
+    for part in ("app-navbar", "rail-nav", "topbar", "tabbar", "groupnav"):  # the store bar, the rail, the top bar, the phone bar, the group strip
         links |= set(hrefs(page, part))
     assert len(links) >= 5, links
     broken = {}
@@ -214,22 +214,28 @@ def test_every_link_in_the_navigation_opens_for_the_person_who_sees_it(client, w
     assert broken == {}, (who, broken)
 
 
+def menu_labels(client, user):
+    """Every page label the person is offered: the rail, the group strip and the jump-to list all come from one list."""
+    import json
+
+    client.force_login(user)
+    page = client.get(reverse("accounts:profile")).content.decode()
+    data = page.split('id="quick-pages" type="application/json">')[1].split("</script>")[0]
+    return {p["label"] for p in json.loads(data)} | {p["group"] for p in json.loads(data)}
+
+
 def test_the_menus_show_only_what_a_role_may_open(client, agent, manager, admin, owner):
-    client.force_login(agent)
-    agent_page = client.get(reverse("accounts:profile")).content.decode()
-    for hidden in ("Reports", "Affiliate programme", ">Brand<", "Add a client", "New order", "Activity log", ">Users<"):
-        assert hidden not in agent_page, hidden
-    assert ">Tickets<" in agent_page and ">Registrations<" in agent_page
-    client.force_login(manager)
-    manager_page = client.get(reverse("accounts:profile")).content.decode()
-    assert "Reports" in manager_page and "Add a client" in manager_page and ">Users<" in manager_page
-    assert "Lifecycle timings" not in manager_page
-    client.force_login(admin)
-    admin_page = client.get(reverse("accounts:profile")).content.decode()
-    assert "Lifecycle timings" in admin_page and ">Brand<" in admin_page and "Email log" in admin_page
-    client.force_login(owner)
-    customer_page = client.get(reverse("accounts:profile")).content.decode()
-    assert "Cancellation requests" in customer_page and ">Invoices<" in customer_page and ">Settings<" not in customer_page
+    agent_labels = menu_labels(client, agent)
+    for hidden in ("Reports", "Affiliate programme", "Brand", "Add a client", "New order", "Activity log", "Users"):
+        assert hidden not in agent_labels, hidden
+    assert {"Tickets", "Registrations"} <= agent_labels
+    manager_labels = menu_labels(client, manager)
+    assert {"Reports", "Add a client", "Users"} <= manager_labels and "Lifecycle timings" not in manager_labels
+    admin_labels = menu_labels(client, admin)
+    assert {"Lifecycle timings", "Brand", "Email log"} <= admin_labels
+    customer_labels = menu_labels(client, owner)
+    assert {"Cancellation requests"} & customer_labels == set()  # that one lives in the profile menu, not the rail
+    assert {"Invoices", "Tickets", "My hosting"} <= customer_labels and "Settings" not in customer_labels
 
 
 def test_the_account_menu_keeps_working_forms_and_the_bell(client, owner):
