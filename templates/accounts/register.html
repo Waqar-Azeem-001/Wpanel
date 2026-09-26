@@ -1,13 +1,22 @@
-{% extends "base.html" %}
+{% extends "layouts/auth.html" %}
 {% load i18n %}
 {% block title %}{% trans "Create account" %} · {{ SITE_NAME }}{% endblock %}
+{% block card_class %} is-wide{% endblock %}
 {% block content %}
-<section class="card mx-auto narrow-card"><div class="card-body p-4">
-  <h1 class="h4">{% trans "Create your account" %}</h1>
-  <form method="post" novalidate>{% csrf_token %}
-    {% include "partials/form.html" %}
-    <button type="submit" class="btn btn-primary w-100">{% trans "Create account" %}</button>
-  </form>
-  <p class="text-secondary mt-3 mb-0">{% trans "Already have an account?" %} <a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></p>
-</div></section>
+<h1>{% trans "Create your account" %}</h1>
+<p class="auth-sub">{% trans "It takes a minute. You can order hosting and domains straight after." %}</p>
+<form method="post" class="auth-form" novalidate>{% csrf_token %}
+  {% include "partials/auth_errors.html" %}
+  <div class="auth-grid">
+    <div>{% include "partials/auth_field.html" with field=form.first_name %}</div>
+    <div>{% include "partials/auth_field.html" with field=form.last_name %}</div>
+  </div>
+  {% include "partials/auth_field.html" with field=form.company_name %}
+  {% include "partials/auth_field.html" with field=form.email %}
+  {% include "partials/auth_field.html" with field=form.password toggle=True hint=_("At least 10 characters. Avoid common words and your email address.") %}
+  {% include "partials/auth_field.html" with field=form.password_confirm toggle=True %}
+  <button type="submit" class="btn btn-primary auth-submit">{% trans "Create account" %}</button>
+</form>
+<p class="auth-alt">{% trans "Already have an account?" %} <a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></p>
+<p class="auth-legal">{% trans "By creating an account you agree to our terms of service and privacy policy." %}</p>
 {% endblock %}

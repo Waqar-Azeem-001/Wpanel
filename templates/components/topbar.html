@@ -1,0 +1,27 @@
+{% load i18n %}
+<header class="topbar">
+  <button class="icon-btn rail-open" type="button" data-rail-open aria-controls="rail" aria-expanded="false" aria-label="{% trans 'Open menu' %}"><i class="bi bi-list" aria-hidden="true"></i></button>
+  <a class="topbar-brand" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt=""><span class="visually-hidden">{{ SITE_NAME }}</span>{% else %}{{ SITE_NAME }}{% endif %}</a>
+  <div class="topbar-crumbs">{% if breadcrumbs %}{% include "components/crumbs.html" %}{% endif %}</div>
+  <div class="topbar-actions">
+    <button class="quick-open" type="button" data-quick-open aria-haspopup="dialog" aria-label="{% trans 'Search or jump to a page' %}"><i class="bi bi-search" aria-hidden="true"></i><span class="quick-open-text">{% if ui_area == "staff" %}{% trans "Search or jump to…" %}{% else %}{% trans "Jump to…" %}{% endif %}</span><kbd class="quick-open-key">Ctrl K</kbd></button>
+    {% for e in nav.right %}
+    <a class="icon-btn" href="{{ e.url }}" title="{{ e.label }}"{% if e.active %} aria-current="page"{% endif %}><i class="bi {{ e.icon }}" aria-hidden="true"></i><span class="visually-hidden">{{ e.label }}</span>{% if e.badge %}<span class="icon-badge">{{ e.badge }}<span class="visually-hidden"> {% trans "new" %}</span></span>{% endif %}</a>
+    {% endfor %}
+    {% for menu in nav.account %}
+    <div class="dropdown">
+      <button class="profile-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Account menu' %}"><span class="avatar" aria-hidden="true">{{ user.get_short_name|slice:":1"|upper }}</span><span class="profile-name">{{ menu.label }}</span><i class="bi bi-chevron-down small" aria-hidden="true"></i></button>
+      <ul class="dropdown-menu dropdown-menu-end profile-menu">
+        <li class="profile-head"><strong>{{ user.get_full_name }}</strong><span>{{ user.email }}</span><span class="profile-role">{{ user.get_role_display }}</span></li>
+        <li><hr class="dropdown-divider"></li>
+        {% for c in menu.children %}
+        {% if c.divider_before %}<li><hr class="dropdown-divider"></li>{% endif %}
+        <li><a class="dropdown-item{% if c.active %} active{% endif %}" href="{{ c.url }}"{% if c.active %} aria-current="page"{% endif %}>{{ c.label }}</a></li>
+        {% endfor %}
+        <li><hr class="dropdown-divider"></li>
+        <li><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> {% trans "Sign out" %}</button></form></li>
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+</header>

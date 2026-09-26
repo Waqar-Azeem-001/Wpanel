@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts import services as account_services
 from apps.accounts.models import User
-from apps.accounts.roles import PRIVILEGED_ROLES, STAFF_ROLES, perm
+from apps.accounts.roles import STAFF_ROLES, perm
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text
@@ -15,7 +15,7 @@ from apps.domains.models import RegistrarProvider
 from apps.notifications import services as notification_services
 from apps.notifications.models import EmailProvider
 
-from . import forms
+from . import forms, views_users
 
 VIEW_USERS, VIEW_PROVIDERS = perm("view_users"), perm("view_providers")
 
@@ -34,21 +34,13 @@ def _flash(request, action):
 
 # --- Staff and roles ---------------------------------------------------------------------------------------------------
 
-def _allowed_roles(actor):
-    return {r for r in STAFF_ROLES if actor.is_superuser or r not in PRIVILEGED_ROLES}
+_allowed_roles = views_users.allowed_roles
 
 
 @portal_permission_required(VIEW_USERS)
-def staff_users(request, create_form=None):
-    staff = list(User.objects.filter(role__in=STAFF_ROLES).order_by("role", "email"))
-    for person in staff:  # never yourself; an admin only by a Super Admin (the services enforce this too)
-        person.can_edit = person.pk != request.user.pk and (request.user.is_superuser or person.role not in PRIVILEGED_ROLES)
-    can_assign = request.user.has_perm(perm("assign_roles")) and request.user.has_perm(perm("manage_users"))
-    return render(request, "console/staff_users.html", {
-        "staff": staff, "can_manage": request.user.has_perm(perm("manage_users")), "can_assign": can_assign,
-        "form": create_form or forms.StaffUserForm(allowed_roles=_allowed_roles(request.user)),
-        "allowed_roles": _allowed_roles(request.user), "privileged": PRIVILEGED_ROLES,
-        "role_choices": forms.STAFF_ROLE_CHOICES, "status_choices": forms.AccountStatus.choices})
+def staff_users(request):
+    """The old Staff & Roles page: staff are now the Users screen (the address is kept for old links and bookmarks)."""
+    return redirect("console:users")
 
 
 @require_POST
@@ -62,18 +54,18 @@ def staff_user_create(request):
             apply_form_error(form, exc)
         else:
             messages.success(request, f"{user.email} added as {user.get_role_display()}. A link to set their password was emailed.")
-            return redirect("console:staff_users")
-    return staff_users(request, create_form=form)
+            return redirect("console:user_detail", pk=user.pk)
+    return views_users.users(request, create_form=form)
 
 
-def _user_action(request, pk, form_class, call, done):
-    user = get_object_or_404(User, pk=pk, role__in=STAFF_ROLES)
+def _user_action(request, pk, form_class, call, done, *, staff_only=False):
+    user = get_object_or_404(User, pk=pk, **({"role__in": STAFF_ROLES} if staff_only else {}))
     form = form_class(request.POST)
     if not form.is_valid():
         messages.error(request, "Choose a valid value.")
     else:
         _flash(request, lambda: (call(user, form.cleaned_data), done(user, form.cleaned_data))[1])
-    return redirect("console:staff_users")
+    return redirect("console:user_detail", pk=user.pk)
 
 
 @require_POST
@@ -81,7 +73,7 @@ def _user_action(request, pk, form_class, call, done):
 def staff_user_role(request, pk):
     return _user_action(request, pk, forms.StaffRoleForm,
                         lambda u, d: account_services.assign_role(request.user, u, d["role"], request=request),
-                        lambda u, d: f"{u.email} is now {u.get_role_display()}.")
+                        lambda u, d: f"{u.email} is now {u.get_role_display()}.", staff_only=True)
 
 
 @require_POST

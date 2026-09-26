@@ -155,7 +155,7 @@ def hrefs(html, container_class):
 
         def handle_starttag(self, tag, attrs):
             a = dict(attrs)
-            if self.depth == 0 and tag == "nav" and container_class in (a.get("class") or ""):
+            if self.depth == 0 and tag in ("nav", "header") and container_class in (a.get("class") or "").split():
                 self.depth = 1
             elif self.depth:
                 self.depth += 1 if tag not in ("br", "img", "hr", "input", "meta", "link") else 0
@@ -172,14 +172,14 @@ def hrefs(html, container_class):
 
 
 def test_each_kind_of_visitor_gets_their_shell(client, owner, manager):
-    page = client.get(reverse("accounts:login")).content.decode()
-    assert "navbar-public" in page and "navbar-client" not in page and "navbar-staff" not in page
+    page = client.get("/").content.decode()
+    assert "navbar-public" in page and "rail-client" not in page and "rail-staff" not in page
     client.force_login(owner)
     page = client.get(reverse("accounts:profile")).content.decode()
-    assert "navbar-client" in page and "navbar-staff" not in page
+    assert "rail-client" in page and "rail-staff" not in page and "navbar-public" not in page
     client.force_login(manager)
     page = client.get(reverse("accounts:profile")).content.decode()
-    assert "navbar-staff" in page and "navbar-client" not in page
+    assert "rail-staff" in page and "rail-client" not in page
 
 
 def test_every_shell_has_the_shared_furniture(client, manager):
@@ -198,9 +198,11 @@ def test_every_link_in_the_navigation_opens_for_the_person_who_sees_it(client, w
              "superuser": User.objects.create_superuser(email="root@example.com", password="x")}
     if who != "anonymous":
         client.force_login(users[who])
-    start = reverse("accounts:login") if who == "anonymous" else reverse("accounts:profile")
+    start = "/" if who == "anonymous" else reverse("accounts:profile")
     page = client.get(start, follow=True).content.decode()
-    links = set(hrefs(page, "app-navbar"))
+    links = set()
+    for part in ("app-navbar", "rail-nav", "topbar", "tabbar"):  # the store bar, the rail, the top bar, the phone bar
+        links |= set(hrefs(page, part))
     assert len(links) >= 5, links
     broken = {}
     for link in sorted(links):
@@ -215,18 +217,19 @@ def test_every_link_in_the_navigation_opens_for_the_person_who_sees_it(client, w
 def test_the_menus_show_only_what_a_role_may_open(client, agent, manager, admin, owner):
     client.force_login(agent)
     agent_page = client.get(reverse("accounts:profile")).content.decode()
-    for hidden in ("Reports", "Affiliate Settings", "Brand", "Add New Client", "Add New Order"):
+    for hidden in ("Reports", "Affiliate programme", ">Brand<", "Add a client", "New order", "Activity log", ">Users<"):
         assert hidden not in agent_page, hidden
-    assert "Support Tickets" in agent_page and "Domain Registrations" in agent_page
+    assert ">Tickets<" in agent_page and ">Registrations<" in agent_page
     client.force_login(manager)
     manager_page = client.get(reverse("accounts:profile")).content.decode()
-    assert "Reports" in manager_page and "Add New Client" in manager_page and "Lifecycle Timings" not in manager_page
+    assert "Reports" in manager_page and "Add a client" in manager_page and ">Users<" in manager_page
+    assert "Lifecycle timings" not in manager_page
     client.force_login(admin)
     admin_page = client.get(reverse("accounts:profile")).content.decode()
-    assert "Lifecycle Timings" in admin_page and ">Brand<" in admin_page and "Email Message Log" in admin_page
+    assert "Lifecycle timings" in admin_page and ">Brand<" in admin_page and "Email log" in admin_page
     client.force_login(owner)
     customer_page = client.get(reverse("accounts:profile")).content.decode()
-    assert "Cancellation requests" in customer_page and "My Invoices" in customer_page and "Setup" not in customer_page
+    assert "Cancellation requests" in customer_page and ">Invoices<" in customer_page and ">Settings<" not in customer_page
 
 
 def test_the_account_menu_keeps_working_forms_and_the_bell(client, owner):
@@ -236,7 +239,7 @@ def test_the_account_menu_keeps_working_forms_and_the_bell(client, owner):
     from apps.notifications.models import Notification
 
     Notification.objects.create(user=owner, event="order.active", title="x")
-    assert 'class="badge unread">1<' in client.get(reverse("accounts:profile")).content.decode()
+    assert 'class="icon-badge">1<' in client.get(reverse("accounts:profile")).content.decode()
 
 
 def test_the_layout_choice_is_a_context_processor_not_a_per_page_edit():
@@ -263,7 +266,7 @@ def test_the_403_page_explains_and_links_back(client, owner):
     client.force_login(owner)
     response = client.get(reverse("clients_staff:list"))
     page = response.content.decode()
-    assert response.status_code == 403 and "do not have access" in page and "navbar-client" in page
+    assert response.status_code == 403 and "do not have access" in page and "rail-client" in page
     assert f'href="{reverse("home")}">Back to the dashboard</a>' in page  # the page's own way back, not just the brand link
     client.logout()
     assert b"Sign in" in client.get(reverse("clients_staff:list"), follow=True).content  # anonymous users go to sign in

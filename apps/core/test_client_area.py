@@ -123,8 +123,8 @@ def test_the_sidebar_describes_the_account_its_contacts_and_shortcuts(world, own
     assert [p.title for p in sidebar] == ["Your info", "Contacts", "Shortcuts"]
     assert "Ada Ltd" in sidebar[0].lines[1] or "Ada Ltd" in sidebar[0].lines
     assert any("Owner" in line for line in sidebar[1].lines) and any("Billing" in line for line in sidebar[1].lines)
-    assert [link.label for link in sidebar[2].links] == ["Order new services", "Register a domain", "Open a ticket", "Sign out"]
-    assert sidebar[2].links[-1].post  # signing out is a POST, never a link
+    assert [link.label for link in sidebar[2].links] == ["Order new services", "Register a domain", "Open a ticket"]
+    assert not any(link.post for link in sidebar[2].links)  # signing out lives in the profile menu, once
 
 
 def test_the_affiliate_panel_follows_the_customers_affiliate_state(world, owner, stranger):
@@ -218,7 +218,7 @@ def test_the_sidebar_sits_after_the_page_on_a_phone_and_before_it_on_a_desktop(w
 
 def test_a_page_without_a_sidebar_is_still_a_single_column(world, owner):
     page = browser(owner).get(reverse("accounts:profile")).content.decode()
-    assert "<aside" not in page and 'class="col-lg-9' not in page
+    assert '<aside class="col-lg-3' not in page and 'class="col-lg-9' not in page
 
 
 # --- Service and domain tabs ------------------------------------------------------------------------------------------
@@ -425,9 +425,9 @@ def test_the_registry_offers_the_new_pages_to_customers_only(world, owner):
         return {c.label for top in menus["main"] + menus["account"] for c in (top.children or [top])}
 
     mine = labels(owner, "client")
-    assert {"View Available Addons", "Payment Methods", "Contacts", "Email history", "My Invoices"} <= mine
+    assert {"Add-ons", "Payment methods", "Contacts", "Email history", "Invoices"} <= mine
     staff = labels(world.people["manager"], "staff")
-    assert not ({"Payment Methods", "Contacts", "Email history", "View Available Addons"} & staff)
+    assert not ({"Contacts", "Email history"} & staff)
 
 
 # --- The re-skin ------------------------------------------------------------------------------------------------------

@@ -1,0 +1,26 @@
+{% extends "layouts/_root.html" %}
+{% load i18n %}
+{# Sign in, create account and password reset: a split screen. The left side is the product; the right side is the form. #}
+{% block body_class %}auth-body{% endblock %}
+{% block frame %}
+<div class="auth">
+  <aside class="auth-art" aria-label="{{ SITE_NAME }}">
+    <a class="auth-logo" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt=""><span class="visually-hidden">{{ SITE_NAME }}</span>{% else %}{{ SITE_NAME }}{% endif %}</a>
+    <div>
+      <p class="auth-headline">{% trans "Your hosting, domains and billing in one place." %}</p>
+      <ul class="auth-points">
+        <li><i class="bi bi-hdd-rack" aria-hidden="true"></i><span><strong>{% trans "Everything you run" %}</strong>{% trans "Manage services, domains and renewals from one dashboard." %}</span></li>
+        <li><i class="bi bi-receipt" aria-hidden="true"></i><span><strong>{% trans "Billing that is easy to follow" %}</strong>{% trans "Invoices, quotes and payment history whenever you need them." %}</span></li>
+        <li><i class="bi bi-life-preserver" aria-hidden="true"></i><span><strong>{% trans "Support that follows up" %}</strong>{% trans "Open a ticket and track every reply in one thread." %}</span></li>
+      </ul>
+    </div>
+    <p class="auth-art-foot">{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}{% endif %}{% if brand.support_email %} &middot; {{ brand.support_email }}{% endif %}</p>
+  </aside>
+  <main id="main" class="auth-panel" tabindex="-1">
+    <div class="auth-card{% block card_class %}{% endblock %}">
+      {% include "components/messages.html" %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% endblock %}

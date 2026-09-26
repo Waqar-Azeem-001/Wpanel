@@ -1,15 +1,17 @@
-{% extends "base.html" %}
+{% extends "layouts/auth.html" %}
 {% load i18n %}
 {% block title %}{% trans "Sign in" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card mx-auto narrow-card"><div class="card-body p-4">
-  <h1 class="h4">{% trans "Sign in" %}</h1>
-  <form method="post" novalidate>{% csrf_token %}
-    <input type="hidden" name="next" value="{{ next }}">
-    {% include "partials/form.html" %}
-    <button type="submit" class="btn btn-primary w-100">{% trans "Sign in" %}</button>
-  </form>
-  <p class="text-secondary mt-3 mb-1"><a href="{% url 'accounts:password_reset' %}">{% trans "Forgot your password?" %}</a></p>
-  <p class="text-secondary mb-0">{% trans "New here?" %} <a href="{% url 'accounts:register' %}">{% trans "Create an account" %}</a></p>
-</div></section>
+<h1>{% trans "Welcome back" %}</h1>
+<p class="auth-sub">{% trans "Sign in to manage your services, domains and billing." %}</p>
+<form method="post" class="auth-form" novalidate>{% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include "partials/auth_errors.html" %}
+  {% url 'accounts:password_reset' as reset_url %}
+  {% include "partials/auth_field.html" with field=form.email %}
+  {% include "partials/auth_field.html" with field=form.password toggle=True link_url=reset_url link_text=_("Forgot password?") %}
+  <button type="submit" class="btn btn-primary auth-submit">{% trans "Sign in" %}</button>
+</form>
+<p class="auth-alt">{% trans "New here?" %} <a href="{% url 'accounts:register' %}">{% trans "Create an account" %}</a></p>
+<p class="auth-legal">{% trans "By signing in you agree to our terms of service and privacy policy." %}</p>
 {% endblock %}

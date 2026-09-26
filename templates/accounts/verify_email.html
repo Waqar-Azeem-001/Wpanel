@@ -1,22 +1,24 @@
-{% extends "base.html" %}
+{% extends "layouts/auth.html" %}
 {% load i18n %}
 {% block title %}{% trans "Email verification" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<section class="card mx-auto narrow-card"><div class="card-body p-4">
-  {% if ok %}
-    <h1 class="h4">{% trans "Email verified" %}</h1>
-    <p>{% trans "Thanks, your email address is confirmed." %}</p>
-    <a class="btn btn-primary" href="{% url 'accounts:profile' %}">{% trans "Continue" %}</a>
+<div class="auth-state">
+{% if ok %}
+  <div class="state-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></div>
+  <h1>{% trans "Email verified" %}</h1>
+  <p class="auth-sub">{% trans "Thanks, your email address is confirmed." %}</p>
+  <a class="btn btn-primary" href="{% url 'accounts:profile' %}">{% trans "Continue" %}</a>
+{% else %}
+  <div class="state-icon is-bad"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></div>
+  <h1>{% trans "Verification failed" %}</h1>
+  <p class="auth-sub">{{ message }}</p>
+  {% if user.is_authenticated %}
+    <form method="post" action="{% url 'accounts:resend_verification' %}">{% csrf_token %}
+      <button class="btn btn-primary" type="submit">{% trans "Send a new link" %}</button>
+    </form>
   {% else %}
-    <h1 class="h4">{% trans "Verification failed" %}</h1>
-    <p>{{ message }}</p>
-    {% if user.is_authenticated %}
-      <form method="post" action="{% url 'accounts:resend_verification' %}">{% csrf_token %}
-        <button class="btn btn-primary" type="submit">{% trans "Send a new link" %}</button>
-      </form>
-    {% else %}
-      <p class="mb-0"><a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a> {% trans "to request a new link." %}</p>
-    {% endif %}
+    <p class="mb-0"><a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a> {% trans "to request a new link." %}</p>
   {% endif %}
-</div></section>
+{% endif %}
+</div>
 {% endblock %}

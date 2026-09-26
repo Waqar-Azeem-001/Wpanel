@@ -876,11 +876,12 @@ Before marking any phase 🟢:
 | D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | 03ba01b | — |
 | D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | ef7a6ce | — |
 | D4 Staff Area Parity + Phase 15 screens (D4a dashboard, search, audit log; D4b client profile tabs; D4c lists and bulk actions; D4d staff, email provider, registrar; D4e re-skin, legacy.css deleted) | 🟢 | 1668 ✅ | ✅ | crawler green (dashboard widgets followed via hx-get) | aab5715, 11a26c6, 4ea073a, 7e5f35b, 83cb778 (D4a-e) | — |
+| D6 Sign-in, application shell and Users area (owner request 2026-09-26: split-screen sign-in and sign-up, left rail + top bar + phone drawer/bottom bar generated from the registry, Users screens for every role, Technical Staff role) | 🟢 local (not deployed) | 1714 ✅ (PostgreSQL 17) | ✅ 609 pages x 6 roles x 3 widths, 0 findings | crawler green with a ninth role (technical staff) | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
 ## Recommended order
 
-D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → 16 Security → 17 Reliability → D5 → 18 → 19
+D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → 16 Security → 17 Reliability → D5 → 18 → 19
 
 ------------------------------------------------------------------------
 
@@ -899,7 +900,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | More email provider kinds (API senders), bounce handling, admin-editable templates | Deferred | SMTP only; no click tracking or bounce handling; templates are files, not editable in admin | Post-MVP |
 | MFA | Deferred | Roadmap places MFA in security hardening | Phase 16 |
 | Account lockout beyond rate limiting | Deferred | Auth endpoints throttled (10/min); failures audited | Phase 16 |
-| Staff admin portal (non-Django-admin UI for roles/status/audit) | Deferred | Django admin used by Super Admin; API covers staff actions | D4 / Phase 15 |
+| Staff admin portal (non-Django-admin UI for roles/status/audit) | Done (D4d, D6) | Users, roles, status, audit log, providers and setup screens are app screens; Django admin is a superuser-only technical door ("Database admin") | — |
 | Error tracking service (e.g. Sentry) and monitoring | Deferred | Structured logging with request IDs in place | Phase 18 |
 | TLS termination / certificates | Deferred | Compose Nginx serves HTTP only | Phase 19 |
 | Docker Compose stack run end to end | Open | No Docker on dev machine; CI covers PostgreSQL/Redis/Celery | Phase 19 |
@@ -949,10 +950,10 @@ Use this section whenever something is discovered but intentionally postponed.
 | Reports: no scheduled or emailed reports, saved views or currency conversion; no chargeback data; "cancelled services" covers portal cancellations only | Deferred | On-demand CSV/XLSX/PDF only; the portal has no dispute records | Post-MVP |
 | Error pages: branded 403/404/400, standalone 500 and maintenance page exist (D1); the crawler still has to prove every link on them, and Nginx must serve the maintenance page | Partly closed (D1) | Rule 5.8 | D2 / Phase 15 |
 | Customers have no menu link to their cancellation requests | Open (found in D0) | Reachable only from a service page and notification links | D3 |
-| Page templates still use the old class names through `static/css/legacy.css` and are not yet wrapped for translation (shells and components are) | Open (D1 bridge) | Re-skinned screen by screen; delete the rules as they become unused | D3 / D4 |
+| Page templates are not yet wrapped for translation (shells and components are); `legacy.css` is deleted (D4e) | Open | Wrap strings as pages are touched | D5 / Post-MVP |
 | Vendored Bootstrap 5.3.3, Bootstrap Icons 1.11.3 and htmx 2.0.4 are updated by hand | Deferred | No package manager for front-end assets; versions recorded here | Post-MVP |
 | Dark mode follows the system setting only (no manual toggle); HTML emails are the text email in a branded frame | Deferred | Not required by v2 | Post-MVP |
-| Staff UI still missing for: staff users and roles, payment providers, registrar provider, email provider, audit log viewer; no staff dashboard or global search | Open (found in D0) | Django admin only today | D4 / Phase 15 |
+| Staff UI still missing for: payment providers (payments are manual; no gateway), webhook events, carts, coupon redemptions (Django admin only) | Open | Staff users, registrar, email provider, audit log, dashboard and global search were delivered in D4 and D6 | Phase 17 / gateway decision |
 
 ## Closed
 
@@ -1054,6 +1055,9 @@ Use this section whenever something is discovered but intentionally postponed.
 | The Web Host Era brand, plans and prices are loaded by `manage.py seed_webhostera` into the database (editable in Setup); the accent colour must carry white or dark text; the front page is the storefront for visitors | Brand is configuration (Rule 6); the owner's site is the source of the catalogue | Active |
 | The staff console (`apps/console`) only reads: dashboard widgets are loaded separately, shown only to staff who may open what they link to, and every figure equals the list it links to; global search covers only areas the person may open | Rule 5.6; a number never disagrees with its list; search cannot reveal what a menu hides | Active |
 | A view that supplies `sidebar` panels (built in `apps/core/portal.py` from URL names) gets a two-column page; every count on a link equals the rows it opens | One sidebar mechanism; a number never disagrees with its list | Active |
+| The signed-in areas use one application shell (`layouts/app.html`): a left rail (sections and groups, collapsible, drawer on phones) and a top bar, both generated from the menu registry; customers also get a bottom bar; sign-in uses its own split-screen layout; the store keeps its top bar | A distinct product identity instead of a copy of a billing-panel layout; one source for every menu | Active (D6) |
+| **Technical Staff** is a fifth staff role (view clients, orders, hosting, domains, support; manage hosting, domains, support; nothing else) | Technical people run services and tickets without seeing money, reports, users or settings; only additive RBAC change of D6 | Active (D6) |
+| "Users" replaces "Staff & Roles": one screen for customers and every staff role; changes still go through the audited services (never yourself, admin accounts only by a Super Admin, roles need `assign_roles`); Django admin is not in the rail | Rule: no duplicate permission system; Django admin is not the product | Active (D6) |
 | Service and domain pages are tab bars (each tab its own URL); the tab for an action is shown only when the person can use it (`portal.can_cancel`) | Rule 5.6: a visible link always opens something usable | Active |
 | Customer contacts are read-only pages; staff manage contacts | Self-service contact management stays deferred | Active |
 | Every menu, breadcrumb and active state is drawn from the menu registry (`apps/core/navigation.py`); `manage.py check` fails on a bad entry (`core.E001`); a group is shown only when a child is | A menu entry cannot name a missing page, and is shown exactly to people who may open it | Active |
@@ -1066,7 +1070,7 @@ Use this section whenever something is discovered but intentionally postponed.
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–15 and D0–D4 (including D3b) are 🟢. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The project stays **local** until the owner asks to deploy. See also `docs/d3b-modern-look.md` and `docs/d4-staff-area.md`.
+Phases 01–15 and D0–D4 (including D3b) are 🟢; D6 (sign-in, shell, Users) is done locally. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The project stays **local** until the owner asks to deploy. See also `docs/d3b-modern-look.md` and `docs/d4-staff-area.md`.
 
 ## Start: Phase 16 — Security Hardening
 

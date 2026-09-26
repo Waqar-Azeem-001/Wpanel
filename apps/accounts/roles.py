@@ -17,12 +17,13 @@ from django.db import models
 class Role(models.TextChoices):
     CUSTOMER = "customer", "Customer"
     SUPPORT_AGENT = "support_agent", "Support Agent"
+    TECHNICAL = "technical", "Technical Staff"
     MANAGER = "manager", "Manager"
     ADMIN = "admin", "Admin"
     SUPER_ADMIN = "super_admin", "Super Admin"
 
 
-STAFF_ROLES = {Role.SUPPORT_AGENT, Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN}
+STAFF_ROLES = {Role.SUPPORT_AGENT, Role.TECHNICAL, Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN}
 # Only a Super Admin may grant or revoke these roles.
 PRIVILEGED_ROLES = {Role.ADMIN, Role.SUPER_ADMIN}
 
@@ -64,6 +65,12 @@ ROLE_PERMISSIONS = {
     Role.SUPPORT_AGENT: [
         *_view("clients", "orders", "billing", "domains", "hosting", "support"),
         *_manage("support"),
+    ],
+    # Technical staff run the services: provisioning, hosting, domains and the tickets that come with them. They read
+    # clients and orders but cannot change them, and see no billing, reports, settings or providers.
+    Role.TECHNICAL: [
+        *_view("clients", "orders", "domains", "hosting", "support"),
+        *_manage("domains", "hosting", "support"),
     ],
     Role.MANAGER: [
         *_view(*(a for a, _ in AREAS if a not in {"providers", "settings"})),

@@ -23,6 +23,7 @@ NOT_CLICKABLE_EXACT = {
     "accounts:password_reset_confirm": "reached from the password-reset email",
     "accounts:register": "the sign-up form is only offered to signed-out visitors",
     "accounts:login": "signed-in people are sent away from it; the anonymous crawl reaches it",
+    "console:staff_users": "the old Staff & Roles address, kept for bookmarks; it redirects to the Users screen",
 }
 
 

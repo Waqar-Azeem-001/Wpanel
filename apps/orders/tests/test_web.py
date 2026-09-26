@@ -1,4 +1,6 @@
 """Cart, checkout and order pages (customer and staff)."""
+import re
+
 import pytest
 from django.core import mail
 from django.test import Client
@@ -167,10 +169,11 @@ def test_a_coupon_that_lapses_is_flagged_on_the_cart(client, owner, shop, coupon
 
 def test_the_nav_shows_the_cart_count(client, owner, shop):
     client.force_login(owner)
-    assert b"Cart</a>" in client.get("/account/profile/").content
+    empty = client.get("/account/profile/").content
+    assert b"icon-badge" not in re.search(rb'title="Cart".*?</a>', empty, re.S).group(0)
     _add_host(client, shop)
     client.post("/cart/add/domain/", {"domain": "example.com", "years": 1})
-    assert b"Cart (2)" in client.get("/account/profile/").content
+    assert re.search(rb'title="Cart".*?<span class="icon-badge">2<', client.get("/account/profile/").content, re.S)
 
 
 # --- Checkout ---------------------------------------------------------------------------------------------

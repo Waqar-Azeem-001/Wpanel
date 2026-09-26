@@ -59,8 +59,8 @@ def _png(color="#123456"):
 
 
 PASSWORD = "Str0ng-Passw0rd!x"
-ROLE_NAMES = ["anonymous", "customer owner", "billing contact", "technical contact", "support agent", "manager", "admin",
-              "super admin"]
+ROLE_NAMES = ["anonymous", "customer owner", "billing contact", "technical contact", "support agent", "technical staff",
+              "manager", "admin", "super admin"]
 
 
 @dataclass
@@ -81,6 +81,7 @@ def build_world():
     manager = _make_user("manager@harness.test", Role.MANAGER)
     admin = _make_user("admin@harness.test", Role.ADMIN)
     agent = _make_user("agent@harness.test", Role.SUPPORT_AGENT)
+    technical = _make_user("technical@harness.test", Role.TECHNICAL)
     root = User.objects.create_superuser(email="root@harness.test", password=PASSWORD)
     sync_role_membership(root)
 
@@ -239,7 +240,7 @@ def build_world():
 
     world = World(
         people={"anonymous": None, "customer owner": owner, "billing contact": billing_user,
-                "technical contact": tech_user, "support agent": agent, "manager": manager, "admin": admin,
+                "technical contact": tech_user, "support agent": agent, "technical staff": technical, "manager": manager, "admin": admin,
                 "super admin": root},
         client=client)
     world.objects.update(orders=orders, invoices=invoices, quotes=quotes, accounts=accounts, domains=domain_rows,

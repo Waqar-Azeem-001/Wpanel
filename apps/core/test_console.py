@@ -1,6 +1,8 @@
 """Phase D4a: the staff dashboard and its widgets, global search, and the audit log viewer."""
 from datetime import timedelta
 from decimal import Decimal
+import re
+
 
 import pytest
 from django.test import Client as HttpClient
@@ -267,9 +269,10 @@ def test_a_group_never_lists_more_than_the_limit_but_counts_them_all(world):
     assert len(group.hits) == search_module.LIMIT and group.total > search_module.LIMIT
 
 
-def test_the_staff_bar_has_a_search_box_and_customers_do_not(world):
+def test_the_staff_shell_has_a_search_and_customers_do_not(world):
     page = browser(world.people["manager"]).get(reverse("console:dashboard")).content.decode()
-    assert f'action="{reverse("console:search")}"' in page and 'name="q"' in page
+    assert f'data-search-url="{reverse("console:search")}"' in page and f'href="{reverse("console:search")}"' in page
+    assert "data-quick-open" in page and 'id="quick-q"' in page
     customer_page = browser(world.people["customer owner"]).get(reverse("dashboard")).content.decode()
     assert reverse("console:search") not in customer_page
 
@@ -323,13 +326,11 @@ def test_the_staff_menu_starts_with_the_dashboard_and_offers_the_audit_log_by_pe
 
     for role in EXPECTED:
         menus = build(role)
-        assert menus["main"][0].label == "Dashboard" and menus["main"][0].url == reverse("console:dashboard")
-        utilities = next((e for e in menus["main"] if e.key == "staff.utilities"), None)
-        has_log = utilities is not None and "Audit Log" in [c.label for c in utilities.children]
-        assert has_log == (role != "support agent"), role
+        assert menus["main"][0].label == "Overview" and menus["main"][0].url == reverse("console:dashboard")
+        has_log = any(e.key == "staff.activity" and e.url == reverse("console:audit_log") for e in menus["main"])
+        assert has_log == (role not in ("support agent", "technical staff")), role
 
 
 def test_the_dashboard_link_is_marked_as_the_current_page(world):
     page = browser(world.people["manager"]).get(reverse("console:dashboard")).content.decode()
-    assert 'aria-current="page">Dashboard' in page or 'aria-current="page"><' in page
-    assert 'class="nav-link active"' in page
+    assert re.search(r'class="rail-link is-current" href="/staff/" title="Overview" aria-current="page"', page)

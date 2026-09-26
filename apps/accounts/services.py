@@ -258,6 +258,31 @@ def set_account_status(actor, user, new_status, *, reason="", request=None):
 
 
 @transaction.atomic
+def update_user_details(actor, user, *, request=None, **changes):
+    """
+    Correct someone else's name or phone number from the Users screen (needs ``manage_users``; never your own account,
+    which you change in your profile; an admin account only by a Super Admin). Email, role and status have their own
+    audited actions.
+    """
+    _require(actor, "manage_users")
+    if user.pk == actor.pk:
+        raise ServiceError("Change your own details in your profile.", code="self_action")
+    if user.role in PRIVILEGED_ROLES and not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can change an admin account.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+    changed = {}
+    for field in PROFILE_FIELDS:
+        if field in changes and getattr(user, field) != changes[field]:
+            setattr(user, field, changes[field])
+            changed[field] = changes[field]
+    if changed:
+        user.save(update_fields=[*changed, "updated_at"])
+        audit.record("account.details_updated", actor=actor, target=user, metadata={"fields": sorted(changed)},
+                     request=request)
+    return user
+
+
+@transaction.atomic
 def create_staff_user(actor, *, email, first_name="", last_name="", role, request=None):
     """
     Add a member of staff (needs ``manage_users`` and ``assign_roles``; admin roles only by a Super Admin). The new person

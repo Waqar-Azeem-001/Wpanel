@@ -10,10 +10,13 @@
   <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/font/bootstrap-icons.min.css' %}">
   <link rel="stylesheet" href="{% url 'brand_css' %}?v={{ brand.version }}">
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+  <link rel="stylesheet" href="{% static 'css/shell.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <a class="skip-link" href="#main">{% trans "Skip to content" %}</a>
+  {# The frame is the whole page between the skip link and the scripts: the store draws a top bar, the signed-in areas a left rail (layouts/app.html), sign-in a split screen (layouts/auth.html). #}
+  {% block frame %}
   {% block navbar %}{% endblock %}
   {% block breadcrumbs %}{% if breadcrumbs %}{% include "components/breadcrumbs.html" %}{% endif %}{% endblock %}
   <main id="main" class="page {% block container %}{% endblock %}{% if sidebar %} wide{% endif %}" tabindex="-1">
@@ -24,10 +27,12 @@
     {% if sidebar %}</div></div>{% endif %}
   </main>
   {% block footer %}{% include "components/footer.html" %}{% endblock %}
+  {% endblock frame %}
   {% include "components/confirm_modal.html" %}
   <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
   <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
+  <script src="{% static 'js/shell.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

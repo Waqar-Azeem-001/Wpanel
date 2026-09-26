@@ -1,3 +1,5 @@
+{# The billing tabs (and the way back to Orders). People without billing access, such as technical staff on the Orders page, get none: a link they cannot open is a broken link. #}
+{% if perms.accounts.view_billing %}
 <nav><ul class="nav nav-tabs mb-3 tab-scroll">
   <li class="nav-item"><a class="nav-link{% if section == "invoices" %} active{% endif %}" href="{% url 'billing_staff:invoice_list' %}"{% if section == "invoices" %} aria-current="page"{% endif %}>Invoices</a></li>
   <li class="nav-item"><a class="nav-link{% if section == "transactions" %} active{% endif %}" href="{% url 'billing_staff:transaction_list' %}"{% if section == "transactions" %} aria-current="page"{% endif %}>Payments</a></li>
@@ -10,3 +12,4 @@
   <li class="nav-item"><a class="nav-link{% if section == "settings" %} active{% endif %}" href="{% url 'billing_staff:settings' %}"{% if section == "settings" %} aria-current="page"{% endif %}>Settings</a></li>
   <li class="nav-item"><a class="nav-link" href="{% url 'orders_staff:list' %}">Orders</a></li>
 </ul></nav>
+{% endif %}

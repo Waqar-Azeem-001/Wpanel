@@ -22,6 +22,19 @@ class StaffUserForm(forms.Form):
             self.fields["role"].choices = [c for c in STAFF_ROLE_CHOICES if c[0] in allowed_roles]
 
 
+class UserFilterForm(forms.Form):
+    """The Users list filters (all optional; a value that is not a choice is ignored by the view, never an error)."""
+
+    q = forms.CharField(required=False)
+    status = forms.ChoiceField(required=False, choices=[("", "Any status"), *AccountStatus.choices])
+
+
+class UserDetailsForm(forms.Form):
+    first_name = forms.CharField(max_length=150, required=False)
+    last_name = forms.CharField(max_length=150, required=False)
+    phone = forms.CharField(max_length=32, required=False)
+
+
 class StaffRoleForm(forms.Form):
     role = forms.ChoiceField(choices=STAFF_ROLE_CHOICES)
 

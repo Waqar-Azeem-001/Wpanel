@@ -91,7 +91,6 @@ def shortcuts(request):
         link(request, "Order new services", "catalog:product_list", icon="bi-box"),
         link(request, "Register a domain", "domains_public:search", icon="bi-globe"),
         link(request, "Open a ticket", "support_customer:new", icon="bi-life-preserver"),
-        Link("Sign out", reverse("accounts:logout"), icon="bi-box-arrow-right", post=True),
     ])
 
 

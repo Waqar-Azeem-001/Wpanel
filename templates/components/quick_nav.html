@@ -1,0 +1,14 @@
+{% load i18n %}
+{# Search or jump to a page: lists the pages in the rail as you type (static/js/shell.js); staff can also search everything. #}
+<div class="modal fade" id="quick-nav" tabindex="-1" aria-labelledby="quick-nav-title" aria-hidden="true"{% if ui_area == "staff" %} data-search-url="{% url 'console:search' %}"{% endif %}>
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable quick-dialog">
+    <div class="modal-content quick">
+      <h2 class="visually-hidden" id="quick-nav-title">{% trans "Search or jump to a page" %}</h2>
+      <div class="quick-input"><i class="bi bi-search" aria-hidden="true"></i>
+        <input id="quick-q" type="search" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="quick-list" placeholder="{% if ui_area == 'staff' %}{% trans 'Search clients, invoices, tickets… or type a page name' %}{% else %}{% trans 'Type a page name' %}{% endif %}" aria-label="{% trans 'Search or jump to a page' %}">
+      </div>
+      <ul id="quick-list" class="quick-list" role="listbox"></ul>
+      <p class="quick-hint"><kbd>↑</kbd> <kbd>↓</kbd> {% trans "to move" %} · <kbd>Enter</kbd> {% trans "to open" %} · <kbd>Esc</kbd> {% trans "to close" %}{% if ui_area == "staff" %} · <a href="{% url 'console:search' %}">{% trans "Open the full search page" %}</a>{% endif %}</p>
+    </div>
+  </div>
+</div>

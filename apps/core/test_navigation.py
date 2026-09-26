@@ -34,6 +34,11 @@ def agent(staff):
 
 
 @pytest.fixture
+def technical(staff):
+    return staff(Role.TECHNICAL)
+
+
+@pytest.fixture
 def owner(manager):
     return client_services.create_client(manager, {"first_name": "Ada", "email": "ada@acme.test", "country": "US"}
                                          ).contacts.get().user
@@ -107,20 +112,29 @@ def test_every_menu_link_reverses_to_an_internal_path():
 
 def test_a_customer_with_an_account_sees_the_full_customer_menu(owner):
     menus = navigation.build(request_for(owner), "client")
-    assert labels(menus, "main") == ["Home", "Services", "Domains", "Billing", "Support", "Open Ticket", "Affiliates"]
+    assert labels(menus, "main") == ["Overview", "Services", "Domains", "Orders", "Billing", "Support", "Affiliates"]
     services = next(e for e in menus["main"] if e.key == "client.services")
-    assert [c.label for c in services.children] == ["My Hosting", "My Orders", "Order New Services", "View Available Addons"]
+    assert [c.label for c in services.children] == ["My hosting", "Order new services", "Add-ons"]
     assert labels(menus, "right") == ["Cart", "Notifications"]
     account = menus["account"][0]
-    assert [c.label for c in account.children] == ["Your profile", "Your account", "Contacts", "Cancellation requests",
+    assert [c.label for c in account.children] == ["Profile & security", "Your account", "Contacts", "Cancellation requests",
                                                    "Change password", "Email history", "Notification preferences"]
     assert account.label == owner.get_short_name()
 
 
 def test_a_customer_without_an_account_sees_the_fallback_not_the_account_menus(loner):
     menus = navigation.build(request_for(loner), "client")
-    assert labels(menus, "main") == ["Home", "Plans", "Help"]
+    assert labels(menus, "main") == ["Overview", "Plans", "Help"]
     assert labels(menus, "right") == ["Notifications"]  # no cart without a client account
+
+
+def test_the_phone_bottom_bar_holds_the_five_things_customers_do_most(owner, loner, client):
+    assert [e.label for e in navigation.build(request_for(owner), "client")["main"] if e.mobile_tab] == [
+        "Overview", "Services", "Domains", "Billing", "Support"]
+    client.force_login(owner)
+    assert 'class="tabbar"' in client.get(reverse("dashboard"), HTTP_HOST="localhost").content.decode()
+    client.force_login(loner)  # one place to go is not a bar
+    assert 'class="tabbar"' not in client.get(reverse("dashboard"), HTTP_HOST="localhost").content.decode()
 
 
 def test_an_anonymous_visitor_sees_the_public_menu():
@@ -134,31 +148,59 @@ def test_the_public_sign_in_entries_are_hidden_from_signed_in_people(owner):
     assert navigation.build(request_for(owner), "public")["right"] == []
 
 
-def test_staff_menus_follow_their_permissions(agent, manager, admin):
+def test_staff_menus_follow_their_permissions(agent, technical, manager, admin):
     def top(user):
         return labels(navigation.build(request_for(user), "staff"), "main")
 
-    assert top(agent) == ["Dashboard", "Clients", "Orders", "Billing", "Support"]  # no Reports, no Utilities
-    assert top(manager) == ["Dashboard", "Clients", "Orders", "Billing", "Support", "Reports", "Utilities"]  # the audit log
-    assert top(admin) == ["Dashboard", "Clients", "Orders", "Billing", "Support", "Reports", "Utilities"]
+    assert top(agent) == ["Overview", "Clients", "Orders", "Billing", "Hosting", "Domains", "Lifecycle", "Support",
+                          "Providers", "Settings"]
+    assert top(technical) == ["Overview", "Clients", "Orders", "Hosting", "Domains", "Lifecycle", "Support", "Providers"]
+    assert top(manager) == ["Overview", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting",
+                            "Domains", "Lifecycle", "Support", "Reports", "Activity log", "Providers", "Settings"]
+    assert top(admin) == ["Overview", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting", "Domains",
+                          "Lifecycle", "Support", "Reports", "Activity log", "Providers", "Notifications", "Settings"]
 
 
-def test_a_group_appears_only_when_something_in_it_can_be_opened(agent, admin):
-    agent_clients = next(e for e in navigation.build(request_for(agent), "staff")["main"] if e.key == "staff.clients")
-    assert [c.label for c in agent_clients.children] == [
-        "View / Search Clients", "Products / Services", "Domain Registrations", "Cancellation Requests", "Service Lifecycle"]
-    setup = navigation.build(request_for(admin), "staff")["setup"][0]
-    assert "Brand" in [c.label for c in setup.children] and setup.children[9].divider_before  # the divider before settings
-    agent_setup = navigation.build(request_for(agent), "staff")["setup"][0]
-    assert [c.label for c in agent_setup.children] == ["Domain Pricing", "Servers", "Payment Methods", "Tax Rules",
-                                                        "Coupons", "Billing Settings", "Support Departments"]
+def test_the_rail_groups_its_entries_under_headings(admin):
+    main = navigation.build(request_for(admin), "staff")["main"]
+    headings = []
+    for entry in main:
+        if entry.section not in headings:
+            headings.append(entry.section)
+    assert headings == ["", "People", "Commerce", "Operations", "Insights", "System"]
 
 
-def test_the_django_admin_link_is_for_superusers_only(owner, admin):
+def test_a_group_appears_only_when_something_in_it_can_be_opened(agent, technical, admin):
+    def group(user, key):
+        return next((e for e in navigation.build(request_for(user), "staff")["main"] if e.key == key), None)
+
+    assert [c.label for c in group(agent, "staff.clients").children] == ["All clients"]  # cannot add a client
+    assert group(technical, "staff.billing") is None and group(technical, "staff.catalog") is None
+    assert [c.label for c in group(technical, "staff.providers").children] == ["Servers"]  # no registrar, email, payments
+    assert [c.label for c in group(admin, "staff.settings").children] == [
+        "Brand", "Billing", "Tax rules", "Lifecycle timings", "Affiliate programme"]
+    assert [c.label for c in group(agent, "staff.settings").children] == ["Billing", "Tax rules"]
+
+
+def test_a_group_links_to_its_first_page(admin):
+    billing = next(e for e in navigation.build(request_for(admin), "staff")["main"] if e.key == "staff.billing")
+    assert billing.landing == billing.children[0].url == reverse("billing_staff:index")
+
+
+def test_the_users_entry_is_for_people_who_may_view_users(agent, technical, manager):
+    def has_users(user):
+        return "Users" in labels(navigation.build(request_for(user), "staff"), "main")
+
+    assert has_users(manager) and not has_users(agent) and not has_users(technical)
+
+
+def test_the_django_admin_link_is_for_superusers_only_and_is_not_the_main_way_in(owner, admin):
     superuser = User.objects.create_superuser(email="root@example.com", password="x")
-    assert "Django admin" not in [c.label for c in navigation.build(request_for(admin), "staff")["account"][0].children]
-    assert "Django admin" in [c.label for c in navigation.build(request_for(superuser), "staff")["account"][0].children]
-    assert "Django admin" not in [c.label for c in navigation.build(request_for(owner), "client")["account"][0].children]
+    tech = "Database admin (technical)"
+    assert tech not in [c.label for c in navigation.build(request_for(admin), "staff")["account"][0].children]
+    assert tech in [c.label for c in navigation.build(request_for(superuser), "staff")["account"][0].children]
+    assert tech not in [c.label for c in navigation.build(request_for(owner), "client")["account"][0].children]
+    assert all("admin" not in e.label.lower() for e in navigation.build(request_for(superuser), "staff")["main"])
 
 
 def test_a_feature_flag_hides_an_entry_until_it_is_switched_on(monkeypatch, owner, settings):
@@ -180,10 +222,10 @@ def test_the_bell_shows_the_unread_count(owner):
 
 # --- Rule 5.6, in both directions -------------------------------------------------------------------------------------
 
-@pytest.mark.parametrize("role", ["agent", "manager", "admin"])
-def test_a_staff_page_is_hidden_exactly_from_people_who_cannot_open_it(client, role, agent, manager, admin):
+@pytest.mark.parametrize("role", ["agent", "technical", "manager", "admin"])
+def test_a_staff_page_is_hidden_exactly_from_people_who_cannot_open_it(client, role, agent, technical, manager, admin):
     """If you can see a link you can open it (tested for every menu in test_ui); and if you cannot open it, you do not see it."""
-    user = {"agent": agent, "manager": manager, "admin": admin}[role]
+    user = {"agent": agent, "technical": technical, "manager": manager, "admin": admin}[role]
     client.force_login(user)
     seen = {e.key for menu in navigation.build(request_for(user), "staff").values() for top in menu
             for e in (top.children or [top])}
@@ -229,16 +271,17 @@ def test_the_breadcrumb_bar_is_drawn_on_registry_pages_only(client, manager):
 # --- No menu is written by hand ---------------------------------------------------------------------------------------
 
 def test_no_navigation_template_contains_a_link_of_its_own():
-    for name in ("navbar_public", "navbar_client", "navbar_staff", "nav_items"):
+    for name in ("navbar_public", "nav_items", "rail", "topbar", "tabbar", "crumbs", "quick_nav"):
         text = (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")
-        assert "<a class=\"nav-link\" href=\"/" not in text and 'href="/' not in text, name
+        assert 'href="/' not in text, name
         urls = [u for u in text.replace("\n", " ").split("{% url ")[1:]]
-        assert all(u.startswith(("'accounts:logout'", "'console:search'")) for u in urls), (name, urls)  # sign out, search
+        assert all(u.startswith(("'accounts:logout'", "'console:search'", "'home'", "'brand_logo'")) for u in urls), (name, urls)
 
 
-def test_the_old_hand_written_account_partial_is_gone():
-    assert not (TEMPLATES / "components" / "navbar_account.html").exists()
+def test_the_old_navigation_bars_are_gone():
+    for name in ("navbar_account", "navbar_client", "navbar_staff"):
+        assert not (TEMPLATES / "components" / f"{name}.html").exists(), name
     base = (TEMPLATES / "base.html").read_text(encoding="utf-8")
     assert "perms.accounts" not in base and "client_contacts" not in base
-    for name in ("navbar_public", "navbar_client", "navbar_staff"):
+    for name in ("navbar_public", "rail", "topbar"):
         assert "perms.accounts" not in (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")

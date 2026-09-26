@@ -25,7 +25,12 @@ def layout(request):
 def menus(request):
     """``nav`` (the menus for this person, generated from the registry) and automatic ``breadcrumbs``."""
     area = area_for(getattr(request, "user", None))
-    context = {"nav": navigation.build(request, area)}
+    menus_for_person = navigation.build(request, area)
+    context = {"nav": menus_for_person}
+    if area == "client":  # the phone's bottom bar: worth showing only when there are enough places to go
+        tabs = [e for e in menus_for_person["main"] if e.mobile_tab]
+        if len(tabs) >= 3:
+            context["mobile_tabs"] = tabs
     crumbs = navigation.breadcrumbs_for(request)
     if crumbs:
         context["breadcrumbs"] = crumbs  # a page that supplies its own breadcrumbs overrides these

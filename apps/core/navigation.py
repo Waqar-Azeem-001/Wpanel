@@ -2,8 +2,9 @@
 The menu registry (roadmap Section 12.2, Rule 5.3): every menu the portal shows is *data* defined here, never markup.
 
 Each entry names a URL (by URL name), who may see it (a portal permission, or a relationship such as "has a client
-account"), which shell it belongs to and where it sits. The three navigation bars, the account and Setup menus, the
-active-item highlighting and the breadcrumbs are all generated from this one list, so:
+account"), which shell it belongs to and where it sits. The store's top bar, the left rail of the signed-in areas (with
+its section headings), the top bar's bell and profile menu, the phone's bottom bar, the active-item highlighting, the
+"jump to" list and the breadcrumbs are all generated from this one list, so:
 
 * a link can only exist if its URL name resolves (checked at startup by ``manage.py check`` and again in the tests);
 * a link is shown only to someone who may open it (Rule 5.6);
@@ -21,7 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.accounts.roles import perm
 
 AREAS = ("public", "client", "staff")
-POSITIONS = ("main", "right", "account", "setup")
+POSITIONS = ("main", "right", "account")
 REQUIRES = ("", "anonymous", "client_contact", "no_client_contact", "superuser")
 
 
@@ -31,7 +32,9 @@ class MenuItem:
     label: object                      # text, or lazy translated text; "{name}" is replaced by the person's name
     url_name: str = ""                 # empty for a group (a menu that only holds other entries)
     areas: tuple = ("client",)         # which shells show it: "public", "client", "staff"
-    position: str = "main"             # "main" bar, "right" side, the "account" menu, the "setup" (gear) menu
+    position: str = "main"             # "main" = the left rail, "right" = the top bar, "account" = the profile menu
+    section: object = ""               # the heading a top-level rail entry sits under (staff rail)
+    mobile_tab: bool = False           # also a tab in the phone bottom bar (customer area)
     parent: str = ""                   # the key of the group it sits in
     permission: str = ""               # a portal permission codename the person must hold
     any_permission: tuple = ()         # or: holding any one of these is enough
@@ -51,7 +54,7 @@ CLIENT = ("client",)
 BOTH = ("client", "staff")
 
 ITEMS = [
-    # --- Public ------------------------------------------------------------------------------------------------------
+    # --- Public (the storefront keeps its top bar) -------------------------------------------------------------------
     item("public.plans", _("Plans"), "catalog:product_list", areas=("public",)),
     item("public.domains", _("Domains"), "domains_public:search", areas=("public",)),
     item("public.help", _("Help"), "help:index", areas=("public",)),
@@ -59,128 +62,139 @@ ITEMS = [
     item("public.register", _("Create account"), "accounts:register", areas=("public",), position="right",
          requires="anonymous"),
 
-    # --- Customer area -----------------------------------------------------------------------------------------------
-    item("client.home", _("Home"), "dashboard", areas=CLIENT),
-    item("client.services", _("Services"), areas=CLIENT, requires="client_contact"),
-    item("client.services.hosting", _("My Hosting"), "hosting_customer:list", areas=CLIENT, parent="client.services"),
-    item("client.services.orders", _("My Orders"), "orders_customer:list", areas=CLIENT, parent="client.services"),
-    item("client.services.order", _("Order New Services"), "catalog:product_list", areas=CLIENT,
+    # --- Customer area: the left rail; five of its entries are also the phone's bottom bar -------------------------
+    item("client.home", _("Overview"), "dashboard", areas=CLIENT, icon="bi-house-door", mobile_tab=True),
+    item("client.services", _("Services"), areas=CLIENT, requires="client_contact", icon="bi-hdd-rack", mobile_tab=True),
+    item("client.services.hosting", _("My hosting"), "hosting_customer:list", areas=CLIENT, parent="client.services"),
+    item("client.services.order", _("Order new services"), "catalog:product_list", areas=CLIENT,
          parent="client.services"),
-    item("client.services.addons", _("View Available Addons"), "catalog:addons", areas=CLIENT,
-         parent="client.services"),
-    item("client.domains", _("Domains"), areas=CLIENT, requires="client_contact"),
-    item("client.domains.list", _("My Domains"), "domains_customer:list", areas=CLIENT, parent="client.domains"),
-    item("client.domains.register", _("Register a New Domain"), "domains_public:search", areas=CLIENT,
+    item("client.services.addons", _("Add-ons"), "catalog:addons", areas=CLIENT, parent="client.services"),
+    item("client.domains", _("Domains"), areas=CLIENT, requires="client_contact", icon="bi-globe2", mobile_tab=True),
+    item("client.domains.list", _("My domains"), "domains_customer:list", areas=CLIENT, parent="client.domains"),
+    item("client.domains.register", _("Register a domain"), "domains_public:search", areas=CLIENT,
          parent="client.domains"),
-    item("client.billing", _("Billing"), areas=CLIENT, requires="client_contact"),
-    item("client.billing.invoices", _("My Invoices"), "billing_customer:invoice_list", areas=CLIENT,
+    item("client.orders", _("Orders"), "orders_customer:list", areas=CLIENT, requires="client_contact", icon="bi-bag"),
+    item("client.billing", _("Billing"), areas=CLIENT, requires="client_contact", icon="bi-credit-card-2-front",
+         mobile_tab=True),
+    item("client.billing.invoices", _("Invoices"), "billing_customer:invoice_list", areas=CLIENT,
          parent="client.billing"),
-    item("client.billing.quotes", _("My Quotes"), "billing_customer:quote_list", areas=CLIENT, parent="client.billing"),
-    item("client.billing.methods", _("Payment Methods"), "billing_customer:payment_methods", areas=CLIENT,
+    item("client.billing.quotes", _("Quotes"), "billing_customer:quote_list", areas=CLIENT, parent="client.billing"),
+    item("client.billing.methods", _("Payment methods"), "billing_customer:payment_methods", areas=CLIENT,
          parent="client.billing"),
-    item("client.support", _("Support"), areas=CLIENT, requires="client_contact"),
+    item("client.support", _("Support"), areas=CLIENT, requires="client_contact", icon="bi-life-preserver",
+         mobile_tab=True),
     item("client.support.tickets", _("Tickets"), "support_customer:list", areas=CLIENT, parent="client.support"),
-    item("client.support.kb", _("Knowledgebase"), "help:index", areas=CLIENT, parent="client.support"),
-    item("client.ticket", _("Open Ticket"), "support_customer:new", areas=CLIENT, requires="client_contact"),
-    item("client.affiliates", _("Affiliates"), "affiliates_customer:dashboard", areas=CLIENT, requires="client_contact"),
-    item("client.plans", _("Plans"), "catalog:product_list", areas=CLIENT, requires="no_client_contact"),
-    item("client.help", _("Help"), "help:index", areas=CLIENT, requires="no_client_contact"),
+    item("client.support.new", _("Open a ticket"), "support_customer:new", areas=CLIENT, parent="client.support"),
+    item("client.support.kb", _("Help articles"), "help:index", areas=CLIENT, parent="client.support"),
+    item("client.affiliates", _("Affiliates"), "affiliates_customer:dashboard", areas=CLIENT, requires="client_contact",
+         icon="bi-share"),
+    item("client.plans", _("Plans"), "catalog:product_list", areas=CLIENT, requires="no_client_contact",
+         icon="bi-box-seam"),
+    item("client.help", _("Help"), "help:index", areas=CLIENT, requires="no_client_contact", icon="bi-question-circle"),
     item("client.cart", _("Cart"), "orders_customer:cart", areas=CLIENT, position="right", requires="client_contact",
          badge="cart", icon="bi-cart"),
 
-    # --- Staff area --------------------------------------------------------------------------------------------------
-    item("staff.dashboard", _("Dashboard"), "console:dashboard", areas=STAFF),
-    item("staff.clients", _("Clients"), areas=STAFF),
-    item("staff.clients.list", _("View / Search Clients"), "clients_staff:list", areas=STAFF, parent="staff.clients",
+    # --- Staff area: the same rail, in sections. What a person may not open is not listed (Rule 5.6). -----------------
+    item("staff.dashboard", _("Overview"), "console:dashboard", areas=STAFF, icon="bi-grid-1x2"),
+
+    item("staff.clients", _("Clients"), areas=STAFF, section=_("People"), icon="bi-people"),
+    item("staff.clients.list", _("All clients"), "clients_staff:list", areas=STAFF, parent="staff.clients",
          permission="view_clients"),
-    item("staff.clients.add", _("Add New Client"), "clients_staff:create", areas=STAFF, parent="staff.clients",
+    item("staff.clients.add", _("Add a client"), "clients_staff:create", areas=STAFF, parent="staff.clients",
          permission="manage_clients"),
-    item("staff.clients.services", _("Products / Services"), "hosting_staff:list", areas=STAFF,
-         parent="staff.clients", permission="view_hosting"),
-    item("staff.clients.domains", _("Domain Registrations"), "domains_staff:list", areas=STAFF,
-         parent="staff.clients", permission="view_domains"),
-    item("staff.clients.cancellations", _("Cancellation Requests"), "lifecycle_staff:cancellations", areas=STAFF,
-         parent="staff.clients", any_permission=("view_hosting", "view_domains")),
-    item("staff.clients.lifecycle", _("Service Lifecycle"), "lifecycle_staff:overview", areas=STAFF,
-         parent="staff.clients", any_permission=("view_hosting", "view_domains")),
-    item("staff.clients.affiliates", _("Manage Affiliates"), "affiliates_staff:overview", areas=STAFF,
-         parent="staff.clients", permission="view_affiliates"),
-    item("staff.orders", _("Orders"), areas=STAFF),
-    item("staff.orders.list", _("List All Orders"), "orders_staff:list", areas=STAFF, parent="staff.orders",
+    item("staff.users", _("Users"), "console:users", areas=STAFF, section=_("People"), permission="view_users",
+         icon="bi-person-badge"),
+    item("staff.affiliates", _("Affiliates"), "affiliates_staff:overview", areas=STAFF, section=_("People"),
+         permission="view_affiliates", icon="bi-share"),
+
+    item("staff.orders", _("Orders"), areas=STAFF, section=_("Commerce"), icon="bi-bag"),
+    item("staff.orders.list", _("All orders"), "orders_staff:list", areas=STAFF, parent="staff.orders",
          permission="view_orders"),
-    item("staff.orders.add", _("Add New Order"), "orders_staff:new", areas=STAFF, parent="staff.orders",
+    item("staff.orders.add", _("New order"), "orders_staff:new", areas=STAFF, parent="staff.orders",
          permission="manage_orders"),
-    item("staff.billing", _("Billing"), areas=STAFF),
-    item("staff.billing.overview", _("Billing Overview"), "billing_staff:index", areas=STAFF, parent="staff.billing",
+    item("staff.billing", _("Billing"), areas=STAFF, section=_("Commerce"), icon="bi-credit-card-2-front"),
+    item("staff.billing.overview", _("Overview"), "billing_staff:index", areas=STAFF, parent="staff.billing",
+         permission="view_billing"),
+    item("staff.billing.invoices", _("Invoices"), "billing_staff:invoice_list", areas=STAFF, parent="staff.billing",
          permission="view_billing"),
     item("staff.billing.transactions", _("Transactions"), "billing_staff:transaction_list", areas=STAFF,
          parent="staff.billing", permission="view_billing"),
-    item("staff.billing.invoices", _("Invoices"), "billing_staff:invoice_list", areas=STAFF, parent="staff.billing",
-         permission="view_billing"),
-    item("staff.billing.items", _("Billable Items"), "billing_staff:billable_list", areas=STAFF,
-         parent="staff.billing", permission="view_billing"),
     item("staff.billing.quotes", _("Quotes"), "billing_staff:quote_list", areas=STAFF, parent="staff.billing",
          permission="view_billing"),
-    item("staff.billing.renewals", _("Renewals & Upgrades"), "renewals_staff:list", areas=STAFF,
+    item("staff.billing.items", _("Billable items"), "billing_staff:billable_list", areas=STAFF,
          parent="staff.billing", permission="view_billing"),
-    item("staff.support", _("Support"), areas=STAFF),
-    item("staff.support.overview", _("Support Overview"), "support_staff:overview", areas=STAFF,
-         parent="staff.support", permission="view_support"),
-    item("staff.support.tickets", _("Support Tickets"), "support_staff:tickets", areas=STAFF, parent="staff.support",
-         permission="view_support"),
-    item("staff.support.new", _("Open New Ticket"), "support_staff:ticket_new", areas=STAFF, parent="staff.support",
-         permission="view_support"),
-    item("staff.support.replies", _("Predefined Replies"), "support_staff:replies", areas=STAFF,
-         parent="staff.support", permission="view_support"),
-    item("staff.support.kb", _("Knowledgebase"), "support_staff:kb", areas=STAFF, parent="staff.support",
-         permission="view_support"),
-    item("staff.reports", _("Reports"), "reports_staff:index", areas=STAFF, permission="view_reports"),
-    item("staff.utilities", _("Utilities"), areas=STAFF),
-    item("staff.utilities.audit", _("Audit Log"), "console:audit_log", areas=STAFF, parent="staff.utilities",
-         permission="view_audit_log"),
-    item("staff.utilities.email_stats", _("Email Statistics"), "notifications_staff:overview", areas=STAFF,
-         parent="staff.utilities", permission="view_settings"),
-    item("staff.utilities.email_log", _("Email Message Log"), "notifications_staff:emails", areas=STAFF,
-         parent="staff.utilities", permission="view_settings"),
+    item("staff.billing.renewals", _("Renewals & upgrades"), "renewals_staff:list", areas=STAFF,
+         parent="staff.billing", permission="view_billing"),
+    item("staff.billing.coupons", _("Coupons"), "billing_staff:coupons", areas=STAFF, parent="staff.billing",
+         permission="view_billing"),
+    item("staff.catalog", _("Products"), areas=STAFF, section=_("Commerce"), icon="bi-box-seam"),
+    item("staff.catalog.products", _("Products & plans"), "catalog_staff:product_list", areas=STAFF,
+         parent="staff.catalog", permission="view_products"),
+    item("staff.catalog.addons", _("Add-ons"), "catalog_staff:addon_list", areas=STAFF, parent="staff.catalog",
+         permission="view_products"),
 
-    # --- Setup (the gear menu) ---------------------------------------------------------------------------------------
-    item("staff.setup", _("Setup"), areas=STAFF, position="setup", icon="bi-gear"),
-    item("staff.setup.products", _("Products / Services"), "catalog_staff:product_list", areas=STAFF,
-         position="setup", parent="staff.setup", permission="view_products"),
-    item("staff.setup.addons", _("Product Addons"), "catalog_staff:addon_list", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_products"),
-    item("staff.setup.tlds", _("Domain Pricing"), "domains_staff:tld_list", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_domains"),
-    item("staff.setup.servers", _("Servers"), "catalog_staff:server_list", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_hosting"),
-    item("staff.setup.payment_methods", _("Payment Methods"), "billing_staff:payment_methods", areas=STAFF,
-         position="setup", parent="staff.setup", permission="view_billing"),
-    item("staff.setup.tax", _("Tax Rules"), "billing_staff:tax_rules", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_billing"),
-    item("staff.setup.coupons", _("Coupons"), "billing_staff:coupons", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_billing"),
-    item("staff.setup.billing", _("Billing Settings"), "billing_staff:settings", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_billing"),
-    item("staff.setup.departments", _("Support Departments"), "support_staff:departments", areas=STAFF,
-         position="setup", parent="staff.setup", permission="view_support"),
-    item("staff.setup.lifecycle", _("Lifecycle Timings"), "lifecycle_staff:settings", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_settings", divider_before=True),
-    item("staff.setup.affiliates", _("Affiliate Settings"), "affiliates_staff:settings", areas=STAFF,
-         position="setup", parent="staff.setup", permission="view_settings"),
-    item("staff.setup.staff", _("Staff & Roles"), "console:staff_users", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_users", divider_before=True),
-    item("staff.setup.email", _("Email Provider"), "console:email_providers", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_providers"),
-    item("staff.setup.registrar", _("Domain Registrar"), "console:registrars", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_providers"),
-    item("staff.setup.brand", _("Brand"), "brand_staff:settings", areas=STAFF, position="setup",
-         parent="staff.setup", permission="view_settings"),
+    item("staff.hosting", _("Hosting"), "hosting_staff:list", areas=STAFF, section=_("Operations"),
+         permission="view_hosting", icon="bi-hdd-rack"),
+    item("staff.domains", _("Domains"), areas=STAFF, section=_("Operations"), icon="bi-globe2"),
+    item("staff.domains.list", _("Registrations"), "domains_staff:list", areas=STAFF, parent="staff.domains",
+         permission="view_domains"),
+    item("staff.domains.pricing", _("Pricing by extension"), "domains_staff:tld_list", areas=STAFF,
+         parent="staff.domains", permission="view_domains"),
+    item("staff.lifecycle", _("Lifecycle"), areas=STAFF, section=_("Operations"), icon="bi-arrow-repeat"),
+    item("staff.lifecycle.overview", _("Overview"), "lifecycle_staff:overview", areas=STAFF, parent="staff.lifecycle",
+         any_permission=("view_hosting", "view_domains")),
+    item("staff.lifecycle.cancellations", _("Cancellations"), "lifecycle_staff:cancellations", areas=STAFF,
+         parent="staff.lifecycle", any_permission=("view_hosting", "view_domains")),
+    item("staff.support", _("Support"), areas=STAFF, section=_("Operations"), icon="bi-life-preserver"),
+    item("staff.support.overview", _("Overview"), "support_staff:overview", areas=STAFF, parent="staff.support",
+         permission="view_support"),
+    item("staff.support.tickets", _("Tickets"), "support_staff:tickets", areas=STAFF, parent="staff.support",
+         permission="view_support"),
+    item("staff.support.new", _("New ticket"), "support_staff:ticket_new", areas=STAFF, parent="staff.support",
+         permission="view_support"),
+    item("staff.support.replies", _("Saved replies"), "support_staff:replies", areas=STAFF, parent="staff.support",
+         permission="view_support"),
+    item("staff.support.kb", _("Knowledge base"), "support_staff:kb", areas=STAFF, parent="staff.support",
+         permission="view_support"),
+    item("staff.support.departments", _("Departments"), "support_staff:departments", areas=STAFF,
+         parent="staff.support", permission="view_support"),
 
-    # --- Shared: notifications and the account menu ------------------------------------------------------------------
+    item("staff.reports", _("Reports"), "reports_staff:index", areas=STAFF, section=_("Insights"),
+         permission="view_reports", icon="bi-graph-up"),
+    item("staff.activity", _("Activity log"), "console:audit_log", areas=STAFF, section=_("Insights"),
+         permission="view_audit_log", icon="bi-clock-history"),
+
+    item("staff.providers", _("Providers"), areas=STAFF, section=_("System"), icon="bi-plug"),
+    item("staff.providers.servers", _("Servers"), "catalog_staff:server_list", areas=STAFF, parent="staff.providers",
+         permission="view_hosting"),
+    item("staff.providers.registrar", _("Domain registrar"), "console:registrars", areas=STAFF,
+         parent="staff.providers", permission="view_providers"),
+    item("staff.providers.email", _("Email provider"), "console:email_providers", areas=STAFF,
+         parent="staff.providers", permission="view_providers"),
+    item("staff.providers.payments", _("Payment methods"), "billing_staff:payment_methods", areas=STAFF,
+         parent="staff.providers", permission="view_billing"),
+    item("staff.notifications", _("Notifications"), areas=STAFF, section=_("System"), icon="bi-envelope"),
+    item("staff.notifications.stats", _("Delivery statistics"), "notifications_staff:overview", areas=STAFF,
+         parent="staff.notifications", permission="view_settings"),
+    item("staff.notifications.log", _("Email log"), "notifications_staff:emails", areas=STAFF,
+         parent="staff.notifications", permission="view_settings"),
+    item("staff.settings", _("Settings"), areas=STAFF, section=_("System"), icon="bi-sliders"),
+    item("staff.settings.brand", _("Brand"), "brand_staff:settings", areas=STAFF, parent="staff.settings",
+         permission="view_settings"),
+    item("staff.settings.billing", _("Billing"), "billing_staff:settings", areas=STAFF, parent="staff.settings",
+         permission="view_billing"),
+    item("staff.settings.tax", _("Tax rules"), "billing_staff:tax_rules", areas=STAFF, parent="staff.settings",
+         permission="view_billing"),
+    item("staff.settings.lifecycle", _("Lifecycle timings"), "lifecycle_staff:settings", areas=STAFF,
+         parent="staff.settings", permission="view_settings"),
+    item("staff.settings.affiliates", _("Affiliate programme"), "affiliates_staff:settings", areas=STAFF,
+         parent="staff.settings", permission="view_settings"),
+
+    # --- Shared: notifications (top bar) and the account menu --------------------------------------------------------
     item("account.notifications", _("Notifications"), "notifications:inbox", areas=BOTH, position="right",
          badge="unread", icon="bi-bell"),
     item("account.menu", "{name}", areas=BOTH, position="account"),
-    item("account.profile", _("Your profile"), "accounts:profile", areas=BOTH, position="account",
+    item("account.profile", _("Profile & security"), "accounts:profile", areas=BOTH, position="account",
          parent="account.menu"),
     item("account.client", _("Your account"), "clients_customer:list", areas=CLIENT, position="account",
          parent="account.menu"),
@@ -194,8 +208,8 @@ ITEMS = [
          parent="account.menu"),
     item("account.preferences", _("Notification preferences"), "notifications:preferences", areas=BOTH,
          position="account", parent="account.menu"),
-    item("account.admin", _("Django admin"), "admin:index", areas=BOTH, position="account", parent="account.menu",
-         requires="superuser", divider_before=True),
+    item("account.admin", _("Database admin (technical)"), "admin:index", areas=BOTH, position="account",
+         parent="account.menu", requires="superuser", divider_before=True),
 ]
 
 BY_KEY = {entry.key: entry for entry in ITEMS}
@@ -230,6 +244,9 @@ class Entry:
     icon: str = ""
     divider_before: bool = False
     children: list = None
+    section: str = ""
+    mobile_tab: bool = False
+    landing: str = ""   # where a group link goes: its first page
 
     @property
     def is_group(self):
@@ -283,9 +300,11 @@ def build(request, area):
         badge = BADGES[entry.badge](request) if entry.badge and authenticated else 0
         return Entry(key=entry.key, label=_label(entry, user), url=reverse(entry.url_name),
                      active=entry.url_name == current_name, badge=badge, icon=entry.icon,
-                     divider_before=entry.divider_before)
+                     divider_before=entry.divider_before, section=str(entry.section), mobile_tab=entry.mobile_tab,
+                     landing=reverse(entry.url_name))
 
     menus = {position: [] for position in POSITIONS}
+    same_screen_family = {position: [] for position in POSITIONS}  # groups whose pages share the current URL namespace
     for top in (e for e in ITEMS if area in e.areas and not e.parent):
         children = [c for c in ITEMS if c.parent == top.key and area in c.areas]
         if children or not top.url_name:
@@ -293,11 +312,19 @@ def build(request, area):
             if not shown or not is_visible(user, top, has_client=has_client):
                 continue
             group_ns = {c.url_name.split(":")[0] for c in children if ":" in c.url_name}
-            group = Entry(key=top.key, label=_label(top, user), icon=top.icon, children=shown,
-                          active=any(e.active for e in shown) or (current_namespace in group_ns and bool(current_namespace)))
+            group = Entry(key=top.key, label=_label(top, user), icon=top.icon, children=shown, landing=shown[0].url,
+                          section=str(top.section), mobile_tab=top.mobile_tab, url=shown[0].url,
+                          active=any(e.active for e in shown))
+            if current_namespace and current_namespace in group_ns:
+                same_screen_family[top.position].append(group)
             menus[top.position].append(group)
         elif is_visible(user, top, has_client=has_client):
             menus[top.position].append(leaf(top))
+    # A page that is not itself an entry (an invoice, a ticket) keeps the first group of its family lit, and only one:
+    # several groups can share a namespace (billing pages appear under Billing, Settings and Providers).
+    for position, groups in same_screen_family.items():
+        if groups and not any(e.active for e in menus[position]):
+            groups[0].active = True
     return menus
 
 

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ person.full_name|default:person.email }} · {% trans "Users" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="person-cell"><span class="avatar" aria-hidden="true">{{ person.get_short_name|slice:":1"|upper }}</span>
+    <div><h1 class="mb-0">{{ person.full_name|default:person.email }}</h1><small class="text-secondary">{{ person.email }}</small></div></div>
+  <span class="d-flex flex-wrap gap-2 align-items-center">{% status_badge person.status person.get_status_display %}<a class="btn btn-outline-secondary" href="{% url 'console:users' %}?role={{ person.role }}">&larr; {{ person.get_role_display }}</a></span>
+</div>
+
+<div class="split">
+  <div>
+    <section class="card mb-3"><div class="card-header">{% trans "Account" %}</div><div class="card-body">
+      <dl class="facts">
+        <div><dt>{% trans "Role" %}</dt><dd>{{ person.get_role_display }}</dd></div>
+        <div><dt>{% trans "Status" %}</dt><dd>{{ person.get_status_display }}</dd></div>
+        <div><dt>{% trans "Email" %}</dt><dd>{% if person.is_email_verified %}{% trans "Verified" %}{% else %}{% trans "Not verified" %}{% endif %}</dd></div>
+        <div><dt>{% trans "Password" %}</dt><dd>{% if person.has_usable_password %}{% trans "Set" %}{% else %}{% trans "Invited, not set yet" %}{% endif %}</dd></div>
+        <div><dt>{% trans "Joined" %}</dt><dd>{{ person.date_joined|fdatetime }}</dd></div>
+        <div><dt>{% trans "Last sign-in" %}</dt><dd>{{ person.last_login|fdatetime }}</dd></div>
+        {% if person.phone %}<div><dt>{% trans "Phone" %}</dt><dd>{{ person.phone }}</dd></div>{% endif %}
+        {% if assigned_tickets is not None %}<div><dt>{% trans "Open tickets assigned" %}</dt><dd>{{ assigned_tickets }}</dd></div>{% endif %}
+      </dl>
+    </div></section>
+
+    {% if clients %}
+    <section class="card mb-3"><div class="card-header">{% trans "Client accounts" %}</div>
+      <div class="table-responsive"><table class="table mb-0 align-middle">
+        <thead><tr><th>{% trans "Client" %}</th><th>{% trans "Their role" %}</th><th class="text-end">{% trans "Orders" %}</th><th class="text-end">{% trans "Services" %}</th><th class="text-end">{% trans "Domains" %}</th><th class="text-end">{% trans "Open tickets" %}</th></tr></thead>
+        <tbody>{% for row in clients %}
+          <tr><td>{% if can_see_clients %}<a href="{% url 'clients_staff:detail' row.client.pk %}">{{ row.client.display_name }}</a>{% else %}{{ row.client.display_name }}{% endif %}</td><td>{{ row.role }}</td>
+            <td class="text-end">{{ row.orders }}</td><td class="text-end">{{ row.services }}</td><td class="text-end">{{ row.domains }}</td><td class="text-end">{{ row.tickets }}</td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+    </section>
+    {% endif %}
+
+    {% if events %}
+    <section class="card"><div class="card-header">{% trans "Recent activity" %}</div>
+      <ul class="list-group list-group-flush">{% for e in events %}
+        <li class="list-group-item d-flex justify-content-between gap-3 flex-wrap"><span><code>{{ e.action }}</code>{% if e.actor_id == person.pk %} <span class="small text-secondary">{% trans "by this person" %}</span>{% else %} <span class="small text-secondary">{% trans "by" %} {{ e.actor_repr|default:"system" }}</span>{% endif %}</span><span class="small text-secondary text-nowrap">{{ e.created_at|fdatetime }}</span></li>
+      {% endfor %}</ul>
+    </section>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if can_edit_details %}
+    <section class="card mb-3"><div class="card-body">
+      <h2 class="h6">{% trans "Details" %}</h2>
+      <form method="post" action="{% url 'console:user_edit' person.pk %}" novalidate>{% csrf_token %}
+        <div class="field"><label for="id_first_name">{% trans "First name" %}</label>{{ details_form.first_name }}</div>
+        <div class="field"><label for="id_last_name">{% trans "Last name" %}</label>{{ details_form.last_name }}</div>
+        <div class="field"><label for="id_phone">{% trans "Phone" %}</label>{{ details_form.phone }}</div>
+        <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
+      </form>
+    </div></section>
+    {% endif %}
+
+    {% if can_set_role %}
+    <section class="card mb-3"><div class="card-body">
+      <h2 class="h6">{% trans "Role" %}</h2>
+      <form method="post" action="{% url 'console:staff_user_role' person.pk %}" data-confirm="{% trans 'Change this person’s role? They are signed out of the mobile app.' %}">{% csrf_token %}
+        <div class="field"><label for="id_role" class="visually-hidden">{% trans "Role" %}</label>
+          <select name="role" id="id_role">{% for value, label in role_choices %}<option value="{{ value }}"{% if value == person.role %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <button class="btn btn-outline-secondary" type="submit">{% trans "Change role" %}</button>
+      </form>
+    </div></section>
+    {% endif %}
+
+    {% if can_set_status %}
+    <section class="card"><div class="card-body">
+      <h2 class="h6">{% if person.status == 'active' %}{% trans "Suspend this account" %}{% else %}{% trans "Reactivate this account" %}{% endif %}</h2>
+      <form method="post" action="{% url 'console:staff_user_status' person.pk %}">{% csrf_token %}
+        <input type="hidden" name="status" value="{% if person.status == 'active' %}suspended{% else %}active{% endif %}">
+        <div class="field"><label for="id_reason">{% trans "Reason (kept in the audit log)" %}</label><input id="id_reason" name="reason" maxlength="500"></div>
+        <button class="btn {% if person.status == 'active' %}btn-outline-danger{% else %}btn-primary{% endif %}" type="submit"{% if person.status == 'active' %} data-confirm="{% trans 'Suspend this account? They are signed out at once.' %}"{% endif %}>{% if person.status == 'active' %}{% trans "Suspend" %}{% else %}{% trans "Reactivate" %}{% endif %}</button>
+      </form>
+    </div></section>
+    {% elif person.pk == user.pk %}
+    <div class="alert alert-info">{% trans "This is your own account. Change your details and password in" %} <a href="{% url 'accounts:profile' %}">{% trans "Profile & security" %}</a>.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

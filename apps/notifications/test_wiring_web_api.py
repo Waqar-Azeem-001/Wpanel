@@ -305,10 +305,10 @@ def test_mark_all_read_and_the_navigation_count(client, owner):
     for i in range(3):
         Notification.objects.create(user=owner, event="order.active", title=f"n{i}")
     client.force_login(owner)
-    assert b'class="badge unread">3<' in client.get("/account/notifications/").content
+    assert b'class="icon-badge">3<' in client.get("/account/notifications/").content
     client.post("/account/notifications/mark-read/")
     assert services.unread_count(owner) == 0
-    assert b'class="badge unread"' not in client.get("/account/notifications/").content.replace(b'class="badge unread">New', b"")
+    assert b'class="icon-badge"' not in client.get("/account/notifications/").content
 
 
 def test_the_inbox_requires_login(client):

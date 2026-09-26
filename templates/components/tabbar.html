@@ -1,0 +1,7 @@
+{% load i18n %}
+{# The customer's phone bottom bar: the few things customers do most often, from the same registry (entries marked mobile_tab). #}
+{% if mobile_tabs %}
+<nav class="tabbar" aria-label="{% trans 'Quick navigation' %}">
+  {% for e in mobile_tabs %}<a class="tabbar-link{% if e.active %} is-current{% endif %}" href="{{ e.landing }}"{% if e.active %} aria-current="page"{% endif %}><i class="bi {{ e.icon }}" aria-hidden="true"></i><span>{{ e.label }}</span></a>{% endfor %}
+</nav>
+{% endif %}

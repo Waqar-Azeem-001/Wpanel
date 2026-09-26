@@ -121,9 +121,9 @@ def test_visitors_and_customers_get_the_light_bar_and_staff_the_dark_one(client,
     assert "navbar-public" in client.get("/").content.decode()
     client.force_login(customer)
     page = client.get(reverse("accounts:profile")).content.decode()
-    assert "navbar-client" in page and "navbar-dark" not in page
+    assert "rail-client" in page and "navbar-dark" not in page
     client.force_login(staff(Role.MANAGER))
-    assert "navbar-staff" in client.get(reverse("accounts:profile")).content.decode()
+    assert "rail-staff" in client.get(reverse("accounts:profile")).content.decode()
 
 
 def test_without_a_logo_the_name_is_the_brand(client):

@@ -1,7 +1,7 @@
 """The staff console: dashboard, its widgets, global search and the audit log. Mounted at staff/."""
 from django.urls import path
 
-from . import views, views_setup
+from . import views, views_setup, views_users
 
 app_name = "console"
 
@@ -10,6 +10,9 @@ urlpatterns = [
     path("widgets/<slug:key>/", views.widget, name="widget"),
     path("search/", views.search, name="search"),
     path("utilities/audit/", views.audit_log, name="audit_log"),
+    path("users/", views_users.users, name="users"),
+    path("users/<int:pk>/", views_users.user_detail, name="user_detail"),
+    path("users/<int:pk>/details/", views_users.user_edit, name="user_edit"),
     path("setup/staff/", views_setup.staff_users, name="staff_users"),
     path("setup/staff/new/", views_setup.staff_user_create, name="staff_user_create"),
     path("setup/staff/<int:pk>/role/", views_setup.staff_user_role, name="staff_user_role"),

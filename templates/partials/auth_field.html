@@ -1,0 +1,8 @@
+{# One labelled field on a sign-in screen. Give it: field; optional toggle=True (show/hide a password), link_url + link_text (beside the label), hint. #}
+{% load ui i18n %}
+<div class="auth-field">
+  <div class="auth-label-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{% if link_url %}<a href="{{ link_url }}">{{ link_text }}</a>{% endif %}</div>
+  <div class="input-wrap">{{ field|bs_field }}{% if toggle %}<button class="pw-toggle" type="button" data-toggle-password aria-pressed="false" aria-label="{% trans 'Show password' %}"><i class="bi bi-eye" aria-hidden="true"></i></button>{% endif %}</div>
+  {% if hint and not field.errors %}<p class="auth-hint">{{ hint }}</p>{% endif %}
+  {% if field.errors %}<div id="{{ field.auto_id }}_errors">{% for e in field.errors %}<p class="invalid-msg">{{ e }}</p>{% endfor %}</div>{% endif %}
+</div>

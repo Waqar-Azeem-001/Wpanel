@@ -30,17 +30,19 @@ def notes(client, response):
 
 # --- Staff and roles --------------------------------------------------------------------------------------------------
 
-def test_who_may_open_the_staff_screen_and_what_they_see(world):
-    url = reverse("console:staff_users")
+def test_who_may_open_the_users_screen_and_what_they_see(world):
+    url = reverse("console:users") + "?role=admin"
     assert browser().get(url).status_code == 302
     for role in ("customer owner", "support agent"):
         assert browser(world.people[role]).get(url).status_code == 403, role
     manager = browser(world.people["manager"]).get(url).content.decode()
-    assert "admin@harness.test" in manager and "Add a member of staff" not in manager
-    assert 'name="role"' not in manager  # managers manage users but cannot assign roles
-    assert "Suspend" in manager  # ...and may suspend
+    assert "admin@harness.test" in manager and "Add a staff member" not in manager  # managers cannot assign roles
+    admin_pk = world.people["support agent"].pk
+    detail = browser(world.people["manager"]).get(reverse("console:user_detail", args=[admin_pk])).content.decode()
+    assert 'name="role"' not in detail and "Suspend" in detail  # ...but may suspend
     admin = browser(world.people["admin"]).get(url).content.decode()
-    assert "Add a member of staff" in admin and "Suspend" in admin
+    assert "Add a staff member" in admin
+    assert 'name="role"' in browser(world.people["admin"]).get(reverse("console:user_detail", args=[admin_pk])).content.decode()
 
 
 def create(client, **data):
@@ -52,8 +54,8 @@ def test_an_admin_adds_an_agent_who_gets_a_link_to_set_their_own_password(world)
     mail.outbox.clear()
     client = browser(world.people["admin"])
     response = create(client)
-    assert response.headers["Location"] == reverse("console:staff_users")
     user = User.objects.get(email="new.agent@harness.test")
+    assert response.headers["Location"] == reverse("console:user_detail", args=[user.pk])
     assert user.role == "support_agent" and user.is_staff and not user.has_usable_password()
     assert user.groups.filter(name="Support Agent").exists()
     assert AuditEvent.objects.filter(action="account.staff_created", target_id=str(user.pk)).exists()
@@ -328,13 +330,13 @@ def test_the_setup_menu_offers_these_screens_only_to_who_may_open_them(world):
 
     from apps.core import navigation
 
-    def setup_labels(role):
+    def labels(role):
         request = RequestFactory().get("/staff/")
         request.user = world.people[role]
         request.resolver_match = None
         menus = navigation.build(request, "staff")
-        return [c.label for c in (menus["setup"][0].children if menus["setup"] else [])]
+        return {c.label for e in menus["main"] for c in (e.children or [e])}
 
-    assert {"Staff & Roles", "Email Provider", "Domain Registrar"} <= set(setup_labels("admin"))
-    assert "Staff & Roles" in setup_labels("manager") and "Email Provider" not in setup_labels("manager")
-    assert not {"Staff & Roles", "Email Provider", "Domain Registrar"} & set(setup_labels("support agent"))
+    assert {"Users", "Email provider", "Domain registrar"} <= labels("admin")
+    assert "Users" in labels("manager") and "Email provider" not in labels("manager")
+    assert not {"Users", "Email provider", "Domain registrar"} & labels("support agent")

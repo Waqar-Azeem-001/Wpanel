@@ -46,8 +46,7 @@ def dashboard(request):
     if client is None:
         context["sidebar"] = [portal.Panel("Shortcuts", [
             portal.link(request, "Browse plans", "catalog:product_list", icon="bi-box"),
-            portal.link(request, "Your profile", "accounts:profile", icon="bi-person"),
-            portal.Link("Sign out", reverse("accounts:logout"), icon="bi-box-arrow-right", post=True)])]
+            portal.link(request, "Profile & security", "accounts:profile", icon="bi-person")])]
         return render(request, "clients/customer/dashboard.html", context)
 
     hosting = hosting_services.visible_hosting_accounts_for_user(user)
