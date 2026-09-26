@@ -1,23 +1,44 @@
 {% extends "base.html" %}
 {% load ui i18n %}
-{% block title %}{% trans "Hosting Plans" %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% if chosen %}{{ chosen.label }}{% else %}{% trans "Hosting, servers, security and domains" %}{% endif %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content %}
 <section class="hero">
   <div class="container-xxl">
     <span class="eyebrow">{{ SITE_NAME }}</span>
-    <h1>{% trans "Hosting Plans" %}</h1>
-    <p class="lead">{% trans "Pick the plan that fits your website today. Upgrade any time as you grow." %}</p>
+    <h1>{% if chosen %}{{ chosen.label }}{% else %}{% trans "Everything you need to get online" %}{% endif %}</h1>
+    <p class="lead">{% if chosen %}{{ chosen.blurb }}{% else %}{% trans "Pick the plan that fits your website today. Upgrade any time as you grow." %}{% endif %}</p>
   </div>
 </section>
 <div class="container-xxl hero-overlap">
-  <div class="row g-4">
-    {% for product in products %}
-    <div class="col-md-6 col-xl-3">{% include "products/_plan_card.html" with product=product featured=False %}</div>
-    {% empty %}
-    <div class="col-12"><div class="card"><div class="card-body text-secondary">{% trans "No plans are available yet. Check back soon." %}</div></div></div>
+  <nav class="cat-nav" aria-label="{% trans 'Categories' %}">
+    <a href="{% url 'catalog:product_list' %}"{% if not chosen %} aria-current="page" class="is-current"{% endif %}>{% trans "All" %}</a>
+    {% for c in nav %}<a href="{% if c.url_name %}{% url c.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ c.key }}{% endif %}"{% if chosen and chosen.key == c.key %} aria-current="page" class="is-current"{% endif %}><i class="bi {{ c.icon }}" aria-hidden="true"></i> {{ c.label }}</a>{% endfor %}
+  </nav>
+  {% for group, entries in sections %}
+  <section class="cat-group" aria-labelledby="g-{{ forloop.counter }}">
+    {% if not chosen %}<h2 id="g-{{ forloop.counter }}" class="cat-group-title">{{ group }}</h2>{% endif %}
+    {% for category, items in entries %}
+    <div class="cat-block" id="{{ category.key }}">
+      {% if not chosen %}<div class="cat-block-head"><span class="chip" aria-hidden="true"><i class="bi {{ category.icon }}"></i></span><div><h3>{{ category.label }}</h3><p class="text-secondary mb-0">{{ category.blurb }}</p></div></div>{% endif %}
+      {% if category.url_name %}
+        <form method="get" action="{% url category.url_name %}" class="search-line cat-search" role="search">
+          <input type="hidden" name="years" value="1">
+          <label class="visually-hidden" for="cat_domain">{% trans "Domain name" %}</label><i class="bi bi-search" aria-hidden="true"></i>
+          <input id="cat_domain" type="text" name="domain" placeholder="yourbusiness.com" required>
+          <button class="btn btn-primary" type="submit">{% trans "Search" %}</button>
+        </form>
+      {% elif items %}
+        <div class="row g-4">
+          {% for item in items %}<div class="col-md-6 col-xl-3">{% if category.addon_kind %}{% include "products/_addon_card.html" with addon=item %}{% else %}{% include "products/_plan_card.html" with product=item featured=False %}{% endif %}</div>{% endfor %}
+        </div>
+      {% else %}
+        <p class="cat-soon"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {% trans "Coming soon. Open a ticket or contact us if you need this now." %}</p>
+      {% endif %}
+    </div>
     {% endfor %}
-  </div>
+  </section>
+  {% endfor %}
 </div>
 {% endblock %}

@@ -39,31 +39,34 @@ def _client_or_error(request):
 # Anyone can shop: a visitor's cart is a guest cart kept in their session (see ``guest``), a signed-in customer's is their own.
 # Only checkout asks who they are, and it can create the account in the same step.
 
-def _addon_offers(priced, recommended=frozenset()):
-    """For each hosting line: the active add-ons (and the prices) that can still be attached to it, recommended ones first."""
+def _addon_switches(priced, recommended=frozenset()):
+    """
+    For each line an add-on can go with: the add-ons as switches ({addon, on, line, choices, recommended}), recommended ones
+    first. A hosting plan gets hosting add-ons (SSL, backups...), a domain gets WHOIS privacy.
+    """
     addons = list(Addon.objects.filter(status=CatalogStatus.ACTIVE).prefetch_related("prices"))
     attached = {}
     for line in priced.lines:
         if line.item.kind == ItemKind.ADDON:
-            attached.setdefault(line.item.parent_id, set()).add(line.item.addon_id)
-    offers = {}
+            attached.setdefault(line.item.parent_id, {})[line.item.addon_id] = line
+    switches = {}
     for line in priced.lines:
-        if line.item.kind != ItemKind.HOSTING or not line.ok:
+        if line.item.kind == ItemKind.ADDON or not line.ok:
             continue
-        options = []
+        rows = []
         for addon in addons:
-            if addon.pk in attached.get(line.item.pk, set()):
+            choices = services.addon_options(line.item, addon)
+            on = attached.get(line.item.pk, {}).get(addon.pk)
+            if not choices and on is None:
                 continue
-            rows = services.addon_options(line.item, addon)
-            if rows:
-                options.append({"addon": addon, "recommended": addon.pk in recommended, "choices": [{
-                    "value": row.option_value, "price": row.price, "setup_fee": row.setup_fee,
-                    "label": "One-time" if row.billing_cycle == "one_time" else pricing.cycle_label(
-                        row.billing_cycle, row.custom_months),
-                } for row in rows]})
-        options.sort(key=lambda o: (not o["recommended"], o["addon"].name))
-        offers[line.item.pk] = options
-    return offers
+            rows.append({"addon": addon, "recommended": addon.pk in recommended, "on": on is not None, "line": on,
+                         "choices": [{
+                             "value": row.option_value, "price": row.price, "setup_fee": row.setup_fee,
+                             "label": "One-time" if row.billing_cycle == "one_time" else pricing.cycle_label(
+                                 row.billing_cycle, row.custom_months)} for row in choices]})
+        rows.sort(key=lambda r: (not r["recommended"], r["addon"].name))
+        switches[line.item.pk] = rows
+    return switches
 
 
 def _shopper(request, *, create=False):
@@ -92,11 +95,17 @@ def cart_view(request):
     if cart is None:
         return render(request, "orders/customer/cart.html", {"rows": [], "guest": True})
     priced = pricing.price_cart(cart, country=country)
-    offers = _addon_offers(priced, services.recommended_addon_ids(cart))
-    rows = [{"line": line, "offers": offers.get(line.item.pk, []),
-             "upgrade": services.upgrade_options(line.item) if line.ok else None} for line in priced.lines]
+    switches = _addon_switches(priced, services.recommended_addon_ids(cart))
+    groups = []  # each plan or domain with what hangs off it
+    for line in priced.lines:
+        if line.item.kind == ItemKind.ADDON:
+            continue
+        periods = services.period_options(line.item) if line.ok else []
+        groups.append({"line": line, "switches": switches.get(line.item.pk, []), "periods": periods,
+                       "selected": next((p for p in periods if p["selected"]), None),
+                       "upgrade": services.upgrade_options(line.item) if line.ok else None})
     return render(request, "orders/customer/cart.html", {
-        "cart": cart, "priced": priced, "rows": rows, "coupon_form": forms.CouponCodeForm(),
+        "cart": cart, "priced": priced, "rows": groups, "groups": groups, "coupon_form": forms.CouponCodeForm(),
         "transfer_form": forms.AddTransferForm(), "guest": cart.is_guest,
         "domain_offers": services.domain_offers(cart, priced)})
 
@@ -185,6 +194,39 @@ def cart_upgrade(request, pk):
     def action():
         services.upgrade_item(request.user if request.user.is_authenticated else None, item, request=request)
         return f"Upgraded to {item.product.name}."
+
+    return run_action(request, action, "orders_customer:cart")
+
+
+@require_POST
+def cart_period(request, pk):
+    """Change a plan's billing period (the cart page's Period menu)."""
+    item = get_object_or_404(_own_items(request).select_related("cart", "product"), pk=pk)
+    form = forms.PeriodForm(request.POST)
+
+    def action():
+        if not form.is_valid():
+            raise ServiceError(_form_error(form))
+        cycle, months = form.cleaned_data["option"]
+        services.change_period(request.user if request.user.is_authenticated else None, item, cycle, months)
+        return "Billing period updated."
+
+    return run_action(request, action, "orders_customer:cart")
+
+
+@require_POST
+def cart_addon_toggle(request):
+    """An add-on switch: on adds it to the plan or domain, off removes it."""
+    form = forms.AddAddonForm(request.POST)
+
+    def action():
+        if not form.is_valid():
+            raise ServiceError(_form_error(form))
+        parent = get_object_or_404(_own_items(request), pk=form.cleaned_data["parent_item"])
+        addon = get_object_or_404(Addon, pk=form.cleaned_data["addon"])
+        cycle, months = form.cleaned_data["option"] or (None, 0)
+        on = services.toggle_addon(request.user if request.user.is_authenticated else None, parent, addon, cycle, months)
+        return f"{addon.name} added." if on else f"{addon.name} removed."
 
     return run_action(request, action, "orders_customer:cart")
 

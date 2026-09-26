@@ -57,7 +57,7 @@ def test_a_plan_card_shows_its_type_price_features_and_a_working_button(client, 
 
 def test_an_empty_shop_says_so_instead_of_showing_nothing(client, settings):
     assert b"Our plans are coming soon" in client.get("/").content
-    assert b"No plans are available yet" in client.get(reverse("catalog:product_list")).content
+    assert b"Coming soon" in client.get(reverse("catalog:product_list")).content
 
 
 def test_customers_and_staff_do_not_get_the_storefront_at_the_front_door(client, store, customer, staff):

@@ -102,7 +102,16 @@ def add_hosting(actor, client, product, domain, billing_cycle, custom_months=0, 
 
 
 def addon_options(parent_item, addon):
-    """The active prices of ``addon`` that may be billed with ``parent_item`` (same cycle, or one-time)."""
+    """
+    The active prices of ``addon`` that may be billed with ``parent_item``: for a hosting plan the plan's own cycle or a one-time
+    charge, for a domain a yearly price (charged for each year of the domain) or a one-time charge. Empty when the add-on does
+    not fit this kind of line.
+    """
+    if parent_item.kind not in pricing.addon_parent_kinds(addon):
+        return []
+    if parent_item.kind in pricing.DOMAIN_KINDS:
+        return [row for row in addon.prices.filter(is_active=True)
+                if row.billing_cycle in (BillingCycle.ANNUAL, BillingCycle.ONE_TIME)]
     return [row for row in addon.prices.filter(is_active=True)
             if row.billing_cycle == BillingCycle.ONE_TIME
             or (row.billing_cycle, row.custom_months) == (parent_item.billing_cycle, parent_item.custom_months)]
@@ -163,6 +172,79 @@ def remove_coupon(actor, cart):
     cart.coupon = None
     cart.save(update_fields=["coupon", "updated_at"])
     return cart
+
+
+# --- The billing period of a plan, and add-ons as switches ---------------------------------------------------
+
+def period_options(item):
+    """
+    The billing periods a hosting line can be switched to, with what each costs and how much longer terms save compared with
+    paying monthly (only when a monthly price exists; nothing is invented). ``[]`` for other kinds of line.
+    """
+    from apps.billing.calculations import money
+    from apps.products.models import STANDARD_CYCLE_MONTHS, BillingCycle
+
+    if item.kind != ItemKind.HOSTING or item.product is None:
+        return []
+    rows = list(item.product.prices.filter(is_active=True))
+
+    def months(row):
+        return row.custom_months if row.billing_cycle == BillingCycle.CUSTOM else STANDARD_CYCLE_MONTHS.get(row.billing_cycle, 0)
+
+    monthly = next((r for r in rows if r.billing_cycle == BillingCycle.MONTHLY), None)
+    options = []
+    for row in sorted(rows, key=months):
+        n = months(row)
+        if not n:
+            continue
+        saving = None
+        if monthly is not None and n > 1 and monthly.price * n > row.price:
+            saving = round(100 * (1 - row.price / (monthly.price * n)))
+        options.append({"value": row.option_value, "months": n, "price": row.price, "setup_fee": row.setup_fee,
+                        "per_month": money(row.price / n),
+                        "saving": saving, "label": pricing.cycle_label(row.billing_cycle, row.custom_months),
+                        "selected": (row.billing_cycle, row.custom_months) == (item.billing_cycle, item.custom_months)})
+    return options
+
+
+def change_period(actor, item, billing_cycle, custom_months=0):
+    """
+    Switch a hosting line to another billing period the plan is priced for. Recurring add-ons follow the plan's new period (or
+    are dropped if they have no price for it); one-time ones stay.
+    """
+    from apps.products.models import BillingCycle
+    from apps.products.services import get_effective_price
+
+    _require_own_cart(actor, item.cart)
+    _require_open(item.cart)
+    if item.kind != ItemKind.HOSTING:
+        raise ServiceError("Only a hosting plan has a billing period.", code="invalid_item")
+    get_effective_price(item.product, billing_cycle, custom_months or 0)  # raises if the plan has no such period
+    with transaction.atomic():
+        item.billing_cycle, item.custom_months = billing_cycle, custom_months or 0
+        item.save(update_fields=["billing_cycle", "custom_months", "updated_at"])
+        for child in item.addon_items.select_related("addon"):
+            if child.billing_cycle == BillingCycle.ONE_TIME:
+                continue
+            options = [row for row in addon_options(item, child.addon) if row.billing_cycle != BillingCycle.ONE_TIME]
+            if not options:
+                child.delete()
+                continue
+            child.billing_cycle, child.custom_months = options[0].billing_cycle, options[0].custom_months
+            child.save(update_fields=["billing_cycle", "custom_months", "updated_at"])
+    return item
+
+
+def toggle_addon(actor, parent_item, addon, billing_cycle=None, custom_months=0):
+    """An add-on as a switch: attach it if it is not on this line, take it off if it is. Returns True when it is now on."""
+    _require_own_cart(actor, parent_item.cart)
+    _require_open(parent_item.cart)
+    existing = parent_item.addon_items.filter(addon=addon).first()
+    if existing is not None:
+        existing.delete()
+        return False
+    add_addon(actor, parent_item, addon, billing_cycle, custom_months)
+    return True
 
 
 # --- Selling more: upgrade and cross-sell -----------------------------------------------------------

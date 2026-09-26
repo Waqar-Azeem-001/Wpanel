@@ -116,12 +116,28 @@ def _price_hosting(item):
     return row.price, row.setup_fee
 
 
+DOMAIN_KINDS = (ItemKind.DOMAIN_REGISTER, ItemKind.DOMAIN_TRANSFER)
+
+
+def addon_parent_kinds(addon):
+    """What an add-on may be attached to: WHOIS privacy goes with a domain, everything else with a hosting plan."""
+    return DOMAIN_KINDS if addon is not None and addon.applies_to == "domain" else (ItemKind.HOSTING,)
+
+
 def _price_addon(item):
     addon, parent = item.addon, item.parent
-    if parent is None or parent.kind != ItemKind.HOSTING or parent.cart_id != item.cart_id:
-        raise ServiceError("An add-on must be attached to a hosting plan in your cart.", code="invalid_addon")
     if addon is None or addon.status != CatalogStatus.ACTIVE:
         raise ServiceError("This add-on is no longer available.", code="addon_unavailable")
+    if parent is None or parent.kind not in addon_parent_kinds(addon) or parent.cart_id != item.cart_id:
+        what = "a domain" if addon.applies_to == "domain" else "a hosting plan"
+        raise ServiceError(f"This add-on must be attached to {what} in your cart.", code="invalid_addon")
+    if parent.kind in DOMAIN_KINDS:
+        # A domain has years, not a billing cycle: the add-on is charged per year of the domain, or once.
+        if item.billing_cycle not in (BillingCycle.ANNUAL, BillingCycle.ONE_TIME):
+            raise ServiceError("This add-on is charged per year of the domain, or once.", code="invalid_addon")
+        row = product_services.get_effective_price(addon, item.billing_cycle, item.custom_months)
+        years = parent.years if item.billing_cycle == BillingCycle.ANNUAL else 1
+        return money(row.price * years), row.setup_fee
     if item.billing_cycle != BillingCycle.ONE_TIME and (item.billing_cycle, item.custom_months) != (
             parent.billing_cycle, parent.custom_months):
         raise ServiceError("This add-on must be billed with your hosting plan or as a one-time charge.",

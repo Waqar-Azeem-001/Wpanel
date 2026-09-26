@@ -6,7 +6,7 @@ import json
 
 from django import forms
 
-from .models import (Addon, BillingCycle, CatalogStatus, Product, ProductType, Server,
+from .models import (Addon, AddonKind, BillingCycle, CatalogStatus, Product, ProductType, Server,
                      ServerStatus)
 
 
@@ -63,6 +63,9 @@ class ProductServersForm(forms.Form):
 
 class AddonForm(forms.Form):
     name = forms.CharField(max_length=150)
+    kind = forms.ChoiceField(choices=AddonKind.choices, initial=AddonKind.GENERAL, required=False,
+                             help_text="An SSL certificate goes with a hosting plan, WHOIS privacy with a domain; the "
+                                       "storefront lists them under their own headings.")
     description = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
 
 

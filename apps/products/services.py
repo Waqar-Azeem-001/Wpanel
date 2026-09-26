@@ -12,13 +12,13 @@ from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 from apps.core.utils import unique_slug
 
-from .models import Addon, AddonPrice, CatalogStatus, Product, ProductPrice, Server
+from .models import Addon, AddonKind, AddonPrice, CatalogStatus, Product, ProductPrice, Server
 
 PRODUCT_FIELDS = (
     "name", "description", "type", "resource_limits", "whm_package_name", "auto_setup", "default_auto_renew",
     "upsell_product",
 )
-ADDON_FIELDS = ("name", "description")
+ADDON_FIELDS = ("name", "description", "kind")
 SERVER_FIELDS = ("name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
                  "use_ssl", "verify_ssl")
 
@@ -193,7 +193,8 @@ def set_product_servers(actor, product, server_ids, *, request=None):
 def create_addon(actor, data, *, request=None):
     _require(actor, "manage_products")
     name = data.get("name", "")
-    addon = Addon(name=name, slug=unique_slug(Addon.objects, name), description=data.get("description", ""))
+    addon = Addon(name=name, slug=unique_slug(Addon.objects, name), description=data.get("description", ""),
+                  kind=data.get("kind") or AddonKind.GENERAL)
     addon.full_clean()
     addon.save()
     audit.record("addon.created", actor=actor, target=addon, request=request)

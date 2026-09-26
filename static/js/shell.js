@@ -213,6 +213,13 @@
     select.form.submit();
   });
 
+  // --- A form marked data-autosubmit sends itself when a switch or menu in it changes (cart period, add-on switches) ----------
+  doc.addEventListener("change", function (event) {
+    var form = event.target.closest("form[data-autosubmit]");
+    if (!form || event.target.disabled) { return; }
+    if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+  });
+
   // --- Generate a strong password in the browser (never sent anywhere until the form is submitted) -------------------------
   doc.addEventListener("click", function (event) {
     var button = event.target.closest("[data-generate-password]");

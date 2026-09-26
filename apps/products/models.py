@@ -21,6 +21,8 @@ class ProductType(models.TextChoices):
 
     SHARED_HOSTING = "shared_hosting", "Shared Hosting"
     WORDPRESS_HOSTING = "wordpress_hosting", "WordPress Hosting"
+    BUSINESS_HOSTING = "business_hosting", "Business Hosting"
+    ECOMMERCE_HOSTING = "ecommerce_hosting", "E-commerce Hosting"
     RESELLER_HOSTING = "reseller_hosting", "Reseller Hosting"
     VPS = "vps", "VPS"
     DEDICATED_SERVER = "dedicated_server", "Dedicated Server"
@@ -175,8 +177,21 @@ class Product(CatalogItem):
                 raise ValidationError({"resource_limits": f"'{key}' must be a non-negative integer or null."})
 
 
+class AddonKind(models.TextChoices):
+    """What an add-on is, which decides what it can be attached to in a cart and where the storefront lists it."""
+
+    GENERAL = "general", "Add-on for a hosting plan"
+    SSL = "ssl", "SSL certificate (for a hosting plan)"
+    WHOIS_PRIVACY = "whois_privacy", "WHOIS privacy (for a domain)"
+
+
 class Addon(CatalogItem):
-    pass
+    kind = models.CharField(max_length=20, choices=AddonKind.choices, default=AddonKind.GENERAL, db_index=True)
+
+    @property
+    def applies_to(self):
+        """The kind of cart line this add-on attaches to: a hosting plan, or a domain registration or transfer."""
+        return "domain" if self.kind == AddonKind.WHOIS_PRIVACY else "hosting"
 
 
 class PriceEntry(TimeStampedModel):

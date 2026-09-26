@@ -556,3 +556,71 @@ body.auth-body { display: block; background: var(--bg); }
 .sticky-summary { position: sticky; top: calc(var(--topbar-h, 3.5rem) + 4.5rem); }
 @media (max-width: 991.98px) { .sticky-summary { position: static; } }
 .cart-table td[data-label]::before { margin-right: .5rem; }
+
+/* --- Shop: cart and checkout as stacked cards beside one order summary ------------------------------------------------------- */
+.shop-page { max-width: 1120px; }
+.shop-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1.5rem; margin-bottom: 1.25rem; }
+.shop-head h1 { margin: 0; font-size: 1.5rem; }
+.shop-head .steps { margin: 0; }
+.shop-layout { display: grid; grid-template-columns: minmax(0, 1fr) 21.5rem; gap: 1.25rem; align-items: start; }
+@media (max-width: 991.98px) { .shop-layout { grid-template-columns: minmax(0, 1fr); } }
+.shop-main { display: grid; gap: 1rem; min-width: 0; }
+.shop-side { position: sticky; top: calc(var(--topbar-h, 3.5rem) + 1rem); }
+@media (max-width: 991.98px) { .shop-side { position: static; } }
+.shop-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.35rem 1.5rem; }
+.shop-card-head { display: flex; align-items: flex-start; gap: .85rem; margin-bottom: 1rem; }
+.shop-card-head .grow, .opt-card .grow { flex: 1; min-width: 0; }
+.shop-title { margin: 0 0 .1rem; font-size: 1.05rem; font-weight: 600; }
+.chip { display: inline-grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: 1.1rem; }
+.period-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; padding-bottom: .75rem; border-bottom: 1px solid var(--border); }
+.period-pick { min-width: 13rem; flex: 0 1 18rem; }
+.period-pick label { display: block; margin-bottom: .3rem; font-size: .8125rem; font-weight: 600; }
+.period-price { text-align: right; }
+.period-price strong { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+.period-price small { color: var(--muted); }
+.save-badge { display: inline-block; margin-right: .5rem; padding: .1rem .5rem; border-radius: 6px; background: var(--ok-bg); color: var(--ok); font-size: .75rem; font-weight: 700; }
+.renews { margin: .6rem 0 .9rem; font-size: .8rem; color: var(--muted); }
+.upsell-box { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; margin: .5rem 0 .75rem; padding: .75rem 1rem; border-radius: 12px; background: var(--accent-subtle); font-size: .9rem; }
+.opt-card { display: flex; align-items: flex-start; gap: .85rem; margin-top: .75rem; padding: 1rem 1.1rem; border: 1px solid var(--border-strong); border-radius: 12px; cursor: pointer; transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
+.opt-card:hover { border-color: var(--accent); }
+.opt-card.is-on { border-color: var(--accent); background: var(--accent-subtle); }
+.opt-card .form-check-input { flex: none; margin-top: .2rem; width: 1.15rem; height: 1.15rem; }
+.opt-card label { cursor: pointer; }
+.opt-icon { flex: none; font-size: 1.2rem; color: var(--muted); }
+.opt-price { font-weight: 600; }
+.tag { display: inline-block; margin-left: .35rem; padding: .05rem .5rem; border-radius: 6px; background: var(--accent-subtle); color: var(--accent-ink); font-size: .7rem; font-weight: 700; }
+.opt-card.is-on .tag { background: var(--surface); }
+.search-line { display: flex; align-items: center; gap: .6rem; padding: .35rem .35rem .35rem .9rem; border: 1px solid var(--border-strong); border-radius: 12px; }
+.search-line input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: .95rem; }
+.search-line:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+.transfer-box, .coupon-box { margin-top: .9rem; font-size: .9rem; }
+.transfer-box summary, .coupon-box summary { cursor: pointer; color: var(--accent-ink); font-weight: 600; }
+.shop-summary { padding: 1.35rem 1.5rem; }
+.summary-lines { list-style: none; margin: .5rem 0 .25rem; padding: 0; }
+.summary-lines li { display: flex; justify-content: space-between; gap: 1rem; padding: .45rem 0; font-size: .875rem; border-bottom: 1px solid var(--border); }
+.summary-lines li.is-sub { padding-left: 1rem; color: var(--muted); }
+.summary-lines strong { white-space: nowrap; font-weight: 600; }
+.summary-note { display: flex; gap: .5rem; margin: .75rem 0 0; font-size: .78rem; color: var(--muted); }
+.coupon-line { display: flex; align-items: center; justify-content: space-between; margin-top: .5rem; font-size: .9rem; }
+.shop-empty { text-align: center; padding: 3rem 1.5rem; }
+.shop-empty > .bi { font-size: 2.5rem; color: var(--muted); }
+.place-order { margin-top: .25rem; }
+
+/* --- Store: category navigation and blocks, home tiles ----------------------------------------------------------------------- */
+.cat-nav { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.5rem; padding: .5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.cat-nav a { padding: .4rem .8rem; border-radius: 9px; font-size: .85rem; font-weight: 550; color: var(--muted); text-decoration: none; }
+.cat-nav a:hover { background: var(--surface-2); color: var(--text); }
+.cat-nav a.is-current { background: var(--accent); color: var(--accent-text); }
+.cat-group { margin-bottom: 2.25rem; }
+.cat-group-title { margin: 0 0 1rem; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cat-block { margin-bottom: 2rem; scroll-margin-top: 5rem; }
+.cat-block-head { display: flex; align-items: center; gap: .85rem; margin-bottom: 1rem; }
+.cat-block-head h3 { margin: 0; font-size: 1.15rem; }
+.cat-soon { padding: 1rem 1.25rem; border: 1px dashed var(--border-strong); border-radius: 12px; color: var(--muted); }
+.cat-search { max-width: 36rem; background: var(--surface); }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
+.cat-tile { display: flex; flex-direction: column; gap: .35rem; padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; color: var(--text); text-decoration: none; transition: border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.cat-tile:hover { border-color: var(--accent); transform: translateY(-2px); }
+.cat-tile .chip { margin-bottom: .35rem; }
+.cat-tile span.text-secondary { font-size: .85rem; line-height: 1.4; }
+.cat-from { margin-top: auto; padding-top: .5rem; font-size: .85rem; font-weight: 650; color: var(--accent-ink); }

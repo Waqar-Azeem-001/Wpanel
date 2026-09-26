@@ -47,6 +47,10 @@ class AddAddonForm(forms.Form):
     option = OptionField(required=False)
 
 
+class PeriodForm(forms.Form):
+    option = OptionField()
+
+
 class CouponCodeForm(forms.Form):
     code = forms.CharField(max_length=50, label="Coupon code")
 

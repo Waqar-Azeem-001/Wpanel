@@ -46,7 +46,7 @@ def test_a_visitor_can_add_a_plan_and_see_it_in_the_cart(shop):
     assert cart.is_guest and cart.client_id is None and cart.items.count() == 1
     page = browser.get("/cart/")
     assert page.status_code == 200 and b"Starter" in page.content and b"example.com" in page.content
-    assert b"Proceed to checkout" in page.content and b"create one at checkout" in page.content
+    assert b"Continue" in page.content and b"you create one at checkout" in page.content
     assert browser.get("/").context["cart_item_count"] == 1  # the header shows it
 
 
@@ -278,9 +278,9 @@ def test_the_cart_offers_to_register_the_domain_of_a_plan(shop):
     browser = visitor()
     add_host(browser, shop)
     page = browser.get("/cart/").content.decode()
-    assert "register your domain" in page and "example.com" in page and "12.00" in page
+    assert "Register example.com" in page and "12.00" in page
     browser.post("/cart/add/domain/", {"domain": "example.com", "years": 1})
-    assert "register your domain" not in browser.get("/cart/").content.decode()
+    assert "Register example.com" not in browser.get("/cart/").content.decode()
 
 
 def test_the_plan_page_points_to_the_next_plan(shop, business):

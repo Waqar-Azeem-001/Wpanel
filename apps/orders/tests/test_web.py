@@ -64,8 +64,8 @@ def test_add_hosting_shows_it_in_the_cart_with_server_side_prices(client, owner,
     assert response.status_code == 302 and response["Location"] == "/cart/"
     page = client.get("/cart/")
     assert b"Starter (Annually) - example.com" in page.content
-    assert b"110.00" in page.content and b"Proceed to checkout" in page.content
-    assert b"Prices are calculated by our servers" in page.content
+    assert b"110.00" in page.content and b"Continue" in page.content
+    assert b"Prices are worked out by our servers" in page.content
 
 
 def test_a_tampered_price_field_has_no_effect_on_the_page_flow(client, owner, shop):
@@ -92,15 +92,16 @@ def test_addons_are_offered_for_the_hosting_cycle_and_can_be_added(client, owner
     client.force_login(owner)
     _add_host(client, shop)
     cart = client.get("/cart/")
-    assert b"Add to this plan" in cart.content and b"Backups" in cart.content
-    assert b'value="annual"' in cart.content and b'value="one_time"' in cart.content
-    assert b'value="monthly"' not in cart.content.split(b"Add to this plan")[1]  # wrong cycle: not offered
+    assert b"Add Backups" in cart.content
+    switch = cart.content.split(b"Add Backups")[1].split(b"</form>")[0]
+    assert b'value="annual"' in switch and b'value="one_time"' in switch
+    assert b'value="monthly"' not in switch  # wrong cycle: not offered
 
     host = CartItem.objects.get()
     client.post("/cart/add/addon/", {"parent_item": host.pk, "addon": shop["addon"].pk, "option": "one_time"})
     page = client.get("/cart/")
     assert b"Backups (one-time)" in page.content
-    assert b"Add to this plan" not in page.content  # nothing left to offer
+    assert b"checked" in page.content.split(b"Add Backups")[0].rsplit(b"<form", 1)[1]  # the switch is now on
 
 
 def test_cannot_attach_an_addon_to_someone_elses_cart_item(client, owner, shop, customer):
@@ -190,7 +191,7 @@ def test_checkout_page_shows_billing_details_methods_and_summary(client, owner, 
     page = client.get("/checkout/")
     assert page.status_code == 200
     for expected in (b"Ada Lovelace", b"Acme Ltd", b"ada@acme.test", b"Bank transfer", b"Pay to IBAN PK00 TEST 0001.",
-                     b"Starter (Annually) - example.com", b"110.00", b"Edit billing details"):
+                     b"Starter (Annually) - example.com", b"110.00", b"Billing details"):
         assert expected in page.content
 
 

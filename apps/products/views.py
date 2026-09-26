@@ -9,7 +9,7 @@ from apps.accounts.roles import perm
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 
-from . import forms, services
+from . import categories, forms, services
 from .models import Addon, CatalogStatus, Product, Server
 
 
@@ -38,7 +38,14 @@ def _redirect_back(request, item, action):
 # --- Public catalog --------------------------------------------------------------------
 
 def public_product_list(request):
-    return render(request, "products/public/list.html", {"products": _cheapest_first(_active_products())})
+    """The store: every category a visitor can shop for, or just one (``?category=vps``)."""
+    chosen = categories.BY_KEY.get(request.GET.get("category", ""))
+    if chosen is not None and chosen.url_name:
+        return redirect(chosen.url_name)
+    shown = [(chosen.group, [(chosen, categories.items(chosen))])] if chosen else categories.sections()
+    return render(request, "products/public/list.html", {
+        "sections": shown, "chosen": chosen, "nav": categories.CATEGORIES,
+        "products": _cheapest_first(_active_products())})
 
 
 def _active_products():
@@ -56,7 +63,13 @@ def _cheapest_first(products):
 
 def public_home(request):
     """The front page for visitors: a search box for a domain, the plans, and why to choose us."""
-    return render(request, "public/home.html", {"products": _cheapest_first(_active_products())[:4]})
+    tiles = []
+    for category in categories.CATEGORIES:
+        entries = categories.items(category)
+        lowest = [categories.lowest_price(e) for e in entries]
+        lowest = [p for p in lowest if p is not None]
+        tiles.append({"category": category, "count": len(entries), "from": min(lowest, key=lambda p: p.price) if lowest else None})
+    return render(request, "public/home.html", {"products": _cheapest_first(_active_products())[:4], "tiles": tiles})
 
 
 def public_addon_list(request):
@@ -258,7 +271,7 @@ def staff_addon_detail(request, slug):
 @portal_permission_required(perm("manage_products"))
 def staff_addon_edit(request, slug):
     addon = get_object_or_404(Addon, slug=slug)
-    form = forms.AddonForm(request.POST or None, initial={"name": addon.name, "description": addon.description})
+    form = forms.AddonForm(request.POST or None, initial={"name": addon.name, "description": addon.description, "kind": addon.kind})
     if request.method == "POST" and form.is_valid():
         try:
             services.update_addon(request.user, addon, form.cleaned_data, request=request)

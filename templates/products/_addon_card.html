@@ -1,0 +1,21 @@
+{% load ui i18n %}
+{# An add-on sold on the store as its own product (an SSL certificate, WHOIS privacy). Use: include this file with addon=... #}
+<article class="plan-card">
+  <div class="plan-body">
+    <div class="plan-type">{{ addon.get_kind_display }}</div>
+    <h2 class="plan-name">{{ addon.name }}</h2>
+    {% with lowest=addon.prices.all|dictsort:"price"|first %}
+      {% if lowest %}<div class="plan-price">{{ lowest.price|money:STORE_CURRENCY }} <small>{% if lowest.billing_cycle == "one_time" %}{% trans "one-time" %}{% else %}{% trans "billed" %} {{ lowest.get_billing_cycle_display|lower }}{% endif %}</small></div>{% endif %}
+    {% endwith %}
+    {% if addon.description %}<ul class="plan-features">{% for line in addon.description|feature_lines %}<li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>{{ line }}</span></li>{% endfor %}</ul>{% endif %}
+  </div>
+  <div class="plan-foot">
+    {% if addon.applies_to == "domain" %}
+      <a class="btn btn-outline-primary w-100" href="{% url 'domains_public:search' %}">{% trans "Add it to a domain" %}</a>
+      <p class="small text-secondary text-center mt-2 mb-0">{% trans "Switch it on for your domain in the cart." %}</p>
+    {% else %}
+      <a class="btn btn-outline-primary w-100" href="{% url 'catalog:product_list' %}?category=shared">{% trans "Add it to a plan" %}</a>
+      <p class="small text-secondary text-center mt-2 mb-0">{% trans "Switch it on for your plan in the cart." %}</p>
+    {% endif %}
+  </div>
+</article>
