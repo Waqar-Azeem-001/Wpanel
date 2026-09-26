@@ -5,14 +5,14 @@
 {% block content %}
 <div class="page-head">
   <h1>{% trans "Users" %}</h1>
+  <p class="page-sub">{% trans "Manage customers, staff and who can sign in. A role decides what someone can see and change." %}</p>
   {% if can_add %}<a class="btn btn-primary" href="#add-staff" data-bs-toggle="collapse" role="button" aria-expanded="{% if show_add %}true{% else %}false{% endif %}" aria-controls="add-staff"><i class="bi bi-person-plus" aria-hidden="true"></i> {% trans "Add a staff member" %}</a>{% endif %}
 </div>
-<p class="text-secondary">{% trans "Everyone who can sign in: customers and staff. A role decides what a person can see and change; only a Super Admin can create or change an admin." %}</p>
 
 {% if can_add %}
 <div class="collapse{% if show_add %} show{% endif %}" id="add-staff">
-  <section class="card mb-4"><div class="card-body">
-    <h2 class="h5">{% trans "Add a staff member" %}</h2>
+  <section class="panel mb-3"><div class="panel-body">
+    <h2 class="h6 mb-3">{% trans "Add a staff member" %}</h2>
     <form method="post" action="{% url 'console:staff_user_create' %}" novalidate>{% csrf_token %}
       <div class="row g-3">
         <div class="col-md-4"><label class="form-label" for="id_email">{% trans "Email" %}</label>{{ form.email|bs_field }}{% for e in form.email.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
@@ -28,31 +28,32 @@
 </div>
 {% endif %}
 
-<nav class="role-tabs" aria-label="{% trans 'Filter by role' %}">
-  {% for value, label, count in tabs %}<a class="role-tab{% if value == role %} is-current{% endif %}" href="?{% if value %}role={{ value }}&amp;{% endif %}{% if term %}q={{ term|urlencode }}&amp;{% endif %}{% if status %}status={{ status }}{% endif %}"{% if value == role %} aria-current="page"{% endif %}>{{ label }} <span class="count">{{ count }}</span></a>{% endfor %}
+<nav class="seg mb-3" aria-label="{% trans 'Filter by role' %}">
+  {% for value, label, count in tabs %}<a class="{% if value == role %}is-current{% endif %}" href="?{% if value %}role={{ value }}&amp;{% endif %}{% if term %}q={{ term|urlencode }}&amp;{% endif %}{% if status %}status={{ status }}{% endif %}"{% if value == role %} aria-current="page"{% endif %}>{{ label }} <span class="count">{{ count }}</span></a>{% endfor %}
 </nav>
 
-<form class="filters" method="get">
+<form class="toolbar" method="get" role="search">
   {% if role %}<input type="hidden" name="role" value="{{ role }}">{% endif %}
-  <div class="field grow"><label for="id_q">{% trans "Search" %}</label><input type="search" name="q" id="id_q" value="{{ term }}" placeholder="{% trans 'Name, email or phone' %}"></div>
-  <div class="field"><label for="id_status">{% trans "Status" %}</label>{{ filter_form.status }}</div>
-  <button class="btn btn-outline-primary" type="submit">{% trans "Filter" %}</button>
+  <div class="search"><i class="bi bi-search" aria-hidden="true"></i><label class="visually-hidden" for="id_q">{% trans "Search users" %}</label><input class="form-control" type="search" name="q" id="id_q" value="{{ term }}" placeholder="{% trans 'Search by name, email or phone' %}"></div>
+  <label class="visually-hidden" for="id_status">{% trans "Status" %}</label>{{ filter_form.status|bs_field }}
+  <button class="btn btn-outline-secondary" type="submit">{% trans "Filter" %}</button>
+  {% if term or status %}<a class="btn btn-link" href="?{% if role %}role={{ role }}{% endif %}">{% trans "Clear" %}</a>{% endif %}
 </form>
 
-<section class="card">
-  <div class="table-responsive"><table class="table mb-0 align-middle">
+<section class="panel">
+  <div class="table-responsive"><table class="table table-hover table-stack">
     <thead><tr><th>{% trans "Person" %}</th><th>{% trans "Role" %}</th><th>{% trans "Status" %}</th><th>{% trans "Client" %}</th><th>{% trans "Last sign-in" %}</th></tr></thead>
     <tbody>
     {% for person in page %}
       <tr>
         <td><div class="person-cell"><span class="avatar" aria-hidden="true">{{ person.get_short_name|slice:":1"|upper }}</span><span><a href="{% url 'console:user_detail' person.pk %}">{{ person.full_name|default:person.email }}</a>{% if person.full_name %}<small>{{ person.email }}</small>{% endif %}</span></div></td>
-        <td>{{ person.get_role_display }}</td>
-        <td>{% status_badge person.status person.get_status_display %}{% if not person.has_usable_password %} <span class="small text-secondary">{% trans "invited" %}</span>{% endif %}</td>
-        <td>{% for contact in person.client_contacts.all %}{{ contact.client.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-secondary">—</span>{% endfor %}</td>
-        <td class="text-nowrap">{{ person.last_login|fdatetime }}</td>
+        <td data-label="{% trans 'Role' %}"><span class="role-pill{% if person.role == 'admin' or person.role == 'super_admin' %} is-privileged{% endif %}">{{ person.get_role_display }}</span></td>
+        <td data-label="{% trans 'Status' %}">{% status_badge person.status person.get_status_display %}{% if not person.has_usable_password %} <span class="small text-secondary">{% trans "invited" %}</span>{% endif %}</td>
+        <td data-label="{% trans 'Client' %}">{% for contact in person.client_contacts.all %}{{ contact.client.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-secondary">—</span>{% endfor %}</td>
+        <td data-label="{% trans 'Last sign-in' %}" class="text-nowrap">{% if person.last_login %}{{ person.last_login|fdatetime }}{% else %}<span class="text-secondary">{% trans "Never" %}</span>{% endif %}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="5">{% include "components/empty_state.html" with message=_("No one matches these filters.") icon="bi-people" %}</td></tr>
+      <tr><td colspan="5">{% if term or status %}{% include "components/empty_state.html" with message=_("No one matches these filters. Try a different search, or clear the filters.") icon="bi-search" %}{% else %}{% include "components/empty_state.html" with message=_("There is nobody in this group yet.") icon="bi-people" %}{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table></div>

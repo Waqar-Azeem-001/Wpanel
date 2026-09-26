@@ -1,24 +1,34 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Dashboard" %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% trans "Overview" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>{% blocktrans with name=user.get_short_name %}Welcome back, {{ name }}{% endblocktrans %}</h1>
-  <div class="d-flex flex-wrap gap-2">
-    {% for label, name in shortcuts %}<a class="btn btn-sm btn-outline-primary" href="{% url name %}">{{ label }}</a>{% endfor %}
+  <h1>{{ greeting }}{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
+  <p class="page-sub">{% trans "What is happening across the business, and what needs a person right now." %}</p>
+  <div class="page-actions">
+    {% for label, name in shortcuts %}<a class="btn btn-sm {% if forloop.first %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url name %}">{{ label }}</a>{% endfor %}
   </div>
 </div>
-<div class="row g-4">
-  {% for w in widgets %}
-  <div class="{% if w.size == 'full' %}col-12{% else %}col-xl-6{% endif %}">
-    <div hx-get="{% url 'console:widget' w.key %}" hx-trigger="load" hx-swap="outerHTML" class="card h-100" aria-busy="true">
-      <div class="card-header d-flex align-items-center gap-2"><i class="bi {{ w.icon }} text-primary" aria-hidden="true"></i><h2 class="h6 mb-0">{{ w.title }}</h2></div>
-      <div class="card-body text-secondary">{% trans "Loading…" %} <noscript><a href="{% url 'console:widget' w.key %}">{% trans "Open" %}</a></noscript></div>
-    </div>
-  </div>
-  {% empty %}
-  <div class="col-12">{% include "components/empty_state.html" with message=_("There is nothing to show for your role yet.") icon="bi-speedometer2" %}</div>
+
+{% for w in widgets %}{% if w.size == "strip" %}
+<div hx-get="{% url 'console:widget' w.key %}" hx-trigger="load" hx-swap="outerHTML" class="kpi-strip" aria-busy="true" aria-label="{{ w.title }}" data-widget>
+  <div class="kpi" data-widget-body><span class="skeleton"></span><span class="skeleton"></span><noscript><a href="{% url 'console:widget' w.key %}">{% trans "Open" %}</a></noscript></div>
+  <div class="kpi"><span class="skeleton"></span><span class="skeleton"></span></div>
+  <div class="kpi"><span class="skeleton"></span><span class="skeleton"></span></div>
+  <div class="kpi"><span class="skeleton"></span><span class="skeleton"></span></div>
+</div>
+{% endif %}{% endfor %}
+
+<div class="dash-grid">
+  {% for w in widgets %}{% if w.size != "strip" %}
+  <section hx-get="{% url 'console:widget' w.key %}" hx-trigger="load" hx-swap="outerHTML" class="panel span-{{ w.span }}" aria-busy="true" aria-label="{{ w.title }}" data-widget>
+    <div class="panel-head"><h2><i class="bi {{ w.icon }}" aria-hidden="true"></i> {{ w.title }}</h2></div>
+    <div class="panel-body" data-widget-body><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
+      <noscript><a href="{% url 'console:widget' w.key %}">{% trans "Open" %}</a></noscript></div>
+  </section>
+  {% endif %}{% empty %}
+  <div>{% include "components/empty_state.html" with message=_("There is nothing to show for your role yet. Ask an administrator which areas you can be given.") icon="bi-speedometer2" %}</div>
   {% endfor %}
 </div>
 {% endblock %}

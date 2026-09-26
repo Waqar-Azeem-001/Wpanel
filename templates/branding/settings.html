@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Brand · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<h1>Brand</h1>
+<div class="page-head"><h1>Brand</h1><p class="page-sub">The name, logo and colours customers see.</p></div>
 <p class="text-secondary">How the portal presents itself: name, logo, favicon, colours, support email, footer and how dates and money are written. Changes apply everywhere at once, including emails and the mobile API.</p>
 <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
   <section class="card"><div class="card-body">

@@ -328,6 +328,18 @@ def build(request, area):
     return menus
 
 
+def sections(entries):
+    """The top-level rail entries grouped under their headings: [{"label", "key", "entries"}]; the first group may have no label."""
+    from django.utils.text import slugify
+
+    grouped = []
+    for entry in entries:
+        if not grouped or grouped[-1]["label"] != entry.section:
+            grouped.append({"label": entry.section, "key": slugify(entry.section) or "top", "entries": []})
+        grouped[-1]["entries"].append(entry)
+    return grouped
+
+
 def area_of(request):
     from apps.core.context_processors import area_for
 

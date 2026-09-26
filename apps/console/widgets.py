@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.roles import perm
@@ -38,11 +39,16 @@ class Widget:
     icon: str
     permissions: tuple  # any one of these opens the widget
     build: Callable
-    size: str = "half"  # "half" (one of two columns) or "full"
+    size: str = "half"  # "strip" (the KPI strip), "full" (a whole row) or "half" (shares a row; `span` of 12 columns)
+    span: int = 6
 
     @property
     def template(self):
         return f"console/widgets/{self.key}.html"
+
+
+def _can(user, *codes):
+    return any(user.has_perm(perm(code)) for code in codes)
 
 
 def _money(value):
@@ -142,17 +148,119 @@ def activity_widget(user):
     return {"events": list(AuditEvent.objects.select_related("actor")[:10])}
 
 
+def summary_widget(user):
+    """The KPI strip: the few figures that matter, each only for people who may open the list behind it, each equal to it."""
+    from apps.clients.models import Client, ClientStatus
+
+    today = timezone.localdate()
+    tiles = []
+    if _can(user, "view_clients"):
+        clients = Client.objects.filter(status=ClientStatus.ACTIVE)
+        new = clients.filter(created_at__date__gte=today.replace(day=1)).count()
+        tiles.append({"label": "Active clients", "value": clients.count(), "icon": "bi-people", "tone": "",
+                      "sub": f"{new} new this month", "url": reverse("clients_staff:list") + "?status=active"})
+    if _can(user, "view_hosting"):
+        active = HostingAccount.objects.filter(status=HostingStatus.ACTIVE)
+        suspended = HostingAccount.objects.filter(status=HostingStatus.SUSPENDED).count()
+        tiles.append({"label": "Active services", "value": active.count(), "icon": "bi-hdd-rack", "tone": "ok",
+                      "sub": f"{suspended} suspended", "url": reverse("hosting_staff:list") + "?status=active"})
+    if _can(user, "view_orders"):
+        pending = Order.objects.filter(status__in=order_lifecycle.GROUPS["pending"]).count()
+        tiles.append({"label": "Pending orders", "value": pending, "icon": "bi-bag", "tone": "info",
+                      "sub": f"{Order.objects.filter(created_at__date=today).count()} placed today",
+                      "url": reverse("orders_staff:list") + "?group=pending"})
+    if _can(user, "view_billing"):
+        billing = billing_widget(user)
+        tiles.append({"label": "Unpaid invoices", "value": billing["owed"], "money": True, "currency": billing["currency"],
+                      "icon": "bi-receipt", "tone": "warn", "bad": bool(billing["overdue"]),
+                      "sub": f"{billing['open']} open · {billing['overdue']} overdue",
+                      "url": reverse("billing_staff:invoice_list") + "?status=unpaid"})
+        tiles.append({"label": "Income this month", "value": billing["month"], "money": True, "currency": billing["currency"],
+                      "icon": "bi-cash-coin", "tone": "ok", "sub": f"{billing['today']} today",
+                      "url": reverse("billing_staff:transaction_list")})
+    if _can(user, "view_support"):
+        counts = support.overview(user)["counts"]
+        tiles.append({"label": "Open tickets", "value": counts["active"], "icon": "bi-life-preserver", "tone": "info",
+                      "sub": f"{counts['unassigned']} unassigned", "bad": bool(counts["urgent"]),
+                      "url": reverse("support_staff:tickets") + "?status=active"})
+    if _can(user, "view_orders"):
+        failed = Order.objects.filter(status=OrderStatus.FAILED).count()
+        hosting_failed = HostingAccount.objects.filter(status=HostingStatus.FAILED).count() if _can(user, "view_hosting") else 0
+        tiles.append({"label": "Failed orders", "value": failed, "icon": "bi-exclamation-octagon",
+                      "tone": "danger" if failed else "ok", "bad": bool(failed),
+                      "sub": f"{hosting_failed} hosting accounts failed" if hosting_failed else "Nothing failed to set up",
+                      "url": reverse("orders_staff:list") + "?status=failed"})
+    return {"tiles": tiles}
+
+
+def attention_widget(user):
+    """What needs a person now, worst first. Every row appears only when its count is above zero and links to the list."""
+    rows = []
+
+    def add(severity, icon, title, text, url, go="View"):
+        rows.append({"severity": severity, "icon": icon, "title": title, "text": text, "url": url, "go": go})
+
+    if _can(user, "view_orders") or _can(user, "view_hosting"):
+        orders = Order.objects.filter(status=OrderStatus.FAILED).count() if _can(user, "view_orders") else 0
+        hosting = HostingAccount.objects.filter(status=HostingStatus.FAILED).count() if _can(user, "view_hosting") else 0
+        if orders or hosting:
+            add("critical", "bi-exclamation-octagon", "Provisioning failed",
+                f"{orders} order(s) and {hosting} hosting account(s) could not be set up and need a retry or a decision.",
+                reverse("orders_staff:list") + "?status=failed" if orders else reverse("hosting_staff:list") + "?status=failed")
+    if _can(user, "view_billing"):
+        overdue = filter_invoices_by_status(Invoice.objects.all(), "overdue").count()
+        if overdue:
+            add("critical", "bi-receipt", "Overdue invoices", f"{overdue} invoice(s) are past their due date.",
+                reverse("billing_staff:invoice_list") + "?status=overdue")
+        waiting = Transaction.objects.filter(status=TransactionStatus.PENDING, provider__isnull=True).count()
+        if waiting:
+            add("warning", "bi-cash-coin", "Payments to confirm",
+                f"{waiting} reported payment(s) are waiting for someone to confirm the money arrived.",
+                reverse("billing_staff:transaction_list"))
+    if _can(user, "view_support"):
+        counts = support.overview(user)["counts"]
+        if counts["urgent"]:
+            add("critical", "bi-life-preserver", "Urgent tickets", f"{counts['urgent']} open ticket(s) are marked urgent.",
+                reverse("support_staff:tickets") + "?status=active&priority=urgent")
+        if counts["unassigned"]:
+            add("warning", "bi-inbox", "Unassigned tickets", f"{counts['unassigned']} open ticket(s) have nobody looking at them.",
+                reverse("support_staff:tickets") + "?status=active&assigned=none")
+    if _can(user, "view_hosting", "view_domains"):
+        overview = lifecycle.overview()
+        if overview["pending_cancellations"]:
+            add("warning", "bi-x-circle", "Cancellation requests",
+                f"{overview['pending_cancellations']} request(s) are waiting for a decision.",
+                reverse("lifecycle_staff:cancellations"))
+    if _can(user, "view_settings"):
+        for check in health_widget(user)["checks"]:
+            if not check["ok"]:
+                target = {"Email provider": "console:email_providers", "Domain registrar": "console:registrars",
+                          "Servers": "catalog_staff:server_list"}.get(check["name"])
+                add("critical" if check["name"] in ("Database", "Email provider", "Domain registrar") else "warning",
+                    "bi-heart-pulse", f"{check['name']} needs attention", check["detail"].capitalize() + ".",
+                    reverse(target) if target else reverse("console:dashboard"), "Fix")
+    order = {"critical": 0, "warning": 1}
+    rows.sort(key=lambda r: order[r["severity"]])
+    return {"rows": rows, "critical": sum(1 for r in rows if r["severity"] == "critical")}
+
+
 WIDGETS = [
-    Widget("billing", "Billing", "bi-cash-coin", (perm("view_billing"),), billing_widget),
-    Widget("orders", "Orders", "bi-bag", (perm("view_orders"),), orders_widget),
-    Widget("support", "Support", "bi-life-preserver", (perm("view_support"),), support_widget),
+    Widget("summary", "Summary", "bi-speedometer2",
+           tuple(perm(c) for c in ("view_clients", "view_hosting", "view_orders", "view_billing", "view_support")),
+           summary_widget, size="strip", span=12),
+    Widget("attention", "Needs attention", "bi-bell", tuple(perm(c) for c in (
+        "view_orders", "view_hosting", "view_billing", "view_support", "view_domains", "view_settings")),
+           attention_widget, size="full", span=12),
+    Widget("orders", "Orders", "bi-bag", (perm("view_orders"),), orders_widget, span=7),
+    Widget("billing", "Money", "bi-cash-coin", (perm("view_billing"),), billing_widget, span=5),
+    Widget("support", "Support queue", "bi-life-preserver", (perm("view_support"),), support_widget, span=7),
     Widget("failures", "Provisioning failures", "bi-exclamation-octagon", (perm("view_orders"), perm("view_hosting")),
-           failures_widget),
-    Widget("domains", "Domains expiring in 30 days", "bi-globe", (perm("view_domains"),), domains_widget),
+           failures_widget, span=5),
+    Widget("domains", "Domains expiring in 30 days", "bi-globe", (perm("view_domains"),), domains_widget, span=6),
     Widget("renewals", "Services and renewals", "bi-arrow-repeat", (perm("view_hosting"), perm("view_domains")),
-           renewals_widget),
-    Widget("health", "System health", "bi-heart-pulse", (perm("view_settings"),), health_widget),
-    Widget("activity", "Recent activity", "bi-clock-history", (perm("view_audit_log"),), activity_widget, size="full"),
+           renewals_widget, span=6),
+    Widget("health", "System health", "bi-heart-pulse", (perm("view_settings"),), health_widget, span=5),
+    Widget("activity", "Recent activity", "bi-clock-history", (perm("view_audit_log"),), activity_widget, span=7),
 ]
 BY_KEY = {w.key: w for w in WIDGETS}
 
@@ -162,5 +270,20 @@ def visible_widgets(user):
     return [w for w in WIDGETS if any(user.has_perm(p) for p in w.permissions)]
 
 
+# The link in a panel's header: where the whole list lives.
+HEADS = {"orders": ("View all", "orders_staff:list"), "billing": ("Billing", "billing_staff:index"),
+         "support": ("Open the queue", "support_staff:tickets"), "domains": ("All domains", "domains_staff:list"),
+         "renewals": ("Lifecycle", "lifecycle_staff:overview"), "activity": ("Activity log", "console:audit_log")}
+
+
 def context_for(widget, user):
-    return {"widget": widget, **widget.build(user)}
+    context = {"widget": widget, **widget.build(user)}
+    if widget.key in HEADS:
+        label, name = HEADS[widget.key]
+        context.update(head_label=label, head_link=reverse(name))
+    if widget.key == "failures":
+        total = context["order_count"] + context["hosting_count"]
+        context.update(head_chip=total or None, head_chip_danger=True)
+    if widget.key == "attention":
+        context.update(head_chip=len(context["rows"]) or None, head_chip_danger=bool(context["critical"]))
+    return context

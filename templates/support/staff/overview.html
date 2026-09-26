@@ -4,6 +4,7 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Support</h1>
+  <p class="page-sub">How busy the queue is, and which tickets are waiting for an answer.</p>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'support_staff:ticket_new' %}">New ticket</a>{% endif %}</div>
 {% include "support/staff/_nav.html" %}
 

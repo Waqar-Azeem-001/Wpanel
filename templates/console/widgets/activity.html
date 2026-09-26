@@ -1,6 +1,8 @@
 {% load ui i18n %}
-<div class="table-responsive"><table class="table mb-0 align-middle">
-  <thead><tr><th>{% trans "When" %}</th><th>{% trans "Who" %}</th><th>{% trans "What" %}</th><th>{% trans "Record" %}</th></tr></thead>
-  <tbody>{% for e in events %}<tr><td class="text-nowrap">{{ e.created_at|fdatetime }}</td><td>{{ e.actor_repr|default:"system" }}</td><td><code>{{ e.action }}</code></td><td>{{ e.target_repr|default:"—" }}</td></tr>
-  {% empty %}<tr><td colspan="4" class="text-secondary">{% trans "Nothing has been recorded yet." %}</td></tr>{% endfor %}</tbody></table></div>
-<div class="card-footer bg-transparent small"><a href="{% url 'console:audit_log' %}">{% trans "Open the audit log" %}</a></div>
+{% if events %}
+<ol class="feed">
+  {% for e in events %}<li><span><span class="what">{{ e.action|action_label }}</span> <span class="who">· {{ e.actor_repr|default:"system" }}{% if e.target_repr %} · {{ e.target_repr }}{% endif %}</span></span><time datetime="{{ e.created_at.isoformat }}" title="{{ e.created_at|fdatetime }}">{{ e.created_at|timesince }} {% trans "ago" %}</time></li>{% endfor %}
+</ol>
+{% else %}
+<div class="state-block"><i class="bi bi-clock-history" aria-hidden="true"></i><strong>{% trans "Nothing has been recorded yet" %}</strong><p>{% trans "Sign-ins, changes and other important actions are listed here as they happen." %}</p></div>
+{% endif %}

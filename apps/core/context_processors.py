@@ -26,7 +26,7 @@ def menus(request):
     """``nav`` (the menus for this person, generated from the registry) and automatic ``breadcrumbs``."""
     area = area_for(getattr(request, "user", None))
     menus_for_person = navigation.build(request, area)
-    context = {"nav": menus_for_person}
+    context = {"nav": menus_for_person, "nav_sections": navigation.sections(menus_for_person["main"])}
     if area == "client":  # the phone's bottom bar: worth showing only when there are enough places to go
         tabs = [e for e in menus_for_person["main"] if e.mobile_tab]
         if len(tabs) >= 3:

@@ -3,6 +3,7 @@
 {% block title %}{% trans "Notifications" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{% trans "Notifications" %}</h1>
+  <p class="page-sub">Updates about your orders, invoices, services and tickets.</p>
   <span class="d-flex flex-wrap gap-2"><a class="btn btn-outline-primary" href="{% url 'notifications:preferences' %}">{% trans "Preferences" %}</a>
     {% if unread %}<form method="post" action="{% url 'notifications:mark_all_read' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Mark all as read" %}</button></form>{% endif %}</span></div>
 <ul class="nav nav-tabs mb-3" aria-label="Filter">
@@ -11,7 +12,7 @@
 </ul>
 <div class="d-flex flex-column gap-2">
 {% for n in page %}
-  <article class="card{% if not n.is_read %} border-start border-4 border-primary{% endif %}"><div class="card-body py-2">
+  <article class="card{% if not n.is_read %} is-unread{% endif %}"><div class="card-body py-2">
     <strong>{% if n.link %}<a href="{% url 'notifications:open' n.pk %}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</strong>
     {% if n.body %}<p class="mb-1 text-break">{{ n.body }}</p>{% endif %}
     <small class="text-secondary">{{ n.created_at|fdatetime }}{% if not n.is_read %} &middot; <span class="badge text-bg-primary">{% trans "New" %}</span>{% endif %}</small>

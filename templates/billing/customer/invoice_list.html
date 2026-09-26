@@ -2,7 +2,8 @@
 {% load ui i18n %}
 {% block title %}{% trans "My Invoices" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{% trans "My Invoices" %}</h1></div>
+<div class="page-head"><h1>{% trans "My Invoices" %}</h1>
+  <p class="page-sub">What you owe, what you have paid, and your receipts.</p></div>
 <div class="card">
   <div class="table-responsive"><table class="table mb-0 align-middle">
     <thead><tr><th>{% trans "Invoice" %}</th><th>{% trans "Issued" %}</th><th>{% trans "Due" %}</th><th>{% trans "Status" %}</th><th class="text-end">{% trans "Total" %}</th><th class="text-end">{% trans "Balance" %}</th></tr></thead>

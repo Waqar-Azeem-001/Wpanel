@@ -42,9 +42,9 @@ def dashboard(request):
     if user.is_staff:  # the staff dashboard is Phase D4
         return redirect("accounts:profile")
     client = primary_client(user)
-    context = {"client": client, "sidebar": []}
+    context = {"client": client, "side_panels": []}
     if client is None:
-        context["sidebar"] = [portal.Panel("Shortcuts", [
+        context["side_panels"] = [portal.Panel("Shortcuts", [
             portal.link(request, "Browse plans", "catalog:product_list", icon="bi-box"),
             portal.link(request, "Profile & security", "accounts:profile", icon="bi-person")])]
         return render(request, "clients/customer/dashboard.html", context)
@@ -78,6 +78,6 @@ def dashboard(request):
         "recent_tickets": tickets.order_by("-last_activity_at", "-id")[:5],
         "affiliate": affiliate,
         "affiliate_balances": affiliate_services.balances(affiliate) if affiliate else None,
-        "sidebar": [portal.your_info(client), portal.contacts_panel(request, client), portal.shortcuts(request)],
+        "side_panels": [portal.your_info(client), portal.contacts_panel(request, client), portal.shortcuts(request)],
     })
     return render(request, "clients/customer/dashboard.html", context)

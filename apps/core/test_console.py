@@ -18,10 +18,12 @@ from apps.core import navigation
 
 pytestmark = pytest.mark.django_db
 
-ALL_KEYS = ["billing", "orders", "support", "failures", "domains", "renewals", "health", "activity"]
+ALL_KEYS = ["summary", "attention", "orders", "billing", "support", "failures", "domains", "renewals", "health", "activity"]
+TOP = ["summary", "attention"]
 EXPECTED = {  # who sees which widgets (the roles' permissions decide)
-    "support agent": ["billing", "orders", "support", "failures", "domains", "renewals"],
-    "manager": ["billing", "orders", "support", "failures", "domains", "renewals", "activity"],
+    "support agent": TOP + ["orders", "billing", "support", "failures", "domains", "renewals"],
+    "technical staff": TOP + ["orders", "support", "failures", "domains", "renewals"],
+    "manager": TOP + ["orders", "billing", "support", "failures", "domains", "renewals", "activity"],
     "admin": ALL_KEYS,
     "super admin": ALL_KEYS,
 }
@@ -60,7 +62,8 @@ def test_each_role_sees_exactly_the_widgets_its_permissions_allow(world, role):
 
 def test_each_widget_is_loaded_on_its_own_with_a_no_script_fallback(world):
     page = browser(world.people["admin"]).get(reverse("console:dashboard")).content.decode()
-    assert page.count('hx-trigger="load"') == 8 and page.count("<noscript>") == 8 and page.count("<h1") == 1
+    assert page.count('hx-trigger="load"') == 10 and page.count("<noscript>") == 10 and page.count("<h1") == 1
+    assert page.count("data-widget-body") == 10 and page.count("skeleton") >= 10  # a loading state, not a blank
 
 
 def test_the_dashboard_offers_shortcuts_only_for_what_the_person_may_do(world):
@@ -160,7 +163,92 @@ def test_domains_expiring_soon_include_overdue_ones_and_leave_out_the_far_future
     assert widget_context(world, "domains")["domains"] == []
     Domain.objects.filter(pk=active.pk).update(expires_at=now - timedelta(days=3))
     page = browser(world.people["admin"]).get(reverse("console:widget", args=["domains"])).content.decode()
-    assert "text-danger" in page and active.name in page  # already past its date: shown, in red
+    assert "is-bad" in page and active.name in page  # already past its date: shown, in red
+
+
+# --- The summary strip and the attention list (D7) -----------------------------------------------------------------
+
+def tiles(world, role):
+    return {t["label"]: t for t in widget_context(world, "summary", role)["tiles"]}
+
+
+def test_each_summary_tile_is_offered_only_for_areas_the_role_may_open(world):
+    assert set(tiles(world, "admin")) == {"Active clients", "Active services", "Pending orders", "Unpaid invoices",
+                                          "Income this month", "Open tickets", "Failed orders"}
+    assert set(tiles(world, "technical staff")) == {"Active clients", "Active services", "Pending orders", "Open tickets",
+                                                    "Failed orders"}  # no money
+    assert "Unpaid invoices" in tiles(world, "support agent") and "Income this month" in tiles(world, "manager")
+
+
+def test_a_summary_tile_equals_the_list_it_opens(world):
+    """The rule since D4a: a number on the dashboard is the number of rows behind its link."""
+    client = browser(world.people["admin"])
+    for label, t in tiles(world, "admin").items():
+        if t.get("money"):
+            continue  # money tiles are sums; their counts are the sub-line and are covered by the billing tests
+        response = client.get(t["url"])
+        assert response.status_code == 200, label
+        assert response.context["page"].paginator.count == t["value"], (label, t["value"], t["url"])
+
+
+def test_the_money_tiles_match_the_billing_widget(world):
+    context = widget_context(world, "billing")
+    t = tiles(world, "admin")
+    assert t["Unpaid invoices"]["value"] == context["owed"] and t["Income this month"]["value"] == context["month"]
+    assert f"{context['open']} open" in t["Unpaid invoices"]["sub"] and t["Unpaid invoices"]["bad"] is True  # one is overdue
+
+
+def test_the_attention_list_names_what_is_wrong_worst_first_and_links_to_the_list(world):
+    rows = widget_context(world, "attention")["rows"]
+    titles = [r["title"] for r in rows]
+    assert "Provisioning failed" in titles and "Overdue invoices" in titles and "Payments to confirm" in titles
+    severities = [r["severity"] for r in rows]
+    assert severities == sorted(severities, key=lambda s: {"critical": 0, "warning": 1}[s])  # critical first
+    client = browser(world.people["admin"])
+    for r in rows:
+        assert client.get(r["url"]).status_code == 200, r["title"]
+
+
+def test_the_attention_list_shows_a_person_only_what_they_may_open(world):
+    titles = [r["title"] for r in widget_context(world, "attention", "technical staff")["rows"]]
+    assert "Provisioning failed" in titles and "Overdue invoices" not in titles and "Payments to confirm" not in titles
+    client = browser(world.people["technical staff"])
+    for r in widget_context(world, "attention", "technical staff")["rows"]:
+        assert client.get(r["url"]).status_code == 200, r["title"]  # never a row that leads to a 403
+
+
+def test_an_empty_attention_list_says_all_clear():
+    from django.template.loader import render_to_string
+
+    html = render_to_string("console/widgets/attention.html", {"rows": []})
+    assert "All clear" in html and 'class="attn-list"' not in html
+
+
+def test_a_panel_that_has_nothing_to_show_explains_what_would_appear_there(world):
+    from django.template.loader import render_to_string
+
+    for key, needle in (("activity", "Nothing has been recorded yet"), ("domains", "No domain expires")):
+        html = render_to_string(f"console/widgets/{key}.html", {"events": [], "domains": [], "count": 0})
+        assert 'class="state-block"' in html and needle in html and "No data" not in html
+
+
+def test_the_dashboard_greets_by_time_of_day_and_puts_the_main_action_first(world):
+    response = browser(world.people["manager"]).get(reverse("console:dashboard"))
+    assert response.context["greeting"] in ("Good morning", "Good afternoon", "Good evening")
+    page = response.content.decode()
+    assert 'class="btn btn-sm btn-primary" href="/staff/clients/new/"' in page and 'class="page-sub"' in page
+
+
+def test_the_dashboard_script_can_show_an_error_with_a_retry():
+    js = open("static/js/shell.js", encoding="utf-8").read()
+    assert "htmx:responseError" in js and "Try again" in js and "This panel could not be loaded" in js
+
+
+def test_audit_codes_are_shown_as_phrases_on_the_dashboard(world):
+    from apps.core.templatetags.ui import action_label
+
+    assert action_label("auth.login") == "Signed in" and action_label("invoice.paid") == "Invoice paid"
+    assert action_label("account.role_changed") == "Account role changed" and action_label("") == ""
 
 
 def test_health_reports_a_missing_email_provider_as_a_problem_not_an_error(world):

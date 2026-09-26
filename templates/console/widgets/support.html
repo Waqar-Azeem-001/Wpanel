@@ -1,13 +1,13 @@
 {% load ui i18n %}
-<div class="card-body pb-2">
-  <div class="row g-2 text-center mb-3">
-    <div class="col-3"><a class="text-decoration-none" href="{% url 'support_staff:tickets' %}?status=active"><div class="fs-4 fw-bold">{{ counts.active }}</div><div class="small text-secondary">{% trans "Open" %}</div></a></div>
-    <div class="col-3"><a class="text-decoration-none" href="{% url 'support_staff:tickets' %}?status=customer_reply"><div class="fs-4 fw-bold">{{ counts.customer_reply }}</div><div class="small text-secondary">{% trans "Customer replied" %}</div></a></div>
-    <div class="col-3"><a class="text-decoration-none" href="{% url 'support_staff:tickets' %}?status=active&amp;assigned=none"><div class="fs-4 fw-bold">{{ counts.unassigned }}</div><div class="small text-secondary">{% trans "Unassigned" %}</div></a></div>
-    <div class="col-3"><a class="text-decoration-none" href="{% url 'support_staff:tickets' %}?status=active&amp;priority=urgent"><div class="fs-4 fw-bold{% if counts.urgent %} text-danger{% endif %}">{{ counts.urgent }}</div><div class="small text-secondary">{% trans "Urgent" %}</div></a></div>
+<div class="panel-body pb-3">
+  <div class="metrics">
+    <a class="metric" href="{% url 'support_staff:tickets' %}?status=active"><span>{% trans "Open" %}</span><strong>{{ counts.active }}</strong></a>
+    <a class="metric" href="{% url 'support_staff:tickets' %}?status=customer_reply"><span>{% trans "Customer replied" %}</span><strong>{{ counts.customer_reply }}</strong></a>
+    <a class="metric" href="{% url 'support_staff:tickets' %}?status=active&amp;assigned=none"><span>{% trans "Unassigned" %}</span><strong>{{ counts.unassigned }}</strong></a>
+    <a class="metric" href="{% url 'support_staff:tickets' %}?status=active&amp;priority=urgent"><span>{% trans "Urgent" %}</span><strong{% if counts.urgent %} class="is-bad"{% endif %}>{{ counts.urgent }}</strong></a>
   </div>
 </div>
-<ul class="list-group list-group-flush">
-  {% for t in waiting %}<li class="list-group-item d-flex justify-content-between align-items-center"><span><a class="fw-semibold" href="{% url 'support_staff:ticket' t.pk %}">{{ t.reference }} {{ t.subject }}</a> <span class="text-secondary">{{ t.client.display_name }}</span></span>{% status_badge t.status t.get_status_display %}</li>
-  {% empty %}<li class="list-group-item text-secondary">{% trans "Nobody is waiting for a reply." %}</li>{% endfor %}
+<ul class="rows is-ruled">
+  {% for t in waiting %}<li><span class="main"><a href="{% url 'support_staff:ticket' t.pk %}">{{ t.reference }} {{ t.subject }}</a><small>{{ t.client.display_name }}</small></span>{% status_badge t.status t.get_status_display %}</li>
+  {% empty %}<li><div class="state-block w-100"><i class="bi bi-check2-circle" aria-hidden="true"></i><strong>{% trans "Nobody is waiting for a reply" %}</strong><p>{% trans "Tickets that need an answer from us will be listed here, oldest first." %}</p></div></li>{% endfor %}
 </ul>

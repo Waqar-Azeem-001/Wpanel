@@ -1,5 +1,6 @@
 {% load i18n %}
-<section class="card h-100" id="widget-{{ widget.key }}" aria-label="{{ widget.title }}">
-  <div class="card-header d-flex align-items-center gap-2"><i class="bi {{ widget.icon }} text-primary" aria-hidden="true"></i><h2 class="h6 mb-0">{{ widget.title }}</h2></div>
+{% if widget.size == "strip" %}{% include widget.template %}
+{% else %}<section class="panel span-{{ widget.span }}" id="widget-{{ widget.key }}" aria-label="{{ widget.title }}">
+  <div class="panel-head"><h2><i class="bi {{ widget.icon }}" aria-hidden="true"></i> {{ widget.title }}{% if head_chip %} <span class="chip{% if head_chip_danger %} is-danger{% endif %}">{{ head_chip }}</span>{% endif %}</h2>{% if head_link %}<a href="{{ head_link }}">{{ head_label }} &rarr;</a>{% endif %}</div>
   {% include widget.template %}
-</section>
+</section>{% endif %}

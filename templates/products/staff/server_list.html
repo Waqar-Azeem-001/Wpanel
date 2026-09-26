@@ -5,6 +5,7 @@
 {% block content %}
 <div class="page-head">
   <h1>Servers</h1>
+  <p class="page-sub">The servers hosting accounts are created on.</p>
   <div class="d-flex flex-wrap gap-2 align-items-center">
     {% if perms.accounts.view_products %}<a href="{% url 'catalog_staff:product_list' %}">Products</a>{% endif %}
     {% if perms.accounts.manage_hosting %}<a class="btn btn-primary" href="{% url 'catalog_staff:server_create' %}">Add server</a>{% endif %}

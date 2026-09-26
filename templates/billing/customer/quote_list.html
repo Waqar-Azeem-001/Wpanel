@@ -2,7 +2,8 @@
 {% load ui i18n %}
 {% block title %}{% trans "My Quotes" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{% trans "My Quotes" %}</h1></div>
+<div class="page-head"><h1>{% trans "My Quotes" %}</h1>
+  <p class="page-sub">Quotes we have sent you to review.</p></div>
 <div class="card">
   <div class="table-responsive"><table class="table mb-0 align-middle">
     <thead><tr><th>{% trans "Quote" %}</th><th>{% trans "Issued" %}</th><th>{% trans "Valid until" %}</th><th>{% trans "Status" %}</th><th class="text-end">{% trans "Total" %}</th></tr></thead>

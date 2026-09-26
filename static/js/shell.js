@@ -38,6 +38,27 @@
       });
     });
 
+    // Sections fold (People, Commerce ...); the choice is remembered, and the section you are in never starts folded.
+    var folded = [];
+    try { folded = JSON.parse(store("wp.sections") || "[]"); } catch (e) { folded = []; }
+    rail.querySelectorAll(".rail-sec").forEach(function (section) {
+      var toggle = section.querySelector(".rail-sec-toggle");
+      if (!toggle) { return; }
+      var key = section.getAttribute("data-section");
+      function set(collapsed) {
+        section.classList.toggle("is-collapsed", collapsed);
+        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      }
+      if (folded.indexOf(key) !== -1 && !section.querySelector("[aria-current='page'], .is-current")) { set(true); }
+      toggle.addEventListener("click", function () {
+        var collapsed = !section.classList.contains("is-collapsed");
+        set(collapsed);
+        folded = folded.filter(function (k) { return k !== key; });
+        if (collapsed) { folded.push(key); }
+        store("wp.sections", JSON.stringify(folded));
+      });
+    });
+
     var opener = doc.querySelector("[data-rail-open]");
     function openDrawer() { body.classList.add("rail-open"); if (opener) { opener.setAttribute("aria-expanded", "true"); } var first = rail.querySelector("a"); if (first) { first.focus(); } }
     function closeDrawer() { if (!body.classList.contains("rail-open")) { return; } body.classList.remove("rail-open"); if (opener) { opener.setAttribute("aria-expanded", "false"); opener.focus(); } }
@@ -116,6 +137,42 @@
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); open(); }
     });
   }
+
+  // --- Light, dark or follow the system ---------------------------------------------------------------------------------
+  function syncTheme() {
+    var current = window.wpTheme ? window.wpTheme.get() : "system";
+    doc.querySelectorAll("[data-theme-choice]").forEach(function (button) {
+      button.setAttribute("aria-pressed", button.getAttribute("data-theme-choice") === current ? "true" : "false");
+    });
+  }
+  doc.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-theme-choice]");
+    if (!button || !window.wpTheme) { return; }
+    window.wpTheme.set(button.getAttribute("data-theme-choice"));
+    syncTheme();
+  });
+  syncTheme();
+
+  // --- A dashboard panel that could not load says so and can try again ---------------------------------------------------
+  function widgetFailed(event) {
+    var target = event.detail && event.detail.target ? event.detail.target : event.target;
+    if (!target || !target.hasAttribute || !target.hasAttribute("data-widget")) { return; }
+    var body = target.querySelector("[data-widget-body]");
+    if (!body) { return; }
+    body.innerHTML = "";
+    var block = doc.createElement("div"); block.className = "state-block is-error"; block.setAttribute("role", "alert");
+    var icon = doc.createElement("i"); icon.className = "bi bi-exclamation-triangle"; icon.setAttribute("aria-hidden", "true");
+    var title = doc.createElement("strong"); title.textContent = "This panel could not be loaded";
+    var text = doc.createElement("p"); text.textContent = "Nothing was changed. Check your connection and try again.";
+    var retry = doc.createElement("button"); retry.type = "button"; retry.className = "btn btn-sm btn-outline-secondary"; retry.textContent = "Try again";
+    retry.addEventListener("click", function () {
+      body.innerHTML = "<span class='skeleton'></span><span class='skeleton'></span><span class='skeleton'></span>";
+      if (window.htmx) { window.htmx.ajax("GET", target.getAttribute("hx-get"), { target: target, swap: "outerHTML" }); }
+    });
+    block.appendChild(icon); block.appendChild(title); block.appendChild(text); block.appendChild(retry); body.appendChild(block);
+  }
+  doc.body.addEventListener("htmx:responseError", widgetFailed);
+  doc.body.addEventListener("htmx:sendError", widgetFailed);
 
   // --- Show or hide a password ---------------------------------------------------------------------------------------
   doc.addEventListener("click", function (event) {

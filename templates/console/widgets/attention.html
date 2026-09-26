@@ -1,0 +1,14 @@
+{% load i18n %}
+{% if rows %}
+<ul class="attn-list">
+  {% for r in rows %}
+  <li class="attn is-{{ r.severity }}">
+    <span class="attn-icon" aria-hidden="true"><i class="bi {{ r.icon }}"></i></span>
+    <div><div class="attn-title"><span class="attn-sev">{% if r.severity == "critical" %}{% trans "Critical" %}{% else %}{% trans "Warning" %}{% endif %}</span> {{ r.title }}</div><p>{{ r.text }}</p></div>
+    <a class="attn-go" href="{{ r.url }}">{{ r.go }} &rarr;</a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="all-clear"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><div><strong>{% trans "All clear" %}</strong>{% trans "Nothing is failing, overdue or waiting on you right now." %}</div></div>
+{% endif %}

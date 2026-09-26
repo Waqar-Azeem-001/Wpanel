@@ -10,6 +10,7 @@ from apps.accounts import services as account_services
 from apps.accounts.models import AccountStatus, User
 from apps.accounts.roles import PRIVILEGED_ROLES, STAFF_ROLES, Role, perm
 from apps.audit.models import AuditEvent
+from apps.billing.models import OPEN_STATUSES, Invoice
 from apps.clients.models import ClientContact
 from apps.core.decorators import portal_permission_required
 from apps.core.web import ACTION_ERRORS, error_text
@@ -79,6 +80,7 @@ def user_detail(request, pk):
     editable = can_edit(actor, person)
     contacts = list(person.client_contacts.select_related("client"))
     clients = []
+    see_billing = actor.has_perm(perm("view_billing"))
     for contact in contacts:
         client = contact.client
         clients.append({
@@ -87,16 +89,19 @@ def user_detail(request, pk):
             "services": HostingAccount.objects.filter(client=client).count(),
             "domains": Domain.objects.filter(client=client).count(),
             "tickets": Ticket.objects.filter(client=client, status__in=OPEN_TICKET).count(),
+            "unpaid": Invoice.objects.filter(client=client, status__in=OPEN_STATUSES).count() if see_billing else None,
         })
     assigned_tickets = (Ticket.objects.filter(assigned_to=person, status__in=OPEN_TICKET).count()
                         if person.role in STAFF_ROLES else None)
     events = []
-    if actor.has_perm(perm("view_audit_log")):
+    can_see_activity = actor.has_perm(perm("view_audit_log"))
+    if can_see_activity:
         events = list(AuditEvent.objects.filter(
             Q(actor=person) | Q(target_type="accounts.user", target_id=str(person.pk))).order_by("-created_at", "-id")[:12])
     can_manage = actor.has_perm(perm("manage_users"))
     return render(request, "console/user_detail.html", {
         "person": person, "clients": clients, "assigned_tickets": assigned_tickets, "events": events,
+        "can_see_activity": can_see_activity,
         "can_edit_details": can_manage and editable,
         "can_set_status": can_manage and editable,
         "can_set_role": can_manage and editable and actor.has_perm(perm("assign_roles")) and person.role in STAFF_ROLES,

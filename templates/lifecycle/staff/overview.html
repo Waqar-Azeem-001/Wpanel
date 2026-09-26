@@ -2,7 +2,7 @@
 {% block title %}Service lifecycle · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<h1>Service lifecycle</h1>
+<div class="page-head"><h1>Service lifecycle</h1><p class="page-sub">Renewals, overdue services, grace periods and suspensions.</p></div>
 {% include "lifecycle/staff/_nav.html" %}
 {% if needing_attention %}<div class="alert alert-danger"><p>{{ needing_attention }} approved cancellation{{ needing_attention|pluralize }} could not be carried out. <a href="{% url 'lifecycle_staff:cancellations' %}">Review</a>.</p></div>{% endif %}
 <div class="stat-tiles">

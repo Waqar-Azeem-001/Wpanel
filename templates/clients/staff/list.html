@@ -4,6 +4,7 @@
 {% block content %}
 <div class="page-head">
   <h1>Clients</h1>
+  <p class="page-sub">Every client account: who they are, their status and where to find them.</p>
   {% if perms.accounts.manage_clients %}<a class="btn btn-primary" href="{% url 'clients_staff:create' %}">Add client</a>{% endif %}
 </div>
 <form class="filters" method="get" hx-get="{% url 'clients_staff:list' %}" hx-target="#client-table"

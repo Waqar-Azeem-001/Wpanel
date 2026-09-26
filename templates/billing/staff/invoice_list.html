@@ -4,6 +4,7 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{% trans "Billing" %}</h1>
+  <p class="page-sub">Invoices, payments, quotes and everything billed.</p>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'billing_staff:invoice_new' %}">{% trans "New invoice" %}</a>{% endif %}
 </div>
 {% include "billing/staff/_nav.html" %}

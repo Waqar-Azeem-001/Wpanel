@@ -1,0 +1,11 @@
+{% load ui i18n %}
+<div class="kpi-strip" id="widget-summary" aria-label="{% trans 'Summary' %}">
+  {% for t in tiles %}
+  <a class="kpi" href="{{ t.url }}">
+    <span class="kpi-icon{% if t.tone %} tone-{{ t.tone }}{% endif %}" aria-hidden="true"><i class="bi {{ t.icon }}"></i></span>
+    <span class="kpi-label">{{ t.label }}</span>
+    <strong class="kpi-value{% if t.money %} is-money{% endif %}">{% if t.money %}{{ t.value|money:t.currency }}{% else %}{{ t.value }}{% endif %}</strong>
+    <span class="kpi-sub{% if t.bad %} is-bad{% endif %}">{{ t.sub }}</span>
+  </a>
+  {% endfor %}
+</div>

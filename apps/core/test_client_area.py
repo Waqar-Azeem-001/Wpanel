@@ -69,7 +69,7 @@ def test_every_contact_sees_the_accounts_dashboard(world, role):
     response = browser(world.people[role]).get(reverse("dashboard"))
     assert response.status_code == 200
     page = response.content.decode()
-    assert "Welcome back" in page and "Your active products / services" in page and "Recent support tickets" in page
+    assert "Welcome back" in page and "Your services" in page and "Recent support tickets" in page
     assert "Register a new domain" in page and "Affiliate program" in page
 
 
@@ -119,7 +119,7 @@ def test_the_dashboard_lists_only_live_services_and_the_latest_tickets(world, ow
 
 
 def test_the_sidebar_describes_the_account_its_contacts_and_shortcuts(world, owner):
-    sidebar = browser(owner).get(reverse("dashboard")).context["sidebar"]
+    sidebar = browser(owner).get(reverse("dashboard")).context["side_panels"]
     assert [p.title for p in sidebar] == ["Your info", "Contacts", "Shortcuts"]
     assert "Ada Ltd" in sidebar[0].lines[1] or "Ada Ltd" in sidebar[0].lines
     assert any("Owner" in line for line in sidebar[1].lines) and any("Billing" in line for line in sidebar[1].lines)

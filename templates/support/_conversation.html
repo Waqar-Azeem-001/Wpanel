@@ -1,7 +1,7 @@
 {% load ui i18n %}
 <div class="mb-4">
 {% for message in messages_ %}
-  <article class="card mb-3{% if message.is_internal %} border-warning bg-warning-subtle{% elif message.kind == 'staff' %} border-start border-4 border-primary{% endif %}">
+  <article class="card mb-3{% if message.is_internal %} is-internal{% elif message.kind == 'staff' %} is-staff{% endif %}">
     <header class="card-header d-flex flex-wrap gap-2 align-items-baseline">
       <strong>{{ message.author_name|default:"System" }}</strong>
       {% if message.kind == "staff" and not staff %}<span class="badge text-bg-primary">{% trans "Support team" %}</span>{% endif %}

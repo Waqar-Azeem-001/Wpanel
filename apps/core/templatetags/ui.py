@@ -109,6 +109,19 @@ def is_checkbox(field):
     return isinstance(field.field.widget, forms.CheckboxInput)
 
 
+ACTION_WORDS = {"auth.login": "Signed in", "auth.login_failed": "Failed sign-in", "auth.logout": "Signed out",
+                "auth.password_changed": "Password changed", "auth.password_reset": "Password reset"}
+
+
+@register.filter
+def action_label(code):
+    """An audit action code as a phrase: "invoice.paid" -> "Invoice paid". The code itself stays in the audit log."""
+    code = str(code or "")
+    if code in ACTION_WORDS:
+        return ACTION_WORDS[code]
+    return code.replace(".", " ").replace("_", " ").capitalize()
+
+
 @register.filter
 def feature_lines(text):
     """A plan's description as a list: one feature per non-empty line."""

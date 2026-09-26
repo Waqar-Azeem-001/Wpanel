@@ -3,7 +3,8 @@
 {% block title %}{% trans "Audit log" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{% trans "Audit log" %}</h1></div>
+<div class="page-head"><h1>{% trans "Audit log" %}</h1>
+  <p class="page-sub">Who did what and when. Entries can be searched but never changed.</p></div>
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-md"><label class="form-label" for="q">{% trans "Search" %}</label><input class="form-control" id="q" name="q" value="{{ term }}" placeholder="{% trans 'Action, person, record or request id' %}"></div>
   <div class="col-md-3"><label class="form-label" for="action">{% trans "Area" %}</label>

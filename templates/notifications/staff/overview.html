@@ -2,7 +2,7 @@
 {% block title %}Email statistics · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<h1>Email</h1>
+<div class="page-head"><h1>Email</h1><p class="page-sub">Which emails were sent and whether they arrived.</p></div>
 {% include "notifications/staff/_nav.html" %}
 {% if failed %}<div class="alert alert-danger"><p>{{ failed }} email{{ failed|pluralize }} failed to send. <a href="{% url 'notifications_staff:emails' %}?status=failed">Review and resend</a>.</p></div>{% endif %}
 <nav aria-label="Period"><ul class="nav nav-tabs mb-3 tab-scroll">

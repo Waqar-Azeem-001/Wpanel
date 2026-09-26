@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import render
+from django.utils import timezone
 
 from apps.accounts.roles import perm
 from apps.audit.models import AuditEvent
@@ -20,7 +21,10 @@ def dashboard(request):
         ("New client", "clients_staff:create", "manage_clients"), ("New invoice", "billing_staff:invoice_new", "manage_billing"),
         ("New order", "orders_staff:new", "manage_orders"), ("Open a ticket", "support_staff:ticket_new", "view_support"))
         if user.has_perm(perm(codename))]
-    return render(request, "console/dashboard.html", {"widgets": widgets.visible_widgets(user), "shortcuts": shortcuts})
+    hour = timezone.localtime().hour
+    greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
+    return render(request, "console/dashboard.html", {"widgets": widgets.visible_widgets(user), "shortcuts": shortcuts,
+                                                       "greeting": greeting})
 
 
 @staff_required

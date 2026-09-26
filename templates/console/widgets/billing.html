@@ -1,14 +1,13 @@
 {% load ui i18n %}
-<div class="card-body">
-  <div class="row g-3 text-center">
-    <div class="col-4"><div class="text-secondary small">{% trans "Today" %}</div><div class="fs-5 fw-bold">{{ today|money:currency }}</div></div>
-    <div class="col-4"><div class="text-secondary small">{% trans "This month" %}</div><div class="fs-5 fw-bold">{{ month|money:currency }}</div></div>
-    <div class="col-4"><div class="text-secondary small">{% trans "This year" %}</div><div class="fs-5 fw-bold">{{ year|money:currency }}</div></div>
+<div class="panel-body">
+  <div class="metrics">
+    <div class="metric"><span>{% trans "Today" %}</span><strong>{{ today|money:currency }}</strong></div>
+    <div class="metric"><span>{% trans "This month" %}</span><strong>{{ month|money:currency }}</strong></div>
+    <div class="metric"><span>{% trans "This year" %}</span><strong>{{ year|money:currency }}</strong></div>
   </div>
-  <hr>
-  <ul class="list-unstyled mb-0">
-    <li class="d-flex justify-content-between py-1"><a href="{% url 'billing_staff:invoice_list' %}?status=unpaid">{% trans "Unpaid invoices" %}</a><span><strong>{{ owed|money:currency }}</strong> <span class="text-secondary">({{ open }})</span></span></li>
-    <li class="d-flex justify-content-between py-1"><a href="{% url 'billing_staff:invoice_list' %}?status=overdue">{% trans "Overdue" %}</a><strong{% if overdue %} class="text-danger"{% endif %}>{{ overdue }}</strong></li>
-    <li class="d-flex justify-content-between py-1"><a href="{% url 'billing_staff:transaction_list' %}">{% trans "Payments waiting to be confirmed" %}</a><strong>{{ waiting }}</strong></li>
-  </ul>
 </div>
+<ul class="rows is-ruled">
+  <li><a href="{% url 'billing_staff:invoice_list' %}?status=unpaid">{% trans "Unpaid invoices" %}</a><span><strong>{{ owed|money:currency }}</strong> <span class="text-secondary">({{ open }})</span></span></li>
+  <li><a href="{% url 'billing_staff:invoice_list' %}?status=overdue">{% trans "Overdue" %}</a><strong{% if overdue %} class="text-danger"{% endif %}>{{ overdue }}</strong></li>
+  <li><a href="{% url 'billing_staff:transaction_list' %}">{% trans "Payments waiting to be confirmed" %}</a><strong>{{ waiting }}</strong></li>
+</ul>

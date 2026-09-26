@@ -136,8 +136,9 @@ def test_the_rail_lists_only_what_the_person_can_open(world):
 
 def test_the_sections_and_their_headings_are_drawn(world):
     html = rail_of(page_of(world.people["admin"], "console:dashboard").content.decode())
-    headings = re.findall(r'<p class="rail-section"><span>([^<]+)</span></p>', html)
+    headings = re.findall(r'<button class="rail-sec-toggle" type="button" aria-expanded="true" aria-controls="rail-sec-[a-z-]+"><span>([^<]+)</span>', html)
     assert headings == ["People", "Commerce", "Operations", "Insights", "System"]
+    assert 'data-section="people"' in html and 'id="rail-sec-people"' in html  # a section folds, and the state is remembered
 
 
 def test_the_profile_menu_shows_who_you_are_and_signs_out_with_a_post(world):
@@ -162,7 +163,7 @@ def test_a_detail_page_keeps_exactly_one_group_open(world):
 
 def test_the_customer_sidebar_no_longer_repeats_the_sign_out_link(world):
     html = page_of(world.people["customer owner"], "dashboard").content.decode()
-    assert html.count("Sign out") == 1  # the profile menu is the one place
+    assert "Sign out" not in html.split('class="span-4 side-panels"')[1]  # the account menu is the one place
 
 
 def test_the_top_bar_carries_the_breadcrumbs_of_registry_pages(world):
@@ -214,7 +215,7 @@ def test_an_admin_can_create_technical_staff_but_a_manager_cannot(world):
 
 def test_the_users_list_has_a_tab_and_a_count_for_every_role(world):
     html = page_of(world.people["admin"], "console:users").content.decode()
-    tabs = re.findall(r'<a class="role-tab[^"]*" href="[^"]*"[^>]*>([^<]+) <span class="count">(\d+)</span>', html)
+    tabs = re.findall(r'<a class="[^"]*" href="[^"]*"[^>]*>([^<]+) <span class="count">(\d+)</span>', html)
     assert [t[0] for t in tabs] == ["All", "Customers", "Support", "Technical", "Managers", "Admins", "Super admins"]
     counts = {label: int(n) for label, n in tabs}
     assert counts["All"] == User.objects.count() and counts["Customers"] == User.objects.filter(role="customer").count()
@@ -398,3 +399,33 @@ def test_nobody_may_edit_themselves_on_this_screen():
     assert views_users.can_edit(Actor(), Person()) is True
     Actor.pk = Person.pk
     assert views_users.can_edit(Actor(), Person()) is False
+
+
+# --- Security of what the new screens print (D7) ------------------------------------------------------------------------
+
+HOSTILE = "<script>alert(1)</script>"
+
+
+def test_a_hostile_name_is_escaped_on_the_users_screens_the_rail_and_the_dashboard_feed(world):
+    person = User.objects.create_user(email="mallory@example.com", password=PASSWORD, first_name=HOSTILE, last_name="<img src=x onerror=alert(2)>")
+    account_services.set_account_status(world.people["admin"], person, "suspended", reason=HOSTILE)
+    admin = world.people["admin"]
+    for html in (page_of(admin, "console:users").content.decode(), page_of(admin, "console:user_detail", person.pk).content.decode(),
+                 browser(admin).get(reverse("console:widget", args=["activity"])).content.decode()):
+        assert HOSTILE not in html and "<img src=x" not in html
+    assert "&lt;script&gt;" in page_of(admin, "console:users").content.decode()
+    User.objects.filter(pk=admin.pk).update(first_name=HOSTILE)
+    assert HOSTILE not in page_of(User.objects.get(pk=admin.pk), "console:dashboard").content.decode()  # the account card and greeting
+
+
+def test_every_post_form_in_the_shell_carries_the_csrf_token(world):
+    html = page_of(world.people["manager"], "console:dashboard").content.decode()
+    for form in re.findall(r"<form[^>]*method=\"post\".*?</form>", html, re.S):
+        assert "csrfmiddlewaretoken" in form, form[:80]
+
+
+def test_the_attention_list_and_the_summary_print_no_secret_and_no_credentials(world):
+    html = browser(world.people["admin"]).get(reverse("console:widget", args=["attention"])).content.decode()
+    html += browser(world.people["admin"]).get(reverse("console:widget", args=["summary"])).content.decode()
+    for needle in ("password", "secret", "api_key", "token", "auth_code"):
+        assert needle not in html.lower(), needle

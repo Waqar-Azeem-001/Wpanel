@@ -3,7 +3,8 @@
 {% block title %}{% trans "Email provider" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{% trans "Email provider" %}</h1></div>
+<div class="page-head"><h1>{% trans "Email provider" %}</h1>
+  <p class="page-sub">How the platform sends email.</p></div>
 <p class="text-secondary">{% trans "The mail server every message is sent through. Only one can be in use. Its password is encrypted and is never shown again; leave it blank when editing to keep it." %}</p>
 {% if not providers %}<div class="alert alert-warning" role="alert">{% trans "No email provider is set up, so no email (invoices, password links, ticket replies) can be delivered." %}</div>{% endif %}
 <div class="row g-4">

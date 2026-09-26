@@ -5,6 +5,7 @@
 {% block content %}
 <div class="page-head">
   <h1>Addons</h1>
+  <p class="page-sub">Extras a customer can add to an order.</p>
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <a href="{% url 'catalog_staff:product_list' %}">Products</a>
     {% if perms.accounts.manage_products %}<a class="btn btn-primary" href="{% url 'catalog_staff:addon_create' %}">Add addon</a>{% endif %}

@@ -4,6 +4,7 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Orders</h1>
+  <p class="page-sub">Orders as they move from payment to provisioning.</p>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'orders_staff:new' %}">Add order</a>{% endif %}
 </div>
 {% include "billing/staff/_nav.html" %}

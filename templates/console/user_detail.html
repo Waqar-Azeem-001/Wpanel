@@ -4,51 +4,56 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div class="person-cell"><span class="avatar" aria-hidden="true">{{ person.get_short_name|slice:":1"|upper }}</span>
-    <div><h1 class="mb-0">{{ person.full_name|default:person.email }}</h1><small class="text-secondary">{{ person.email }}</small></div></div>
-  <span class="d-flex flex-wrap gap-2 align-items-center">{% status_badge person.status person.get_status_display %}<a class="btn btn-outline-secondary" href="{% url 'console:users' %}?role={{ person.role }}">&larr; {{ person.get_role_display }}</a></span>
+  <div class="person-cell"><span class="avatar avatar-lg" aria-hidden="true">{{ person.get_short_name|slice:":1"|upper }}</span>
+    <div><h1 class="mb-0 h1-md">{{ person.full_name|default:person.email }}</h1><small class="text-secondary">{{ person.email }} · <span class="role-pill{% if person.role == 'admin' or person.role == 'super_admin' %} is-privileged{% endif %}">{{ person.get_role_display }}</span></small></div></div>
+  <span class="d-flex flex-wrap gap-2 align-items-center">{% status_badge person.status person.get_status_display %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'console:users' %}?role={{ person.role }}">&larr; {% trans "All" %} {{ person.get_role_display }}</a></span>
 </div>
 
-<div class="split">
-  <div>
-    <section class="card mb-3"><div class="card-header">{% trans "Account" %}</div><div class="card-body">
+<div class="dash-grid">
+  <div class="span-8 stack">
+    <section class="panel"><div class="panel-head"><h2><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "Account and security" %}</h2></div><div class="panel-body">
       <dl class="facts">
         <div><dt>{% trans "Role" %}</dt><dd>{{ person.get_role_display }}</dd></div>
         <div><dt>{% trans "Status" %}</dt><dd>{{ person.get_status_display }}</dd></div>
         <div><dt>{% trans "Email" %}</dt><dd>{% if person.is_email_verified %}{% trans "Verified" %}{% else %}{% trans "Not verified" %}{% endif %}</dd></div>
         <div><dt>{% trans "Password" %}</dt><dd>{% if person.has_usable_password %}{% trans "Set" %}{% else %}{% trans "Invited, not set yet" %}{% endif %}</dd></div>
         <div><dt>{% trans "Joined" %}</dt><dd>{{ person.date_joined|fdatetime }}</dd></div>
-        <div><dt>{% trans "Last sign-in" %}</dt><dd>{{ person.last_login|fdatetime }}</dd></div>
+        <div><dt>{% trans "Last sign-in" %}</dt><dd>{% if person.last_login %}{{ person.last_login|fdatetime }}{% else %}{% trans "Never" %}{% endif %}</dd></div>
         {% if person.phone %}<div><dt>{% trans "Phone" %}</dt><dd>{{ person.phone }}</dd></div>{% endif %}
         {% if assigned_tickets is not None %}<div><dt>{% trans "Open tickets assigned" %}</dt><dd>{{ assigned_tickets }}</dd></div>{% endif %}
       </dl>
     </div></section>
 
     {% if clients %}
-    <section class="card mb-3"><div class="card-header">{% trans "Client accounts" %}</div>
-      <div class="table-responsive"><table class="table mb-0 align-middle">
-        <thead><tr><th>{% trans "Client" %}</th><th>{% trans "Their role" %}</th><th class="text-end">{% trans "Orders" %}</th><th class="text-end">{% trans "Services" %}</th><th class="text-end">{% trans "Domains" %}</th><th class="text-end">{% trans "Open tickets" %}</th></tr></thead>
+    <section class="panel"><div class="panel-head"><h2><i class="bi bi-building" aria-hidden="true"></i> {% trans "Client accounts" %}</h2></div>
+      <div class="table-responsive"><table class="table table-stack">
+        <thead><tr><th>{% trans "Client" %}</th><th>{% trans "Their role" %}</th><th class="text-end">{% trans "Orders" %}</th><th class="text-end">{% trans "Services" %}</th><th class="text-end">{% trans "Domains" %}</th><th class="text-end">{% trans "Unpaid invoices" %}</th><th class="text-end">{% trans "Open tickets" %}</th></tr></thead>
         <tbody>{% for row in clients %}
-          <tr><td>{% if can_see_clients %}<a href="{% url 'clients_staff:detail' row.client.pk %}">{{ row.client.display_name }}</a>{% else %}{{ row.client.display_name }}{% endif %}</td><td>{{ row.role }}</td>
-            <td class="text-end">{{ row.orders }}</td><td class="text-end">{{ row.services }}</td><td class="text-end">{{ row.domains }}</td><td class="text-end">{{ row.tickets }}</td></tr>
+          <tr><td>{% if can_see_clients %}<a class="fw-semibold" href="{% url 'clients_staff:detail' row.client.pk %}">{{ row.client.display_name }}</a>{% else %}{{ row.client.display_name }}{% endif %}</td><td data-label="{% trans 'Their role' %}">{{ row.role }}</td>
+            <td class="text-end" data-label="{% trans 'Orders' %}">{{ row.orders }}</td><td class="text-end" data-label="{% trans 'Services' %}">{{ row.services }}</td><td class="text-end" data-label="{% trans 'Domains' %}">{{ row.domains }}</td>
+            <td class="text-end" data-label="{% trans 'Unpaid invoices' %}">{% if row.unpaid is None %}—{% else %}{{ row.unpaid }}{% endif %}</td><td class="text-end" data-label="{% trans 'Open tickets' %}">{{ row.tickets }}</td></tr>
         {% endfor %}</tbody>
       </table></div>
     </section>
     {% endif %}
 
-    {% if events %}
-    <section class="card"><div class="card-header">{% trans "Recent activity" %}</div>
-      <ul class="list-group list-group-flush">{% for e in events %}
-        <li class="list-group-item d-flex justify-content-between gap-3 flex-wrap"><span><code>{{ e.action }}</code>{% if e.actor_id == person.pk %} <span class="small text-secondary">{% trans "by this person" %}</span>{% else %} <span class="small text-secondary">{% trans "by" %} {{ e.actor_repr|default:"system" }}</span>{% endif %}</span><span class="small text-secondary text-nowrap">{{ e.created_at|fdatetime }}</span></li>
-      {% endfor %}</ul>
+    <section class="panel"><div class="panel-head"><h2><i class="bi bi-clock-history" aria-hidden="true"></i> {% trans "Recent activity" %}</h2></div>
+      {% if events %}
+      <ol class="feed">{% for e in events %}
+        <li><span><span class="what">{{ e.action|action_label }}</span> <span class="who">· {% if e.actor_id == person.pk %}{% trans "by this person" %}{% else %}{% trans "by" %} {{ e.actor_repr|default:"system" }}{% endif %}</span></span><time datetime="{{ e.created_at.isoformat }}" title="{{ e.created_at|fdatetime }}">{{ e.created_at|timesince }} {% trans "ago" %}</time></li>
+      {% endfor %}</ol>
+      {% elif not can_see_activity %}
+      <div class="state-block"><i class="bi bi-lock" aria-hidden="true"></i><strong>{% trans "Activity is restricted" %}</strong><p>{% trans "Only people who can view the audit log can see what this account has done." %}</p></div>
+      {% else %}
+      <div class="state-block"><i class="bi bi-clock-history" aria-hidden="true"></i><strong>{% trans "No activity recorded yet" %}</strong><p>{% trans "Sign-ins and changes made by or to this account will be listed here." %}</p></div>
+      {% endif %}
     </section>
-    {% endif %}
   </div>
 
-  <div>
+  <aside class="span-4 stack" aria-label="{% trans 'Actions' %}">
     {% if can_edit_details %}
-    <section class="card mb-3"><div class="card-body">
-      <h2 class="h6">{% trans "Details" %}</h2>
+    <section class="panel"><div class="panel-body">
+      <h2 class="h6 mb-3">{% trans "Details" %}</h2>
       <form method="post" action="{% url 'console:user_edit' person.pk %}" novalidate>{% csrf_token %}
         <div class="field"><label for="id_first_name">{% trans "First name" %}</label>{{ details_form.first_name }}</div>
         <div class="field"><label for="id_last_name">{% trans "Last name" %}</label>{{ details_form.last_name }}</div>
@@ -59,8 +64,8 @@
     {% endif %}
 
     {% if can_set_role %}
-    <section class="card mb-3"><div class="card-body">
-      <h2 class="h6">{% trans "Role" %}</h2>
+    <section class="panel"><div class="panel-body">
+      <h2 class="h6 mb-3">{% trans "Role" %}</h2>
       <form method="post" action="{% url 'console:staff_user_role' person.pk %}" data-confirm="{% trans 'Change this person’s role? They are signed out of the mobile app.' %}">{% csrf_token %}
         <div class="field"><label for="id_role" class="visually-hidden">{% trans "Role" %}</label>
           <select name="role" id="id_role">{% for value, label in role_choices %}<option value="{{ value }}"{% if value == person.role %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
@@ -70,8 +75,8 @@
     {% endif %}
 
     {% if can_set_status %}
-    <section class="card"><div class="card-body">
-      <h2 class="h6">{% if person.status == 'active' %}{% trans "Suspend this account" %}{% else %}{% trans "Reactivate this account" %}{% endif %}</h2>
+    <section class="panel"><div class="panel-body">
+      <h2 class="h6 mb-3">{% if person.status == 'active' %}{% trans "Suspend this account" %}{% else %}{% trans "Reactivate this account" %}{% endif %}</h2>
       <form method="post" action="{% url 'console:staff_user_status' person.pk %}">{% csrf_token %}
         <input type="hidden" name="status" value="{% if person.status == 'active' %}suspended{% else %}active{% endif %}">
         <div class="field"><label for="id_reason">{% trans "Reason (kept in the audit log)" %}</label><input id="id_reason" name="reason" maxlength="500"></div>
@@ -79,8 +84,10 @@
       </form>
     </div></section>
     {% elif person.pk == user.pk %}
-    <div class="alert alert-info">{% trans "This is your own account. Change your details and password in" %} <a href="{% url 'accounts:profile' %}">{% trans "Profile & security" %}</a>.</div>
+    <div class="alert alert-info mb-0">{% trans "This is your own account. Change your details and password in" %} <a href="{% url 'accounts:profile' %}">{% trans "Profile & security" %}</a>.</div>
+    {% elif not can_edit_details %}
+    <div class="alert alert-info mb-0">{% trans "You can view this account but not change it." %}</div>
     {% endif %}
-  </div>
+  </aside>
 </div>
 {% endblock %}
