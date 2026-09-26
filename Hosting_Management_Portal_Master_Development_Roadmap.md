@@ -876,7 +876,7 @@ Before marking any phase 🟢:
 | D3 Client Area Parity | 🟢 | 1480 ✅ | ✅ | CI crawler: 8 roles, new pages included, 0 broken; tabs and sidebar counts tested | 03ba01b | — |
 | D3b Modern look & Web Host Era brand (owner request) | 🟢 | 1517 ✅ | ✅ | crawler green; 35 customer pages x 3 widths 0 findings | ef7a6ce | — |
 | D4 Staff Area Parity + Phase 15 screens (D4a dashboard, search, audit log; D4b client profile tabs; D4c lists and bulk actions; D4d staff, email provider, registrar; D4e re-skin, legacy.css deleted) | 🟢 | 1668 ✅ | ✅ | crawler green (dashboard widgets followed via hx-get) | aab5715, 11a26c6, 4ea073a, 7e5f35b, 83cb778 (D4a-e) | — |
-| D6 Sign-in, application shell and Users area (owner request 2026-09-26: split-screen sign-in and sign-up, left rail + top bar + phone drawer/bottom bar generated from the registry, Users screens for every role, Technical Staff role) | 🟢 local (not deployed) | 1714 ✅ (PostgreSQL 17) | ✅ 609 pages x 6 roles x 3 widths, 0 findings | crawler green with a ninth role (technical staff) | — |
+| D6 Sign-in, application shell and Users area (owner request 2026-09-26: split-screen sign-in and sign-up, left rail + top bar + phone drawer/bottom bar generated from the registry, Users screens for every role, Technical Staff role) | 🟢 local (not deployed) | 1714 ✅ (PostgreSQL 17) | ✅ 609 pages x 6 roles x 3 widths, 0 findings | crawler green with a ninth role (technical staff) | 19c45ca |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
 ## Recommended order
