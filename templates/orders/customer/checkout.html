@@ -5,9 +5,31 @@
 {% block content %}
 <p class="mb-2"><a href="{% url 'orders_customer:cart' %}">&larr; {% trans "Back to cart" %}</a></p>
 <div class="page-head"><h1>{% trans "Checkout" %}</h1></div>
+{% include "orders/_steps.html" with step=2 %}
 
 <div class="row g-4">
   <div class="col-lg-7">
+    {% if guest %}
+    <form method="post" novalidate id="checkout-form">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+    <section class="card mb-3"><div class="card-body">
+      <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2">
+        <h2 class="h5 mb-0">{% trans "Your details" %}</h2>
+        <span class="small text-secondary">{% trans "Already have an account?" %} <a href="{{ login_url }}">{% trans "Sign in" %}</a></span>
+      </div>
+      <p class="text-secondary small mt-2">{% trans "We create your account with these details, so you can follow your order, pay and manage your services." %}</p>
+      <div class="row g-3">
+        {% include "orders/_field.html" with field=form.first_name %}
+        {% include "orders/_field.html" with field=form.last_name %}
+        {% include "orders/_field.html" with field=form.company_name %}
+        {% include "orders/_field.html" with field=form.email %}
+        {% include "orders/_field.html" with field=form.phone %}
+        {% include "orders/_field.html" with field=form.country %}
+        {% include "orders/_field.html" with field=form.password %}
+        {% include "orders/_field.html" with field=form.password_confirm %}
+      </div>
+    </div></section>
+    {% else %}
     <section class="card mb-3"><div class="card-body">
       <h2 class="h5">{% trans "Billing details" %}</h2>
       <p class="text-secondary">{% trans "These are copied onto your order. To change them, update your account first" %} &mdash; {% trans "your cart is kept." %}</p>
@@ -21,36 +43,38 @@
       </dl>
       <a class="btn btn-sm btn-outline-primary" href="{% url 'clients_customer:detail' client.pk %}">{% trans "Edit billing details" %}</a>
     </div></section>
-
     <form method="post" novalidate>{% csrf_token %}
+    {% endif %}
     <section class="card"><div class="card-body">
       <h2 class="h5">{% trans "Payment method" %}</h2>
-      {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+      {% if not guest and form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
       {% for error in form.payment_method.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
       {% for method in methods %}
         <div class="form-check border rounded p-3 mb-2 ps-5">
-          <input class="form-check-input" type="radio" name="payment_method" id="pm_{{ method.code }}" value="{{ method.code }}"{% if form.payment_method.value == method.code %} checked{% endif %}>
+          <input class="form-check-input" type="radio" name="payment_method" id="pm_{{ method.code }}" value="{{ method.code }}"{% if form.payment_method.value == method.code or forloop.first and not form.payment_method.value %} checked{% endif %}>
           <label class="form-check-label w-100" for="pm_{{ method.code }}"><strong>{{ method.name }}</strong>{% if method.instructions %}<br><small class="text-secondary">{{ method.instructions|linebreaksbr }}</small>{% endif %}</label>
         </div>
       {% empty %}
         <p class="text-danger">{% trans "No payment methods are available right now. Please contact support." %}</p>
       {% endfor %}
+      <p class="small text-secondary">{% trans "You pay after placing the order, following the instructions on the confirmation page. Nothing is charged now." %}</p>
       <div class="mb-3">
         <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
         {{ form.notes|bs_field }}
       </div>
-      <button class="btn btn-primary" type="submit"{% if not methods %} disabled{% endif %}>{% trans "Place order" %}</button>
+      <button class="btn btn-primary btn-lg w-100" type="submit"{% if not methods %} disabled{% endif %}>{% if guest %}{% trans "Create my account and place the order" %}{% else %}{% trans "Place order" %}{% endif %}</button>
+      {% if guest %}<p class="small text-secondary mt-2 mb-0">{% trans "By placing the order you create an account and agree to our terms of service and privacy policy." %}</p>{% endif %}
     </div></section>
     </form>
   </div>
 
   <div class="col-lg-5">
-    <section class="card"><div class="card-body">
-      <h2 class="h5">{% trans "Order summary" %}</h2>
+    <section class="card sticky-summary"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-baseline"><h2 class="h5">{% trans "Order summary" %}</h2><a class="small" href="{% url 'orders_customer:cart' %}">{% trans "Edit cart" %}</a></div>
       <ul class="list-group list-group-flush mb-3">
-        {% for line in priced.lines %}<li class="list-group-item d-flex justify-content-between px-0"><span>{{ line.description }}</span><span>{{ line.total|money:priced.currency }}</span></li>{% endfor %}
+        {% for line in priced.lines %}<li class="list-group-item d-flex justify-content-between gap-3 px-0"><span>{{ line.description }}</span><span class="text-nowrap">{{ line.total|money:priced.currency }}</span></li>{% endfor %}
       </ul>
-      {% include "orders/_totals.html" with currency=priced.currency subtotal=priced.subtotal discount_total=priced.discount_total coupon_code=priced.coupon.code tax_name=priced.tax_rule.name tax_rate=priced.tax_rate tax_total=priced.tax_total total=priced.total %}
+      {% include "orders/_totals.html" with currency=priced.currency subtotal=priced.subtotal discount_total=priced.discount_total coupon_code=priced.coupon.code tax_name=priced.tax_rule.name tax_rate=priced.tax_rate tax_total=priced.tax_total total=priced.total tax_pending=priced.tax_pending %}
       {% if not priced.is_valid %}<p class="text-danger mb-0">{% trans "Something in your cart needs attention." %} <a href="{% url 'orders_customer:cart' %}">{% trans "Review your cart" %}</a>.</p>{% endif %}
     </div></section>
   </div>

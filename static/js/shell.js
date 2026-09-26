@@ -203,6 +203,16 @@
     doc.querySelectorAll("[data-currency-code]").forEach(function (el) { el.textContent = select.value; });
   });
 
+  // --- Checkout: choosing a country re-shows the totals with tax (the form is posted back; what was typed is kept) -----------
+  doc.addEventListener("change", function (event) {
+    var select = event.target.closest("select[data-refresh]");
+    if (!select || !select.form) { return; }
+    var flag = doc.createElement("input");
+    flag.type = "hidden"; flag.name = "action"; flag.value = "refresh";
+    select.form.appendChild(flag);
+    select.form.submit();
+  });
+
   // --- Generate a strong password in the browser (never sent anywhere until the form is submitted) -------------------------
   doc.addEventListener("click", function (event) {
     var button = event.target.closest("[data-generate-password]");

@@ -10,6 +10,14 @@ def fulfil_order_task(order_id):
 
 
 @shared_task
+def purge_guest_carts_task():
+    """Daily: delete visitors' carts nobody touched for 30 days."""
+    from . import services
+
+    return services.purge_guest_carts()
+
+
+@shared_task
 def sweep_stuck_orders_task():
     """Every few minutes: pick up paid orders that were never fulfilled and reset ones stuck mid-way."""
     return fulfilment.sweep()

@@ -17,7 +17,7 @@ from django.core.exceptions import ValidationError
 
 from apps.billing.calculations import ZERO, discount_amount, money, tax_amount
 from apps.billing.models import Coupon, TaxRule
-from apps.billing.services import tax_rule_for_client
+from apps.billing.services import tax_rule_for_client, tax_rule_for_country
 from apps.core.exceptions import ServiceError
 from apps.core.web import error_text
 from apps.domains import services as domain_services
@@ -66,6 +66,7 @@ class PricedCart:
     tax_total: Decimal = ZERO
     total: Decimal = ZERO
     errors: list = field(default_factory=list)
+    tax_pending: bool = False  # a guest cart: the tax depends on the country, which is asked at checkout
 
     @property
     def is_valid(self):
@@ -189,7 +190,7 @@ def coupon_usage(coupon):
 
 
 def evaluate_coupon(coupon, client, subtotal):
-    """The discount ``coupon`` gives ``client`` on ``subtotal``, or raise ``ServiceError``."""
+    """The discount ``coupon`` gives ``client`` (None for a visitor who has no account yet) on ``subtotal``, or raise."""
     try:
         coupon.check_window()
     except ValueError as exc:
@@ -199,14 +200,14 @@ def evaluate_coupon(coupon, client, subtotal):
     usage = coupon_usage(coupon)
     if coupon.max_redemptions is not None and usage.count() >= coupon.max_redemptions:
         raise ServiceError("This coupon has reached its usage limit.", code="coupon_invalid")
-    if coupon.one_per_client and usage.filter(client=client).exists():
+    if coupon.one_per_client and client is not None and usage.filter(client=client).exists():
         raise ServiceError("You have already used this coupon.", code="coupon_invalid")
     return money(coupon.amount_for(subtotal))
 
 
 # --- The whole cart -----------------------------------------------------------------------
 
-def price_cart(cart, *, strict=False, verify_availability=False):
+def price_cart(cart, *, strict=False, verify_availability=False, country=""):
     """
     Price every line, then apply the coupon and tax.
 
@@ -214,6 +215,9 @@ def price_cart(cart, *, strict=False, verify_availability=False):
     error and the cart still prices what it can. Strict (checkout): any problem
     raises ``ServiceError`` so an order can only ever be built from a fully
     valid cart.
+
+    A guest cart has no client yet: the coupon is checked without the once-per-client rule (checkout checks it against the new
+    account) and tax is worked out from ``country`` when the visitor has chosen one, else marked pending.
     """
     items = list(cart.items.select_related("product", "addon", "parent").order_by("id"))
     if strict and not items:
@@ -244,7 +248,11 @@ def price_cart(cart, *, strict=False, verify_availability=False):
             priced.coupon_error = exc.message
 
     taxable = priced.subtotal - priced.discount_total
-    priced.tax_rule = tax_rule_for_client(cart.client)
+    if cart.client_id is None:
+        priced.tax_rule = tax_rule_for_country(country) if country else None
+        priced.tax_pending = not country
+    else:
+        priced.tax_rule = tax_rule_for_client(cart.client)
     if priced.tax_rule:
         priced.tax_rate = priced.tax_rule.rate
         priced.tax_total = tax_amount(taxable, priced.tax_rule.rate)

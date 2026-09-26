@@ -5,6 +5,7 @@ Order reactions to billing events, plus the hooks later phases attach to.
 (fulfilment/provisioning) subscribes to it instead of billing calling into
 provisioning.
 """
+from django.contrib.auth.signals import user_logged_in
 from django.dispatch import Signal, receiver
 
 from apps.billing.signals import invoice_cancelled, invoice_paid
@@ -13,6 +14,16 @@ from . import lifecycle
 from .models import Order, OrderStatus
 
 order_paid = Signal()
+
+
+@receiver(user_logged_in)
+def claim_guest_cart(sender, request, user, **kwargs):
+    """Someone who filled a cart before signing in keeps it: its selections join their account's cart."""
+    if request is None or not hasattr(request, "session"):
+        return
+    from . import guest
+
+    guest.claim(request, user)
 
 
 @receiver(invoice_paid)

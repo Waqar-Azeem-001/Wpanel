@@ -23,9 +23,9 @@ def _place(client, shop, **extra):
 
 # --- Public catalogue pages lead into the cart --------------------------------------------------------
 
-def test_plan_page_offers_ordering_only_to_signed_in_users(client, owner, shop):
+def test_plan_page_offers_ordering_to_everyone(client, owner, shop):
     anonymous = client.get(f"/products/{shop['product'].slug}/")
-    assert b"to order" in anonymous.content and b"cart/add/hosting" not in anonymous.content
+    assert b'action="/cart/add/hosting/"' in anonymous.content and b"do not need an account" in anonymous.content
 
     client.force_login(owner)
     page = client.get(f"/products/{shop['product'].slug}/")
@@ -43,10 +43,10 @@ def test_domain_search_offers_add_to_cart(client, owner, shop):
 
 # --- Cart pages ------------------------------------------------------------------------------------------
 
-def test_cart_pages_require_login(client):
-    for path in ("/cart/", "/checkout/", "/account/orders/"):
-        assert client.get(path).status_code == 302
-    assert client.post("/cart/add/hosting/", {}).status_code == 302
+def test_only_the_orders_list_requires_login(client):
+    assert client.get("/account/orders/").status_code == 302
+    assert client.get("/cart/").status_code == 200  # a visitor may look at (and fill) a cart
+    assert client.get("/checkout/").status_code == 302  # an empty cart goes back to the cart
 
 
 def test_a_user_with_no_client_is_told_ordering_is_for_customers(client, manager):

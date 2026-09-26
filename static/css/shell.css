@@ -544,3 +544,15 @@ body.auth-body { display: block; background: var(--bg); }
 .canvas .alert { border-radius: var(--radius-panel); padding: .8rem 1.1rem; }
 .canvas .alert > p:last-child, .canvas .alert > :last-child { margin-bottom: 0; }
 .canvas .page-head + .alert, .canvas .page-head + form { margin-top: 0; }
+
+/* --- Cart and checkout: the steps, the upgrade suggestion, a summary that stays in view ------------------------------------- */
+.steps { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 0 0 1.25rem; padding: 0; list-style: none; font-size: .875rem; color: var(--muted); }
+.steps li { display: inline-flex; align-items: center; gap: .5rem; }
+.steps-n { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 1px solid var(--border-strong); font-size: .75rem; font-weight: 600; }
+.steps li.is-current { color: var(--text); font-weight: 600; }
+.steps li.is-current .steps-n { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.steps li.is-done .steps-n { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent-ink); }
+.upsell-row > td { background: var(--accent-subtle); border-top: 0; }
+.sticky-summary { position: sticky; top: calc(var(--topbar-h, 3.5rem) + 4.5rem); }
+@media (max-width: 991.98px) { .sticky-summary { position: static; } }
+.cart-table td[data-label]::before { margin-right: .5rem; }

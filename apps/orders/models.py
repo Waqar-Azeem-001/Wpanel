@@ -32,10 +32,18 @@ class ItemKind(models.TextChoices):
 
 
 class Cart(TimeStampedModel):
-    """One open cart per (user, client); the client is the account the order will belong to."""
+    """
+    One open cart per (user, client); the client is the account the order will belong to.
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="carts")
-    client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="carts")
+    A visitor who has not signed in has a *guest cart*: no user and no client, only a ``guest_token`` kept in their session.
+    When they sign in or create an account at checkout, its selections move into their own cart and the guest cart is
+    deleted. A guest cart holds selections only, like every cart, so nothing about it can change a price.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE,
+                             related_name="carts")
+    client = models.ForeignKey("clients.Client", null=True, blank=True, on_delete=models.CASCADE, related_name="carts")
+    guest_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     status = models.CharField(max_length=16, choices=CartStatus.choices, default=CartStatus.OPEN, db_index=True)
     coupon = models.ForeignKey("billing.Coupon", null=True, blank=True, on_delete=models.SET_NULL,
                                related_name="carts")
@@ -48,7 +56,11 @@ class Cart(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"Cart {self.pk} ({self.user})"
+        return f"Cart {self.pk} ({self.user or 'guest'})"
+
+    @property
+    def is_guest(self):
+        return self.user_id is None
 
 
 class CartItem(TimeStampedModel):

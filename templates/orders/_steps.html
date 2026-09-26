@@ -1,0 +1,6 @@
+{% load i18n %}
+<ol class="steps" aria-label="{% trans 'Order progress' %}">
+  <li class="{% if step == 1 %}is-current{% else %}is-done{% endif %}"{% if step == 1 %} aria-current="step"{% endif %}><span class="steps-n">1</span> {% trans "Cart" %}</li>
+  <li class="{% if step == 2 %}is-current{% elif step > 2 %}is-done{% endif %}"{% if step == 2 %} aria-current="step"{% endif %}><span class="steps-n">2</span> {% trans "Details and payment" %}</li>
+  <li class="{% if step == 3 %}is-current{% endif %}"{% if step == 3 %} aria-current="step"{% endif %}><span class="steps-n">3</span> {% trans "Confirmation" %}</li>
+</ol>

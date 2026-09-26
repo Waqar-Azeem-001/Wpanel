@@ -30,16 +30,11 @@
       </div>
       <div class="text-end">
         <div class="fs-3 fw-bold">{{ result.pricing.register_price|money:STORE_CURRENCY }} <small class="fs-6 fw-normal text-secondary">/ {% trans "year" %}</small></div>
-        {% if user.is_authenticated %}
-          <form method="post" action="{% url 'orders_customer:cart_add_domain' %}" class="mt-2">{% csrf_token %}
-            <input type="hidden" name="domain" value="{{ result.domain }}">
-            <input type="hidden" name="years" value="{{ result.years }}">
-            <button class="btn btn-primary" type="submit">{% trans "Add to cart" %} ({{ result.years }} year{{ result.years|pluralize }})</button>
-          </form>
-        {% else %}
-          <p class="mb-0 mt-2"><a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">{% trans "Sign in" %}</a> {% trans "or" %}
-            <a href="{% url 'accounts:register' %}">{% trans "create an account" %}</a> {% trans "to order it." %}</p>
-        {% endif %}
+        <form method="post" action="{% url 'orders_customer:cart_add_domain' %}" class="mt-2">{% csrf_token %}
+          <input type="hidden" name="domain" value="{{ result.domain }}">
+          <input type="hidden" name="years" value="{{ result.years }}">
+          <button class="btn btn-primary" type="submit">{% trans "Add to cart" %} ({{ result.years }} year{{ result.years|pluralize }})</button>
+        </form>
       </div>
     </div>
   {% else %}

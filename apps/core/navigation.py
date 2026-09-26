@@ -58,6 +58,8 @@ ITEMS = [
     item("public.plans", _("Plans"), "catalog:product_list", areas=("public",)),
     item("public.domains", _("Domains"), "domains_public:search", areas=("public",)),
     item("public.help", _("Help"), "help:index", areas=("public",)),
+    item("public.cart", _("Cart"), "orders_customer:cart", areas=("public",), position="right", badge="cart", icon="bi-cart",
+         requires="anonymous"),
     item("public.login", _("Sign in"), "accounts:login", areas=("public",), position="right", requires="anonymous"),
     item("public.register", _("Create account"), "accounts:register", areas=("public",), position="right",
          requires="anonymous"),
@@ -304,7 +306,7 @@ def build(request, area):
     has_client = authenticated and not user.is_staff and user.client_contacts.exists()
 
     def leaf(entry):
-        badge = BADGES[entry.badge](request) if entry.badge and authenticated else 0
+        badge = BADGES[entry.badge](request) if entry.badge else 0
         return Entry(key=entry.key, label=_label(entry, user), url=reverse(entry.url_name),
                      active=entry.url_name == current_name, badge=badge, icon=entry.icon,
                      divider_before=entry.divider_before, section=str(entry.section), mobile_tab=entry.mobile_tab,

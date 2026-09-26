@@ -27,7 +27,6 @@
   </div>
   {% if prices %}
   <h2 class="h5">{% trans "Order this plan" %}</h2>
-  {% if user.is_authenticated %}
   <form method="post" action="{% url 'orders_customer:cart_add_hosting' %}" class="row g-2 align-items-end">{% csrf_token %}
     <input type="hidden" name="product" value="{{ product.pk }}">
     <div class="col-md-4">
@@ -42,11 +41,20 @@
     </div>
     <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Add to cart" %}</button></div>
   </form>
-  <p class="text-secondary mt-3 mb-0">{% trans "Don't have a domain yet?" %} <a href="{% url 'domains_public:search' %}">{% trans "Search for one" %}</a> {% trans "and add it to the same cart." %}</p>
-  {% else %}
-  <p class="mb-0"><a class="btn btn-primary" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">{% trans "Sign in" %}</a> {% trans "or" %}
-    <a href="{% url 'accounts:register' %}">{% trans "create an account" %}</a> {% trans "to order." %}</p>
+  <p class="text-secondary mt-3 mb-0">{% trans "Don't have a domain yet?" %} <a href="{% url 'domains_public:search' %}">{% trans "Search for one" %}</a> {% trans "and add it to the same cart." %} {% trans "You do not need an account to fill your cart; you create one at checkout." %}</p>
   {% endif %}
+  {% if recommended_addons %}
+  <hr>
+  <h2 class="h5">{% trans "Works well with this plan" %}</h2>
+  <ul class="list-unstyled mb-0">{% for addon in recommended_addons %}<li class="py-1"><strong>{{ addon.name }}</strong>{% if addon.description %} <span class="text-secondary">&mdash; {{ addon.description|truncatechars:110 }}</span>{% endif %}</li>{% endfor %}</ul>
+  <p class="small text-secondary mb-0">{% trans "You can add these in your cart." %}</p>
+  {% endif %}
+  {% if upsell %}
+  <hr>
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span><strong>{% trans "Need more room?" %}</strong> <span class="text-secondary">{{ upsell.name }} {% trans "is the next step up." %}</span></span>
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'catalog:product_detail' upsell.slug %}">{% trans "See" %} {{ upsell.name }}</a>
+  </div>
   {% endif %}
 </div></section>
 {% endblock %}

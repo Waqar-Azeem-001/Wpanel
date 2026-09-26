@@ -6,6 +6,8 @@
   {% endif %}
   {% if tax_name %}
   <tr><th class="fw-normal text-secondary">{{ tax_name }} ({{ tax_rate }}%)</th><td class="text-end">{{ tax_total|money:currency }}</td></tr>
+  {% elif tax_pending %}
+  <tr><th class="fw-normal text-secondary">{% trans "Tax" %}</th><td class="text-end text-secondary">{% trans "worked out at checkout" %}</td></tr>
   {% endif %}
   <tr class="fw-bold"><th>{% trans "Total due now" %}</th><td class="text-end">{{ total|money:currency }}</td></tr>
 </table>

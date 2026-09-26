@@ -45,6 +45,11 @@ class ProductForm(forms.Form):
     whm_package_name = forms.CharField(max_length=100, required=False, label="WHM package name")
     auto_setup = forms.BooleanField(required=False, initial=True, label="Auto-provision on payment")
     default_auto_renew = forms.BooleanField(required=False, initial=True, label="Auto-renew by default")
+    upsell_product = forms.ModelChoiceField(queryset=Product.objects.all(), required=False, label="Suggest this bigger plan",
+                                            help_text="Shown in the cart as an upgrade to the same domain and billing cycle.")
+    recommended_addons = forms.ModelMultipleChoiceField(
+        queryset=Addon.objects.all(), required=False, widget=forms.CheckboxSelectMultiple, label="Recommended add-ons",
+        help_text="Highlighted first in the cart and on the plan page.")
 
 
 class ProductStatusForm(forms.Form):

@@ -68,7 +68,10 @@ def public_addon_list(request):
 def public_product_detail(request, slug):
     product = get_object_or_404(Product.objects.prefetch_related("prices"), slug=slug, status=CatalogStatus.ACTIVE)
     prices = product.prices.filter(is_active=True)
-    return render(request, "products/public/detail.html", {"product": product, "prices": prices})
+    upsell = product.upsell_product if product.upsell_product and product.upsell_product.status == CatalogStatus.ACTIVE else None
+    recommended = product.recommended_addons.filter(status=CatalogStatus.ACTIVE)
+    return render(request, "products/public/detail.html", {"product": product, "prices": prices, "upsell": upsell,
+                                                           "recommended_addons": recommended})
 
 
 # --- Staff: products ---------------------------------------------------------------------
@@ -125,8 +128,10 @@ def staff_product_edit(request, slug):
         "name": product.name, "type": product.type, "description": product.description,
         "resource_limits": product.resource_limits, "whm_package_name": product.whm_package_name,
         "auto_setup": product.auto_setup, "default_auto_renew": product.default_auto_renew,
+        "upsell_product": product.upsell_product_id, "recommended_addons": list(product.recommended_addons.all()),
     }
     form = forms.ProductForm(request.POST or None, initial=initial)
+    form.fields["upsell_product"].queryset = Product.objects.exclude(pk=product.pk)
     if request.method == "POST" and form.is_valid():
         try:
             services.update_product(request.user, product, form.cleaned_data, request=request)

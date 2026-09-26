@@ -6,6 +6,7 @@ name what it wants (a product, a cycle, a domain), never what it costs.
 from django import forms
 
 from apps.billing.models import PaymentMethod
+from apps.core.countries import COUNTRIES
 from apps.products.models import STANDARD_CYCLE_MONTHS, BillingCycle, CatalogStatus, Product, decode_option
 
 from .models import OrderStatus
@@ -59,6 +60,31 @@ class CheckoutForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["payment_method"].choices = [(m.code, m.name) for m in PaymentMethod.objects.filter(
             is_active=True)]
+
+
+class GuestCheckoutForm(CheckoutForm):
+    """A visitor checking out: who they are (this creates their account), where they are (for tax), and how they will pay."""
+
+    first_name = forms.CharField(max_length=150)
+    last_name = forms.CharField(max_length=150, required=False)
+    company_name = forms.CharField(max_length=200, required=False, label="Company (optional)")
+    email = forms.EmailField(widget=forms.EmailInput(attrs={"autocomplete": "email"}))
+    phone = forms.CharField(max_length=32, required=False)
+    country = forms.ChoiceField(choices=[("", "Choose your country"), *COUNTRIES],
+                                widget=forms.Select(attrs={"data-refresh": ""}),
+                                help_text="Used for tax. The total updates when you change it.")
+    password = forms.CharField(widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}), label="Choose a password",
+                               help_text="At least 10 characters. Avoid common words and your email address.")
+    password_confirm = forms.CharField(label="Confirm password",
+                                       widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
+    field_order = ["first_name", "last_name", "company_name", "email", "phone", "country", "password", "password_confirm",
+                   "payment_method", "notes"]
+
+    def clean(self):
+        data = super().clean()
+        if data.get("password") and data.get("password") != data.get("password_confirm"):
+            self.add_error("password_confirm", "Passwords do not match.")
+        return data
 
 
 class CancelOrderForm(forms.Form):

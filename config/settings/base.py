@@ -274,6 +274,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.lifecycle.tasks.run_lifecycle_task",
         "schedule": crontab(hour=5, minute=0),
     },
+    "purge-guest-carts": {
+        "task": "apps.orders.tasks.purge_guest_carts_task",
+        "schedule": crontab(hour=4, minute=45),
+    },
     "retry-stuck-emails": {
         "task": "apps.notifications.tasks.retry_stuck_emails_task",
         "schedule": crontab(minute="*/10"),

@@ -16,6 +16,7 @@ from .models import Addon, AddonPrice, CatalogStatus, Product, ProductPrice, Ser
 
 PRODUCT_FIELDS = (
     "name", "description", "type", "resource_limits", "whm_package_name", "auto_setup", "default_auto_renew",
+    "upsell_product",
 )
 ADDON_FIELDS = ("name", "description")
 SERVER_FIELDS = ("name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
@@ -140,6 +141,8 @@ def create_product(actor, data, *, request=None):
             setattr(product, field, data[field])
     product.full_clean()
     product.save()
+    if "recommended_addons" in data:
+        product.recommended_addons.set(data["recommended_addons"])
     audit.record("product.created", actor=actor, target=product, metadata={"type": product.type}, request=request)
     return product
 
@@ -148,10 +151,15 @@ def create_product(actor, data, *, request=None):
 def update_product(actor, product, data, *, request=None):
     _require(actor, "manage_products")
     changed = _apply(product, data, PRODUCT_FIELDS)
-    if not changed:
+    addons_changed = ("recommended_addons" in data
+                      and set(a.pk for a in data["recommended_addons"]) != set(product.recommended_addons.values_list("pk", flat=True)))
+    if not changed and not addons_changed:
         return product
     product.full_clean()
     product.save()
+    if addons_changed:
+        product.recommended_addons.set(data["recommended_addons"])
+        changed["recommended_addons"] = True
     audit.record("product.updated", actor=actor, target=product, metadata={"fields": sorted(changed)}, request=request)
     return product
 

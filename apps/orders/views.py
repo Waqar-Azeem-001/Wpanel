@@ -1,20 +1,24 @@
 """Server-rendered cart, checkout and order pages (customer and staff). Rules live in ``services``/``pricing``."""
 from django.contrib import messages
-from django.urls import reverse
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.urls import reverse
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts import services as accounts_services
 from apps.accounts.roles import perm
 from apps.billing.models import PaymentMethod
+from apps.clients import services as client_services
 from apps.clients.services import single_contact_client
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, query_id, run_action
 from apps.products.models import Addon, CatalogStatus, Product
 
-from . import forms, lifecycle, pricing, services, staff_actions
+from . import forms, guest, lifecycle, pricing, services, staff_actions
 from .models import CartItem, ItemKind, Order, OrderStatus
 
 
@@ -32,9 +36,11 @@ def _client_or_error(request):
 
 
 # --- Cart --------------------------------------------------------------------------------------
+# Anyone can shop: a visitor's cart is a guest cart kept in their session (see ``guest``), a signed-in customer's is their own.
+# Only checkout asks who they are, and it can create the account in the same step.
 
-def _addon_offers(priced):
-    """For each hosting line: the active add-ons (and the prices) that can still be attached to it."""
+def _addon_offers(priced, recommended=frozenset()):
+    """For each hosting line: the active add-ons (and the prices) that can still be attached to it, recommended ones first."""
     addons = list(Addon.objects.filter(status=CatalogStatus.ACTIVE).prefetch_related("prices"))
     attached = {}
     for line in priced.lines:
@@ -50,129 +56,167 @@ def _addon_offers(priced):
                 continue
             rows = services.addon_options(line.item, addon)
             if rows:
-                options.append({"addon": addon, "choices": [{
+                options.append({"addon": addon, "recommended": addon.pk in recommended, "choices": [{
                     "value": row.option_value, "price": row.price, "setup_fee": row.setup_fee,
                     "label": "One-time" if row.billing_cycle == "one_time" else pricing.cycle_label(
                         row.billing_cycle, row.custom_months),
                 } for row in rows]})
+        options.sort(key=lambda o: (not o["recommended"], o["addon"].name))
         offers[line.item.pk] = options
     return offers
 
 
-@login_required
+def _shopper(request, *, create=False):
+    """
+    (actor, client, cart) for whoever is shopping: a signed-in customer (their own cart is fetched by the services), or a visitor
+    (a guest cart, created on first add when ``create``). Staff and customers with no single account cannot shop here.
+    """
+    if request.user.is_authenticated:
+        return request.user, _client_or_error(request), None
+    return None, None, (guest.current_or_create(request) if create else guest.current(request))
+
+
+def _current_cart(request):
+    """The cart being looked at, or None (an empty visitor). Raises nothing for a visitor; a customer with no account is sent away."""
+    if request.user.is_authenticated:
+        client = single_contact_client(request.user)
+        return services.get_open_cart(request.user, client) if client is not None else False
+    return guest.current(request)
+
+
 def cart_view(request):
-    client = single_contact_client(request.user)
-    if client is None:
+    cart = _current_cart(request)
+    if cart is False:
         return render(request, "orders/customer/cart_unavailable.html")
-    cart = services.get_open_cart(request.user, client)
-    priced = pricing.price_cart(cart)
-    offers = _addon_offers(priced)
-    rows = [{"line": line, "offers": offers.get(line.item.pk, [])} for line in priced.lines]
+    country = request.GET.get("country", "").strip().upper()[:2]
+    if cart is None:
+        return render(request, "orders/customer/cart.html", {"rows": [], "guest": True})
+    priced = pricing.price_cart(cart, country=country)
+    offers = _addon_offers(priced, services.recommended_addon_ids(cart))
+    rows = [{"line": line, "offers": offers.get(line.item.pk, []),
+             "upgrade": services.upgrade_options(line.item) if line.ok else None} for line in priced.lines]
     return render(request, "orders/customer/cart.html", {
         "cart": cart, "priced": priced, "rows": rows, "coupon_form": forms.CouponCodeForm(),
-        "transfer_form": forms.AddTransferForm(),
-    })
+        "transfer_form": forms.AddTransferForm(), "guest": cart.is_guest,
+        "domain_offers": services.domain_offers(cart, priced)})
+
+
+def _add(request, form, add, message):
+    """Run one add-to-cart action for a customer or a visitor, then show the cart."""
+
+    def action():
+        actor, client, cart = _shopper(request, create=True)
+        if not form.is_valid():
+            raise ServiceError(_form_error(form))
+        add(actor, client, cart)
+        return message
+
+    return run_action(request, action, "orders_customer:cart")
 
 
 @require_POST
-@login_required
 def cart_add_hosting(request):
     form = forms.AddHostingForm(request.POST)
 
-    def action():
-        client = _client_or_error(request)
-        if not form.is_valid():
-            raise ServiceError(_form_error(form))
+    def add(actor, client, cart):
         product = Product.objects.filter(pk=form.cleaned_data["product"], status=CatalogStatus.ACTIVE).first()
         if product is None:
             raise ServiceError("This plan is no longer available.", code="product_unavailable")
         cycle, months = form.cleaned_data["cycle"]
-        services.add_hosting(request.user, client, product, form.cleaned_data["domain"], cycle, months)
-        return "Added to your cart."
+        services.add_hosting(actor, client, product, form.cleaned_data["domain"], cycle, months, cart=cart)
 
-    return run_action(request, action, "orders_customer:cart")
+    return _add(request, form, add, "Added to your cart.")
 
 
 @require_POST
-@login_required
 def cart_add_domain(request):
     form = forms.AddDomainForm(request.POST)
-
-    def action():
-        client = _client_or_error(request)
-        if not form.is_valid():
-            raise ServiceError(_form_error(form))
-        services.add_domain_registration(request.user, client, form.cleaned_data["domain"], form.cleaned_data["years"])
-        return "Domain added to your cart."
-
-    return run_action(request, action, "orders_customer:cart")
+    return _add(request, form, lambda actor, client, cart: services.add_domain_registration(
+        actor, client, form.cleaned_data["domain"], form.cleaned_data["years"], cart=cart), "Domain added to your cart.")
 
 
 @require_POST
-@login_required
 def cart_add_transfer(request):
     form = forms.AddTransferForm(request.POST)
+    return _add(request, form, lambda actor, client, cart: services.add_domain_transfer(
+        actor, client, form.cleaned_data["domain"], form.cleaned_data["auth_code"], cart=cart), "Transfer added to your cart.")
 
-    def action():
-        client = _client_or_error(request)
-        if not form.is_valid():
-            raise ServiceError(_form_error(form))
-        services.add_domain_transfer(request.user, client, form.cleaned_data["domain"], form.cleaned_data["auth_code"])
-        return "Transfer added to your cart."
 
-    return run_action(request, action, "orders_customer:cart")
+def _own_items(request):
+    """The cart items this shopper may act on: their own cart's, or the visitor's guest cart's."""
+    if request.user.is_authenticated:
+        return CartItem.objects.filter(cart__user=request.user)
+    cart = guest.current(request)
+    return CartItem.objects.filter(cart=cart) if cart is not None else CartItem.objects.none()
 
 
 @require_POST
-@login_required
 def cart_add_addon(request):
     form = forms.AddAddonForm(request.POST)
 
     def action():
         if not form.is_valid():
             raise ServiceError(_form_error(form))
-        parent = get_object_or_404(CartItem.objects.filter(cart__user=request.user), pk=form.cleaned_data["parent_item"])
+        parent = get_object_or_404(_own_items(request), pk=form.cleaned_data["parent_item"])
         addon = get_object_or_404(Addon, pk=form.cleaned_data["addon"])
         cycle, months = form.cleaned_data["option"] or (None, 0)
-        services.add_addon(request.user, parent, addon, cycle, months)
+        services.add_addon(request.user if request.user.is_authenticated else None, parent, addon, cycle, months)
         return "Add-on added."
 
     return run_action(request, action, "orders_customer:cart")
 
 
 @require_POST
-@login_required
 def cart_remove(request, pk):
-    item = get_object_or_404(CartItem.objects.filter(cart__user=request.user), pk=pk)
+    item = get_object_or_404(_own_items(request), pk=pk)
 
     def action():
-        services.remove_item(request.user, item)
+        services.remove_item(request.user if request.user.is_authenticated else None, item)
         return "Removed from your cart."
 
     return run_action(request, action, "orders_customer:cart")
 
 
 @require_POST
-@login_required
+def cart_upgrade(request, pk):
+    """The upsell: swap this plan for the bigger one staff suggested, keeping the domain, cycle and add-ons."""
+    item = get_object_or_404(_own_items(request).select_related("cart", "product"), pk=pk)
+
+    def action():
+        services.upgrade_item(request.user if request.user.is_authenticated else None, item, request=request)
+        return f"Upgraded to {item.product.name}."
+
+    return run_action(request, action, "orders_customer:cart")
+
+
+def _coupon_target(request):
+    cart = _current_cart(request)
+    if cart is False:
+        raise ServiceError("Ordering is available to customer accounts.", code="client_required")
+    if cart is None:
+        raise ServiceError("Your cart is empty.", code="cart_empty")
+    return request.user if request.user.is_authenticated else None, cart
+
+
+@require_POST
 def cart_coupon(request):
     form = forms.CouponCodeForm(request.POST)
 
     def action():
-        client = _client_or_error(request)
+        actor, cart = _coupon_target(request)
         if not form.is_valid():
             raise ServiceError(_form_error(form))
-        services.apply_coupon(request.user, services.get_open_cart(request.user, client), form.cleaned_data["code"])
+        services.apply_coupon(actor, cart, form.cleaned_data["code"])
         return "Coupon applied."
 
     return run_action(request, action, "orders_customer:cart")
 
 
 @require_POST
-@login_required
 def cart_coupon_remove(request):
     def action():
-        client = _client_or_error(request)
-        services.remove_coupon(request.user, services.get_open_cart(request.user, client))
+        actor, cart = _coupon_target(request)
+        services.remove_coupon(actor, cart)
         return "Coupon removed."
 
     return run_action(request, action, "orders_customer:cart")
@@ -180,8 +224,14 @@ def cart_coupon_remove(request):
 
 # --- Checkout ------------------------------------------------------------------------------------
 
-@login_required
+def _payment_methods():
+    return PaymentMethod.objects.filter(is_active=True)
+
+
 def checkout_view(request):
+    """A signed-in customer confirms and pays; a visitor gives their details and gets an account in the same step."""
+    if not request.user.is_authenticated:
+        return _guest_checkout(request)
     client = single_contact_client(request.user)
     if client is None:
         return render(request, "orders/customer/cart_unavailable.html")
@@ -202,9 +252,61 @@ def checkout_view(request):
             messages.success(request, f"Order {order.reference} placed. Follow the payment instructions below.")
             return redirect("orders_customer:detail", pk=order.pk)
     return render(request, "orders/customer/checkout.html", {
-        "cart": cart, "priced": priced, "form": form, "client": client,
-        "methods": PaymentMethod.objects.filter(is_active=True),
-    })
+        "cart": cart, "priced": priced, "form": form, "client": client, "guest": False, "methods": _payment_methods()})
+
+
+def _guest_checkout(request):
+    cart = guest.current(request)
+    if cart is None or not cart.items.exists():
+        messages.info(request, "Your cart is empty.")
+        return redirect("orders_customer:cart")
+    posted = request.method == "POST"
+    refresh = posted and request.POST.get("action") == "refresh"  # only the country changed: show the tax, keep what was typed
+    country = (request.POST.get("country") if posted else request.GET.get("country", "")) or ""
+    priced = pricing.price_cart(cart, country=country.strip().upper()[:2])
+    if refresh:
+        form = forms.GuestCheckoutForm(initial={k: v for k, v in request.POST.items() if "password" not in k})
+    else:
+        form = forms.GuestCheckoutForm(request.POST if posted else None, initial={"country": country})
+    if posted and not refresh and form.is_valid():
+        data = form.cleaned_data
+        try:
+            pricing.price_cart(cart, strict=True, verify_availability=True)  # refuse a bad cart before any account exists
+            user = accounts_services.register_user(
+                email=data["email"], password=data["password"], first_name=data["first_name"],
+                last_name=data["last_name"], phone=data["phone"], company_name=data["company_name"],
+                referral_code=request.COOKIES.get("wp_ref", ""), request=request)
+        except ServiceError as exc:
+            if exc.code == "email_taken":
+                form.add_error("email", "An account with this email already exists. Sign in to use it, and your cart comes with you.")
+            else:
+                apply_form_error(form, exc)
+        except ValidationError as exc:
+            form.add_error("password", exc)
+        else:
+            return _finish_guest_checkout(request, user, data)
+    return render(request, "orders/customer/checkout.html", {
+        "cart": cart, "priced": priced, "form": form, "guest": True, "methods": _payment_methods(),
+        "login_url": f"{reverse('accounts:login')}?next={reverse('orders_customer:checkout')}"})
+
+
+def _finish_guest_checkout(request, user, data):
+    """The account exists: sign in (which brings the cart across), record the country, and place the order."""
+    login(request, user)  # the sign-in signal moves the guest cart into the new account's cart
+    client = single_contact_client(user)
+    try:
+        client_services.update_client(user, client, {"country": data["country"], "phone": data["phone"]}, request=request)
+        cart = services.get_open_cart(user, client)
+        order = services.checkout(user, cart, payment_method_code=data["payment_method"], notes=data["notes"], request=request)
+    except ACTION_ERRORS as exc:
+        messages.error(request, f"Your account was created, but the order was not placed: {error_text(exc)} "
+                                "Your cart is kept; fix it and check out again.")
+        return redirect("orders_customer:cart")
+    messages.success(request, f"Welcome! Your account is ready and order {order.reference} is placed. Check your inbox to verify "
+                              "your email address, and follow the payment instructions below.")
+    response = redirect("orders_customer:detail", pk=order.pk)
+    response.delete_cookie("wp_ref")
+    return response
 
 
 # --- Customer orders ----------------------------------------------------------------------------------

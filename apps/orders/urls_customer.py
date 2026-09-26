@@ -12,6 +12,7 @@ urlpatterns = [
     path("cart/add/transfer/", views.cart_add_transfer, name="cart_add_transfer"),
     path("cart/add/addon/", views.cart_add_addon, name="cart_add_addon"),
     path("cart/items/<int:pk>/remove/", views.cart_remove, name="cart_remove"),
+    path("cart/items/<int:pk>/upgrade/", views.cart_upgrade, name="cart_upgrade"),
     path("cart/coupon/", views.cart_coupon, name="cart_coupon"),
     path("cart/coupon/remove/", views.cart_coupon_remove, name="cart_coupon_remove"),
     path("checkout/", views.checkout_view, name="checkout"),

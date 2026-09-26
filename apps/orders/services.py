@@ -41,7 +41,10 @@ def _require_can_order(actor, client):
 
 
 def _require_own_cart(actor, cart):
-    if cart.user_id != actor.pk and not actor.has_perm(perm("manage_orders")):
+    if cart.user_id is None:
+        # A guest cart: only ever reached through the visitor's own session (see ``guest``), so there is no one to compare.
+        return
+    if actor is None or (cart.user_id != actor.pk and not actor.has_perm(perm("manage_orders"))):
         raise _denied()
 
 
@@ -89,8 +92,9 @@ def _add_item(actor, cart, item, *, duplicate_check=None):
     return item
 
 
-def add_hosting(actor, client, product, domain, billing_cycle, custom_months=0):
-    cart = get_open_cart(actor, client)
+def add_hosting(actor, client, product, domain, billing_cycle, custom_months=0, *, cart=None):
+    """Add a plan. ``cart`` is given for a guest cart; otherwise it is the actor's own cart for ``client``."""
+    cart = cart or get_open_cart(actor, client)
     item = CartItem(cart=cart, kind=ItemKind.HOSTING, product=product, domain_name=domain.strip().lower(),
                     billing_cycle=billing_cycle, custom_months=custom_months or 0)
     return _add_item(actor, cart, item,
@@ -116,16 +120,16 @@ def add_addon(actor, parent_item, addon, billing_cycle=None, custom_months=0):
     return _add_item(actor, cart, item, duplicate_check=Q(kind=ItemKind.ADDON, addon=addon, parent=parent_item))
 
 
-def add_domain_registration(actor, client, domain, years=1):
-    cart = get_open_cart(actor, client)
+def add_domain_registration(actor, client, domain, years=1, *, cart=None):
+    cart = cart or get_open_cart(actor, client)
     name = domain.strip().lower()
     item = CartItem(cart=cart, kind=ItemKind.DOMAIN_REGISTER, domain_name=name, years=years)
     return _add_item(actor, cart, item, duplicate_check=Q(
         kind__in=(ItemKind.DOMAIN_REGISTER, ItemKind.DOMAIN_TRANSFER), domain_name=name))
 
 
-def add_domain_transfer(actor, client, domain, auth_code):
-    cart = get_open_cart(actor, client)
+def add_domain_transfer(actor, client, domain, auth_code, *, cart=None):
+    cart = cart or get_open_cart(actor, client)
     name = domain.strip().lower()
     item = CartItem(cart=cart, kind=ItemKind.DOMAIN_TRANSFER, domain_name=name, years=1)
     item.set_auth_code(auth_code)
@@ -147,7 +151,7 @@ def apply_coupon(actor, cart, code):
     if coupon is None:
         raise ServiceError("This coupon code is not valid.", code="coupon_invalid")
     subtotal = pricing.price_cart(cart).subtotal
-    pricing.evaluate_coupon(coupon, cart.client, subtotal)  # raises with the reason if it can't be used
+    pricing.evaluate_coupon(coupon, cart.client, subtotal)  # raises with the reason if it can't be used (client None: a guest)
     cart.coupon = coupon
     cart.save(update_fields=["coupon", "updated_at"])
     return cart
@@ -159,6 +163,122 @@ def remove_coupon(actor, cart):
     cart.coupon = None
     cart.save(update_fields=["coupon", "updated_at"])
     return cart
+
+
+# --- Selling more: upgrade and cross-sell -----------------------------------------------------------
+
+def upgrade_options(item):
+    """The upsell for a hosting line: the plan staff chose to suggest, if it is orderable in the same billing cycle."""
+    from apps.products.models import CatalogStatus
+    from apps.products.services import get_effective_price
+
+    product = item.product
+    target = product.upsell_product if product is not None else None
+    if item.kind != ItemKind.HOSTING or target is None or target.status != CatalogStatus.ACTIVE or not target.whm_package_name:
+        return None
+    try:
+        now = get_effective_price(product, item.billing_cycle, item.custom_months)
+        then = get_effective_price(target, item.billing_cycle, item.custom_months)
+    except ServiceError:
+        return None
+    return {"product": target, "price": then.price, "setup_fee": then.setup_fee, "extra": then.price - now.price,
+            "cycle": pricing.cycle_label(item.billing_cycle, item.custom_months)}
+
+
+def upgrade_item(actor, item, *, request=None):
+    """Swap a hosting line for its suggested bigger plan, keeping the domain, the billing cycle and the add-ons."""
+    _require_own_cart(actor, item.cart)
+    _require_open(item.cart)
+    offer = upgrade_options(item)
+    if offer is None:
+        raise ServiceError("There is no upgrade available for this plan.", code="no_upgrade")
+    if item.cart.items.filter(kind=ItemKind.HOSTING, product=offer["product"], domain_name=item.domain_name).exists():
+        raise ServiceError("That plan is already in your cart for this domain.", code="duplicate_item")
+    previous = item.product
+    item.product = offer["product"]
+    pricing.price_item(item, verify_availability=False)
+    item.save(update_fields=["product", "updated_at"])
+    if actor is not None:
+        audit.record("cart.upgraded", actor=actor, target=item.cart,
+                     metadata={"from": previous.name, "to": offer["product"].name}, request=request)
+    return item
+
+
+def domain_offers(cart, priced):
+    """Cross-sell: a plan's own domain that is not yet being registered or transferred in this cart, with its price."""
+    from apps.domains import services as domain_services
+    from apps.domains.models import LIVE_STATUSES, Domain, domain_tld
+
+    covered = {i.domain_name for i in cart.items.filter(kind__in=(ItemKind.DOMAIN_REGISTER, ItemKind.DOMAIN_TRANSFER))}
+    offers, seen = [], set()
+    for line in priced.lines:
+        name = line.item.domain_name
+        if line.item.kind != ItemKind.HOSTING or not line.ok or not name or name in covered or name in seen:
+            continue
+        seen.add(name)
+        if Domain.objects.filter(name=name, status__in=LIVE_STATUSES).exists():
+            continue  # already ours: nothing to sell
+        try:
+            row = domain_services.get_tld_pricing(domain_tld(name))
+        except Exception:  # noqa: BLE001 - an unsupported ending simply has no offer
+            continue
+        offers.append({"domain": name, "price": row.register_price, "years": max(row.min_years, 1)})
+    return offers
+
+
+def recommended_addon_ids(cart):
+    """The add-ons staff marked as recommended for any plan in this cart."""
+    from apps.products.models import Addon
+
+    products = [i.product_id for i in cart.items.filter(kind=ItemKind.HOSTING)]
+    return set(Addon.objects.filter(recommended_for__in=products).values_list("pk", flat=True)) if products else set()
+
+
+# --- Guest carts ---------------------------------------------------------------------------------
+
+def adopt_guest_cart(guest_cart, user, client):
+    """
+    Move a visitor's selections into their own open cart (after they sign in or create an account) and delete the guest cart.
+    Items already present are skipped; add-ons follow their plan. Returns the account's cart.
+    """
+    _require_can_order(user, client)
+    with transaction.atomic():
+        target = get_open_cart(user, client)
+        mapping = {}
+        for item in guest_cart.items.select_related("product", "addon", "parent").order_by("id"):
+            parent = mapping.get(item.parent_id)
+            if item.kind == ItemKind.ADDON and parent is None:
+                continue
+            exists = target.items.filter(kind=item.kind, product=item.product, addon=item.addon, parent=parent,
+                                         domain_name=item.domain_name).exists()
+            if exists:
+                if item.kind == ItemKind.HOSTING:
+                    mapping[item.pk] = target.items.filter(kind=item.kind, product=item.product,
+                                                           domain_name=item.domain_name).first()
+                continue
+            copy = CartItem(cart=target, kind=item.kind, product=item.product, addon=item.addon, parent=parent,
+                            domain_name=item.domain_name, billing_cycle=item.billing_cycle,
+                            custom_months=item.custom_months, years=item.years,
+                            auth_code_encrypted=item.auth_code_encrypted)
+            copy.save()
+            mapping[item.pk] = copy
+        if guest_cart.coupon_id and not target.coupon_id:
+            target.coupon = guest_cart.coupon
+            target.save(update_fields=["coupon", "updated_at"])
+        guest_cart.delete()
+    return target
+
+
+def purge_guest_carts(*, days=30):
+    """Delete guest carts nobody touched for ``days`` days (run daily). Returns how many."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    stale = Cart.objects.filter(user__isnull=True, updated_at__lt=timezone.now() - timedelta(days=days))
+    count = stale.count()
+    stale.delete()
+    return count
 
 
 # --- Checkout -------------------------------------------------------------------------------

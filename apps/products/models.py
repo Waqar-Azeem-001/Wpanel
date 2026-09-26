@@ -155,8 +155,16 @@ class Product(CatalogItem):
         default=True, help_text="Provision automatically on payment once Phase 05 is live. Off = staff provision manually.",
     )
     default_auto_renew = models.BooleanField(default=True, help_text="Default for new orders of this product.")
+    # Selling more: the plan to suggest to someone who has this one in their cart (an upsell), and the add-ons that suit it
+    # (a cross-sell). Both are chosen by staff; nothing is guessed.
+    upsell_product = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL,
+                                       related_name="upsold_from", help_text="A bigger plan to suggest in the cart.")
+    recommended_addons = models.ManyToManyField("products.Addon", blank=True, related_name="recommended_for",
+                                                help_text="Add-ons to highlight with this plan.")
 
     def clean(self):
+        if self.upsell_product_id and self.pk and self.upsell_product_id == self.pk:
+            raise ValidationError({"upsell_product": "A plan cannot be its own upgrade."})
         if not isinstance(self.resource_limits, dict):
             raise ValidationError({"resource_limits": "Must be a JSON object."})
         for key in KNOWN_RESOURCE_LIMITS:
