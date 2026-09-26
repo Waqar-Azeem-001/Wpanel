@@ -80,10 +80,10 @@ class ProductForm(FirstPriceMixin, forms.Form):
         queryset=Addon.objects.all(), required=False, widget=forms.CheckboxSelectMultiple, label="Recommended add-ons",
         help_text="Highlighted first in the cart and on the plan page.")
 
-    def __init__(self, *args, existing_limits=None, with_price=False, **kwargs):
+    def __init__(self, *args, existing_limits=None, with_price=False, **kwargs):  # existing_limits: [(key, value)] in order, or None for a new plan
         super().__init__(*args, **kwargs)
         starter = existing_limits is None  # a new plan begins with the usual few lines, ready to fill in
-        self.existing_limits = dict(existing_limits or {})
+        self.existing_limits = list(existing_limits or [])
         self.with_price = with_price
         if with_price:
             self.add_price_fields()
@@ -94,7 +94,7 @@ class ProductForm(FirstPriceMixin, forms.Form):
             self.limit_rows = [{"title": title, "value": values[i] if i < len(values) else ""} for i, title in enumerate(titles)]
         else:
             self.limit_rows = [{"title": LIMIT_LABELS.get(key, key), "value": "" if value is None else value}
-                               for key, value in self.existing_limits.items()]
+                               for key, value in self.existing_limits]
             if starter:
                 self.limit_rows = [{"title": LIMIT_LABELS[key], "value": ""} for key in ("disk_mb", "email_accounts", "databases")]
         self.limit_choices = list(LIMIT_LABELS.values())
@@ -130,9 +130,10 @@ class ProductForm(FirstPriceMixin, forms.Form):
         data = super().clean()
         try:
             data["resource_limits"] = self._limits_from_rows()
+            data["limit_order"] = list(data["resource_limits"])  # the order of the rows as staff wrote them
         except forms.ValidationError as exc:
             self.add_error(None, exc)
-            data["resource_limits"] = {}
+            data["resource_limits"], data["limit_order"] = {}, []
         return self.clean_price_fields(data) if self.with_price else data
 
 

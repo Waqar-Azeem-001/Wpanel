@@ -187,7 +187,7 @@ def staff_product_edit(request, slug):
         "auto_setup": product.auto_setup, "default_auto_renew": product.default_auto_renew,
         "upsell_product": product.upsell_product_id, "recommended_addons": list(product.recommended_addons.all()),
     }
-    form = forms.ProductForm(request.POST or None, initial=initial, existing_limits=product.resource_limits)
+    form = forms.ProductForm(request.POST or None, initial=initial, existing_limits=product.ordered_limits())
     form.fields["upsell_product"].queryset = Product.objects.exclude(pk=product.pk)
     if request.method == "POST" and form.is_valid():
         try:

@@ -145,7 +145,21 @@ def test_editing_limits_adds_changes_and_removes_lines(manager):
     p.refresh_from_db()
     assert p.resource_limits == {"disk_mb": 9000, "custom_note": 7, "Backups": "Daily"}  # "old" had no row, so it is gone
     assert p.prices.count() == 1  # a price box is only on the create form
-    assert p.limit_items == [("Disk space (MB)", 9000), ("custom_note", 7), ("Backups", "Daily")]
+    assert p.limit_items == [("Disk space (MB)", 9000), ("custom_note", 7), ("Backups", "Daily")]  # in the order listed, on any database
+
+
+def test_limits_keep_the_order_they_were_listed_in_even_when_the_database_reorders_keys(manager):
+    # PostgreSQL's jsonb hands the keys back sorted (shorter first, then alphabetical); the order staff chose is stored beside them.
+    p = plan(manager, "Ordered")
+    b = browser(manager)
+    b.post(f"/staff/products/{p.slug}/edit/", {"name": "Ordered", "type": "shared_hosting", "limit_title": ["Websites", "Free SSL", "Databases"],
+                                              "limit_value": ["3", "Included", "5"]})
+    p.refresh_from_db()
+    assert p.limit_order == ["websites", "Free SSL", "databases"]
+    p.resource_limits = dict(sorted(p.resource_limits.items(), key=lambda kv: (len(kv[0]), kv[0])))  # what jsonb does
+    assert [key for key, _ in p.ordered_limits()] == ["websites", "Free SSL", "databases"]
+    page = b.get(f"/staff/products/{p.slug}/edit/").content.decode()
+    assert page.index('value="Websites"') < page.index('value="Free SSL"') < page.index('value="Databases"')
 
 
 def test_a_limit_listed_twice_or_with_a_word_for_a_number_is_refused(manager):

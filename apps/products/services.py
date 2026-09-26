@@ -17,7 +17,7 @@ from .models import (Addon, AddonKind, AddonPrice, BillingCycle, CatalogStatus, 
                      StoreCategory)
 
 PRODUCT_FIELDS = (
-    "name", "description", "type", "resource_limits", "whm_package_name", "auto_setup", "default_auto_renew",
+    "name", "description", "type", "resource_limits", "limit_order", "whm_package_name", "auto_setup", "default_auto_renew",
     "upsell_product", "category",
 )
 ADDON_FIELDS = ("name", "description", "kind", "category")

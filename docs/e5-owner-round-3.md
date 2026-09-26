@@ -49,7 +49,7 @@ A card on a soft field with the logo above it, "Keep me signed in on this device
 
 ## 10. Plan limits and the product form
 
-* **Limits are rows now**: a title and a limit each, **Add a limit**, a remove button on every row, and quick-add buttons for the usual ones (disk space, bandwidth, email accounts, databases, FTP, subdomains, parked/addon domains, websites). A limit can be any title ("Free SSL" → "Included"); a known title takes a whole number, empty means unlimited; a title listed twice is refused. A removed row is removed from the plan. The public plan page shows them under **What is included**.
+* **Limits are rows now**: a title and a limit each, **Add a limit**, a remove button on every row, and quick-add buttons for the usual ones (disk space, bandwidth, email accounts, databases, FTP, subdomains, parked/addon domains, websites). A limit can be any title ("Free SSL" → "Included"); a known title takes a whole number, empty means unlimited; a title listed twice is refused. A removed row is removed from the plan. The order you list them in is kept (stored beside the limits, because PostgreSQL re-sorts the keys of a JSON field). The public plan page shows them under **What is included**.
 * **Add a product is simpler**: name and type, features, the first price and the limits are on the page; the server package, auto-provision, renewal default, upgrade suggestion and recommended add-ons are under a collapsed **More options** (it opens by itself when something there needs attention).
 
 ## 11. Verified

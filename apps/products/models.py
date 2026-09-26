@@ -223,6 +223,8 @@ class Product(CatalogItem):
         default=dict, blank=True,
         help_text="e.g. {\"disk_mb\": 5000, \"bandwidth_mb\": null} (null = unlimited).",
     )
+    # The order staff listed the limits in. PostgreSQL's jsonb sorts the keys of ``resource_limits`` by itself, so the order is kept here.
+    limit_order = models.JSONField(default=list, blank=True, editable=False)
     servers = models.ManyToManyField(Server, blank=True, related_name="products")
     whm_package_name = models.CharField(max_length=100, blank=True, help_text="WHM package this product creates.")
     auto_setup = models.BooleanField(
@@ -239,8 +241,13 @@ class Product(CatalogItem):
     @property
     def limit_items(self):
         """[(title, value)] for showing the limits: an empty limit reads Unlimited."""
+        return [(LIMIT_LABELS.get(key, key), "Unlimited" if value is None else value) for key, value in self.ordered_limits()]
+
+    def ordered_limits(self):
+        """[(key, value)] in the order staff listed them (limits with no recorded place, from the API, follow in stored order)."""
         limits = self.resource_limits if isinstance(self.resource_limits, dict) else {}
-        return [(LIMIT_LABELS.get(key, key), "Unlimited" if value is None else value) for key, value in limits.items()]
+        order = [k for k in (self.limit_order if isinstance(self.limit_order, list) else []) if k in limits]
+        return [(k, limits[k]) for k in order] + [(k, v) for k, v in limits.items() if k not in order]
 
     def clean(self):
         if self.upsell_product_id and self.pk and self.upsell_product_id == self.pk:
