@@ -76,6 +76,7 @@ def _document_page(request, *, kind, client, document=None):
     is_quote = kind == "quote"
     form_class = forms.QuoteForm if is_quote else forms.InvoiceForm
     initial = {}
+    current_currency = document.currency if document is not None else client.currency
     if document is not None:
         initial = {"notes": document.notes, "discount_label": document.discount_label}
         if document.discount_total:
@@ -83,7 +84,7 @@ def _document_page(request, *, kind, client, document=None):
         if is_quote:
             initial["valid_until"] = document.valid_until
     posted = request.method == "POST"
-    form = form_class(request.POST if posted else None, initial=initial)
+    form = form_class(request.POST if posted else None, initial=initial, current_currency=current_currency)
     formset = forms.line_formset(request.POST if posted else None,
                                  existing=document.items.all() if document is not None else ())
     if posted and form.is_valid() and formset.is_valid():
@@ -92,7 +93,7 @@ def _document_page(request, *, kind, client, document=None):
         try:
             common = {"lines": lines, "discount_type": data["discount_type"],
                       "discount_value": data["discount_value"], "discount_label": data["discount_label"],
-                      "notes": data["notes"], "request": request}
+                      "notes": data["notes"], "currency": data["currency"], "request": request}
             if is_quote:
                 common["valid_until"] = data["valid_until"]
                 saved = (invoicing.update_quote(request.user, document, **common) if document is not None
@@ -153,6 +154,7 @@ def invoice_bulk(request):
     do = request.POST.get("do", "")
     reason = request.POST.get("reason", "").strip()[:300]
     actions = {
+        "delete": ("draft invoice(s) deleted", lambda i: invoicing.delete_draft_invoice(request.user, i, request=request)),
         "issue": ("invoice(s) issued", lambda i: invoicing.issue_invoice(request.user, i, request=request)),
         "cancel": ("invoice(s) cancelled", lambda i: invoicing.cancel_invoice(request.user, i, reason=reason, request=request)),
     }
@@ -357,6 +359,36 @@ def quote_cancel(request, pk):
         return "Quote cancelled."
 
     return run_action(request, action, "billing_staff:quote_detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
+def quote_delete(request, pk):
+    quote = get_object_or_404(Quote, pk=pk)
+
+    def action():
+        invoicing.delete_draft_quote(request.user, quote, request=request)
+        return "Draft quote deleted."
+
+    return run_action(request, action, "billing_staff:quote_list")
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
+def quote_bulk(request):
+    """"With selected": delete the ticked drafts, or cancel the ticked draft/sent quotes."""
+    do = request.POST.get("do", "")
+    actions = {
+        "delete": ("draft quote(s) deleted", lambda q: invoicing.delete_draft_quote(request.user, q, request=request)),
+        "cancel": ("quote(s) cancelled", lambda q: invoicing.cancel_quote(request.user, q, request=request)),
+    }
+    if do not in actions:
+        messages.error(request, "Choose what to do with the selected quotes.")
+    else:
+        verb, action = actions[do]
+        bulk.run(request, Quote.objects.all(), bulk.selected_ids(request), action, verb=verb,
+                 label=lambda q: q.number or f"Draft #{q.pk}")
+    return bulk.back_to(request, "billing_staff:quote_list")
 
 
 @portal_permission_required(perm("view_billing"))

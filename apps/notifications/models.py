@@ -73,6 +73,11 @@ class EmailMessage(TimeStampedModel):
     attempts = models.PositiveIntegerField(default=0)
     last_error = models.TextField(blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    # How it left: the active provider's mail server, or the fallback (no provider is set up: the console in development, or a
+    # refusal in production). A fallback message is never really delivered, and the log says so.
+    message_id = models.CharField(max_length=255, blank=True, help_text="The Message-ID header, to find it in a mail server's log.")
+    delivery = models.CharField(max_length=20, blank=True, choices=[("smtp", "Mail server"), ("fallback", "No provider set up")])
 
     # Emails carrying a secret (a temporary password, a one-time link) are kept encrypted only until they are
     # delivered, then wiped - the log must not be a second copy of a credential.
@@ -83,12 +88,19 @@ class EmailMessage(TimeStampedModel):
     track_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     opened_at = models.DateTimeField(null=True, blank=True)
     open_count = models.PositiveIntegerField(default=0)
+    # Click tracking: links in the HTML body go through us once; the first click and the total are kept here, per link in EmailLink.
+    click_count = models.PositiveIntegerField(default=0)
+    first_clicked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.subject} -> {self.to_email} [{self.status}]"
+
+    @property
+    def was_clicked(self):
+        return self.first_clicked_at is not None
 
     @property
     def was_opened(self):
@@ -99,6 +111,45 @@ class EmailMessage(TimeStampedModel):
         from . import events
 
         return events.EVENTS[self.event].label if self.event in events.EVENTS else ""
+
+
+class EmailEvent(models.Model):
+    """One step in an email's life (queued, an attempt that failed, sent, resent, opened, clicked), oldest first."""
+
+    class Kind(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        FAILED = "failed", "Attempt failed"
+        SENT = "sent", "Handed to the mail server"
+        RESENT = "resent", "Sent again by staff"
+        OPENED = "opened", "Opened"
+        CLICKED = "clicked", "Link clicked"
+
+    message = models.ForeignKey(EmailMessage, on_delete=models.CASCADE, related_name="events")
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    detail = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"{self.message_id} {self.kind}"
+
+
+class EmailLink(models.Model):
+    """A link that was in an email, addressed by number so the click page can only ever go where we sent people."""
+
+    message = models.ForeignKey(EmailMessage, on_delete=models.CASCADE, related_name="links")
+    url = models.TextField()
+    click_count = models.PositiveIntegerField(default=0)
+    first_clicked_at = models.DateTimeField(null=True, blank=True)
+    last_clicked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.url[:80]
 
 
 class Notification(TimeStampedModel):

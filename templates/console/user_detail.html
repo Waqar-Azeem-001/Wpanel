@@ -63,6 +63,28 @@
     </div></section>
     {% endif %}
 
+    {% if can_reset_link or can_set_password %}
+    <section class="panel" id="password"><div class="panel-body">
+      <h2 class="h6 mb-3">{% trans "Password" %}</h2>
+      {% if can_reset_link %}
+      <form method="post" action="{% url 'console:user_reset_link' person.pk %}" class="mb-3" data-confirm="{% trans 'Email a password reset link to this person?' %}">{% csrf_token %}
+        <p class="text-secondary small">{% trans "Emails them a one-time link to choose a new password themselves." %}</p>
+        <button class="btn btn-outline-secondary" type="submit">{% trans "Send reset link" %}</button>
+      </form>
+      {% endif %}
+      {% if can_set_password %}
+      <form method="post" action="{% url 'console:user_set_password' person.pk %}" novalidate data-confirm="{% trans 'Set this password? They are signed out everywhere and told by email.' %}">{% csrf_token %}
+        <p class="text-secondary small">{% trans "Or set a new password yourself and give it to them. It must pass the password rules and is never shown again." %}</p>
+        <div class="field"><label for="id_new_password">{% trans "New password" %}</label>{{ password_form.new_password }}{% for e in password_form.new_password.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</div>
+        <div class="field"><label for="id_new_password_confirm">{% trans "Confirm new password" %}</label>{{ password_form.new_password_confirm }}{% for e in password_form.new_password_confirm.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</div>
+        <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% trans "Set password" %}</button>
+          <button class="btn btn-outline-secondary" type="button" data-generate-password="#id_new_password,#id_new_password_confirm">{% trans "Generate" %}</button></div>
+        <p class="small text-secondary mt-2 mb-0" data-generated-note hidden></p>
+      </form>
+      {% endif %}
+    </div></section>
+    {% endif %}
+
     {% if can_set_role %}
     <section class="panel"><div class="panel-body">
       <h2 class="h6 mb-3">{% trans "Role" %}</h2>

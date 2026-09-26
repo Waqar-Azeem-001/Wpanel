@@ -20,7 +20,7 @@ def manager(staff):
 def client_obj(manager):
     return services.create_client(manager, {
         "company_name": "Acme Ltd", "first_name": "Ada", "last_name": "Lovelace", "email": "ada@acme.test",
-        "country": "gb", "currency": "gbp",
+        "country": "gb", "currency": "pkr",
     })
 
 
@@ -187,7 +187,7 @@ def test_owner_updates_own_client_but_not_restricted_fields(api, client_obj):
     assert response.status_code == 200
     client_obj.refresh_from_db()
     assert client_obj.company_name == "Acme Group"
-    assert (client_obj.currency, client_obj.notes, client_obj.status) == ("GBP", "", "active")
+    assert (client_obj.currency, client_obj.notes, client_obj.status) == ("PKR", "", "active")
 
 
 def test_technical_contact_cannot_edit(api, manager, client_obj):

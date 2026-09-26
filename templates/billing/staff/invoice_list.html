@@ -37,7 +37,7 @@
 <div class="d-flex flex-wrap align-items-end gap-2 mt-3 bulk-bar">
   <span class="fw-semibold me-1">{% trans "With selected:" %}</span>
   <div><label class="visually-hidden" for="bulk_do">{% trans "Action" %}</label>
-    <select class="form-select form-select-sm w-auto" name="do" id="bulk_do"><option value="issue">{% trans "Issue drafts" %}</option><option value="cancel">{% trans "Cancel (unpaid only)" %}</option></select></div>
+    <select class="form-select form-select-sm w-auto" name="do" id="bulk_do"><option value="issue">{% trans "Issue drafts" %}</option><option value="delete">{% trans "Delete drafts" %}</option><option value="cancel">{% trans "Cancel (unpaid only)" %}</option></select></div>
   <div><label class="visually-hidden" for="bulk_reason">{% trans "Reason for cancelling" %}</label><input class="form-control form-control-sm" name="reason" id="bulk_reason" maxlength="300" placeholder="{% trans 'Reason (for cancelling)' %}"></div>
   <button class="btn btn-sm btn-outline-primary" type="submit">{% trans "Apply" %}</button>
 </div>

@@ -1,11 +1,14 @@
 {% load ui %}
 <p class="text-secondary">{{ page.paginator.count }} client{{ page.paginator.count|pluralize }}</p>
+<form method="post" action="{% url 'clients_staff:bulk' %}" data-confirm="Apply this to every ticked client? Deleting cannot be undone.">{% csrf_token %}
+<input type="hidden" name="next" value="{{ request.get_full_path }}">
 <div class="table-responsive">
 <table class="table">
-  <thead><tr><th>Ref</th><th>Client</th><th>Email</th><th>Country</th><th>Status</th><th>Created</th></tr></thead>
+  <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all aria-label="Select all clients on this page"></th>{% endif %}<th>Ref</th><th>Client</th><th>Email</th><th>Country</th><th>Status</th><th>Created</th></tr></thead>
   <tbody>
   {% for client in page %}
     <tr>
+      {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="ids" value="{{ client.pk }}" aria-label="Select {{ client.display_name }}"></td>{% endif %}
       <td><a href="{% url 'clients_staff:detail' client.pk %}">{{ client.reference }}</a></td>
       <td><a href="{% url 'clients_staff:detail' client.pk %}">{{ client.display_name }}</a>
         {% if client.company_name %}<br><small class="text-secondary">{{ client.contact_name }}</small>{% endif %}</td>
@@ -15,11 +18,20 @@
       <td>{{ client.created_at|date:"Y-m-d" }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="6" class="text-secondary">No clients match.</td></tr>
+    <tr><td colspan="7" class="text-secondary">No clients match.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
+{% if can_manage and page.paginator.count %}
+<div class="d-flex flex-wrap align-items-end gap-2 mt-3 bulk-bar">
+  <span class="fw-semibold me-1">With selected:</span>
+  <div><label class="visually-hidden" for="bulk_do">Action</label>
+    <select class="form-select form-select-sm w-auto" name="do" id="bulk_do"><option value="activate">Set active</option><option value="deactivate">Set inactive</option><option value="close">Close account</option>{% if is_super %}<option value="delete">Delete (no history only)</option>{% endif %}</select></div>
+  <button class="btn btn-sm btn-outline-primary" type="submit">Apply</button>
+</div>
+{% endif %}
+</form>
 {% if page.has_other_pages %}
 <nav class="pager">
   {% if page.has_previous %}<a href="?{{ query.urlencode }}&page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}

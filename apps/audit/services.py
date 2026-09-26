@@ -43,3 +43,35 @@ def record(action, *, actor=None, target=None, metadata=None, request=None):
     event.save()
     logger.info("audit %s actor=%s target=%s:%s", action, event.actor_repr or "system", event.target_type, event.target_id)
     return event
+
+
+MIN_PURGE_DAYS = 90
+
+
+def purge(actor, *, older_than_days, area="", request=None):
+    """
+    Super Admin only: delete audit entries older than N days (at least 90), optionally only one area (the part of the action
+    before the first dot, e.g. "email"), to keep the table a manageable size. This is the one way entries ever leave the
+    log; it never edits one, and the purge itself is recorded (who, how many, how old) in an entry that is not deleted.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+    from rest_framework import status
+
+    from apps.core.exceptions import ServiceError
+
+    if not getattr(actor, "is_superuser", False):
+        raise ServiceError("Only a Super Admin can delete audit entries.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+    if not isinstance(older_than_days, int) or older_than_days < MIN_PURGE_DAYS:
+        raise ServiceError(f"Keep at least {MIN_PURGE_DAYS} days of history: choose {MIN_PURGE_DAYS} or more.",
+                           code="too_recent")
+    doomed = AuditEvent.objects.filter(created_at__lt=timezone.now() - timedelta(days=older_than_days))
+    if area:
+        doomed = doomed.filter(action__startswith=f"{area}.")
+    count = doomed.count()
+    doomed.delete()
+    record("audit.purged", actor=actor, metadata={"older_than_days": older_than_days, "area": area or "all",
+                                                   "entries": count}, request=request)
+    return count

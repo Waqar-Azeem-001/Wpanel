@@ -5,6 +5,7 @@
 {% block content %}
 <p><a href="{% url 'notifications_staff:emails' %}">&larr; Email log</a></p>
 <div class="page-head"><h1>{{ message.subject }}</h1>{% status_badge message.status message.get_status_display %}</div>
+{% if message.delivery == "fallback" %}<div class="alert alert-warning" role="alert"><p class="mb-0">No email provider was active when this was sent, so it went to the fallback and <strong>did not leave this machine</strong>. Set up a provider, then delete this and trigger the action again.</p></div>{% endif %}
 <div class="split">
   <section class="card"><div class="card-body">
     <h2>Message</h2>
@@ -15,17 +16,37 @@
     <h2>Delivery</h2>
     <dl class="meta">
       <dt>To</dt><dd>{{ message.to_email }}</dd>
-      <dt>Message type</dt><dd>{{ message.event|default:"&mdash;" }}</dd>
+      <dt>From</dt><dd>{{ message.from_email|default:"&mdash;" }}</dd>
+      <dt>Message type</dt><dd>{{ message.event_label|default:message.event|default:"&mdash;" }}</dd>
       <dt>Created</dt><dd>{{ message.created_at|date:"j M Y H:i" }}</dd>
       <dt>Sent</dt><dd>{{ message.sent_at|date:"j M Y H:i"|default:"&mdash;" }}</dd>
-      <dt>Attempts</dt><dd>{{ message.attempts }}</dd>
+      <dt>Attempts</dt><dd>{{ message.attempts }}{% if message.last_attempt_at %} (last {{ message.last_attempt_at|date:"j M H:i" }}){% endif %}</dd>
+      <dt>Message-ID</dt><dd class="text-break">{{ message.message_id|default:"&mdash;" }}</dd>
       <dt>Opened</dt><dd>{% if message.is_sensitive %}not tracked{% elif message.opened_at %}{{ message.opened_at|date:"j M Y H:i" }} ({{ message.open_count }} time{{ message.open_count|pluralize }}){% else %}not (yet){% endif %}</dd>
+      <dt>Clicked</dt><dd>{% if message.is_sensitive %}not tracked{% elif message.first_clicked_at %}{{ message.first_clicked_at|date:"j M Y H:i" }} ({{ message.click_count }} click{{ message.click_count|pluralize }}){% else %}not (yet){% endif %}</dd>
     </dl>
+    <p class="text-secondary small">&ldquo;Sent&rdquo; means the mail server accepted it. Opens and clicks are signals: image blocking hides opens and link scanners can create clicks.</p>
     {% if message.last_error %}<div class="alert alert-danger"><p>{{ message.last_error }}</p></div>{% endif %}
     {% if secret_removed and message.status != "sent" %}<p class="text-secondary">The secret in this email has been removed, so it cannot be sent again. Ask the customer to request a new one.</p>{% endif %}
+    <div class="d-flex flex-wrap gap-2">
     {% if can_resend %}
     <form method="post" action="{% url 'notifications_staff:resend' message.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Send again</button></form>
-    {% endif %}</div>
+    {% endif %}
+    {% if can_delete %}
+    <form method="post" action="{% url 'notifications_staff:delete' message.pk %}" data-confirm="Delete this email from the log? This cannot be undone.">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete</button></form>
+    {% endif %}
+    </div></div>
 </section>
 </div>
+<section class="card mt-3"><div class="card-body">
+  <h2>Timeline</h2>
+  <ol class="feed">{% for event in timeline %}
+    <li><span><span class="what">{{ event.get_kind_display }}</span>{% if event.detail %} <span class="who">&middot; {{ event.detail }}</span>{% endif %}</span><time datetime="{{ event.created_at.isoformat }}">{{ event.created_at|date:"j M Y H:i:s" }}</time></li>
+  {% empty %}<li class="text-secondary">No steps were recorded (this email is from before delivery tracking).</li>{% endfor %}</ol>
+  {% if links %}
+  <h3 class="h6 mt-3">Links in this email</h3>
+  <div class="table-responsive"><table class="table"><thead><tr><th>Link</th><th class="text-end">Clicks</th><th>First click</th></tr></thead><tbody>
+    {% for link in links %}<tr><td class="text-break">{{ link.url|truncatechars:90 }}</td><td class="text-end">{{ link.click_count }}</td><td>{{ link.first_clicked_at|date:"j M H:i"|default:"&mdash;" }}</td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+</div></section>
 {% endblock %}

@@ -4,7 +4,8 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{% trans "Audit log" %}</h1>
-  <p class="page-sub">Who did what and when. Entries can be searched but never changed.</p></div>
+  <p class="page-sub">Who did what and when. Entries can be searched and exported but never changed.</p>
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'console:audit_export' %}?q={{ term|urlencode }}&amp;action={{ action|urlencode }}"><i class="bi bi-download" aria-hidden="true"></i> {% trans "Export CSV" %}</a></div>
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-md"><label class="form-label" for="q">{% trans "Search" %}</label><input class="form-control" id="q" name="q" value="{{ term }}" placeholder="{% trans 'Action, person, record or request id' %}"></div>
   <div class="col-md-3"><label class="form-label" for="action">{% trans "Area" %}</label>
@@ -21,4 +22,15 @@
   {% empty %}<tr><td colspan="5" class="text-secondary">{% trans "No events match." %}</td></tr>{% endfor %}</tbody>
 </table></div></div>
 {% include "components/pager.html" %}
+{% if is_super %}
+<section class="panel mt-4"><div class="panel-body">
+  <h2 class="h6">{% trans "Clear old entries" %}</h2>
+  <p class="text-secondary small">{% blocktrans %}The log is never edited. To keep it a manageable size a Super Admin can delete entries older than {{ min_purge_days }} days or more, all of them or one area. Export first if you want a copy. The deletion itself is recorded and is not deleted.{% endblocktrans %}</p>
+  <form method="post" action="{% url 'console:audit_purge' %}" class="d-flex flex-wrap align-items-end gap-2" data-plain data-confirm="{% trans 'Delete these audit entries permanently?' %}">{% csrf_token %}
+    <div><label class="form-label" for="purge_days">{% trans "Older than (days)" %}</label><input class="form-control form-control-sm" id="purge_days" name="days" type="number" min="{{ min_purge_days }}" value="365" required></div>
+    <div><label class="form-label" for="purge_area">{% trans "Area" %}</label><select class="form-select form-select-sm" id="purge_area" name="area"><option value="">{% trans "All areas" %}</option>{% for k in kinds %}<option value="{{ k }}">{{ k }}</option>{% endfor %}</select></div>
+    <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Delete old entries" %}</button>
+  </form>
+</div></section>
+{% endif %}
 {% endblock %}

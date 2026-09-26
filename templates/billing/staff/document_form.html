@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{% if document %}Edit{% else %}New{% endif %} {{ kind }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
@@ -6,12 +7,17 @@
 <p class="text-secondary">For <a href="{% url 'clients_staff:detail' client.pk %}">{{ client.display_name }}</a>. Tax is added automatically from the tax rules and the client's tax status.</p>
 <form method="post" novalidate>{% csrf_token %}
   <section class="card"><div class="card-body">
+    <h2>Currency</h2>
+    <div class="field"><label for="{{ form.currency.id_for_label }}">{{ form.currency.label }}</label>{{ form.currency|bs_field }}
+      <small>{{ form.currency.help_text }}</small>{% for e in form.currency.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</div>
+  </div></section>
+  <section class="card"><div class="card-body">
     <h2>Lines</h2>
     {{ formset.management_form }}
     {% if formset.non_form_errors %}<div class="alert alert-danger">{% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
     <div class="table-responsive">
     <table class="table lines">
-      <thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Taxable</th></tr></thead>
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit price (<span data-currency-code>{{ form.currency.value|default:client.currency }}</span>)</th><th>Taxable</th></tr></thead>
       <tbody>
       {% for line in formset %}
         <tr>
@@ -28,7 +34,7 @@
 </section>
   <section class="card"><div class="card-body">
     <h2>Discount and notes</h2>
-    <div class="grid-form">{% include "partials/form.html" %}</div>
+    <div class="grid-form">{% include "partials/form.html" with exclude_field="currency" %}</div>
     <div class="d-flex flex-wrap gap-2 align-items-center">
       <button type="submit" class="btn btn-primary">Save draft</button>
       {% if kind == "quote" %}<a href="{% if document %}{% url 'billing_staff:quote_detail' document.pk %}{% else %}{% url 'billing_staff:quote_list' %}{% endif %}">Cancel</a>

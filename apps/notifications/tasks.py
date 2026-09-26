@@ -18,6 +18,12 @@ def deliver_email(self, message_id):
 
 
 @shared_task
+def retry_stuck_emails_task():
+    """Every 10 minutes: try again the emails that are still queued or failed (see ``services.sweep_stuck``)."""
+    return services.sweep_stuck()
+
+
+@shared_task
 def purge_sensitive_emails_task():
     """Daily: remove the secret content of emails that could not be delivered within a day."""
     return services.purge_sensitive()

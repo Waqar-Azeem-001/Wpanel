@@ -26,6 +26,7 @@ from apps.accounts.roles import perm
 from apps.audit import services as audit
 from apps.clients.models import ClientContact
 from apps.clients.services import contact_role
+from apps.core import currencies
 from apps.core.exceptions import ServiceError
 from apps.notifications import services as notifications
 
@@ -46,6 +47,19 @@ def _denied(message="You do not have permission to perform this action."):
 def _require_manage(actor):
     if not actor.has_perm(perm("manage_billing")):
         raise _denied()
+
+
+def _document_currency(requested, *, default, keep=""):
+    """
+    The currency of a draft: what staff chose (USD, PKR or SAR), else the client's default. Amounts are not converted, so this
+    only says what the typed prices are in. A value the document or client already holds may stay even if no longer offered.
+    """
+    if not requested:
+        return keep or default
+    try:
+        return currencies.clean(requested, keep=keep or default)
+    except ValidationError:
+        raise ServiceError(f"Choose a currency: {', '.join(currencies.CODES)}.", code="invalid_currency")
 
 
 def is_staff_biller(user):
@@ -222,28 +236,30 @@ def _save_document(document, items, fk):
 
 @transaction.atomic
 def create_invoice(actor, client, *, lines, discount_type="", discount_value=None, discount_label="", notes="",
-                   request=None):
-    """Staff: a new draft invoice for ``client``."""
+                   currency=None, request=None):
+    """Staff: a new draft invoice for ``client`` (in ``currency``, else the client's own)."""
     _require_manage(actor)
     return create_draft_invoice(actor, client, lines=lines, discount_type=discount_type,
                                 discount_value=discount_value, discount_label=discount_label, notes=notes,
-                                request=request)
+                                currency=currency, request=request)
 
 
 def create_draft_invoice(actor, client, *, lines, discount_type="", discount_value=None, discount_label="",
-                         notes="", request=None):
+                         notes="", currency=None, request=None):
     """
     A draft invoice, with no permission check: for callers that have already authorised the action
     (renewals and upgrades, which a customer may start for their own service). Run inside a transaction.
     """
     lines = _clean_lines(lines)
     totals, rule, label = _compute(client, lines, discount_type, discount_value, discount_label)
-    invoice = Invoice(client=client, created_by=actor, currency=client.currency, notes=notes.strip()[:2000],
+    invoice = Invoice(client=client, created_by=actor, notes=notes.strip()[:2000],
+                      currency=_document_currency(currency, default=client.currency),
                       status=InvoiceStatus.DRAFT, **billing_snapshot(client))
     _apply_totals(invoice, totals, rule, label)
     _save_document(invoice, _build_items(InvoiceItem, "invoice", invoice, lines, totals), "invoice")
     audit.record("invoice.created", actor=actor, target=invoice,
-                 metadata={"client_id": client.pk, "total": str(invoice.total), "lines": len(lines)}, request=request)
+                 metadata={"client_id": client.pk, "total": str(invoice.total), "lines": len(lines),
+                           "currency": invoice.currency}, request=request)
     return invoice
 
 
@@ -254,13 +270,15 @@ def _require_draft(invoice):
 
 @transaction.atomic
 def update_invoice(actor, invoice, *, lines, discount_type="", discount_value=None, discount_label="", notes="",
-                   request=None):
-    """Staff: replace the lines/discount/notes of a draft invoice."""
+                   currency=None, request=None):
+    """Staff: replace the lines/discount/notes (and the currency) of a draft invoice."""
     _require_manage(actor)
     invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
     _require_draft(invoice)
     lines = _clean_lines(lines)
     totals, rule, label = _compute(invoice.client, lines, discount_type, discount_value, discount_label)
+    previous_currency = invoice.currency
+    invoice.currency = _document_currency(currency, default=invoice.client.currency, keep=invoice.currency)
     invoice.notes = notes.strip()[:2000]
     _apply_totals(invoice, totals, rule, label)
     items = _build_items(InvoiceItem, "invoice", invoice, lines, totals)
@@ -271,7 +289,9 @@ def update_invoice(actor, invoice, *, lines, discount_type="", discount_value=No
     invoice.items.all().delete()
     InvoiceItem.objects.bulk_create(items)
     audit.record("invoice.updated", actor=actor, target=invoice,
-                 metadata={"total": str(invoice.total), "lines": len(lines)}, request=request)
+                 metadata={"total": str(invoice.total), "lines": len(lines), "currency": invoice.currency,
+                           **({"currency_from": previous_currency} if previous_currency != invoice.currency else {})},
+                 request=request)
     return invoice
 
 
@@ -471,16 +491,18 @@ def invoice_billable_items(actor, client, item_ids=None, *, request=None):
 
 @transaction.atomic
 def create_quote(actor, client, *, lines, discount_type="", discount_value=None, discount_label="", notes="",
-                 valid_until=None, request=None):
+                 valid_until=None, currency=None, request=None):
     _require_manage(actor)
     lines = _clean_lines(lines)
     totals, rule, label = _compute(client, lines, discount_type, discount_value, discount_label)
-    quote = Quote(client=client, created_by=actor, currency=client.currency, notes=notes.strip()[:2000],
+    quote = Quote(client=client, created_by=actor, currency=_document_currency(currency, default=client.currency),
+                  notes=notes.strip()[:2000],
                   valid_until=valid_until, status=QuoteStatus.DRAFT, **billing_snapshot(client))
     _apply_totals(quote, totals, rule, label)
     _save_document(quote, _build_items(QuoteItem, "quote", quote, lines, totals), "quote")
     audit.record("quote.created", actor=actor, target=quote,
-                 metadata={"client_id": client.pk, "total": str(quote.total)}, request=request)
+                 metadata={"client_id": client.pk, "total": str(quote.total), "currency": quote.currency},
+                 request=request)
     return quote
 
 
@@ -491,12 +513,13 @@ def _require_quote_draft(quote):
 
 @transaction.atomic
 def update_quote(actor, quote, *, lines, discount_type="", discount_value=None, discount_label="", notes="",
-                 valid_until=None, request=None):
+                 valid_until=None, currency=None, request=None):
     _require_manage(actor)
     quote = Quote.objects.select_for_update().get(pk=quote.pk)
     _require_quote_draft(quote)
     lines = _clean_lines(lines)
     totals, rule, label = _compute(quote.client, lines, discount_type, discount_value, discount_label)
+    quote.currency = _document_currency(currency, default=quote.client.currency, keep=quote.currency)
     quote.notes, quote.valid_until = notes.strip()[:2000], valid_until
     _apply_totals(quote, totals, rule, label)
     items = _build_items(QuoteItem, "quote", quote, lines, totals)
@@ -506,7 +529,8 @@ def update_quote(actor, quote, *, lines, discount_type="", discount_value=None, 
     quote.save()
     quote.items.all().delete()
     QuoteItem.objects.bulk_create(items)
-    audit.record("quote.updated", actor=actor, target=quote, metadata={"total": str(quote.total)}, request=request)
+    audit.record("quote.updated", actor=actor, target=quote,
+                 metadata={"total": str(quote.total), "currency": quote.currency}, request=request)
     return quote
 
 
@@ -581,6 +605,17 @@ def decline_quote(actor, quote, *, request=None):
     audit.record("quote.declined", actor=actor, target=quote, request=request)
     _tell_billing_team("quote.declined", f"Quote {quote.reference} was declined", quote)
     return quote
+
+
+@transaction.atomic
+def delete_draft_quote(actor, quote, *, request=None):
+    """Staff: discard a quote that was never sent."""
+    _require_manage(actor)
+    quote = Quote.objects.select_for_update().get(pk=quote.pk)
+    _require_quote_draft(quote)
+    reference = quote.reference
+    quote.delete()
+    audit.record("quote.draft_deleted", actor=actor, metadata={"reference": reference}, request=request)
 
 
 @transaction.atomic

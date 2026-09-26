@@ -10,16 +10,25 @@
   <li class="nav-item"><a class="nav-link{% if show != "unread" %} active{% endif %}" href="?show=all"{% if show != "unread" %} aria-current="page"{% endif %}>{% trans "All" %}</a></li>
   <li class="nav-item"><a class="nav-link{% if show == "unread" %} active{% endif %}" href="?show=unread"{% if show == "unread" %} aria-current="page"{% endif %}>{% trans "Unread" %} <span class="badge text-bg-secondary rounded-pill">{{ unread }}</span></a></li>
 </ul>
+<form method="post" action="{% url 'notifications:delete' %}" id="inbox-form" data-plain>{% csrf_token %}
+<input type="hidden" name="next" value="{{ request.get_full_path }}">
+{% if page.paginator.count %}<div class="d-flex flex-wrap align-items-center gap-2 mb-2 bulk-bar">
+  <label class="form-check-label d-flex align-items-center gap-2 mb-0"><input class="form-check-input" type="checkbox" data-select-all aria-label="{% trans 'Select all notifications on this page' %}"> {% trans "Select all" %}</label>
+  <button class="btn btn-sm btn-outline-danger" type="submit" data-confirm="{% trans 'Delete the ticked notifications?' %}">{% trans "Delete selected" %}</button>
+  <button class="btn btn-sm btn-outline-secondary" type="submit" name="clear" value="read" data-confirm="{% trans 'Delete every notification you have already read?' %}">{% trans "Clear read" %}</button>
+</div>{% endif %}
 <div class="d-flex flex-column gap-2">
 {% for n in page %}
-  <article class="card{% if not n.is_read %} is-unread{% endif %}"><div class="card-body py-2">
-    <strong>{% if n.link %}<a href="{% url 'notifications:open' n.pk %}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</strong>
+  <article class="card{% if not n.is_read %} is-unread{% endif %}"><div class="card-body py-2 d-flex gap-2 align-items-start">
+    <input class="form-check-input mt-1" type="checkbox" name="ids" value="{{ n.pk }}" aria-label="{% trans 'Select' %}: {{ n.title }}">
+    <div class="flex-grow-1"><strong>{% if n.link %}<a href="{% url 'notifications:open' n.pk %}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</strong>
     {% if n.body %}<p class="mb-1 text-break">{{ n.body }}</p>{% endif %}
     <small class="text-secondary">{{ n.created_at|fdatetime }}{% if not n.is_read %} &middot; <span class="badge text-bg-primary">{% trans "New" %}</span>{% endif %}</small>
-  </div></article>
+  </div></div></article>
 {% empty %}
   <p class="text-secondary">{% if show == "unread" %}{% trans "You are all caught up." %}{% else %}{% trans "No notifications yet. Updates about your orders, invoices, services and support tickets will appear here." %}{% endif %}</p>
 {% endfor %}
 </div>
+</form>
 {% include "components/pager.html" %}
 {% endblock %}

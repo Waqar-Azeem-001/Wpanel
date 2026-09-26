@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
+from apps.core import bulk
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 
@@ -41,7 +42,8 @@ def staff_client_list(request):
         if filter_form.cleaned_data["status"]:
             queryset = queryset.filter(status=filter_form.cleaned_data["status"])
     page = Paginator(queryset.order_by("-created_at", "-id"), 25).get_page(request.GET.get("page"))
-    context = {"filter_form": filter_form, "page": page, "query": request.GET.copy()}
+    context = {"filter_form": filter_form, "page": page, "query": request.GET.copy(),
+               "can_manage": request.user.has_perm(perm("manage_clients")), "is_super": request.user.is_superuser}
     context["query"].pop("page", None)
     template = "clients/staff/_table.html" if request.headers.get("HX-Request") else "clients/staff/list.html"
     return render(request, template, context)
@@ -49,7 +51,7 @@ def staff_client_list(request):
 
 @portal_permission_required(perm("manage_clients"))
 def staff_client_create(request):
-    form = forms.NewClientForm(request.POST or None, initial={"currency": "USD"})
+    form = forms.NewClientForm(request.POST or None, initial={"currency": "USD"}, current_currency="USD")
     if request.method == "POST" and form.is_valid():
         data = dict(form.cleaned_data)
         owner_email = data.pop("owner_email") or None
@@ -74,6 +76,7 @@ def staff_client_detail(request, pk):
         "status_form": forms.ClientStatusForm(initial={"status": client.status}),
         "can_manage": request.user.has_perm(perm("manage_clients")),
         "can_bill": request.user.has_perm(perm("manage_billing")),
+        "is_super": request.user.is_superuser,
     })
 
 
@@ -100,7 +103,8 @@ def staff_client_tab(request, pk, tab):
 @portal_permission_required(perm("manage_clients"))
 def staff_client_edit(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    form = forms.StaffClientForm(request.POST or None, initial=_initial(client, services.STAFF_FIELDS))
+    form = forms.StaffClientForm(request.POST or None, initial=_initial(client, services.STAFF_FIELDS),
+                                 current_currency=client.currency)
     if request.method == "POST" and form.is_valid():
         try:
             services.update_client(request.user, client, form.cleaned_data, request=request)
@@ -140,6 +144,61 @@ def staff_client_status(request, pk):
     return _post_action(request, pk, action)
 
 
+@require_POST
+@portal_permission_required(perm("manage_clients"))
+def staff_client_bulk(request):
+    """"With selected": set the ticked clients active, inactive or closed, or (Super Admin only) delete the ones with no history."""
+    do = request.POST.get("do", "")
+    statuses = {"activate": "active", "deactivate": "inactive", "close": "closed"}
+    if do in statuses:
+        target = statuses[do]
+        verb, action = f"client(s) set to {target}", lambda c: services.set_client_status(
+            request.user, c, target, reason="Bulk change", request=request)
+    elif do == "delete":
+        # the person confirmed in the dialog for the whole selection; the service still refuses any client with history
+        verb, action = "client(s) deleted", lambda c: services.delete_client(
+            request.user, c, confirm_email=c.email, request=request)
+    else:
+        messages.error(request, "Choose what to do with the selected clients.")
+        return bulk.back_to(request, "clients_staff:list")
+    bulk.run(request, Client.objects.all(), bulk.selected_ids(request), action, verb=verb, label=lambda c: c.display_name)
+    return bulk.back_to(request, "clients_staff:list")
+
+
+@portal_permission_required(perm("manage_clients"))
+def staff_client_delete(request, pk):
+    """Super Admin only: the confirmation page (what would block it, and the email to type) and the deletion itself."""
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    client = get_object_or_404(Client, pk=pk)
+    form = forms.DeleteClientForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            gone = services.delete_client(request.user, client, confirm_email=form.cleaned_data["confirm_email"],
+                                          delete_logins=form.cleaned_data["delete_logins"], request=request)
+        except (ServiceError, ValidationError) as exc:
+            _apply_error(form, exc)
+        else:
+            extra = f" {len(gone['logins_deleted'])} sign-in(s) deleted." if gone["logins_deleted"] else ""
+            messages.success(request, f"Client {gone['name']} deleted.{extra}")
+            return redirect("clients_staff:list")
+    return render(request, "clients/staff/delete.html", {"client": client, "form": form, "tab": "profile",
+                                                          "blockers": services.delete_blockers(client)})
+
+
+@require_POST
+@portal_permission_required(perm("manage_clients"))
+def staff_contact_reset_link(request, pk, contact_id):
+    from apps.accounts import services as account_services
+
+    def action(client):
+        contact = get_object_or_404(ClientContact.objects.select_related("user"), pk=contact_id, client=client)
+        account_services.admin_send_reset_link(request.user, contact.user, request=request)
+        return f"A password reset link was emailed to {contact.user.email}."
+
+    return _post_action(request, pk, action, back="clients_staff:contact_add")
+
+
 @portal_permission_required(perm("view_clients"))
 def staff_contact_add(request, pk):
     """GET: the Contacts tab (people on the account, and a form to add one). POST: add a contact."""
@@ -148,7 +207,8 @@ def staff_contact_add(request, pk):
         return render(request, "clients/staff/tab_contacts.html", {
             "client": client, "tab": "contacts", "contacts": client.contacts.select_related("user").order_by("role", "id"),
             "contact_form": forms.AddContactForm(), "role_choices": forms.ContactRole.choices,
-            "can_manage": request.user.has_perm(perm("manage_clients"))})
+            "can_manage": request.user.has_perm(perm("manage_clients")),
+            "is_super": request.user.is_superuser})
     if not request.user.has_perm(perm("manage_clients")):
         raise PermissionDenied
     form = forms.AddContactForm(request.POST)

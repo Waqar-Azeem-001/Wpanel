@@ -35,6 +35,8 @@ ORDER_AUTO_FULFIL = env.bool("ORDER_AUTO_FULFIL", default=True)
 # Emails get a 1x1 image that records when it is fetched ("opened"). It is a signal, not proof of reading: mail
 # clients that block images hide it, and privacy proxies and link scanners fetch it. Never added to security emails.
 EMAIL_OPEN_TRACKING = env.bool("EMAIL_OPEN_TRACKING", default=True)
+# Sends the links in non-security emails through a counting page (which redirects to the original address). Off = links untouched.
+EMAIL_CLICK_TRACKING = env.bool("EMAIL_CLICK_TRACKING", default=True)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -271,6 +273,10 @@ CELERY_BEAT_SCHEDULE = {
     "run-service-lifecycle": {
         "task": "apps.lifecycle.tasks.run_lifecycle_task",
         "schedule": crontab(hour=5, minute=0),
+    },
+    "retry-stuck-emails": {
+        "task": "apps.notifications.tasks.retry_stuck_emails_task",
+        "schedule": crontab(minute="*/10"),
     },
     "purge-sensitive-emails": {
         "task": "apps.notifications.tasks.purge_sensitive_emails_task",

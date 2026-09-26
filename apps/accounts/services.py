@@ -209,6 +209,57 @@ def change_password(user, *, old_password, new_password, request=None):
     return user
 
 
+def _password_target(actor, user):
+    """Who an admin may act on: someone else, and never a Super Admin's account (they change their own)."""
+    if user.pk == actor.pk:
+        raise ServiceError("Change your own password in your profile.", code="self_action")
+    if user.is_superuser or user.role == Role.SUPER_ADMIN:
+        raise ServiceError("A Super Admin's password can only be changed by that person.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+
+
+@transaction.atomic
+def admin_set_password(actor, user, new_password, *, request=None):
+    """
+    Super Admin only: give someone a new password (a customer who cannot use the reset link, say). It is checked against the
+    password rules, the person is signed out everywhere, they are told by email that it changed (the email never contains the
+    password), and the audit trail records who did it, never the password.
+    """
+    if not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can set another person's password.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+    _password_target(actor, user)
+    try:
+        password_validation.validate_password(new_password or "", user=user)
+    except Exception as exc:  # noqa: BLE001 - shown to the admin as the reason
+        raise ServiceError(" ".join(getattr(exc, "messages", None) or [str(exc)]), code="weak_password")
+    user.set_password(new_password)
+    user.save(update_fields=["password", "updated_at"])
+    revoke_all_tokens(user)
+    audit.record("account.password_set_by_admin", actor=actor, target=user, request=request)
+    notifications.dispatch("account.password_changed_by_admin", user=user, context={"by": actor.full_name or actor.email})
+    return user
+
+
+@transaction.atomic
+def admin_send_reset_link(actor, user, *, request=None):
+    """Send the person a fresh password-reset link (needs ``manage_users``, or ``manage_clients`` for a customer)."""
+    allowed = actor.has_perm(perm("manage_users")) or (actor.has_perm(perm("manage_clients")) and user.role == Role.CUSTOMER)
+    if not allowed:
+        raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+    _password_target(actor, user)
+    if user.role in PRIVILEGED_ROLES and not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can reset an admin account.", code="permission_denied",
+                           status_code=status.HTTP_403_FORBIDDEN)
+    if user.status != AccountStatus.ACTIVE:
+        raise ServiceError("This account is not active, so it cannot receive a reset link. Reactivate it first.",
+                           code="account_inactive")
+    message = request_password_reset(user.email, request=request)
+    audit.record("account.reset_link_sent", actor=actor, target=user, request=request)
+    return message
+
+
 # --- Profile ----------------------------------------------------------------------
 
 PROFILE_FIELDS = ("first_name", "last_name", "phone")

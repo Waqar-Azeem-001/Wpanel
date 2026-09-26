@@ -52,6 +52,7 @@ urlpatterns = [
     path("account/notifications/", include("apps.notifications.urls")),
     path("staff/notifications/", include("apps.notifications.urls_staff")),
     path("e/o/<uuid:token>.gif", notification_views.open_pixel, name="email_open_pixel"),
+    path("e/c/<uuid:token>/<int:link_id>/", notification_views.click_redirect, name="email_click"),
     path("staff/support/", include("apps.support.urls_staff")),
     path("help/", include("apps.support.urls_kb")),
     path("staff/renewals/", include("apps.renewals.urls_staff")),

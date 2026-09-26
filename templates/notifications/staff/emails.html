@@ -3,7 +3,12 @@
 {% block title %}Email log · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
 {% block content %}
-<h1>Email</h1>
+<div class="page-head"><h1>Email</h1><p class="page-sub">Every email the portal sent or tried to send, with its delivery, opens and clicks.</p>
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'notifications_staff:overview' %}">Statistics</a></div>
+{% if no_provider %}<div class="alert alert-warning" role="alert"><p class="mb-0"><strong>No email provider is active.</strong> Nothing is really delivered: in development messages only reach the console, and a live site refuses to send. Set one up in <a href="{% url 'console:email_providers' %}">Setup &rsaquo; Email provider</a>, use <em>Send test email</em>, then send the failed ones again.</p></div>{% endif %}
+{% if failed_count %}<div class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2" role="status">
+  <span><strong>{{ failed_count }}</strong> email{{ failed_count|pluralize }} failed to send.</span>
+  {% if can_manage %}<form method="post" action="{% url 'notifications_staff:retry_failed' %}" data-plain>{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-danger" type="submit">Send all failed again</button></form>{% endif %}</div>{% endif %}
 <form class="filters" method="get">
   <div class="field grow"><label for="id_q">Search</label><input type="search" name="q" id="id_q" value="{{ q }}" placeholder="Recipient or subject"></div>
   <div class="field"><label for="id_status">Status</label>
@@ -12,16 +17,40 @@
     <select name="event" id="id_event"><option value="">All</option>{% for value, label in event_choices %}<option value="{{ value }}"{% if value == event %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
   <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
+<form method="post" action="{% url 'notifications_staff:bulk' %}" data-confirm="Apply this to every ticked email? Deleting cannot be undone.">{% csrf_token %}
+<input type="hidden" name="next" value="{{ request.get_full_path }}">
 <div class="table-responsive"><table class="table">
-  <thead><tr><th>Date</th><th>To</th><th>Subject</th><th>Message</th><th>Status</th><th>Opened</th></tr></thead>
+  <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all aria-label="Select all emails on this page"></th>{% endif %}<th>Date</th><th>To</th><th>Subject</th><th>Message</th><th>Status</th><th>Opened</th><th>Clicked</th></tr></thead>
   <tbody>
   {% for m in page %}
-    <tr><td>{{ m.created_at|date:"j M, H:i" }}</td><td>{{ m.to_email }}</td>
+    <tr>{% if can_manage %}<td><input class="form-check-input" type="checkbox" name="ids" value="{{ m.pk }}" aria-label="Select the email to {{ m.to_email }}"></td>{% endif %}
+        <td>{{ m.created_at|date:"j M, H:i" }}</td><td>{{ m.to_email }}</td>
         <td><a href="{% url 'notifications_staff:email' m.pk %}">{{ m.subject|truncatechars:60 }}</a>{% if m.is_sensitive %} <span class="badge text-bg-secondary">Secret</span>{% endif %}</td>
         <td>{{ m.event_label|default:m.event|default:"&mdash;" }}</td>
-        <td>{% status_badge m.status m.get_status_display %}{% if m.attempts > 1 %} <small class="text-secondary">{{ m.attempts }} attempts</small>{% endif %}</td>
-        <td>{% if m.is_sensitive %}<span class="text-secondary">not tracked</span>{% elif m.opened_at %}{{ m.opened_at|date:"j M, H:i" }}{% else %}&mdash;{% endif %}</td></tr>
-  {% empty %}<tr><td colspan="6" class="text-secondary">No emails match.</td></tr>{% endfor %}
+        <td>{% status_badge m.status m.get_status_display %}{% if m.delivery == "fallback" %} <span class="badge text-bg-warning" title="No email provider was active, so this did not leave this machine">not delivered</span>{% endif %}{% if m.attempts > 1 %} <small class="text-secondary">{{ m.attempts }} attempts</small>{% endif %}</td>
+        <td>{% if m.is_sensitive %}<span class="text-secondary">not tracked</span>{% elif m.opened_at %}{{ m.opened_at|date:"j M, H:i" }}{% else %}&mdash;{% endif %}</td>
+        <td>{% if m.is_sensitive %}<span class="text-secondary">not tracked</span>{% elif m.click_count %}{{ m.click_count }}{% else %}&mdash;{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="8" class="text-secondary">No emails match.</td></tr>{% endfor %}
   </tbody></table></div>
+{% if can_manage and page.paginator.count %}
+<div class="d-flex flex-wrap align-items-end gap-2 mt-3 bulk-bar">
+  <span class="fw-semibold me-1">With selected:</span>
+  <div><label class="visually-hidden" for="bulk_do">Action</label>
+    <select class="form-select form-select-sm w-auto" name="do" id="bulk_do"><option value="resend">Send again (failed only)</option><option value="delete">Delete from the log</option></select></div>
+  <button class="btn btn-sm btn-outline-primary" type="submit">Apply</button>
+</div>
+{% endif %}
+</form>
 {% include "components/pager.html" %}
+{% if can_manage %}
+<section class="panel mt-4"><div class="panel-body">
+  <h2 class="h6">Clear old emails</h2>
+  <p class="text-secondary small">Delete sent or failed emails older than a number of days (7 or more) to keep the log short. Emails still waiting to be sent are never deleted. The deletion is recorded in the audit log.</p>
+  <form method="post" action="{% url 'notifications_staff:purge' %}" class="d-flex flex-wrap align-items-end gap-2" data-plain data-confirm="Delete these emails permanently?">{% csrf_token %}
+    <div><label class="form-label" for="purge_days">Older than (days)</label><input class="form-control form-control-sm" id="purge_days" name="days" type="number" min="7" value="90" required></div>
+    <div><label class="form-label" for="purge_status">Which</label><select class="form-select form-select-sm" id="purge_status" name="status"><option value="">Sent and failed</option><option value="sent">Sent only</option><option value="failed">Failed only</option></select></div>
+    <button class="btn btn-sm btn-outline-danger" type="submit">Delete old emails</button>
+  </form>
+</div></section>
+{% endif %}
 {% endblock %}

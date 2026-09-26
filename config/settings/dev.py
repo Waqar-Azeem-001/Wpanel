@@ -16,6 +16,8 @@ if not env("DATABASE_URL", default=""):
 if not env("REDIS_URL", default=""):
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
     CELERY_TASK_ALWAYS_EAGER = True
-    CELERY_TASK_EAGER_PROPAGATES = True
+    # No worker here, so a task runs inline. A failing one (an email that cannot be sent right now) must not break the page that
+    # caused it: it is recorded on its own row and can be sent again from the email log.
+    CELERY_TASK_EAGER_PROPAGATES = False
     CELERY_BROKER_URL = "memory://"
     CELERY_RESULT_BACKEND = "cache+memory://"

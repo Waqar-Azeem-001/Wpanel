@@ -34,6 +34,7 @@
         <button class="btn btn-outline-primary" type="submit">{% trans "Update status" %}</button>
       </form>
       {% else %}<p class="mb-0">{{ client.get_status_display }}</p>{% endif %}
+      {% if is_super %}<hr><a class="btn btn-sm btn-outline-danger" href="{% url 'clients_staff:delete' client.pk %}"><i class="bi bi-trash" aria-hidden="true"></i> {% trans "Delete this client" %}</a>{% endif %}
     </div></section>
   </div>
 </div>

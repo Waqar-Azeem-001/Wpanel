@@ -195,4 +195,28 @@
     var icon = button.querySelector(".bi");
     if (icon) { icon.className = "bi " + (show ? "bi-eye-slash" : "bi-eye"); }
   });
+
+  // --- A currency choice names the currency wherever the page says it (invoice and quote prices) -------------------------------
+  doc.addEventListener("change", function (event) {
+    var select = event.target.closest("[data-currency-source]");
+    if (!select) { return; }
+    doc.querySelectorAll("[data-currency-code]").forEach(function (el) { el.textContent = select.value; });
+  });
+
+  // --- Generate a strong password in the browser (never sent anywhere until the form is submitted) -------------------------
+  doc.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-generate-password]");
+    if (!button) { return; }
+    var alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_";
+    var bytes = new Uint32Array(16);
+    window.crypto.getRandomValues(bytes);
+    var password = "";
+    for (var i = 0; i < bytes.length; i++) { password += alphabet.charAt(bytes[i] % alphabet.length); }
+    button.getAttribute("data-generate-password").split(",").forEach(function (selector) {
+      var field = doc.querySelector(selector);
+      if (field) { field.value = password; field.type = "text"; }
+    });
+    var note = button.closest("form").querySelector("[data-generated-note]");
+    if (note) { note.hidden = false; note.textContent = "Generated: copy it now and give it to the person; it is not shown again after you save."; }
+  });
 })();

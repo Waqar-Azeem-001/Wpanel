@@ -19,6 +19,7 @@ NOT_CLICKABLE = {
 NOT_CLICKABLE_EXACT = {
     "billing_customer:test_gateway": "the simulated gateway's page, reached from a redirect after starting a test payment",
     "email_open_pixel": "the tracking pixel inside emails (tested with the email links)",
+    "email_click": "the counting redirect behind links inside emails (tested in test_owner_tools)",
     "accounts:verify_email": "reached from the verification email (tested with the email links)",
     "accounts:password_reset_confirm": "reached from the password-reset email",
     "accounts:register": "the sign-up form is only offered to signed-out visitors",

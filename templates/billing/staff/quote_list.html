@@ -12,12 +12,15 @@
   <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
   <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
+<form method="post" action="{% url 'billing_staff:quote_bulk' %}" data-confirm="Apply this to every ticked quote? Deleting cannot be undone.">{% csrf_token %}
+<input type="hidden" name="next" value="{{ request.get_full_path }}">
 <div class="table-responsive">
 <table class="table">
-  <thead><tr><th>Quote</th><th>Client</th><th>Issued</th><th>Valid until</th><th>Status</th><th class="text-end">Total</th></tr></thead>
+  <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all aria-label="Select all quotes on this page"></th>{% endif %}<th>Quote</th><th>Client</th><th>Issued</th><th>Valid until</th><th>Status</th><th class="text-end">Total</th></tr></thead>
   <tbody>
   {% for quote in page %}
     <tr>
+      {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="ids" value="{{ quote.pk }}" aria-label="Select {{ quote.reference }}"></td>{% endif %}
       <td><a href="{% url 'billing_staff:quote_detail' quote.pk %}">{{ quote.reference }}</a></td>
       <td>{{ quote.client.display_name }}</td>
       <td>{{ quote.issue_date|date:"Y-m-d"|default:"&mdash;" }}</td>
@@ -26,10 +29,19 @@
       <td class="text-end">{{ quote.currency }} {{ quote.total }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="6" class="text-secondary">No quotes match.</td></tr>
+    <tr><td colspan="7" class="text-secondary">No quotes match.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
+{% if can_manage and page.paginator.count %}
+<div class="d-flex flex-wrap align-items-end gap-2 mt-3 bulk-bar">
+  <span class="fw-semibold me-1">With selected:</span>
+  <div><label class="visually-hidden" for="bulk_do">Action</label>
+    <select class="form-select form-select-sm w-auto" name="do" id="bulk_do"><option value="delete">Delete drafts</option><option value="cancel">Cancel (draft or sent)</option></select></div>
+  <button class="btn btn-sm btn-outline-primary" type="submit">Apply</button>
+</div>
+{% endif %}
+</form>
 {% include "components/pager.html" %}
 {% endblock %}

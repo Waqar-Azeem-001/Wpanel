@@ -35,6 +35,18 @@ class UserDetailsForm(forms.Form):
     phone = forms.CharField(max_length=32, required=False)
 
 
+class SetPasswordForm(forms.Form):
+    new_password = forms.CharField(widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}, render_value=False))
+    new_password_confirm = forms.CharField(label="Confirm new password", widget=forms.PasswordInput(
+        attrs={"autocomplete": "new-password"}, render_value=False))
+
+    def clean(self):
+        data = super().clean()
+        if data.get("new_password") and data.get("new_password") != data.get("new_password_confirm"):
+            self.add_error("new_password_confirm", "The two passwords do not match.")
+        return data
+
+
 class StaffRoleForm(forms.Form):
     role = forms.ChoiceField(choices=STAFF_ROLE_CHOICES)
 

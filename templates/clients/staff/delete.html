@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Delete client" %} · {{ client.display_name }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p class="mb-2"><a href="{% url 'clients_staff:detail' client.pk %}">&larr; {{ client.display_name }}</a></p>
+<div class="page-head"><h1>{% trans "Delete client" %}</h1></div>
+<section class="card"><div class="card-body">
+  <h2>{{ client.display_name }} <small class="text-secondary fs-6">{{ client.reference }}</small></h2>
+  {% if blockers %}
+  <div class="alert alert-warning" role="alert">
+    <p><strong>{% trans "This client cannot be deleted." %}</strong> {% trans "It has records that belong to the books:" %}</p>
+    <ul class="mb-2">{% for count, what in blockers %}<li>{{ count }} {{ what }}</li>{% endfor %}</ul>
+    <p class="mb-0">{% trans "Close the account instead (Status on the client page). The history is kept and no new business can be started." %}</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'clients_staff:detail' client.pk %}">{% trans "Back to the client" %}</a>
+  {% else %}
+  <p>{% trans "This permanently deletes the client and cannot be undone. Only unissued drafts, unbilled items and the cart are removed with it. The audit log keeps a record of the deletion." %}</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+    <div class="field"><label for="{{ form.confirm_email.id_for_label }}">{{ form.confirm_email.label }} ({{ client.email }})</label>{{ form.confirm_email }}{% for e in form.confirm_email.errors %}<p class="text-danger small">{{ e }}</p>{% endfor %}</div>
+    <div class="field form-check"><label for="{{ form.delete_logins.id_for_label }}">{{ form.delete_logins.label }}</label>{{ form.delete_logins }}</div>
+    <div class="form-actions"><a href="{% url 'clients_staff:detail' client.pk %}">{% trans "Cancel" %}</a><button class="btn btn-danger" type="submit">{% trans "Delete permanently" %}</button></div>
+  </form>
+  {% endif %}
+</div></section>
+{% endblock %}

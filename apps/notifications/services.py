@@ -23,6 +23,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.urls import reverse
 from django.core.mail import EmailMultiAlternatives, get_connection
+from django.core.mail.message import make_msgid
 from django.db import transaction
 from django.db.models import Count, F, Q, Value
 from django.db.models.functions import Coalesce
@@ -36,7 +37,7 @@ from apps.core import crypto
 from apps.core.exceptions import ServiceError
 
 from . import events
-from .models import EmailMessage, EmailProvider, Notification, NotificationPreference
+from .models import EmailEvent, EmailLink, EmailMessage, EmailProvider, Notification, NotificationPreference
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,9 @@ SENSITIVE_PLACEHOLDER = "[This message contained a secret. It is kept encrypted 
 SENSITIVE_KEEP_FAILED = timedelta(hours=24)
 FAILURE_ALERT_AFTER_ATTEMPTS = 6
 URL_RE = re.compile(r"(https?://[^\s<>\"]+)")
+HREF_RE = re.compile(r'(<a\b[^>]*?\shref=")(https?://[^"]+)(")', re.IGNORECASE)
+SWEEP_AFTER = timedelta(minutes=10)  # an email still queued or failed this long after its last change is picked up again
+SWEEP_MAX_ATTEMPTS = 8
 
 
 # --- Provider and rendering ------------------------------------------------------------------------------------
@@ -107,6 +111,42 @@ def _with_open_pixel(body_html, token):
     return body_html.replace("</body>", pixel + "</body>", 1) if "</body>" in body_html else body_html + pixel
 
 
+def log_event(message, kind, detail=""):
+    """Add a step to an email's timeline (what the log's detail page shows, oldest first)."""
+    return EmailEvent.objects.create(message=message, kind=kind, detail=detail[:500])
+
+
+def _track_links(message):
+    """Send the links in the HTML body through our click page (one stored, numbered link each), so clicks can be counted."""
+    if not settings.EMAIL_CLICK_TRACKING or message.is_sensitive or not message.body_html:
+        return
+
+    def replace(match):
+        link = EmailLink.objects.create(message=message, url=html.unescape(match.group(2)))
+        target = settings.SITE_URL.rstrip("/") + reverse("email_click", args=[message.track_token, link.pk])
+        return f"{match.group(1)}{target}{match.group(3)}"
+
+    message.body_html = HREF_RE.sub(replace, message.body_html)
+    message.save(update_fields=["body_html", "updated_at"])
+
+
+def _enqueue(message_id):
+    """
+    Hand the email to the delivery task. With a worker (Redis) it is queued and retried with back-off. Without one (local
+    development runs tasks inline), the attempt happens here and a failure never breaks the page that caused it: the row keeps
+    the error and can be sent again from the email log.
+    """
+    from .tasks import deliver_email
+
+    if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False) and not getattr(settings, "CELERY_TASK_EAGER_PROPAGATES", False):
+        try:
+            deliver(message_id)
+        except Exception:  # noqa: BLE001 - already recorded on the message
+            logger.info("Email %s was not delivered now; it stays in the log to send again.", message_id)
+        return
+    deliver_email.delay(message_id)
+
+
 # --- Sending ----------------------------------------------------------------------------------------------------
 
 def send_email(*, to_email, template, context=None, user=None, event=""):
@@ -125,9 +165,9 @@ def send_email(*, to_email, template, context=None, user=None, event=""):
         fields = {"body_text": body_text, "body_html": _with_open_pixel(body_html, token)}
     message = EmailMessage.objects.create(user=user, event=event, template=template, to_email=to_email,
                                           subject=subject, track_token=token, **fields)
-    from .tasks import deliver_email
-
-    transaction.on_commit(lambda: deliver_email.delay(message.pk))
+    _track_links(message)
+    log_event(message, EmailEvent.Kind.QUEUED)
+    transaction.on_commit(lambda: _enqueue(message.pk))
     return message
 
 
@@ -152,17 +192,20 @@ def deliver(message_id):
         if message.status == EmailMessage.Status.SENT:
             return True
         message.attempts += 1
-        message.save(update_fields=["attempts", "updated_at"])
+        message.last_attempt_at = timezone.now()
+        message.save(update_fields=["attempts", "last_attempt_at", "updated_at"])
 
     try:
         body_text, body_html = _content(message)
         connection, sender = _connection_and_sender()
+        message_id = message.message_id or make_msgid(domain=(sender.rsplit("@", 1)[-1].strip("> ") or None))
         mail = EmailMultiAlternatives(
             subject=message.subject,
             body=body_text,
             from_email=sender,
             to=[message.to_email],
             connection=connection,
+            headers={"Message-ID": message_id},
         )
         if body_html:
             mail.attach_alternative(body_html, "text/html")
@@ -171,6 +214,7 @@ def deliver(message_id):
         message.status = EmailMessage.Status.FAILED
         message.last_error = f"{type(exc).__name__}: {exc}"[:2000]
         message.save(update_fields=["status", "last_error", "updated_at"])
+        log_event(message, EmailEvent.Kind.FAILED, f"Attempt {message.attempts}: {message.last_error}")
         logger.warning("Email %s delivery failed (attempt %s): %s", message.pk, message.attempts, message.last_error)
         if message.attempts >= FAILURE_ALERT_AFTER_ATTEMPTS:
             _alert_email_failing(message)
@@ -178,14 +222,19 @@ def deliver(message_id):
 
     message.status = EmailMessage.Status.SENT
     message.from_email = sender
+    message.message_id = message_id
+    message.delivery = "smtp" if get_active_provider() is not None else "fallback"
     message.sent_at = timezone.now()
     message.last_error = ""
-    update = ["status", "from_email", "sent_at", "last_error", "updated_at"]
+    update = ["status", "from_email", "sent_at", "last_error", "message_id", "delivery", "updated_at"]
     if message.is_sensitive:  # delivered: the secret is no longer kept anywhere in our database
         message.sensitive_body = ""
         message.body_text = SENSITIVE_PLACEHOLDER
         update += ["sensitive_body", "body_text"]
     message.save(update_fields=update)
+    provider = get_active_provider()
+    log_event(message, EmailEvent.Kind.SENT, f"Accepted by {provider.host}" if provider is not None
+              else "No provider is set up: it went to the fallback and did not leave this machine")
     return True
 
 
@@ -340,6 +389,18 @@ def mark_read(user, notification_ids=None):
     return qs.update(read_at=timezone.now())
 
 
+def delete_notifications(user, notification_ids=None, *, read_only=False):
+    """Delete some of the person's own notifications: the ticked ones, or every one they have already read."""
+    qs = Notification.objects.filter(user=user)
+    if read_only:
+        qs = qs.filter(read_at__isnull=False)
+    if notification_ids is not None:
+        qs = qs.filter(pk__in=notification_ids)
+    count = qs.count()
+    qs.delete()
+    return count
+
+
 def safe_link(link):
     """A notification's link, only if it is a path on this site (never an external address)."""
     return link if link.startswith("/") and not link.startswith("//") and "\\" not in link else "/account/notifications/"
@@ -349,8 +410,31 @@ def safe_link(link):
 
 def record_open(token):
     """Note that the tracking pixel was fetched. A signal, not proof of reading (proxies and scanners fetch it too)."""
-    return EmailMessage.objects.filter(track_token=token).update(
+    message = EmailMessage.objects.filter(track_token=token).first()
+    if message is None:
+        return 0
+    first = message.opened_at is None
+    EmailMessage.objects.filter(pk=message.pk).update(
         open_count=F("open_count") + 1, opened_at=Coalesce("opened_at", Value(timezone.now())))
+    if first:
+        log_event(message, EmailEvent.Kind.OPENED, "The tracking image was loaded")
+    return 1
+
+
+def record_click(token, link_id):
+    """Count a click and return where it goes: only ever an address that was in the email (never one from the request)."""
+    link = EmailLink.objects.select_related("message").filter(pk=link_id, message__track_token=token).first()
+    if link is None:
+        return None
+    now = timezone.now()
+    EmailLink.objects.filter(pk=link.pk).update(click_count=F("click_count") + 1,
+                                                first_clicked_at=Coalesce("first_clicked_at", Value(now)), last_clicked_at=now)
+    first = link.message.first_clicked_at is None
+    EmailMessage.objects.filter(pk=link.message_id).update(
+        click_count=F("click_count") + 1, first_clicked_at=Coalesce("first_clicked_at", Value(now)))
+    if first:
+        log_event(link.message, EmailEvent.Kind.CLICKED, link.url[:300])
+    return link.url
 
 
 def email_stats(*, days=30, now=None):
@@ -364,16 +448,21 @@ def email_stats(*, days=30, now=None):
         queued=Count("id", filter=Q(status=EmailMessage.Status.QUEUED)),
         tracked=Count("id", filter=Q(status=EmailMessage.Status.SENT, is_sensitive=False)),
         opened=Count("id", filter=Q(status=EmailMessage.Status.SENT, is_sensitive=False, opened_at__isnull=False)),
+        clicked=Count("id", filter=Q(status=EmailMessage.Status.SENT, is_sensitive=False, first_clicked_at__isnull=False)),
     ).order_by("-total"))
 
     def rate(opened, tracked):
         return round(100 * opened / tracked, 1) if tracked else None
 
     by_event = [{**row, "event_label": events.EVENTS[row["event"]].label if row["event"] in events.EVENTS
-                 else (row["event"] or "(other)"), "open_rate": rate(row["opened"], row["tracked"])} for row in rows]
-    totals = {key: sum(r[key] for r in by_event) for key in ("total", "sent", "failed", "queued", "tracked", "opened")}
-    return {**totals, "open_rate": rate(totals["opened"], totals["tracked"]), "days": days, "by_event": by_event,
-            "tracking_enabled": settings.EMAIL_OPEN_TRACKING}
+                 else (row["event"] or "(other)"), "open_rate": rate(row["opened"], row["tracked"]),
+                 "click_rate": rate(row["clicked"], row["tracked"])} for row in rows]
+    totals = {key: sum(r[key] for r in by_event) for key in ("total", "sent", "failed", "queued", "tracked", "opened", "clicked")}
+    return {**totals, "open_rate": rate(totals["opened"], totals["tracked"]),
+            "click_rate": rate(totals["clicked"], totals["tracked"]), "days": days, "by_event": by_event,
+            "tracking_enabled": settings.EMAIL_OPEN_TRACKING, "click_tracking_enabled": settings.EMAIL_CLICK_TRACKING,
+            "no_provider": get_active_provider() is None,
+            "fallback_sent": EmailMessage.objects.filter(created_at__gte=since, delivery="fallback").count()}
 
 
 @transaction.atomic
@@ -390,11 +479,74 @@ def resend(actor, message, *, request=None):
     _content(message)  # refuses if a secret has already been removed
     message.status = EmailMessage.Status.QUEUED
     message.save(update_fields=["status", "updated_at"])
+    log_event(message, EmailEvent.Kind.RESENT, f"By {actor.email}")
     audit.record("email.resent", actor=actor, target=message, metadata={"to": message.to_email}, request=request)
-    from .tasks import deliver_email
-
-    transaction.on_commit(lambda: deliver_email.delay(message.pk))
+    transaction.on_commit(lambda: _enqueue(message.pk))
     return message
+
+
+def _require_settings(actor):
+    if not actor.has_perm(perm("manage_settings")):
+        raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
+                           status_code=http.HTTP_403_FORBIDDEN)
+
+
+@transaction.atomic
+def delete_email(actor, message, *, request=None):
+    """Staff (``manage_settings``): remove an email from the log. Its timeline and link counts go with it; an email still
+    waiting to be sent cannot be removed (send it or wait), so nothing that was meant to go out disappears."""
+    from apps.audit import services as audit
+
+    _require_settings(actor)
+    message = EmailMessage.objects.select_for_update().get(pk=message.pk)
+    if message.status == EmailMessage.Status.QUEUED:
+        raise ServiceError("This email is still waiting to be sent. Wait for the attempt, or delete it once it has "
+                           "been sent or has failed.", code="email_queued")
+    audit.record("email.deleted", actor=actor, metadata={"to": message.to_email, "subject": message.subject[:120],
+                                                          "status": message.status, "event": message.event}, request=request)
+    message.delete()
+
+
+@transaction.atomic
+def purge_emails(actor, *, older_than_days, status="", request=None):
+    """
+    Staff (``manage_settings``): delete the sent or failed emails older than N days (at least 7), optionally only one status,
+    to keep the log small. Queued emails are never touched. Returns how many were deleted; the count is audited.
+    """
+    from apps.audit import services as audit
+
+    _require_settings(actor)
+    if not isinstance(older_than_days, int) or older_than_days < 7:
+        raise ServiceError("Choose 7 days or more, so recent history is never lost by accident.", code="too_recent")
+    if status and status not in (EmailMessage.Status.SENT, EmailMessage.Status.FAILED):
+        raise ServiceError("You can delete sent or failed emails only.", code="invalid_status")
+    doomed = EmailMessage.objects.filter(created_at__lt=timezone.now() - timedelta(days=older_than_days)).exclude(
+        status=EmailMessage.Status.QUEUED)
+    if status:
+        doomed = doomed.filter(status=status)
+    count = doomed.count()
+    doomed.delete()  # the timeline and link rows go with each message
+    audit.record("email.purged", actor=actor, metadata={"older_than_days": older_than_days, "status": status or "any",
+                                                         "emails": count}, request=request)
+    return count
+
+
+def sweep_stuck(*, now=None):
+    """
+    Run every few minutes: pick up emails that are still queued or failed a while after their last change (a worker was down, a
+    mail server was slow, the process ended mid-send) and try them again, up to ``SWEEP_MAX_ATTEMPTS`` tries in all.
+    """
+    cutoff = (now or timezone.now()) - SWEEP_AFTER
+    stuck = EmailMessage.objects.filter(status__in=(EmailMessage.Status.QUEUED, EmailMessage.Status.FAILED),
+                                        updated_at__lt=cutoff, attempts__lt=SWEEP_MAX_ATTEMPTS)
+    retried = 0
+    for message in stuck[:200]:
+        if message.is_sensitive and not message.sensitive_body:
+            continue  # the secret was wiped: it can never be sent, so leave it for staff
+        log_event(message, EmailEvent.Kind.RESENT, "Automatic retry")
+        _enqueue(message.pk)
+        retried += 1
+    return retried
 
 
 def purge_sensitive(*, now=None):

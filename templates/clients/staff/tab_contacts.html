@@ -24,10 +24,14 @@
         </td>
         <td>{% if not contact.user.has_usable_password %}{% trans "Invited" %}{% else %}{{ contact.user.get_status_display }}{% endif %}</td>
         {% if can_manage %}
-        <td class="text-end">
+        <td class="text-end"><div class="d-flex flex-wrap justify-content-end gap-2">
+          <form method="post" action="{% url 'clients_staff:contact_reset_link' client.pk contact.pk %}" data-confirm="{% trans 'Email a password reset link to' %} {{ contact.user.email }}?">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Send reset link" %}</button>
+          </form>
+          {% if is_super %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'console:user_detail' contact.user.pk %}#password">{% trans "Set password" %}</a>{% endif %}
           <form method="post" action="{% url 'clients_staff:contact_remove' client.pk contact.pk %}" data-confirm="Remove {{ contact.user.email }} from this client?">{% csrf_token %}
             <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Remove" %}</button>
-          </form>
+          </form></div>
         </td>
         {% endif %}
       </tr>

@@ -74,7 +74,7 @@ def users(request, create_form=None):
 
 
 @portal_permission_required(VIEW_USERS)
-def user_detail(request, pk):
+def user_detail(request, pk, password_form=None):
     actor = request.user
     person = get_object_or_404(User, pk=pk)
     editable = can_edit(actor, person)
@@ -104,6 +104,10 @@ def user_detail(request, pk):
         "can_see_activity": can_see_activity,
         "can_edit_details": can_manage and editable,
         "can_set_status": can_manage and editable,
+        "can_reset_link": editable and (can_manage or actor.has_perm(perm("manage_clients")) and person.role == Role.CUSTOMER)
+                          and not person.is_superuser,
+        "can_set_password": actor.is_superuser and editable and not person.is_superuser,
+        "password_form": password_form or forms.SetPasswordForm(),
         "can_set_role": can_manage and editable and actor.has_perm(perm("assign_roles")) and person.role in STAFF_ROLES,
         "role_choices": [(v, label) for v, label in forms.STAFF_ROLE_CHOICES if v in allowed_roles(actor)],
         "details_form": forms.UserDetailsForm(initial={f: getattr(person, f) for f in ("first_name", "last_name", "phone")}),
@@ -124,4 +128,35 @@ def user_edit(request, pk):
             messages.error(request, error_text(exc))
         else:
             messages.success(request, "Details saved.")
+    return redirect("console:user_detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_users"))
+def user_set_password(request, pk):
+    """Super Admin only (the service refuses anyone else): set a new password for someone, who is signed out everywhere."""
+    person = get_object_or_404(User, pk=pk)
+    form = forms.SetPasswordForm(request.POST)
+    if form.is_valid():
+        try:
+            account_services.admin_set_password(request.user, person, form.cleaned_data["new_password"], request=request)
+        except ACTION_ERRORS as exc:
+            form.add_error("new_password", error_text(exc))
+        else:
+            messages.success(request, f"The password for {person.email} was changed and they were signed out everywhere. "
+                                      "Give them the new password yourself; it is not shown again.")
+            return redirect("console:user_detail", pk=pk)
+    return user_detail(request, pk, password_form=form)
+
+
+@require_POST
+@portal_permission_required(VIEW_USERS)
+def user_reset_link(request, pk):
+    person = get_object_or_404(User, pk=pk)
+    try:
+        account_services.admin_send_reset_link(request.user, person, request=request)
+    except ACTION_ERRORS as exc:
+        messages.error(request, error_text(exc))
+    else:
+        messages.success(request, f"A password reset link was emailed to {person.email}.")
     return redirect("console:user_detail", pk=pk)

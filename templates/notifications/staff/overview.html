@@ -3,6 +3,7 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Email</h1><p class="page-sub">Which emails were sent and whether they arrived.</p></div>
+{% if stats.no_provider %}<div class="alert alert-warning" role="alert"><p class="mb-0"><strong>No email provider is active.</strong> {% if stats.fallback_sent %}{{ stats.fallback_sent }} email{{ stats.fallback_sent|pluralize }} in this period only reached the fallback and never left this machine. {% endif %}Set one up in <a href="{% url 'console:email_providers' %}">Setup &rsaquo; Email provider</a>.</p></div>{% endif %}
 {% if failed %}<div class="alert alert-danger"><p>{{ failed }} email{{ failed|pluralize }} failed to send. <a href="{% url 'notifications_staff:emails' %}?status=failed">Review and resend</a>.</p></div>{% endif %}
 <nav aria-label="Period"><ul class="nav nav-tabs mb-3 tab-scroll">
   <li class="nav-item"><a class="nav-link{% if days == 7 %} active{% endif %}" href="?days=7"{% if days == 7 %} aria-current="page"{% endif %}>7 days</a></li>
@@ -14,19 +15,20 @@
   <div class="stat-tile"><strong>{{ stats.failed }}</strong><span>Failed</span></div>
   <div class="stat-tile"><strong>{{ stats.queued }}</strong><span>Queued</span></div>
   <div class="stat-tile"><strong>{% if stats.open_rate is not None %}{{ stats.open_rate }}%{% else %}&mdash;{% endif %}</strong><span>Open rate</span></div>
+  <div class="stat-tile"><strong>{% if stats.click_rate is not None %}{{ stats.click_rate }}%{% else %}&mdash;{% endif %}</strong><span>Click rate</span></div>
 </div>
 <p class="text-secondary">Open tracking is a <strong>signal, not proof of reading</strong>: mail programs that block images hide opens, and privacy features and link scanners can register opens nobody made. Security emails (password resets, verification, login details) are never tracked.
-  {% if not stats.tracking_enabled %}<strong>Tracking is switched off.</strong>{% endif %}</p>
+  {% if not stats.tracking_enabled %}<strong>Open tracking is switched off.</strong>{% endif %}{% if not stats.click_tracking_enabled %} <strong>Click tracking is switched off.</strong>{% endif %}</p>
 <section class="card"><div class="card-body">
   <h2>By message type, last {{ days }} days</h2>
   <div class="table-responsive"><table class="table">
-    <thead><tr><th>Message</th><th class="text-end">Total</th><th class="text-end">Sent</th><th class="text-end">Failed</th><th class="text-end">Queued</th><th class="text-end">Opened</th><th class="text-end">Open rate</th></tr></thead>
+    <thead><tr><th>Message</th><th class="text-end">Total</th><th class="text-end">Sent</th><th class="text-end">Failed</th><th class="text-end">Queued</th><th class="text-end">Opened</th><th class="text-end">Open rate</th><th class="text-end">Clicked</th></tr></thead>
     <tbody>
     {% for row in stats.by_event %}
       <tr><td><a href="{% url 'notifications_staff:emails' %}?event={{ row.event|urlencode }}">{{ row.event_label }}</a></td>
           <td class="text-end">{{ row.total }}</td><td class="text-end">{{ row.sent }}</td><td class="text-end">{{ row.failed }}</td><td class="text-end">{{ row.queued }}</td>
-          <td class="text-end">{{ row.opened }}</td><td class="text-end">{% if row.open_rate is not None %}{{ row.open_rate }}%{% else %}&mdash;{% endif %}</td></tr>
-    {% empty %}<tr><td colspan="7" class="text-secondary">No emails in this period.</td></tr>{% endfor %}
+          <td class="text-end">{{ row.opened }}</td><td class="text-end">{% if row.open_rate is not None %}{{ row.open_rate }}%{% else %}&mdash;{% endif %}</td><td class="text-end">{{ row.clicked }}</td></tr>
+    {% empty %}<tr><td colspan="8" class="text-secondary">No emails in this period.</td></tr>{% endfor %}
     </tbody></table></div></div>
 </section>
 {% endblock %}

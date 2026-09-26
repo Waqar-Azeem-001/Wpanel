@@ -18,6 +18,8 @@ from apps.audit.models import AuditEvent
 from apps.core.exceptions import ServiceError
 from apps.notifications import services as notifications
 
+from apps.core import currencies
+
 from .models import Client, ClientContact, ClientStatus, ContactRole
 
 # Fields staff may set on a client.
@@ -51,6 +53,13 @@ def _normalise(data):
     if data.get("email"):
         data["email"] = data["email"].strip().lower()
     return data
+
+
+def _valid_currency(value, *, keep=""):
+    try:
+        return currencies.clean(value, keep=keep)
+    except Exception:
+        raise ServiceError(f"Choose a currency: {', '.join(currencies.CODES)}.", code="invalid_currency")
 
 
 # --- Queries ---------------------------------------------------------------------
@@ -130,6 +139,7 @@ def create_client(actor, data, *, owner_email=None, request=None):
     """
     _require(actor, "manage_clients")
     data = _normalise({k: v for k, v in data.items() if k in STAFF_FIELDS})
+    data["currency"] = _valid_currency(data.get("currency") or currencies.DEFAULT)
     client = Client(**data)
     client.full_clean()
     client.save()
@@ -179,6 +189,8 @@ def update_client(actor, client, data, *, request=None):
         raise _denied()
 
     data = _normalise(data)
+    if "currency" in data and "currency" in allowed:
+        data["currency"] = _valid_currency(data["currency"], keep=client.currency)
     before = {f: getattr(client, f) for f in allowed}
     changed = _apply_changes(client, data, allowed)
     if not changed:
@@ -263,3 +275,67 @@ def remove_contact(actor, contact, *, request=None):
     contact.delete()
     audit.record("client.contact_removed", actor=actor, target=client,
                  metadata={"client_id": client.pk, "user": email}, request=request)
+
+
+# --- Deleting a client -------------------------------------------------------------------------------------
+
+# What a client's history is made of. A client that has any of it (other than an unissued draft) is never deleted: the records
+# belong to the books, so the account is closed instead, which keeps everything and stops new business.
+HISTORY = (
+    ("orders", "orders"), ("transactions", "payments"), ("domains", "domains"), ("hosting_accounts", "hosting services"),
+    ("tickets", "support tickets"), ("cancellation_requests", "cancellation requests"),
+    ("service_changes", "service changes"), ("coupon_redemptions", "coupon uses"),
+)
+
+
+def delete_blockers(client):
+    """What stops this client being deleted: ``[(count, what)]`` (empty when it can go)."""
+    from apps.billing.models import InvoiceStatus, QuoteStatus
+
+    found = []
+    for relation, label in HISTORY:
+        count = getattr(client, relation).count()
+        if count:
+            found.append((count, label))
+    issued_invoices = client.invoices.exclude(status=InvoiceStatus.DRAFT).count()
+    if issued_invoices:
+        found.append((issued_invoices, "issued invoices"))
+    sent_quotes = client.quotes.exclude(status=QuoteStatus.DRAFT).count()
+    if sent_quotes:
+        found.append((sent_quotes, "quotes that were sent"))
+    return found
+
+
+@transaction.atomic
+def delete_client(actor, client, *, confirm_email, delete_logins=True, request=None):
+    """
+    Super Admin only: permanently delete a client that has no history (a mistaken or test account). Type the client's email to
+    confirm. Unissued drafts, unbilled items, the cart and the contact links go with it; the sign-ins that belonged only to this
+    client go too (unless ``delete_logins`` is off). A client with orders, invoices, payments, services or tickets cannot be
+    deleted: close it instead. The audit trail keeps who deleted what.
+    """
+    if not actor.is_superuser:
+        raise _denied("Only a Super Admin can delete a client.")
+    client = Client.objects.select_for_update().get(pk=client.pk)
+    if (confirm_email or "").strip().lower() != client.email.strip().lower():
+        raise ServiceError("Type the client's email address exactly to confirm the deletion.", code="confirmation_mismatch")
+    blockers = delete_blockers(client)
+    if blockers:
+        listed = ", ".join(f"{count} {what}" for count, what in blockers)
+        raise ServiceError(f"This client has {listed}, so it cannot be deleted without losing records. Close the account "
+                           "instead (Status), which keeps the history and stops new business.", code="client_has_history")
+    people = [c.user for c in client.contacts.select_related("user")]
+    snapshot = {"client_id": client.pk, "reference": client.reference, "name": client.display_name, "email": client.email}
+    client.invoices.all().delete()
+    client.quotes.all().delete()
+    client.billable_items.all().delete()
+    removed_logins = []
+    audit.record("client.deleted", actor=actor, metadata={**snapshot, "logins_deleted": delete_logins}, request=request)
+    client.delete()
+    if delete_logins:
+        for person in people:
+            still_used = ClientContact.objects.filter(user=person).exists()
+            if person.role == Role.CUSTOMER and not still_used and not person.is_superuser and person.pk != actor.pk:
+                removed_logins.append(person.email)
+                person.delete()
+    return {**snapshot, "logins_deleted": removed_logins}

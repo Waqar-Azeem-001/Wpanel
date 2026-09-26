@@ -48,7 +48,7 @@ def test_list_search_and_htmx_partial(client, manager, acme):
 def test_create_edit_status_via_web(client, manager):
     client.force_login(manager)
     response = client.post("/staff/clients/new/", {
-        "first_name": "Web", "email": "web@client.test", "currency": "usd", "country": "pk",
+        "first_name": "Web", "email": "web@client.test", "currency": "USD", "country": "pk",
     })
     new = Client.objects.get(email="web@client.test")
     assert response.status_code == 302 and response["Location"] == f"/staff/clients/{new.pk}/"
@@ -69,7 +69,7 @@ def test_create_edit_status_via_web(client, manager):
 
 def test_create_shows_validation_errors(client, manager):
     client.force_login(manager)
-    response = client.post("/staff/clients/new/", {"first_name": "X", "email": "x@x.test", "currency": "usd",
+    response = client.post("/staff/clients/new/", {"first_name": "X", "email": "x@x.test", "currency": "USD",
                                                     "country": "P1"})
     assert response.status_code == 200 and b"two-letter" in response.content
     assert not Client.objects.exists()

@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from django import forms
 
+from apps.core import currencies
+
 from .models import DiscountType
 
 
@@ -91,6 +93,17 @@ def lines_from_formset(formset):
 
 class DocumentForm(forms.Form):
     """Fields common to a draft invoice and a draft quote."""
+
+    currency = forms.ChoiceField(choices=currencies.CURRENCIES, label="Currency", required=False,
+                                 widget=forms.Select(attrs={"data-currency-source": ""}),
+                                 help_text="What the prices below are in. Amounts are not converted: choose it before you "
+                                           "type the prices, and before you share the document.")
+
+    def __init__(self, *args, current_currency="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["currency"].choices = currencies.choices(current_currency)
+        if current_currency:
+            self.fields["currency"].initial = current_currency
 
     discount_type = forms.ChoiceField(required=False, label="Discount",
                                       choices=[("", "No discount"), ("percent", "Percentage"), ("fixed", "Fixed amount")])

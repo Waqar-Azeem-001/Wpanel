@@ -60,6 +60,8 @@ EVENTS = _events(
           sensitive=True),
     Event("account.password_reset", "Reset your password", C.ACCOUNT, "password_reset", essential=True,
           sensitive=True),
+    Event("account.password_changed_by_admin", "Your password was changed by our team", C.ACCOUNT,
+          "password_changed_by_admin", essential=True),
     # --- Billing & payments (always sent) -----------------------------------------------------------------
     Event("invoice.issued", "A new invoice", C.BILLING, "invoice_issued", essential=True),
     Event("invoice.due_soon", "An invoice is due soon", C.BILLING, "invoice_due_soon", essential=True),
