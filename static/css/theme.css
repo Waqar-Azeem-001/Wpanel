@@ -61,7 +61,7 @@
   --danger-bg: color-mix(in srgb, var(--danger) 13%, var(--surface)); --info-bg: color-mix(in srgb, var(--info) 13%, var(--surface));
   --accent: color-mix(in srgb, var(--brand-primary) 55%, white); --accent-text: #0a1226;
   --accent-subtle: color-mix(in srgb, var(--accent) 14%, var(--surface)); --accent-ink: var(--accent);
-  --staff-bar: #070b15; --footer-bg: #070b15; --chrome-bg: #060a16; --hero-a: #070c1a; --hero-b: #0e1c40; --shadow-panel: none; --shadow-hover: 0 8px 24px rgba(0, 0, 0, .5);
+  --staff-bar: #070b15; --footer-bg: #070b15; --chrome-bg: #111e42; --hero-a: #0f1b3f; --hero-b: #172c66; --shadow-panel: none; --shadow-hover: 0 8px 24px rgba(0, 0, 0, .5);
   --shadow-modal: 0 24px 60px rgba(0, 0, 0, .65);
 }
 

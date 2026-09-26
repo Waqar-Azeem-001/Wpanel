@@ -148,3 +148,28 @@ def test_the_account_menu_offers_the_three_choices_in_the_header(world):
 def test_the_sign_in_screen_follows_the_saved_theme_too():
     page = HttpClient(HTTP_HOST="localhost").get(reverse("accounts:login")).content.decode()
     assert page.index("js/theme.js") < page.index("css/theme.css")  # applied before anything paints
+
+
+# --- Forms and widgets (D8b) -----------------------------------------------------------------------------------------------
+
+JS = (STATIC / "js" / "shell.js").read_text(encoding="utf-8")
+
+
+def test_the_form_styles_cover_fields_switches_errors_and_the_footer_bar():
+    for needle in (".canvas .field.form-check", ".form-check-input:checked", ".form-actions", 'aria-invalid="true"', ".canvas .stat-tile::before",
+                   'main.page > form[method="get"]'):
+        assert needle in SHELL, needle
+    assert re.search(r"\.canvas \.field\.form-check \.form-check-input \{[^}]*appearance: none", SHELL)  # a yes/no field is a switch
+
+
+def test_the_form_footer_bar_is_added_only_to_real_forms_never_to_search_forms_or_one_button_forms():
+    for guard in ('method") || "get")', "form.closest(\"table, td, th, li, .dropdown-menu, .modal\")", 'form.querySelector("table")', '".field, .form-control'):
+        assert guard in JS, guard
+    assert "htmx:afterSwap" in JS  # a form that arrives by htmx gets the same bar
+
+
+def test_signed_in_pages_carry_the_form_script_and_no_breadcrumb_line(world):
+    page = HttpClient(HTTP_HOST="localhost")
+    page.force_login(world.people["manager"])
+    html = page.get(reverse("clients_staff:create")).content.decode()
+    assert "js/shell.js" in html and 'class="field' in html and "crumbs-line" not in html

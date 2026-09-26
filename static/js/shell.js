@@ -157,6 +157,32 @@
   doc.body.addEventListener("htmx:responseError", widgetFailed);
   doc.body.addEventListener("htmx:sendError", widgetFailed);
 
+  // --- Forms: the buttons at the end of a form become one footer bar (Cancel on the left, the main action on the right) ------
+  function decorateForms(scope) {
+    (scope || doc).querySelectorAll("main form").forEach(function (form) {
+      if (form.dataset.actions || form.matches(".filters, .row-form, .inline-form, .bulk-bar, .row, [data-plain]") || (form.getAttribute("method") || "get").toLowerCase() === "get" || form.closest("table, td, th, li, .dropdown-menu, .modal")) { return; }
+      // only a real form (something to fill in) gets a footer bar; a lone "Suspend" or "Delete" button is left as it is
+      if (form.querySelector("table") || !form.querySelector(".field, .form-control, .form-select, textarea, input[type=file]")) { return; }
+      var kids = Array.prototype.slice.call(form.children);
+      var tail = [];
+      for (var i = kids.length - 1; i >= 0; i--) {
+        var kid = kids[i];
+        var control = kid.matches("button, .btn, a") || (kid.matches("div") && kid.querySelector("button, [type=submit]") && !kid.querySelector("input:not([type=hidden]), select, textarea"));
+        if (!control) { break; }
+        tail.unshift(kid);
+      }
+      var hasSubmit = tail.some(function (el) { return el.matches("button[type=submit], button:not([type]), input[type=submit]") || !!el.querySelector("button[type=submit], button:not([type])"); });
+      if (!tail.length || !hasSubmit) { return; }
+      var bar = doc.createElement("div");
+      bar.className = "form-actions";
+      form.insertBefore(bar, tail[0]);
+      tail.forEach(function (el) { bar.appendChild(el); });
+      form.dataset.actions = "1";
+    });
+  }
+  decorateForms();
+  doc.body.addEventListener("htmx:afterSwap", function (event) { decorateForms(event.target); });
+
   // --- Show or hide a password ---------------------------------------------------------------------------------------
   doc.addEventListener("click", function (event) {
     var button = event.target.closest("[data-toggle-password]");

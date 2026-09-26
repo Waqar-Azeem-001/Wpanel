@@ -49,3 +49,19 @@ dashboard; overflow and JS errors on the sweeps; text contrast, control names an
 Screen readers were not used. The hero text is measured through its tokens (its gradient is not a flat colour, so the
 in-browser contrast script skips it). Deferred: a per-user choice between this header and a side rail; a menu description line
 under each area; customising which KPI tiles show.
+
+## 6. Second round (owner feedback with screenshots: header rows, widgets, forms)
+
+* **Header:** the breadcrumb line and the duplicate area title in the strip are gone (the lit section, the underlined page and the
+  page's own heading already say where you are), so the heading starts right under the header. In dark the header is a lighter navy
+  than the canvas so it reads as one block.
+* **Widgets:** number tiles (`.stat-tile`, used on reports, affiliates, lifecycle, billing overview) are cards with a small accent
+  tab, an uppercase label above a large tabular number; plain link lists inside cards (reports index) are rows with the link as
+  the title and its description underneath; a table that sits directly on the page is a panel; alerts are tighter.
+* **Forms** (through shared CSS, no template edits): taller fields with weight and air, help text under the field, inline errors with
+  an icon and an invalid ring; a yes/no field is a card with a **switch**; a form card has a header band and a readable width;
+  the buttons at the end of a form become one **footer bar** (Cancel on the left, the main action on the right) added by
+  `shell.js` to real forms only (never to search or filter forms, forms with a table, or one-button forms in rows and menus);
+  search/filter forms above a list are one tidy panel; the bulk bar has matching controls.
+* Browser-tested: create a client and a ticket by submitting from the bar, validation errors, GET forms untouched, the bar
+  spanning a wide grid form, phones; a scan of 260 pages found no bar with a stray field, without a button, or outside a form.

@@ -261,17 +261,17 @@ def test_breadcrumbs_come_from_the_registry(manager):
     assert navigation.breadcrumbs_for(request_for(manager, "/staff/billing/invoices/1/")) == []  # a page that is not an entry
 
 
-def test_the_breadcrumb_bar_is_drawn_on_registry_pages_only(client, manager):
+def test_the_signed_in_shell_has_no_breadcrumb_line_because_the_header_already_says_where_you_are(client, manager):
     client.force_login(manager)
     page = client.get("/staff/billing/invoices/").content.decode()
-    assert 'aria-label="Breadcrumb"' in page and 'aria-current="page">Invoices<' in page
-    assert 'aria-label="Breadcrumb"' not in client.get("/account/profile/").content.decode()
+    assert 'aria-label="Breadcrumb"' not in page and "crumbs-line" not in page
+    assert "topnav-link is-current" in page and 'aria-current="page">Invoices<' in page  # the section, the area and the page are all marked
 
 
 # --- No menu is written by hand ---------------------------------------------------------------------------------------
 
 def test_no_navigation_template_contains_a_link_of_its_own():
-    for name in ("navbar_public", "nav_items", "topnav", "tabbar", "crumbs", "quick_nav", "subnav", "account_menu"):
+    for name in ("navbar_public", "nav_items", "topnav", "tabbar", "quick_nav", "subnav", "account_menu"):
         text = (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")
         assert 'href="/' not in text, name
         urls = [u for u in text.replace("\n", " ").split("{% url ")[1:]]

@@ -208,11 +208,10 @@ def test_the_customer_sidebar_no_longer_repeats_the_sign_out_link(world):
     assert "Sign out" not in html.split('class="span-4 side-panels"')[1]  # the account menu is the one place
 
 
-def test_the_breadcrumbs_of_registry_pages_are_the_first_line_of_the_page(world):
+def test_the_page_starts_with_its_own_heading_not_a_breadcrumb_line(world):
     html = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
-    line = html.split('<div class="crumbs-line">')[1].split("</nav>")[0]
-    assert 'aria-label="Breadcrumb"' in line and 'aria-current="page">Invoices<' in line
-    assert html.index('<main id="main"') < html.index('class="crumbs-line"')
+    main = html.split('<main id="main"')[1]
+    assert "crumbs-line" not in main and main.index('class="page-head"') < 600  # the heading is right at the top of the page
 
 
 def test_the_theme_is_read_before_the_page_paints():
