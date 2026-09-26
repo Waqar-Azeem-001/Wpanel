@@ -79,3 +79,12 @@ Same structure (header menus, area strip, page header, panels, forms), a differe
 * **Lighter type:** weights 550-600 instead of 650-750, 14px base, quiet icons (no coloured chips) on numbers, table header without a
   fill, data links without underline (running text keeps it).
 * The header colour tokens (`--chrome-*`) now alias the surface tokens, so the header is readable by the same contrast tests.
+
+## 8. The empty sides on wide screens
+
+On 1536-1920px screens the canvas was almost the same white as the cards, the header's hairlines stopped at 1440px and single-form pages
+sat left or centre inconsistently, so the margins looked like unused white. Fixed with: a **tinted canvas** (`--bg` `#f1f3f6`, near-black
+in dark) so the white panels stand out and the margins read as background; **full-bleed header and strip lines** with their content aligned
+to one container (`--container` 1560px, `--gutter`); wide pages use that container; a page that is just one form card is one centred column,
+heading included. Options not taken: decorative side patterns, a right-hand context column (help, recent activity), fluid layouts wider than
+1560px.

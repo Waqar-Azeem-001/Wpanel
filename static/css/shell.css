@@ -3,21 +3,23 @@
  * page headers, the hero band and dashboard components (KPI strip, attention list, panels, rows, feed), states (loading, empty,
  * error) and the sign-in screens. Built only on the tokens in theme.css, so every rule works in the light and the dark theme.
  */
-:root { --topbar-h: 60px; }
+:root { --topbar-h: 60px; --container: 1560px; --gutter: max(1.75rem, calc((100% - var(--container)) / 2 + 1.75rem)); }
 
 /* --- Frame ------------------------------------------------------------------------------------------------------ */
 body.has-shell { display: block; min-height: 100vh; }
 .shell { min-height: 100vh; display: flex; flex-direction: column; }
 .canvas { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
 .canvas > main.page { flex: 1 0 auto; width: 100%; margin: 1.6rem auto 0; padding: 0 1.75rem; max-width: 1180px; }
-.canvas > main.page.wide { max-width: 1440px; }
+.canvas > main.page.wide { max-width: var(--container); }
+/* A page that is one form card (settings, add client) is a single centred column, heading included */
+.canvas > main.page:has(> .card > .card-body > form):not(:has(table)):not(:has(.stat-tiles)) { max-width: 62rem; }
 .crumbs-line .breadcrumb { margin: 0 0 .9rem; font-size: .8rem; --bs-breadcrumb-divider-color: var(--muted); }
 .crumbs-line .breadcrumb-item a { color: var(--muted); text-decoration: none; }
 .crumbs-line .breadcrumb-item a:hover { color: var(--accent-ink); }
 .crumbs-line .breadcrumb-item.active { color: var(--text); font-weight: 600; }
 .canvas .app-footer { background: transparent; color: var(--muted); border-top: 1px solid var(--border); margin-top: 2.5rem; padding: .9rem 0; font-size: .8125rem; }
 .canvas .app-footer a { color: var(--accent-ink); }
-.canvas .app-footer .container-xxl { max-width: 1440px; padding-left: 1.75rem; padding-right: 1.75rem; }
+.canvas .app-footer .container-xxl { max-width: none; padding-left: var(--gutter); padding-right: var(--gutter); }
 
 /* --- Page header: title, one line of context, the actions -------------------------------------------------------- */
 .page-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; row-gap: .15rem; align-items: center; margin-bottom: 1.35rem; }
@@ -34,7 +36,7 @@ body.has-shell { display: block; min-height: 100vh; }
 
 /* --- The header: one navy block ------------------------------------------------------------------------------------ */
 .chrome { position: sticky; top: 0; z-index: 1040; background: var(--chrome-bg); color: var(--chrome-fg); }
-.chrome-bar { display: flex; align-items: center; gap: 1.25rem; height: var(--topbar-h); padding: 0 1.75rem; max-width: 1440px; margin: 0 auto; }
+.chrome-bar { display: flex; align-items: center; gap: 1.25rem; height: var(--topbar-h); padding: 0 var(--gutter); }
 .chrome-brand { display: flex; align-items: center; gap: .65rem; color: var(--chrome-fg); text-decoration: none; flex: none; }
 .brand-mark { width: 2.15rem; height: 2.15rem; border-radius: 10px; flex: none; object-fit: contain; background: var(--chrome-pill); padding: .25rem; }
 .brand-logo { height: 2.15rem; width: auto; max-width: 9rem; border-radius: 8px; background: var(--logo-plate); padding: .25rem .6rem; flex: none; }
@@ -103,7 +105,7 @@ kbd { font-family: var(--font-ui); font-size: .68rem; font-weight: 700; padding:
 .theme-label { display: block; margin: .5rem .75rem .2rem; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 
 /* The pages of the area you are in: the second row of the header */
-.groupnav { display: flex; align-items: center; gap: 1rem; max-width: 1440px; margin: 0 auto; padding: 0 1.75rem; border-top: 1px solid var(--chrome-line); }
+.groupnav { display: flex; align-items: center; gap: 1rem; padding: 0 var(--gutter); border-top: 1px solid var(--chrome-line); }
 .groupnav-title { flex: none; font-size: .66rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--chrome-muted); }
 .groupnav ul { display: flex; gap: .1rem; list-style: none; margin: 0; padding: 0; overflow-x: auto; scrollbar-width: none; }
 .groupnav a { display: block; padding: .6rem .8rem .5rem; border-bottom: 2px solid transparent; color: var(--chrome-muted); font-size: .8125rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
@@ -129,7 +131,8 @@ kbd { font-family: var(--font-ui); font-size: .68rem; font-weight: 700; padding:
 .tabbar { display: none; }
 @media (max-width: 1199.98px) { .chrome-search { min-width: 0; width: 2.3rem; padding: 0; justify-content: center; } .chrome-search span, .chrome-search kbd { display: none; } }
 @media (max-width: 991.98px) {
-  .chrome-bar { padding: 0 .75rem; gap: .5rem; }
+  :root { --gutter: .75rem; }
+  .chrome-bar { gap: .5rem; }
   .chrome-burger { display: grid; }
   .topnav { position: fixed; left: 0; top: 0; bottom: 0; width: min(90vw, 340px); background: var(--surface); color: var(--text); transform: translateX(-102%); visibility: hidden; overflow-y: auto;
     transition: transform .2s var(--ease); z-index: 2; padding-bottom: 2rem; }

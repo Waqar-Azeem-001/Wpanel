@@ -17,7 +17,7 @@
   --brand-primary-subtle: #eaf0fe; --brand-accent: #c8fc35; --brand-accent-text: #14213d;
 
   /* Neutrals: page, panel, raised panel (menus, modals), hairlines, text */
-  --bg: #fafafb; --surface: #ffffff; --surface-2: #f3f4f6; --elevated: #ffffff; --text: #0e1116; --muted: #596070; --border: #e6e8ec;
+  --bg: #f1f3f6; --surface: #ffffff; --surface-2: #f4f5f8; --elevated: #ffffff; --text: #0e1116; --muted: #596070; --border: #e6e8ec;
   --border-strong: #d0d3da;
 
   /* Status: the colour is the text and the tint behind it; used through the status badge, the alert and the dot */
@@ -54,7 +54,7 @@
 }
 
 [data-bs-theme="dark"] {
-  --bg: #0a0b0d; --surface: #111214; --surface-2: #18191c; --elevated: #18191c; --text: #ececef; --muted: #9a9ea9; --border: #24262a;
+  --bg: #08090b; --surface: #101113; --surface-2: #18191c; --elevated: #18191c; --text: #ececef; --muted: #9a9ea9; --border: #24262a;
   --border-strong: #363940;
   --ok: #4fd08c; --warn: #e6b453; --danger: #f28282; --info: #7fb4f5; --neutral: #9a9ea9;
   --ok-bg: color-mix(in srgb, var(--ok) 13%, var(--surface)); --warn-bg: color-mix(in srgb, var(--warn) 13%, var(--surface));
