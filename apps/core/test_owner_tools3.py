@@ -500,12 +500,22 @@ def test_the_alert_settings_page_offers_the_new_alerts_and_says_who_gets_them_by
     assert "Super Admin" in page
 
 
-# --- The KPI strip never ends in a blank box (E11) ------------------------------------------------------------------------------------
+# --- The KPI strip never ends in a blank box (E11), and lines up in even rows (E12) ----------------------------------------------------
 
 def test_the_kpi_strip_is_flex_so_a_short_last_row_fills_the_width():
     from pathlib import Path
 
     css = Path("static/css/shell.css").read_text(encoding="utf-8")
     assert ".kpi-strip { display: flex; flex-wrap: wrap;" in css
-    assert ".kpi { flex: 1 1 150px;" in css
     assert "grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));" not in css  # the old grid left the trailing cells blank
+
+
+def test_the_kpi_tile_width_is_an_even_fraction_of_the_row_not_a_fixed_pixel_width():
+    """A fixed 150px basis packs however many tiles happen to fit (10 then 4, for 14 tiles on a wide screen) instead
+    of lining up in even rows; an even fraction (1/2, 1/3, 1/4, 1/7) always wraps at a whole number of tiles per
+    row, and flex-grow still fills a short last row so the no-blank-box fix from E11 still holds either way."""
+    from pathlib import Path
+
+    css = Path("static/css/shell.css").read_text(encoding="utf-8")
+    assert ".kpi { flex: 1 1 50%;" in css
+    assert "flex-basis: 33.333%" in css and "flex-basis: 25%" in css and "flex-basis: 14.2857%" in css

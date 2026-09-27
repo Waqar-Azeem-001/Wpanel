@@ -320,8 +320,39 @@ BY_KEY = {w.key: w for w in WIDGETS}
 
 
 def visible_widgets(user):
-    """The widgets this person may see: at least one of a widget's permissions is enough."""
-    return [w for w in WIDGETS if any(user.has_perm(p) for p in w.permissions)]
+    """
+    The widgets this person may see (at least one of a widget's permissions is enough), in their own saved order.
+    The KPI strip always leads, unmoved - only the panels below it are reorderable. A saved key this person can no
+    longer see (or that no longer exists) is simply skipped, and any panel not in their saved order yet (new, or
+    never touched) keeps the registry's own order at the end - so nothing here needs a migration or a data fix-up
+    when a widget is added, removed or renamed.
+    """
+    visible = [w for w in WIDGETS if any(user.has_perm(p) for p in w.permissions)]
+    strip = [w for w in visible if w.size == "strip"]
+    panels = [w for w in visible if w.size != "strip"]
+    by_key = {w.key: w for w in panels}
+    order = getattr(user, "dashboard_widget_order", None) or []
+    ordered = [by_key[k] for k in order if k in by_key]
+    ordered += [w for w in panels if w.key not in order]
+    return strip + ordered
+
+
+def move_widget(user, key, direction):
+    """
+    Move one panel up or down in this person's own saved dashboard order (never the KPI strip, which is not in this
+    list at all). Does nothing for an unknown key, an unknown direction, or a widget already at that edge - calling
+    it again from a stale page is harmless, not an error.
+    """
+    panels = [w.key for w in visible_widgets(user) if w.size != "strip"]
+    if key not in panels or direction not in ("up", "down"):
+        return
+    order = panels
+    i = order.index(key)
+    j = i - 1 if direction == "up" else i + 1
+    if 0 <= j < len(order):
+        order[i], order[j] = order[j], order[i]
+        user.dashboard_widget_order = order
+        user.save(update_fields=["dashboard_widget_order"])
 
 
 # The link in a panel's header: where the whole list lives.
@@ -340,4 +371,9 @@ def context_for(widget, user):
         context.update(head_chip=total or None, head_chip_danger=True)
     if widget.key == "attention":
         context.update(head_chip=len(context["rows"]) or None, head_chip_danger=bool(context["critical"]))
+    if widget.size != "strip":
+        panel_keys = [w.key for w in visible_widgets(user) if w.size != "strip"]
+        context.update(can_move=len(panel_keys) > 1,
+                       is_first_panel=panel_keys[:1] == [widget.key],
+                       is_last_panel=panel_keys[-1:] == [widget.key])
     return context

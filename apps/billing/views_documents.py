@@ -446,6 +446,20 @@ def billable_delete(request, pk):
 
 @require_POST
 @portal_permission_required(perm("manage_billing"))
+def billable_bulk(request):
+    """"With selected": delete every ticked charge that is not already on an invoice (the same rule as one at a
+    time - an invoiced charge is reported as a failure, not silently skipped)."""
+    if request.POST.get("do") != "delete":
+        messages.error(request, "Choose what to do with the selected charges.")
+    else:
+        bulk.run(request, BillableItem.objects.all(), bulk.selected_ids(request),
+                 lambda i: invoicing.delete_billable_item(request.user, i, request=request),
+                 verb="charge(s) deleted", label=lambda i: i.description)
+    return bulk.back_to(request, "billing_staff:billable_list")
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
 def billable_invoice(request, client_id):
     client = get_object_or_404(Client, pk=client_id)
     try:

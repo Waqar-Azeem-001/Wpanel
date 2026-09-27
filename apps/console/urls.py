@@ -8,6 +8,7 @@ app_name = "console"
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("widgets/<slug:key>/", views.widget, name="widget"),
+    path("widgets/<slug:key>/move/<str:direction>/", views.widget_move, name="widget_move"),
     path("search/", views.search, name="search"),
     path("utilities/audit/", views.audit_log, name="audit_log"),
     path("utilities/audit/export/", views.audit_export, name="audit_export"),

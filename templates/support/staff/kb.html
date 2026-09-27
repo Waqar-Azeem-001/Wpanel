@@ -23,16 +23,28 @@
 </section>
   <section class="card"><div class="card-body">
     <h2>Articles</h2>
+    <form method="post" action="{% url 'support_staff:kb_article_bulk' %}" data-confirm="Delete every ticked article?">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
     <div class="table-responsive"><table class="table">
-      <thead><tr><th>Title</th><th>Category</th><th>Status</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+      <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all aria-label="Select all articles"></th>{% endif %}<th>Title</th><th>Category</th><th>Status</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
       <tbody>
       {% for a in articles %}
-        <tr><td>{{ a.title }}</td><td>{{ a.category.name }}</td>
+        <tr>{% if can_manage %}<td><input class="form-check-input" type="checkbox" name="ids" value="{{ a.pk }}" aria-label="Select {{ a.title }}"></td>{% endif %}
+            <td>{{ a.title }}</td><td>{{ a.category.name }}</td>
             <td>{% if a.is_published %}{% status_badge "done" "Published" %}{% else %}{% status_badge "draft" "Draft" %}{% endif %}</td>
-            {% if can_manage %}<td><a href="?article={{ a.pk }}">Edit</a>
-              <form method="post" action="{% url 'support_staff:kb_article_delete' a.pk %}" class="inline-form" data-confirm="Delete this article?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form></td>{% endif %}</tr>
-      {% empty %}<tr><td colspan="4" class="text-secondary">No articles yet.</td></tr>{% endfor %}
-      </tbody></table></div></div>
+            {% if can_manage %}<td class="d-flex gap-2"><a href="?article={{ a.pk }}">Edit</a>
+              <button class="btn btn-sm btn-outline-danger" type="submit" formaction="{% url 'support_staff:kb_article_delete' a.pk %}" formnovalidate data-confirm="Delete this article?">Delete</button></td>{% endif %}</tr>
+      {% empty %}<tr><td colspan="5" class="text-secondary">No articles yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    {% if can_manage and articles %}
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-2 bulk-bar">
+      <span class="fw-semibold me-1">With selected:</span>
+      <input type="hidden" name="do" value="delete">
+      <button class="btn btn-sm btn-outline-danger" type="submit">Delete selected</button>
+    </div>
+    {% endif %}
+    </form>
+    </div></div>
 </section>
 </div>
 {% if article_form %}

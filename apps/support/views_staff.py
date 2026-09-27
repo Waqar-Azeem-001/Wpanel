@@ -347,3 +347,16 @@ def kb_article_delete(request, pk):
 
     return run_action(request, action, "support_staff:kb")
 
+
+@require_POST
+@portal_permission_required(MANAGE)
+def kb_article_bulk(request):
+    """"With selected": delete every ticked article."""
+    if request.POST.get("do") != "delete":
+        messages.error(request, "Choose what to do with the selected articles.")
+    else:
+        bulk.run(request, KBArticle.objects.all(), bulk.selected_ids(request),
+                 lambda a: kb.delete_article(request.user, a, request=request),
+                 verb="article(s) deleted", label=lambda a: a.title)
+    return bulk.back_to(request, "support_staff:kb")
+

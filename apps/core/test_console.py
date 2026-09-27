@@ -9,6 +9,7 @@ from django.test import Client as HttpClient
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.models import User
 from apps.audit.models import AuditEvent
 from apps.audit.services import record
 from apps.billing.models import OPEN_STATUSES, Invoice
@@ -283,6 +284,83 @@ def test_reading_the_dashboard_writes_nothing(world):
     client.get(reverse("console:dashboard"))
     client.get(reverse("console:search"), {"q": "ada"})
     assert AuditEvent.objects.count() == before
+
+
+# --- Arranging the panels below the KPI strip, to taste --------------------------------------------------------------
+
+PANELS = [k for k in ALL_KEYS if k != "summary"]  # every panel key for a Super Admin, in the registry's own order
+
+
+def test_a_fresh_account_sees_the_registrys_own_order(world):
+    admin = world.people["admin"]
+    assert admin.dashboard_widget_order == []
+    assert [w.key for w in widgets.visible_widgets(admin)] == ALL_KEYS
+
+
+def test_moving_a_panel_up_or_down_persists_and_survives_a_fresh_request(world):
+    admin = world.people["admin"]
+    client = browser(admin)
+    client.post(reverse("console:widget_move", args=["billing", "up"]))
+    admin.refresh_from_db()
+    expected = list(PANELS)
+    i = expected.index("billing")
+    expected[i - 1], expected[i] = expected[i], expected[i - 1]  # swapped with whatever was just ahead of it
+    moved = [w.key for w in widgets.visible_widgets(admin) if w.key != "summary"]
+    assert moved == expected
+    # a second request (a fresh page load) reads the same, saved order back - this is not a one-request fluke
+    again = [w.key for w in widgets.visible_widgets(User.objects.get(pk=admin.pk)) if w.key != "summary"]
+    assert again == expected
+
+
+def test_moving_the_first_panel_up_or_the_last_one_down_does_nothing(world):
+    admin = world.people["admin"]
+    client = browser(admin)
+    client.post(reverse("console:widget_move", args=["attention", "up"]))  # already first
+    admin.refresh_from_db()
+    assert [w.key for w in widgets.visible_widgets(admin)] == ALL_KEYS
+    client.post(reverse("console:widget_move", args=["activity", "down"]))  # already last
+    admin.refresh_from_db()
+    assert [w.key for w in widgets.visible_widgets(admin)] == ALL_KEYS
+
+
+def test_moving_an_unknown_or_a_not_visible_widget_is_quietly_ignored(world):
+    admin, manager = world.people["admin"], world.people["manager"]
+    widgets.move_widget(admin, "nonsense", "up")  # not a real widget key at all
+    widgets.move_widget(manager, "health", "up")  # a manager cannot see this one (no view_settings)
+    admin.refresh_from_db()
+    manager.refresh_from_db()
+    assert admin.dashboard_widget_order == [] and manager.dashboard_widget_order == []
+
+
+def test_the_kpi_strip_itself_never_moves_and_only_multi_panel_pages_offer_the_controls(world):
+    admin = world.people["admin"]
+    page = browser(admin).get(reverse("console:widget", args=["summary"])).content.decode()
+    assert "panel-move" not in page and reverse("console:widget_move", args=["summary", "up"]) not in page
+    page = browser(admin).get(reverse("console:widget", args=["attention"])).content.decode()
+    assert "panel-move" in page  # a Super Admin has several panels, so the controls are offered
+
+
+def test_a_widget_that_cannot_be_seen_never_reaches_someone_elses_saved_order(world):
+    """A key from an old save should never resurface a panel this role has since lost the permission for."""
+    manager = world.people["manager"]
+    manager.dashboard_widget_order = ["health", "billing"]  # "health" needs view_settings, which a manager lacks
+    manager.save(update_fields=["dashboard_widget_order"])
+    assert "health" not in [w.key for w in widgets.visible_widgets(manager)]
+
+
+def test_moving_a_widget_needs_a_post_and_a_staff_account(world):
+    admin = world.people["admin"]
+    assert browser(admin).get(reverse("console:widget_move", args=["billing", "up"])).status_code == 405
+    assert browser(world.people["customer owner"]).post(
+        reverse("console:widget_move", args=["billing", "up"])).status_code == 403
+    assert browser().post(reverse("console:widget_move", args=["billing", "up"])).status_code == 302  # to sign in
+
+
+def test_the_redirect_back_never_carries_a_hostile_referer(world):
+    admin = world.people["admin"]
+    response = browser(admin).post(reverse("console:widget_move", args=["billing", "up"]),
+                                   HTTP_REFERER="https://evil.test/take-over/")
+    assert response.status_code == 302 and "evil.test" not in response.url
 
 
 # --- Search -----------------------------------------------------------------------------------------------------------

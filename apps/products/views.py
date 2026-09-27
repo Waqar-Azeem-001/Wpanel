@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
+from apps.core import bulk
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import run_action
@@ -161,6 +162,20 @@ def staff_category_delete(request, pk):
         return f"Category '{category.name}' deleted."
 
     return run_action(request, action, "catalog_staff:category_list")
+
+
+@require_POST
+@portal_permission_required(perm("manage_products"))
+def staff_category_bulk(request):
+    """"With selected": delete every ticked category that holds no products or add-ons (the same rule as one at a
+    time - a category still in use is reported as a failure, not silently skipped)."""
+    if request.POST.get("do") != "delete":
+        messages.error(request, "Choose what to do with the selected categories.")
+    else:
+        bulk.run(request, StoreCategory.objects.all(), bulk.selected_ids(request),
+                 lambda c: services.delete_category(request.user, c, request=request),
+                 verb="categories deleted", label=lambda c: c.name)
+    return bulk.back_to(request, "catalog_staff:category_list")
 
 
 @portal_permission_required(perm("view_products"))

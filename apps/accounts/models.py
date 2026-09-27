@@ -59,6 +59,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     mfa_enabled = models.BooleanField(default=False, editable=False)
     mfa_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
 
+    # A staff member's own arrangement of the dashboard panels below the KPI strip (widget keys, in the order they
+    # want them; apps.console.widgets.visible_widgets applies it). A key that no longer exists, or that this person
+    # can no longer see, is simply dropped - never carried along as a gap - so adding or removing a widget in the
+    # registry never needs a migration or a data fix-up here.
+    dashboard_widget_order = models.JSONField(default=list, blank=True, editable=False)
+
     # Derived from ``status`` and ``role`` on save; never set directly.
     is_active = models.BooleanField(default=True, editable=False)
     is_staff = models.BooleanField(default=False, editable=False)

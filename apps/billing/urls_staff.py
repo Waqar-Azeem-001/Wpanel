@@ -34,6 +34,7 @@ urlpatterns = [
     path("billable-items/", docs.billable_list, name="billable_list"),
     path("billable-items/add/", docs.billable_create, name="billable_create"),
     path("billable-items/<int:pk>/delete/", docs.billable_delete, name="billable_delete"),
+    path("billable-items/bulk/", docs.billable_bulk, name="billable_bulk"),
     path("billable-items/invoice/<int:client_id>/", docs.billable_invoice, name="billable_invoice"),
     path("settings/", docs.billing_settings, name="settings"),
     path("payment-methods/", views.payment_methods, name="payment_methods"),

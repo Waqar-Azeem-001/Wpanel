@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
@@ -29,7 +30,9 @@ def dashboard(request):
         if user.has_perm(perm(codename))]
     hour = timezone.localtime().hour
     greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
-    return render(request, "console/dashboard.html", {"widgets": widgets.visible_widgets(user), "shortcuts": shortcuts,
+    visible = widgets.visible_widgets(user)
+    panels = [w for w in visible if w.size != "strip"]
+    return render(request, "console/dashboard.html", {"widgets": visible, "panels": panels, "shortcuts": shortcuts,
                                                        "greeting": greeting})
 
 
@@ -42,6 +45,18 @@ def widget(request, key):
     if found not in widgets.visible_widgets(request.user):
         raise PermissionDenied
     return render(request, "console/widget.html", widgets.context_for(found, request.user))
+
+
+@staff_required
+@require_POST
+def widget_move(request, key, direction):
+    """Move one dashboard panel up or down in this person's own arrangement (never anyone else's - there is nothing
+    to permission-check beyond being staff, since it only ever touches the signed-in person's own preference)."""
+    widgets.move_widget(request.user, key, direction)
+    referer = request.META.get("HTTP_REFERER")
+    if referer and url_has_allowed_host_and_scheme(referer, {request.get_host()}, request.is_secure()):
+        return redirect(referer)
+    return redirect("console:dashboard")
 
 
 @staff_required

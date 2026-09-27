@@ -1,6 +1,21 @@
 {% load i18n %}
 {% if widget.size == "strip" %}{% include widget.template %}
 {% else %}<section class="panel span-{{ widget.span }}" id="widget-{{ widget.key }}" aria-label="{{ widget.title }}">
-  <div class="panel-head"><h2><i class="bi {{ widget.icon }}" aria-hidden="true"></i> {{ widget.title }}{% if head_chip %} <span class="chip{% if head_chip_danger %} is-danger{% endif %}">{{ head_chip }}</span>{% endif %}</h2>{% if head_link %}<a href="{{ head_link }}">{{ head_label }} &rarr;</a>{% endif %}</div>
+  <div class="panel-head">
+    <h2><i class="bi {{ widget.icon }}" aria-hidden="true"></i> {{ widget.title }}{% if head_chip %} <span class="chip{% if head_chip_danger %} is-danger{% endif %}">{{ head_chip }}</span>{% endif %}</h2>
+    <div class="panel-head-actions">
+      {% if head_link %}<a href="{{ head_link }}">{{ head_label }} &rarr;</a>{% endif %}
+      {% if can_move %}
+      <div class="panel-move" role="group" aria-label="{% blocktrans with title=widget.title %}Move the {{ title }} panel{% endblocktrans %}">
+        <form method="post" action="{% url 'console:widget_move' widget.key 'up' %}">{% csrf_token %}
+          <button type="submit" class="panel-move-btn" title="{% trans 'Move up' %}" aria-label="{% trans 'Move up' %}" {% if is_first_panel %}disabled{% endif %}><i class="bi bi-chevron-up" aria-hidden="true"></i></button>
+        </form>
+        <form method="post" action="{% url 'console:widget_move' widget.key 'down' %}">{% csrf_token %}
+          <button type="submit" class="panel-move-btn" title="{% trans 'Move down' %}" aria-label="{% trans 'Move down' %}" {% if is_last_panel %}disabled{% endif %}><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
   {% include widget.template %}
 </section>{% endif %}

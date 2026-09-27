@@ -23,13 +23,13 @@
 </section>
 
 <div class="dash-grid">
-  {% for w in widgets %}{% if w.size != "strip" %}
+  {% for w in panels %}
   <section hx-get="{% url 'console:widget' w.key %}" hx-trigger="load" hx-swap="outerHTML" class="panel span-{{ w.span }}" aria-busy="true" aria-label="{{ w.title }}" data-widget>
     <div class="panel-head"><h2><i class="bi {{ w.icon }}" aria-hidden="true"></i> {{ w.title }}</h2></div>
     <div class="panel-body" data-widget-body><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
       <noscript><a href="{% url 'console:widget' w.key %}">{% trans "Open" %}</a></noscript></div>
   </section>
-  {% endif %}{% empty %}
+  {% empty %}
   <div>{% include "components/empty_state.html" with message=_("There is nothing to show for your role yet. Ask an administrator which areas you can be given.") icon="bi-speedometer2" %}</div>
   {% endfor %}
 </div>

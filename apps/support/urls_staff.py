@@ -24,4 +24,5 @@ urlpatterns = [
     path("kb/categories/save/", views.kb_category_save, name="kb_category_save"),
     path("kb/articles/save/", views.kb_article_save, name="kb_article_save"),
     path("kb/articles/<int:pk>/delete/", views.kb_article_delete, name="kb_article_delete"),
+    path("kb/articles/bulk/", views.kb_article_bulk, name="kb_article_bulk"),
 ]

@@ -470,5 +470,7 @@ def test_every_post_form_in_the_shell_carries_the_csrf_token(world):
 def test_the_attention_list_and_the_summary_print_no_secret_and_no_credentials(world):
     html = browser(world.people["admin"]).get(reverse("console:widget", args=["attention"])).content.decode()
     html += browser(world.people["admin"]).get(reverse("console:widget", args=["summary"])).content.decode()
+    # every POST form on the page carries Django's own CSRF token field, which is not a secret about the business
+    html = html.replace("csrfmiddlewaretoken", "")
     for needle in ("password", "secret", "api_key", "token", "auth_code"):
         assert needle not in html.lower(), needle

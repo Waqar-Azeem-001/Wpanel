@@ -218,6 +218,85 @@ def test_the_invoice_list_offers_bulk_actions_only_with_manage_billing(world):
     assert "With selected:" not in agent and 'name="ids"' not in agent
 
 
+# --- Bulk delete: categories, billable charges, knowledgebase articles -----------------------------------------------
+
+def test_bulk_deletes_every_ticked_category_that_holds_nothing_and_reports_the_rest(world):
+    from apps.products.models import StoreCategory
+
+    empty = StoreCategory.objects.create(name="Temp", slug="temp")
+    in_use = StoreCategory.objects.create(name="In use", slug="in-use")
+    world.objects["product"].category = in_use
+    world.objects["product"].save(update_fields=["category"])
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("catalog_staff:category_bulk"), {"ids": [empty.pk, in_use.pk], "do": "delete"})
+    shown = follow_messages(client, response)
+    assert not StoreCategory.objects.filter(pk=empty.pk).exists()
+    assert StoreCategory.objects.filter(pk=in_use.pk).exists()  # still holds a product
+    assert any("categories deleted" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
+def test_bulk_category_delete_needs_manage_products(world):
+    from apps.products.models import StoreCategory
+
+    empty = StoreCategory.objects.create(name="Temp", slug="temp")
+    url = reverse("catalog_staff:category_bulk")
+    assert browser(world.people["support agent"]).post(url, {"ids": [empty.pk], "do": "delete"}).status_code == 403
+    assert StoreCategory.objects.filter(pk=empty.pk).exists()
+
+
+def test_bulk_deletes_every_ticked_charge_not_yet_invoiced_and_reports_the_rest(world):
+    from apps.billing.models import BillableItem
+
+    uninvoiced = BillableItem.objects.create(client=world.client, description="Setup fee", unit_price="50.00")
+    invoiced = BillableItem.objects.create(client=world.client, description="Migration",
+                                           unit_price="80.00", invoice=world.objects["invoices"]["unpaid"])
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("billing_staff:billable_bulk"),
+                                 {"ids": [uninvoiced.pk, invoiced.pk], "do": "delete"})
+    shown = follow_messages(client, response)
+    assert not BillableItem.objects.filter(pk=uninvoiced.pk).exists()
+    assert BillableItem.objects.filter(pk=invoiced.pk).exists()  # already on an invoice
+    assert any("charge(s) deleted" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
+def test_bulk_billable_delete_needs_manage_billing(world):
+    from apps.billing.models import BillableItem
+
+    item = BillableItem.objects.create(client=world.client, description="Setup fee", unit_price="50.00")
+    url = reverse("billing_staff:billable_bulk")
+    assert browser(world.people["support agent"]).post(url, {"ids": [item.pk], "do": "delete"}).status_code == 403
+    assert BillableItem.objects.filter(pk=item.pk).exists()
+
+
+def test_bulk_deletes_every_ticked_knowledgebase_article(world):
+    from apps.support.models import KBArticle, KBCategory
+
+    category = KBCategory.objects.create(name="Billing help", slug="billing-help")
+    one = KBArticle.objects.create(category=category, title="How to pay", slug="how-to-pay", body="...")
+    two = KBArticle.objects.create(category=category, title="Refunds", slug="refunds", body="...")
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("support_staff:kb_article_bulk"), {"ids": [one.pk, two.pk], "do": "delete"})
+    assert any("article(s) deleted" in m for m in follow_messages(client, response))
+    assert not KBArticle.objects.filter(pk__in=[one.pk, two.pk]).exists()
+
+
+def test_bulk_kb_delete_needs_the_support_manage_permission(world):
+    from apps.support.models import KBArticle, KBCategory
+
+    category = KBCategory.objects.create(name="Billing help", slug="billing-help")
+    article = KBArticle.objects.create(category=category, title="How to pay", slug="how-to-pay", body="...")
+    url = reverse("support_staff:kb_article_bulk")
+    assert browser(world.people["customer owner"]).post(url, {"ids": [article.pk], "do": "delete"}).status_code == 403
+    assert KBArticle.objects.filter(pk=article.pk).exists()
+
+
+def test_the_bulk_delete_lists_offer_the_checkboxes_only_to_who_may_manage_them(world):
+    manager = browser(world.people["manager"]).get(reverse("catalog_staff:category_list")).content.decode()
+    assert "With selected:" in manager and 'name="ids"' in manager
+    agent = browser(world.people["support agent"]).get(reverse("catalog_staff:category_list")).content.decode()
+    assert "With selected:" not in agent and 'name="ids"' not in agent
+
+
 # --- The confirmation modal -------------------------------------------------------------------------------------------
 
 def test_no_page_uses_the_browsers_own_confirm_box():
