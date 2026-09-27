@@ -753,21 +753,6 @@ table.lines .line-row[hidden] { display: none; }
 .shop-layout.wide-side { grid-template-columns: minmax(0, 1fr) 26rem; }
 @media (max-width: 991.98px) { .shop-layout.wide-side { grid-template-columns: minmax(0, 1fr); } }
 
-/* The footer: who we are, where things are, how to reach us */
-.app-footer.site-footer { margin-top: 2rem; padding: 1.75rem 0 1rem; background: var(--surface); border-top: 1px solid var(--border); font-size: .875rem; color: var(--muted); }
-.canvas .app-footer.site-footer { margin-top: 2rem; padding: 1.75rem 0 1rem; }
-.foot-grid { display: grid; grid-template-columns: 1.7fr repeat(3, 1fr); gap: 1.25rem 2.5rem; }
-.foot-brand p { margin: .5rem 0 0; max-width: 24rem; line-height: 1.5; }
-.foot-logo { display: inline-block; font-weight: 800; font-size: 1.1rem; color: var(--text); text-decoration: none; }
-.foot-logo img { height: 32px; width: auto; max-width: 180px; }
-.foot-col h2 { margin: 0 0 .6rem; font-size: .7rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
-.foot-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
-.site-footer a { color: var(--text); text-decoration: none; }
-.site-footer a:hover { color: var(--accent-ink); text-decoration: underline; }
-.foot-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; margin-top: 1.25rem; padding-top: .9rem; border-top: 1px solid var(--border); font-size: .8125rem; }
-.app-footer-slim .foot-links { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
-@media (max-width: 767.98px) { .foot-grid { grid-template-columns: 1fr 1fr; } .foot-brand { grid-column: 1 / -1; } }
-
 /* Sign in and the other account screens: one centred card, the brand above it, a few help articles beneath */
 .auth.auth-center { display: block; min-height: 100vh; }
 .auth-center .auth-panel { min-height: 100vh; justify-content: center; gap: 1.1rem; padding: 2rem 1rem;
@@ -783,8 +768,64 @@ table.lines .line-row[hidden] { display: none; }
 .auth-center .auth-art-foot a { color: inherit; }
 @media (max-width: 900px) { .auth-center .auth-card { padding: 1.5rem 1.25rem 1.25rem; } }
 .shop-main > * { min-width: 0; }
-.canvas .app-footer.site-footer a { color: var(--text); }
-.canvas .app-footer.site-footer a:hover { color: var(--accent-ink); }
 .auth-center .auth-legal { margin: 1rem 0 0; }
 .auth-center .auth-alt { margin-top: 1.25rem; }
-.auth-brand img { padding: .35rem .8rem; border-radius: 12px; background: var(--logo-plate); }
+.auth-brand img { border-radius: 12px; }
+html[data-bs-theme="dark"] .auth-brand img:not(.logo-on-dark) { padding: .35rem .8rem; background: var(--logo-plate); }
+
+/* --- The footer: a call to action, five columns, the ways to pay, on a dark field with the brand pattern ----------------------------------- */
+.app-footer.site-footer, .canvas .app-footer.site-footer { --foot-bg: #0a1224; --foot-text: #aab6d3; --foot-line: rgba(255, 255, 255, .12); margin-top: 3rem; padding: 0; background: var(--foot-bg); color: var(--foot-text); border-top: 0; font-size: .9rem; position: relative; overflow: hidden; }
+.site-footer::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .11; background: url("../img/pattern-white.svg") right -6% bottom -30% / min(60rem, 90%) no-repeat; }
+.site-footer > * { position: relative; }
+.app-footer.site-footer a { color: #e6ecfa; text-decoration: none; }
+.app-footer.site-footer a:hover { color: #fff; text-decoration: underline; }
+.foot-cta { background: linear-gradient(100deg, var(--brand-primary-dark, #1b46a8), var(--brand-primary, #2459d6)); color: #fff; }
+.foot-cta::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .1; background: url("../img/pattern-white.svg") right -3rem center / 22rem no-repeat; }
+.foot-cta-inner { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; padding-top: 1.6rem; padding-bottom: 1.6rem; }
+.canvas .app-footer.site-footer .foot-cta .container-xxl, .foot-cta .container-xxl { max-width: none; padding-left: var(--gutter, 1.75rem); padding-right: var(--gutter, 1.75rem); }
+.foot-cta h2 { margin: 0 0 .2rem; font-size: 1.35rem; font-weight: 650; letter-spacing: -.02em; color: #fff; }
+.foot-cta p { margin: 0; color: rgba(255, 255, 255, .85); }
+.foot-cta-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.app-footer.site-footer .foot-cta .btn-light { color: var(--brand-primary-dark, #1b46a8); background: #fff; font-weight: 600; }
+.app-footer.site-footer .foot-cta .btn-outline-light { color: #fff; border-color: rgba(255, 255, 255, .7); }
+.app-footer.site-footer .foot-cta .btn-outline-light:hover { background: rgba(255, 255, 255, .14); }
+.app-footer.site-footer .foot-cta a:hover { text-decoration: none; }
+.foot-main { padding: 2.6rem 0 1.2rem; }
+.canvas .app-footer.site-footer .foot-main .container-xxl, .foot-main .container-xxl { max-width: none; padding-left: var(--gutter, 1.75rem); padding-right: var(--gutter, 1.75rem); }
+.foot-grid { display: grid; grid-template-columns: 1.7fr repeat(4, 1fr); gap: 2rem 2.5rem; }
+.foot-logo { display: inline-block; font-weight: 800; font-size: 1.25rem; color: #fff; }
+.foot-logo img { height: 44px; width: auto; max-width: 260px; }
+.foot-logo img.on-plate { background: #fff; border-radius: 10px; padding: 6px 12px; height: 40px; }
+.foot-brand p { margin: .8rem 0 0; max-width: 24rem; line-height: 1.55; }
+.foot-contact { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .55rem; }
+.foot-contact li { display: flex; gap: .65rem; align-items: flex-start; line-height: 1.45; }
+.foot-contact .bi { flex: none; margin-top: .15rem; color: var(--brand-primary-light, #7f9df0); }
+.foot-col h2 { margin: 0 0 .9rem; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #fff; }
+.foot-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.app-footer.site-footer .foot-col a { color: var(--foot-text); }
+.app-footer.site-footer .foot-col a:hover { color: #fff; }
+.foot-pay { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 2rem; padding-top: 1.1rem; border-top: 1px solid var(--foot-line); }
+.foot-pay > span:first-child { margin-right: .35rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+.foot-chip { padding: .25rem .7rem; border: 1px solid var(--foot-line); border-radius: 999px; background: rgba(255, 255, 255, .05); color: #e6ecfa; font-size: .82rem; }
+.foot-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1.5rem; margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--foot-line); font-size: .82rem; }
+.app-footer-slim .foot-links, .foot-base .foot-links { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+@media (max-width: 991.98px) { .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .foot-brand { grid-column: 1 / -1; } }
+@media (max-width: 575.98px) { .foot-cta-inner { padding-top: 1.2rem; padding-bottom: 1.2rem; } .foot-cta-actions .btn { flex: 1 1 100%; } }
+
+/* --- The brand in both themes: a light logo and icon for dark backgrounds, and the pattern behind sign-in ------------------------------------- */
+.logo-on-dark, .mark-on-dark { display: none; }
+html[data-bs-theme="dark"] .logo-on-dark, html[data-bs-theme="dark"] .mark-on-dark { display: inline-block; }
+html[data-bs-theme="dark"] .logo-on-light, html[data-bs-theme="dark"] .mark-on-light { display: none; }
+html[data-bs-theme="dark"] .auth-brand img.logo-on-dark, html[data-bs-theme="dark"] .app-navbar .navbar-brand img.logo-on-dark { background: none; padding: 0; }
+.auth-center .auth-panel { position: relative; overflow: hidden; }
+.auth-center .auth-panel::before, .auth-center .auth-panel::after { content: ""; position: absolute; pointer-events: none; background: url("../img/pattern-black.svg") center / contain no-repeat; opacity: .055; }
+.auth-center .auth-panel::before { width: 34rem; height: 32rem; left: -9rem; bottom: -8rem; }
+.auth-center .auth-panel::after { width: 26rem; height: 24rem; right: -7rem; top: -6rem; }
+.auth-center .auth-panel > * { position: relative; z-index: 1; }
+html[data-bs-theme="dark"] .auth-center .auth-panel::before, html[data-bs-theme="dark"] .auth-center .auth-panel::after { background-image: url("../img/pattern-white.svg"); opacity: .14; }
+.logo-previews { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+.logo-previews figure { margin: 0; padding: .9rem 1.1rem; border: 1px solid var(--border); border-radius: 12px; }
+.logo-previews figure.on-dark { background: #0a1224; border-color: #0a1224; }
+.logo-previews figcaption { margin-top: .4rem; font-size: .75rem; color: var(--muted); }
+.logo-previews figure.on-dark figcaption { color: #aab6d3; }
+.logo-previews img { height: 40px; width: auto; max-width: 240px; }

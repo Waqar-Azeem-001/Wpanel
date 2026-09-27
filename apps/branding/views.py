@@ -55,6 +55,14 @@ def brand_favicon(request):
     return _image(request, "favicon")
 
 
+def brand_logo_dark(request):
+    return _image(request, "logo_dark")
+
+
+def brand_mark_dark(request):
+    return _image(request, "mark_dark")
+
+
 def settings_page(request):
     if not request.user.is_authenticated:
         return redirect_to_login(request.get_full_path())
@@ -73,7 +81,10 @@ def settings_page(request):
                     request.user, values={k: data[k] for k in services.TEXT_FIELDS}, request=request,
                     logo=data["logo"].read() if data.get("logo") else None,
                     favicon=data["favicon"].read() if data.get("favicon") else None,
-                    remove_logo=data.get("remove_logo"), remove_favicon=data.get("remove_favicon"))
+                    logo_dark=data["logo_dark"].read() if data.get("logo_dark") else None,
+                    mark_dark=data["mark_dark"].read() if data.get("mark_dark") else None,
+                    remove_logo=data.get("remove_logo"), remove_favicon=data.get("remove_favicon"),
+                    remove_logo_dark=data.get("remove_logo_dark"), remove_mark_dark=data.get("remove_mark_dark"))
             except ACTION_ERRORS as exc:
                 apply_form_error(form, exc)
             else:

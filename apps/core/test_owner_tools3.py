@@ -368,7 +368,7 @@ def test_a_paid_invoice_is_marked_after_its_content_so_tables_cannot_hide_it(man
 
 def test_the_client_footer_has_columns_and_the_staff_footer_is_slim(owner_user, boss):
     page = browser(owner_user).get(reverse("dashboard")).content.decode()
-    assert page.count('class="foot-col"') == 3 and "Hosting plans" in page and "Open a ticket" in page and "Affiliate programme" in page
+    assert page.count('class="foot-col"') == 4 and "Open a ticket" in page and "Affiliate programme" in page and "foot-cta" in page
     staff_page = browser(boss).get(reverse("console:dashboard")).content.decode()
     assert "app-footer-slim" in staff_page and "foot-col" not in staff_page
     assert "site-footer" in browser().get(reverse("catalog:product_list")).content.decode()  # the store, signed out, has it too
@@ -411,3 +411,32 @@ def test_the_sign_in_card_is_centred_with_the_brand_above_and_no_dark_side_panel
 def test_the_email_provider_page_is_two_columns_with_the_form_beside_the_lists(boss):
     page = browser(boss).get(reverse("console:email_providers")).content.decode()
     assert "wide-side" in page and "Add a provider" in page and "Sending and receiving" in page and "check-pill" in page
+
+
+# --- The full footer and the brand pattern ---------------------------------------------------------------------------------------------
+
+def test_the_footer_lists_real_categories_ways_to_pay_and_contact_details(boss, owner_user):
+    from apps.billing.models import BillingSettings
+
+    billing.save_payment_method(boss, "jc", name="JazzCash", kind="jazzcash", account_number="0300")
+    BillingSettings.objects.update_or_create(pk=1, defaults={"phone": "+92 51 1234567", "address": "Blue Area, Islamabad"})
+    page = browser(owner_user).get(reverse("dashboard")).content.decode()
+    assert "?category=wordpress" in page and "WordPress hosting" in page  # the store's own categories
+    assert "You can pay by" in page and "JazzCash" in page
+    assert "+92 51 1234567" in page and "Blue Area, Islamabad" in page
+    assert "Need a hand with your services?" in page
+
+
+def test_a_visitor_sees_a_call_to_start_and_no_account_links_they_cannot_use():
+    page = browser().get(reverse("catalog:product_list")).content.decode()
+    assert "Ready to get online?" in page and "Create an account" in page and reverse("support_customer:new") not in page.split("site-footer")[1]
+
+
+def test_the_pattern_files_are_shipped_and_used_by_the_footer_and_sign_in():
+    from pathlib import Path
+
+    for name in ("pattern-white.svg", "pattern-black.svg"):
+        text = Path("static/img", name).read_text(encoding="utf-8")
+        assert text.lstrip().startswith("<svg") and "<script" not in text and "onload" not in text
+    css = Path("static/css/shell.css").read_text(encoding="utf-8")
+    assert css.count("pattern-white.svg") >= 3 and "pattern-black.svg" in css

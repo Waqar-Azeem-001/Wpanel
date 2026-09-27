@@ -289,3 +289,50 @@ def test_emails_use_the_brand(admin, customer):
     html = sent.alternatives[0][0]
     assert "Mail Hosting" in sent.subject and "#123456" in html and "Mail footer" in html and "help@mail.test" in html
     assert "/brand/logo/?v=" in html and message is not None
+
+
+# --- The logo and icon for dark backgrounds ------------------------------------------------------------------------------------------
+
+def test_a_light_logo_and_icon_for_dark_backgrounds_are_stored_and_served(admin, client):
+    assert not services.get().has_logo_dark and not services.get().has_mark_dark
+    services.save_settings(admin, logo=image(), logo_dark=image(color=(250, 250, 250)), mark_dark=image(size=(32, 32), color=(250, 250, 250)))
+    brand = services.get()
+    assert brand.has_logo and brand.has_logo_dark and brand.has_mark_dark
+    for name, kind in (("brand_logo_dark", "image/png"), ("brand_mark_dark", "image/png")):
+        response = client.get(reverse(name))
+        assert response.status_code == 200 and response["Content-Type"] == kind and response.content[:4] == b"\x89PNG"
+        assert "sandbox" in response["Content-Security-Policy"]  # an uploaded file can never run as a page
+
+
+def test_the_dark_images_are_checked_like_the_others_and_can_be_removed(admin, client):
+    with pytest.raises(ValidationError):
+        services.save_settings(admin, logo_dark=b"<svg onload=alert(1)></svg>")
+    with pytest.raises(ValidationError):
+        services.save_settings(admin, mark_dark=image(size=(600, 600)))  # an icon is at most 512 pixels
+    services.save_settings(admin, logo_dark=image(), mark_dark=image(size=(32, 32)))
+    services.save_settings(admin, remove_logo_dark=True, remove_mark_dark=True)
+    assert not services.get().has_logo_dark and not services.get().has_mark_dark
+    assert client.get(reverse("brand_logo_dark")).status_code == 404 and client.get(reverse("brand_mark_dark")).status_code == 404
+
+
+def test_each_theme_gets_its_own_logo_when_both_exist_and_the_one_logo_otherwise(admin, client):
+    services.save_settings(admin, logo=image())
+    page = client.get(reverse("accounts:login")).content.decode()
+    assert "auth-brand" in page and "logo-on-dark" not in page and reverse("brand_logo") in page
+    services.save_settings(admin, logo_dark=image(color=(250, 250, 250)), mark_dark=image(size=(32, 32)))
+    page = client.get(reverse("accounts:login")).content.decode()
+    assert "logo-on-light" in page and "logo-on-dark" in page and reverse("brand_logo_dark") in page
+
+
+def test_the_brand_page_takes_the_dark_images_and_previews_both(client, admin):
+    client.force_login(admin)
+    saved = client.post(reverse("brand_staff:settings"), {
+        "site_name": "Acme", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "footer_text": "",
+        "date_format": "%d %b %Y", "money_format": "code_before",
+        "logo": SimpleUploadedFile("l.png", image(), content_type="image/png"),
+        "logo_dark": SimpleUploadedFile("d.png", image(color=(250, 250, 250)), content_type="image/png"),
+        "mark_dark": SimpleUploadedFile("m.png", image(size=(32, 32)), content_type="image/png")})
+    assert saved.status_code == 302
+    page = client.get(reverse("brand_staff:settings")).content.decode()
+    assert "On a light background" in page and "On a dark background" in page and "Logo for dark backgrounds" in page
+    assert AuditEvent.objects.filter(action="brand.updated").latest("pk").metadata["changed"].count("logo_dark") == 1

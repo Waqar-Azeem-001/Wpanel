@@ -6,7 +6,7 @@
     <button class="chrome-icon chrome-burger" type="button" data-menu-open aria-controls="topnav" aria-expanded="false" aria-label="{% trans 'Open menu' %}"><i class="bi bi-list" aria-hidden="true"></i></button>
     <a class="chrome-brand" href="{% url 'home' %}">
       {# The small mark (favicon) if there is one; else the uploaded logo on a light plate; else the first letter. #}
-      {% if brand.has_favicon %}<img class="brand-mark" src="{% url 'brand_favicon' %}?v={{ brand.version }}" alt="">{% elif brand.has_logo %}<img class="brand-logo" src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="">{% else %}<span class="brand-mark is-letter" aria-hidden="true">{{ SITE_NAME|slice:":1"|upper }}</span>{% endif %}
+      {% if brand.has_favicon or brand.has_mark_dark %}{% if brand.has_mark_dark %}<img class="brand-mark mark-on-dark" src="{% url 'brand_mark_dark' %}?v={{ brand.version }}" alt="">{% endif %}{% if brand.has_favicon %}<img class="brand-mark{% if brand.has_mark_dark %} mark-on-light{% endif %}" src="{% url 'brand_favicon' %}?v={{ brand.version }}" alt="">{% endif %}{% elif brand.has_logo %}<img class="brand-logo" src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="">{% else %}<span class="brand-mark is-letter" aria-hidden="true">{{ SITE_NAME|slice:":1"|upper }}</span>{% endif %}
       <span class="brand-text"><strong>{{ SITE_NAME }}</strong><small>{% if ui_area == "staff" %}{% trans "Staff console" %}{% else %}{% trans "Client area" %}{% endif %}</small></span>
     </a>
 

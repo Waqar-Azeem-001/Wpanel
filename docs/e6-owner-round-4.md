@@ -30,6 +30,12 @@ Fields inside a grid were spaced twice (the grid gap plus the field's own margin
 * **Billing › New invoice / quote**: search box plus a list of recent clients (or the matches) that fills the width instead of one small card.
 * **Email provider**: providers and "Sending and receiving" on the left, the add/edit form on the right in two columns, the switches as compact pills.
 
-## 7. Verified
+## 7. Logos for dark backgrounds, the brand pattern, a full footer
 
-`apps/core/test_owner_tools3.py` (31 tests) and the updated shell tests. Browser (Chromium, 1440 light and dark, 390): sign-in, client dashboard and footer, ticket page, new invoice, email provider, payment methods, staff dashboard — no overflow, no JS errors. The PDFs were rendered to images and inspected.
+* **Brand settings** has two new uploads: a **light logo for dark backgrounds** and a **light icon for dark backgrounds** (checked like the other images; never SVG). With them, the dark theme shows the white logo on sign-in and on the public store bar, and the white icon in the header; without them the one logo is used (on a white plate in the dark theme, as before). The page previews the logo on a light and on a dark background. The owner's coloured logo, white logo and white icon are loaded into the local database.
+* **The pattern** (`static/img/pattern-white.svg`, `pattern-black.svg`) sits faintly behind the sign-in card (black on light, white outline on dark) and across the footer.
+* **The footer** is now a full one on a dark field: a call to action (open a ticket / browse help when signed in; see plans / create an account for a visitor), five columns (the brand with support email, phone and address; the store's own categories; domains and add-ons; support; your account), the payment methods you accept, and the copyright line. Everything listed comes from the database (categories, payment methods, Billing settings, Brand settings); an empty item is left out. Staff pages keep the slim footer.
+
+## 8. Verified
+
+`apps/core/test_owner_tools3.py` (34 tests), four new brand tests and the updated shell tests. Browser (Chromium, 1440 light and dark, 390): sign-in, client dashboard and footer, ticket page, new invoice, email provider, payment methods, staff dashboard — no overflow, no JS errors. The PDFs were rendered to images and inspected.

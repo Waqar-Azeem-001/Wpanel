@@ -5,7 +5,7 @@
 {% block frame %}
 <div class="auth auth-center">
   <main id="main" class="auth-panel" tabindex="-1">
-    <a class="auth-brand" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="{{ SITE_NAME }}">{% else %}{{ SITE_NAME }}{% endif %}</a>
+    <a class="auth-brand" href="{% url 'home' %}">{% if brand.has_logo or brand.has_logo_dark %}{% include "components/brand_logo.html" %}{% else %}{{ SITE_NAME }}{% endif %}</a>
     <div class="auth-card{% block card_class %}{% endblock %}">
       {% include "components/messages.html" %}
       {% block content %}{% endblock %}

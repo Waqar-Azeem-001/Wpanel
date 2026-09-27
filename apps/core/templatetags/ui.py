@@ -13,6 +13,24 @@ from apps.branding import services as branding
 
 register = template.Library()
 
+
+@register.simple_tag
+def footer_info():
+    """What the store footer lists, all of it real: the store categories, the ways to pay and the company's contact details."""
+    info = {"categories": [], "methods": [], "phone": "", "address": ""}
+    try:
+        from apps.billing.models import BillingSettings, PaymentMethod
+        from apps.products import categories
+        from apps.products.models import CategoryKind
+
+        info["categories"] = [c for c in categories.active() if c.kind == CategoryKind.PLANS][:7]
+        info["methods"] = list(PaymentMethod.objects.filter(is_active=True).order_by("sort_order", "name").values_list("name", flat=True)[:8])
+        row = BillingSettings.load()
+        info["phone"], info["address"] = row.phone, row.address
+    except Exception:  # noqa: BLE001 - a footer must never break a page
+        pass
+    return info
+
 # --- Status badges (v2 Section 9.3): the colour of a status is decided here, once ------------------------------------
 TONES = {
     "success": {"active", "paid", "resolved", "approved", "completed", "registered", "succeeded", "accepted", "done",

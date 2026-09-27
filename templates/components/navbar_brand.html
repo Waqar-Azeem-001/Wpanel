@@ -1,1 +1,1 @@
-<a class="navbar-brand" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt=""><span class="visually-hidden">{{ SITE_NAME }}</span>{% else %}<span>{{ SITE_NAME }}</span>{% endif %}</a>
+<a class="navbar-brand" href="{% url 'home' %}">{% if brand.has_logo or brand.has_logo_dark %}{% include "components/brand_logo.html" %}<span class="visually-hidden">{{ SITE_NAME }}</span>{% else %}<span>{{ SITE_NAME }}</span>{% endif %}</a>

@@ -229,7 +229,7 @@ def build_world():
 
     # --- an open cart (so the checkout page exists) and a brand logo ------------------------------------------------
     orders_services.add_hosting(owner, client, product, "cart-site.harness.test", "annual")
-    branding.save_settings(admin, logo=_png(), favicon=_png("#654321"))
+    branding.save_settings(admin, logo=_png(), favicon=_png("#654321"), logo_dark=_png("#fafafa"), mark_dark=_png("#fefefe"))
 
     # --- notifications, brand ----------------------------------------------------------------------------------------
     EmailMessage.objects.create(user=owner, event="invoice.issued", template="invoice_issued", to_email=owner.email,

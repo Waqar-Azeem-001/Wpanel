@@ -6,7 +6,10 @@
 <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
   <section class="card"><div class="card-body">
     <h2>Identity</h2>
-    {% if current.has_logo %}<p><img class="brand-logo-preview" src="{% url 'brand_logo' %}?v={{ current.version }}" alt="Current logo"></p>{% endif %}
+    {% if current.has_logo or current.has_logo_dark %}<div class="logo-previews">
+      {% if current.has_logo %}<figure class="on-light"><img class="brand-logo-preview" src="{% url 'brand_logo' %}?v={{ current.version }}" alt="Current logo"><figcaption>On a light background</figcaption></figure>{% endif %}
+      {% if current.has_logo_dark %}<figure class="on-dark"><img class="brand-logo-preview" src="{% url 'brand_logo_dark' %}?v={{ current.version }}" alt="Current logo for dark backgrounds"><figcaption>On a dark background</figcaption></figure>{% endif %}
+    </div>{% endif %}
     {% include "partials/form.html" %}
     {% if can_manage %}<div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
     {% else %}<p class="text-secondary">You can view these settings but not change them.</p>{% endif %}</div>

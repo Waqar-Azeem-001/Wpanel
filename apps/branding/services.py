@@ -32,7 +32,9 @@ MENU_CACHE_KEY = "branding.menu.v1"
 TEXT_FIELDS = ("site_name", "primary_color", "accent_color", "support_email", "footer_text", "date_format",
                "money_format")
 MIN_CONTRAST = 4.5
-IMAGE_LIMITS = {"logo": (512 * 1024, 2048), "favicon": (128 * 1024, 512)}  # (bytes, longest side in pixels)
+IMAGE_LIMITS = {"logo": (512 * 1024, 2048), "favicon": (128 * 1024, 512), "logo_dark": (512 * 1024, 2048),
+                "mark_dark": (128 * 1024, 512)}  # (bytes, longest side in pixels)
+IMAGE_LABELS = {"logo": "logo", "favicon": "favicon", "logo_dark": "logo for dark backgrounds", "mark_dark": "icon for dark backgrounds"}
 SIGNATURES = (
     (b"\x89PNG\r\n\x1a\n", "image/png", "PNG"), (b"\xff\xd8\xff", "image/jpeg", "JPEG"),
     (b"GIF87a", "image/gif", "GIF"), (b"GIF89a", "image/gif", "GIF"), (b"\x00\x00\x01\x00", "image/x-icon", "ICO"),
@@ -89,9 +91,11 @@ class Brand:
     has_logo: bool
     has_favicon: bool
     version: int
+    has_logo_dark: bool = False
+    has_mark_dark: bool = False
 
 
-def _brand_from(row, has_logo, has_favicon):
+def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=False):
     primary = row["primary_color"]
     return Brand(
         name=row["site_name"] or settings.SITE_NAME, primary=primary, primary_dark=mix(primary, "#000000", 0.18),
@@ -99,7 +103,7 @@ def _brand_from(row, has_logo, has_favicon):
         primary_light_rgb=", ".join(str(c) for c in _rgb(mix(primary, "#ffffff", 0.45))),
         accent=row["accent_color"], accent_text=readable_text(row["accent_color"]), support_email=row["support_email"], footer_text=row["footer_text"],
         date_format=row["date_format"], money_format=row["money_format"], has_logo=has_logo,
-        has_favicon=has_favicon, version=row["version"])
+        has_favicon=has_favicon, version=row["version"], has_logo_dark=has_logo_dark, has_mark_dark=has_mark_dark)
 
 
 DEFAULTS = {"site_name": "", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "",
@@ -115,9 +119,10 @@ def get():
             has_logo = BrandSettings.objects.filter(pk=1, logo_type__gt="").exists()
             has_favicon = BrandSettings.objects.filter(pk=1, favicon_type__gt="").exists()
             cached = {**{f: getattr(row, f) for f in TEXT_FIELDS}, "version": row.version, "has_logo": has_logo,
-                      "has_favicon": has_favicon}
+                      "has_favicon": has_favicon, "has_logo_dark": bool(row.logo_dark_type), "has_mark_dark": bool(row.mark_dark_type)}
             cache.set(CACHE_KEY, cached, 300)
-        return _brand_from(cached, cached["has_logo"], cached["has_favicon"])
+        return _brand_from(cached, cached["has_logo"], cached["has_favicon"], cached.get("has_logo_dark", False),
+                           cached.get("has_mark_dark", False))
     except Exception:  # noqa: BLE001 - a page must not fail because the brand could not be read
         logger.exception("Could not read the brand settings; using the defaults")
         return _brand_from(DEFAULTS, False, False)
@@ -137,7 +142,7 @@ def image(kind):
 def validate_image(kind, data):
     """Returns the content type of a valid ``kind`` ("logo" or "favicon") upload, or raises ValidationError."""
     max_bytes, max_side = IMAGE_LIMITS[kind]
-    label = "logo" if kind == "logo" else "favicon"
+    label = IMAGE_LABELS[kind]
     if not data:
         raise ValidationError(f"The {label} file is empty.")
     if len(data) > max_bytes:
@@ -145,9 +150,9 @@ def validate_image(kind, data):
     content_type = next((t for sig, t, _ in SIGNATURES if data.startswith(sig)), None)
     if content_type is None and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         content_type = "image/webp"
-    if content_type is None or (content_type == "image/x-icon" and kind == "logo"):
+    if content_type is None or (content_type == "image/x-icon" and kind in ("logo", "logo_dark")):
         raise ValidationError(f"The {label} must be a PNG, JPEG, GIF or WebP image"
-                              f"{' (or ICO)' if kind == 'favicon' else ''}. SVG is not accepted.")
+                              f"{' (or ICO)' if kind in ('favicon', 'mark_dark') else ''}. SVG is not accepted.")
     try:
         from PIL import Image
 
@@ -183,7 +188,7 @@ def _check_colors(values):
 
 @transaction.atomic
 def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=False, remove_favicon=False,
-                  request=None):
+                  logo_dark=None, mark_dark=None, remove_logo_dark=False, remove_mark_dark=False, request=None):
     """Staff (``manage_settings``): change the brand. ``logo`` / ``favicon`` are the uploaded file bytes."""
     if not actor.has_perm(perm("manage_settings")):
         raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
@@ -196,7 +201,8 @@ def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=Fa
     row.full_clean()
     _check_colors({f: getattr(row, f) for f in ("primary_color", "accent_color")})
     changed = [f for f in TEXT_FIELDS if before[f] != getattr(row, f)]
-    for kind, data, remove in (("logo", logo, remove_logo), ("favicon", favicon, remove_favicon)):
+    for kind, data, remove in (("logo", logo, remove_logo), ("favicon", favicon, remove_favicon),
+                               ("logo_dark", logo_dark, remove_logo_dark), ("mark_dark", mark_dark, remove_mark_dark)):
         if data:
             setattr(row, kind, data)
             setattr(row, f"{kind}_type", validate_image(kind, data))

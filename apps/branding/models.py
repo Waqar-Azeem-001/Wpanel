@@ -63,6 +63,11 @@ class BrandSettings(models.Model):
     logo_type = models.CharField(max_length=30, blank=True, editable=False)
     favicon = models.BinaryField(null=True, blank=True, editable=False)
     favicon_type = models.CharField(max_length=30, blank=True, editable=False)
+    # The same brand for dark backgrounds: a light logo and a light icon, used in the dark theme and on the dark footer.
+    logo_dark = models.BinaryField(null=True, blank=True, editable=False)
+    logo_dark_type = models.CharField(max_length=30, blank=True, editable=False)
+    mark_dark = models.BinaryField(null=True, blank=True, editable=False)
+    mark_dark_type = models.CharField(max_length=30, blank=True, editable=False)
 
     version = models.PositiveIntegerField(default=1, editable=False, help_text="Bumped on every change (cache busting).")
     updated_at = models.DateTimeField(auto_now=True)
@@ -76,5 +81,5 @@ class BrandSettings(models.Model):
     @classmethod
     def load(cls):
         """The row, without the (possibly large) image columns."""
-        row = cls.objects.defer("logo", "favicon").filter(pk=1).first()
+        row = cls.objects.defer("logo", "favicon", "logo_dark", "mark_dark").filter(pk=1).first()
         return row or cls.objects.create(pk=1)
