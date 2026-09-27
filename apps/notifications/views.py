@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.roles import perm
@@ -210,26 +211,39 @@ def template_edit(request, key):
     override = mail_templates.customised(key)
     subject = override.subject if override else default_subject
     body = override.body_text if override else default_body
-    shown = None
+    design = override.body_html if override else ""
+    shown, shown_design = None, ""
     error = ""
     if request.method == "POST":
         do = request.POST.get("do", "save")
         subject, body = request.POST.get("subject", ""), request.POST.get("body_text", "")
+        design = request.POST.get("body_html", "") if request.POST.get("mode") == "design" else ""  # the design only counts in "designed" mode
         try:
             if do == "reset":
                 changed = services.reset_template(request.user, key, request=request)
                 messages.success(request, "Back to the default wording." if changed else "This message already uses the default.")
                 return redirect("notifications_staff:template", key=key)
             if do == "preview":
-                shown = mail_templates.preview(key, *mail_templates.validate(key, subject, body))
+                shown = mail_templates.preview(key, *mail_templates.validate(key, subject, body, design))
+                if shown[2]:  # the design inside the branded shell, as a reader will see it (the logo by a relative address here)
+                    from django.template.loader import render_to_string
+
+                    from .services import _brand_context
+
+                    brand = _brand_context()
+                    shown_design = render_to_string("emails/_custom.html", {
+                        **brand, "logo_url": reverse("brand_logo") if brand["brand"].has_logo else "", "custom_html": shown[2],
+                        "heading": "", "page_title": shown[0], "site_name": brand["brand"].name})
             else:
-                services.save_template(request.user, key, subject, body, request=request)
+                services.save_template(request.user, key, subject, body, design, request=request)
                 messages.success(request, "Saved. New emails of this kind use this wording.")
                 return redirect("notifications_staff:template", key=key)
         except ServiceError as exc:
             error = exc.message
+    editor_start = design or mail_templates.text_to_design(body)
     return render(request, "notifications/staff/template_edit.html", {
-        "key": key, "labels": mail_templates.known_templates()[key], "subject": subject, "body": body,
+        "key": key, "labels": mail_templates.known_templates()[key], "subject": subject, "body": body, "design": design,
+        "editor_start": editor_start, "has_design": bool(design.strip()), "shown_design": shown_design, "brand_color": brand_primary(),
         "variables": mail_templates.variables(key), "override": override, "preview": shown, "error": error,
         "sensitive": key in events.sensitive_templates(), "section": "templates"})
 
@@ -313,3 +327,10 @@ def email_purge(request):
         return f"{count} email(s) older than {days} days were deleted."
 
     return run_action(request, action, "notifications_staff:emails")
+
+
+def brand_primary():
+    """The brand colour, for the editor's Button tool."""
+    from apps.branding import services as branding
+
+    return branding.get().primary

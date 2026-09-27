@@ -203,7 +203,8 @@ class EmailTemplateOverride(TimeStampedModel):
 
     template = models.SlugField(max_length=100, unique=True)
     subject = models.CharField(max_length=255)
-    body_text = models.TextField()
+    body_text = models.TextField(blank=True, help_text="The plain-text version. Blank with an HTML design = made from the design.")
+    body_html = models.TextField(blank=True, help_text="The design, as HTML (written in the editor or pasted). Cleaned when it is sent.")
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                    related_name="+")
 

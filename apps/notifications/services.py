@@ -115,8 +115,11 @@ def render_email(template, context):
     override = mail_templates.customised(template)
     if override is not None:  # a Super Admin's own wording; the HTML layout is built from the text
         try:
-            subject, body_text = mail_templates.render_override(override, ctx)
-            return subject, body_text, ""
+            subject, body_text, design = mail_templates.render_override(override, ctx)
+            if not design:
+                return subject, body_text, ""
+            # A Super Admin's own design goes inside the branded shell (logo, footer); its own button is part of the design.
+            return subject, body_text, render_to_string("emails/_custom.html", {**ctx, "custom_html": design, "heading": "", "page_title": subject, "cta_url": ""})
         except ServiceError:  # the wording no longer renders (say a variable it needed is gone): send the default, never nothing
             logger.exception("Customised wording for %s failed; the default was used", template)
     subject = " ".join(render_to_string(f"emails/{template}_subject.txt", ctx).split())
@@ -245,6 +248,34 @@ def _content(message):
     return message.body_text, message.body_html
 
 
+def _inline_logo(body_html):
+    """
+    Put the logo inside the email (a picture the message carries) instead of a web address the reader's mail program must fetch: it
+    shows even when the portal is not reachable from the internet, and when the mail program blocks remote pictures.
+    Returns (html with the picture's address swapped, the picture part or None). Never raises: without it the address stays.
+    """
+    if not body_html or "brand/logo/" not in body_html:
+        return body_html, None
+    try:
+        from email.mime.image import MIMEImage
+
+        from apps.branding import services as branding
+
+        found = branding.image("logo")
+        if found is None:
+            return body_html, None
+        data, content_type = found
+        subtype = content_type.split("/")[-1] if content_type.startswith("image/") else "png"
+        part = MIMEImage(data, _subtype=subtype)
+        part.add_header("Content-ID", "<brand-logo>")
+        part.add_header("Content-Disposition", "inline", filename=f"logo.{'jpg' if subtype == 'jpeg' else subtype}")
+        swapped = re.sub(r'src="[^"]*brand/logo/[^"]*"', 'src="cid:brand-logo"', body_html)
+        return swapped, part
+    except Exception:  # noqa: BLE001 - a picture that cannot be embedded never stops the email
+        logger.exception("Could not embed the logo in an email")
+        return body_html, None
+
+
 def _attach_pdf(mail, message):
     """
     Attach the invoice or quote PDF the email is about, made now from the stored document: an unpaid invoice goes out marked UNPAID, a
@@ -288,6 +319,7 @@ def deliver(message_id):
 
     try:
         body_text, body_html = _content(message)
+        body_html, inline_logo = _inline_logo(body_html)
         connection, sender = _connection_and_sender()
         message_id = message.message_id or make_msgid(domain=(sender.rsplit("@", 1)[-1].strip("> ") or None))
         from .models import NotificationSettings
@@ -304,6 +336,9 @@ def deliver(message_id):
         )
         if body_html:
             mail.attach_alternative(body_html, "text/html")
+        if inline_logo is not None:
+            mail.mixed_subtype = "related"  # the logo is part of the page, not a file to download
+            mail.attach(inline_logo)
         attachment_name = _attach_pdf(mail, message)
         mail.send(fail_silently=False)
     except Exception as exc:
@@ -350,7 +385,7 @@ def _alert_email_failing(message):
 # --- Email wording (Super Admin) --------------------------------------------------------------------------------------
 
 @transaction.atomic
-def save_template(actor, key, subject, body_text, *, request=None):
+def save_template(actor, key, subject, body_text, html="", *, request=None):
     """Super Admin only: use this wording for one email instead of the default. Checked before it is stored."""
     from apps.audit import services as audit
 
@@ -360,11 +395,11 @@ def save_template(actor, key, subject, body_text, *, request=None):
     if not actor.is_superuser:
         raise ServiceError("Only a Super Admin can change email wording.", code="permission_denied",
                            status_code=http.HTTP_403_FORBIDDEN)
-    subject, body_text = mail_templates.validate(key, subject, body_text)
+    subject, body_text, html = mail_templates.validate(key, subject, body_text, html)
     _, created = EmailTemplateOverride.objects.update_or_create(
-        template=key, defaults={"subject": subject, "body_text": body_text, "updated_by": actor})
-    audit.record("email_template.saved", actor=actor, metadata={"template": key, "first_time": created,
-                                                                 "subject": subject[:120], "characters": len(body_text)},
+        template=key, defaults={"subject": subject, "body_text": body_text, "body_html": html, "updated_by": actor})
+    audit.record("email_template.saved", actor=actor, metadata={"template": key, "first_time": created, "subject": subject[:120],
+                                                                 "characters": len(body_text), "design_characters": len(html)},
                  request=request)
 
 

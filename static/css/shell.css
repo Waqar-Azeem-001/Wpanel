@@ -861,3 +861,31 @@ html[data-bs-theme="dark"] .auth-center .auth-panel::before, html[data-bs-theme=
 .app-footer.site-footer .foot-top { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .85rem; border: 1px solid var(--foot-line); border-radius: 999px; color: #e6ecfa; font-size: .82rem; }
 .app-footer.site-footer .foot-top:hover { background: rgba(255, 255, 255, .08); text-decoration: none; }
 @media (max-width: 767.98px) { .foot-base { padding-bottom: 4.5rem; } }
+
+/* --- The email editor: plain text or a designed message ---------------------------------------------------------------------------------- */
+.me-mode { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .75rem; margin: .25rem 0 1rem; }
+.me-mode label { position: relative; cursor: pointer; }
+.me-mode input { position: absolute; opacity: 0; }
+.me-mode label > span { display: grid; gap: .1rem; padding: .8rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-panel, 10px); font-weight: 650; }
+.me-mode label > span small { color: var(--muted); font-weight: 400; font-size: .8rem; }
+.me-mode label > span .bi { margin-right: .35rem; color: var(--accent); }
+.me-mode input:checked + span { border-color: var(--accent); background: var(--accent-subtle); }
+.me-mode input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.me-tabs { display: flex; gap: .25rem; margin-bottom: .6rem; border-bottom: 1px solid var(--border); }
+.me-tabs button { padding: .45rem .95rem; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font-weight: 600; cursor: pointer; }
+.me-tabs button.is-active { color: var(--text); border-bottom-color: var(--accent); }
+.me-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .15rem; padding: .35rem; border: 1px solid var(--border-strong); border-bottom: 0; border-radius: var(--radius-input, 8px) var(--radius-input, 8px) 0 0; background: var(--surface-2); }
+.me-toolbar button { display: inline-flex; align-items: center; gap: .3rem; min-width: 2rem; height: 2rem; padding: 0 .5rem; border: 0; border-radius: 6px; background: none; color: var(--text); font-size: .85rem; cursor: pointer; }
+.me-toolbar button:hover { background: var(--surface); box-shadow: 0 0 0 1px var(--border-strong); }
+.me-sep { width: 1px; height: 1.3rem; margin: 0 .25rem; background: var(--border-strong); }
+.me-surface { min-height: 18rem; max-height: 34rem; overflow: auto; padding: 1rem 1.15rem; border: 1px solid var(--border-strong); border-radius: 0 0 var(--radius-input, 8px) var(--radius-input, 8px); background: #fff; color: #1d2330; font: 15px/1.6 Arial, Helvetica, sans-serif; }
+.me-surface:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.me-surface p { margin: 0 0 12px; }
+.me-surface h2 { margin: 0 0 12px; font-size: 22px; color: #14213d; }
+.me-surface ul, .me-surface ol { margin: 0 0 12px; padding-left: 1.4rem; }
+.me-surface a { color: #1d5fbf; }
+.me-source { min-height: 18rem; }
+.me-vars { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem; }
+.me-vars button { padding: .15rem .55rem; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface); color: var(--text); font: 500 .78rem var(--font-mono, monospace); cursor: pointer; }
+.me-vars button:hover { border-color: var(--accent); background: var(--accent-subtle); }
+.me-preview { width: 100%; height: 34rem; border: 1px solid var(--border-strong); border-radius: var(--radius-input, 8px); background: #f3f4fa; }
