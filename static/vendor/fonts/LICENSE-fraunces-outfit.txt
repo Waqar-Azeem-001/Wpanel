@@ -1,3 +1,3 @@
-Fraunces (c) The Fraunces Project Authors, and Outfit (c) The Outfit Project Authors.
+Fraunces (c) The Fraunces Project Authors, Outfit (c) The Outfit Project Authors and Sora (c) The Sora Project Authors.
 Both are licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org), the same licence as Plus Jakarta Sans.
 The variable latin subsets here come from Fontsource (https://fontsource.org).

@@ -473,7 +473,8 @@ def test_the_look_stylesheet_and_fonts_are_shipped_and_every_look_is_written_for
     css = Path("static/css/looks.css").read_text(encoding="utf-8")
     for look in ("heritage", "aura"):
         assert f'html[data-look="{look}"][data-bs-theme="light"]' in css and f'html[data-look="{look}"][data-bs-theme="dark"]' in css
-    for font in ("fraunces-latin-wght-normal.woff2", "outfit-latin-wght-normal.woff2"):
+    assert "--foot-bg: color-mix(in srgb, var(--brand-primary)" in css and "--navy: color-mix(in srgb, var(--brand-primary)" in css  # the deep tone follows the brand
+    for font in ("fraunces-latin-wght-normal.woff2", "fraunces-latin-wght-italic.woff2", "outfit-latin-wght-normal.woff2", "sora-latin-wght-normal.woff2"):
         assert font in css and Path("static/vendor/fonts", font).read_bytes()[:4] == b"wOF2"
 
 

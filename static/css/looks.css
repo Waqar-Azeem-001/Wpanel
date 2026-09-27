@@ -6,9 +6,12 @@
  */
 @font-face { font-family: "Fraunces"; font-style: normal; font-weight: 100 900; font-display: swap;
   src: url("../vendor/fonts/fraunces-latin-wght-normal.woff2") format("woff2-variations"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Fraunces"; font-style: italic; font-weight: 100 900; font-display: swap;
+  src: url("../vendor/fonts/fraunces-latin-wght-italic.woff2") format("woff2-variations"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap;
   src: url("../vendor/fonts/outfit-latin-wght-normal.woff2") format("woff2-variations"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-
+@font-face { font-family: "Sora"; font-style: normal; font-weight: 100 800; font-display: swap;
+  src: url("../vendor/fonts/sora-latin-wght-normal.woff2") format("woff2-variations"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
 /* The deep tone (hero band, footer) is the brand colour taken down to near black, so every look and every custom colour has its own. */
 html[data-look] { --navy: color-mix(in srgb, var(--brand-primary) 32%, #04060b); --navy-2: color-mix(in srgb, var(--brand-primary) 48%, #04060b); }
@@ -120,7 +123,7 @@ html[data-look="aura"] .canvas .nav-tabs { border-radius: 999px; }
 .lp-foot { height: 1.2rem; flex: none; }
 .look-preview.is-signature { background: #f1f3f6; color: #0e1116; }
 .is-signature .lp-bar { background: #fff; border-bottom: 1px solid #e6e8ec; box-shadow: inset 0 -2px 0 #2a6af2; }
-.is-signature .lp-body b { font-family: "Plus Jakarta Sans", system-ui, sans-serif; color: #2a6af2; }
+.is-signature .lp-body b { font-family: "Sora", "Plus Jakarta Sans", system-ui, sans-serif; color: #2a6af2; }
 .is-signature .lp-btn { background: #2a6af2; border-radius: 6px; }
 .is-signature .lp-foot { background: #0b1b3f; }
 .look-preview.is-heritage { background: #f6f3ec; color: #1c231f; }
@@ -138,3 +141,44 @@ html[data-look="aura"] .canvas .nav-tabs { border-radius: 999px; }
 .look-custom { display: none; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 form:has(input[name="theme"][value="custom"]:checked) .look-custom { display: flex; }
 .logo-previews figure.on-dark img { background: none; padding: 0; }
+
+/* ================================= TYPE: each look has its own voice ==================================================================== */
+/* Signature: a geometric display face (Sora) for headings and the big numbers, the UI face (Plus Jakarta Sans) for everything else. */
+html[data-look="signature"] { --font-heading: "Sora", "Plus Jakarta Sans", system-ui, sans-serif; }
+html[data-look="signature"] :is(h1, h2, h3, .page-head > h1, .shop-title, .auth-card h1, .foot-cta h2, .hero-title, .kpi-value, .stat-tile strong, .plan-card .plan-price, .brand-text strong) { font-family: var(--font-heading); letter-spacing: -.03em; }
+html[data-look="signature"] .page-head > h1 { font-weight: 700; font-size: 1.6rem; }
+html[data-look="signature"] :is(.kpi-value, .plan-card .plan-price) { font-weight: 600; }
+
+/* Heritage: Fraunces, a soft old-style serif that draws itself larger and finer as the size grows (optical sizing), with an italic for the
+   quiet lines; small capitals with room between the letters for labels; the numbers that matter in the serif too. */
+html[data-look="heritage"] { font-optical-sizing: auto; }
+html[data-look="heritage"] :is(h1, h2, h3, .page-head > h1, .shop-title, .auth-card h1, .foot-cta h2, .hero-title, .kpi-value, .stat-tile strong, .plan-card .plan-price, .plan-card h3, .brand-text strong, .lp-body b) { font-family: var(--font-heading); font-variation-settings: "SOFT" 60, "WONK" 0; font-optical-sizing: auto; }
+html[data-look="heritage"] .page-head > h1 { font-size: 2.15rem; font-weight: 450; letter-spacing: -.012em; line-height: 1.12; }
+html[data-look="heritage"] .page-head > .page-sub, html[data-look="heritage"] .auth-sub, html[data-look="heritage"] .foot-cta p { font-family: var(--font-heading); font-style: italic; font-weight: 350; font-size: 1.02rem; letter-spacing: 0; }
+html[data-look="heritage"] .page-head { position: relative; padding-bottom: 1.05rem; margin-bottom: 1.4rem; border-bottom: 1px solid var(--border); }
+html[data-look="heritage"] .page-head::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 4rem; height: 2px; background: var(--brand-accent); }
+html[data-look="heritage"] .shop-title, html[data-look="heritage"] .card-header h2, html[data-look="heritage"] .card > .card-header { font-weight: 550; letter-spacing: 0; }
+html[data-look="heritage"] .shop-title { font-size: 1.18rem; }
+html[data-look="heritage"] .kpi-value, html[data-look="heritage"] .stat-tile strong { font-weight: 450; font-size: 2rem; letter-spacing: -.01em; font-variant-numeric: lining-nums tabular-nums; }
+html[data-look="heritage"] .kpi-value.is-money { font-size: 1.35rem; }
+html[data-look="heritage"] .plan-card .plan-price { font-weight: 500; letter-spacing: -.015em; }
+html[data-look="heritage"] .plan-card .plan-price .per { font-family: var(--bs-body-font-family); font-style: normal; }
+html[data-look="heritage"] :is(.table thead th, .kpi-label, .foot-col h2, .side-facts dt, .mega-title, .groupnav-title, .badge-eyebrow) { letter-spacing: .13em; }
+html[data-look="heritage"] .table thead th { font-weight: 600; font-size: .7rem; }
+html[data-look="heritage"] { --bs-body-line-height: 1.62; }
+html[data-look="heritage"] a { text-decoration-thickness: 1px; text-underline-offset: 4px; }
+html[data-look="heritage"] .auth-card h1 { font-size: 2.05rem; font-weight: 450; }
+html[data-look="heritage"] .auth-brand { letter-spacing: 0; }
+html[data-look="heritage"] .foot-cta h2 { font-size: 1.6rem; font-weight: 450; }
+html[data-look="heritage"] .foot-col h2 { font-family: var(--bs-body-font-family); }
+html[data-look="heritage"] .shop-card-head { padding-bottom: .8rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+html[data-look="heritage"] .look-name { font-weight: 500; }
+
+/* Aura: Outfit throughout, light and airy: light headings and big light numbers. */
+html[data-look="aura"] :is(h1, h2, h3, .page-head > h1, .shop-title, .auth-card h1, .foot-cta h2, .brand-text strong) { font-weight: 500; letter-spacing: -.015em; }
+html[data-look="aura"] .page-head > h1 { font-size: 2rem; font-weight: 400; letter-spacing: -.02em; }
+html[data-look="aura"] :is(.kpi-value, .stat-tile strong, .plan-card .plan-price) { font-weight: 300; font-size: 2rem; letter-spacing: -.02em; }
+html[data-look="aura"] .kpi-value.is-money { font-size: 1.3rem; }
+html[data-look="aura"] .page-head > .page-sub { font-weight: 300; font-size: 1rem; }
+html[data-look="aura"] .auth-card h1 { font-size: 2rem; font-weight: 400; }
+html[data-look="aura"] .table thead th { font-weight: 500; letter-spacing: .06em; }

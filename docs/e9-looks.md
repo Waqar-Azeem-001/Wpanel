@@ -15,9 +15,13 @@ Status: implemented locally (owner request, 2026-09-27). Nothing is deployed.
 
 Each look has its own light and dark theme. Choosing one changes the store, the client area, the staff console, sign-in, emails and PDFs (they read the same colours). Out of the box the brand stays "Custom" with the colours already saved, so nothing changes until you choose.
 
+## Type
+
+Each look has its own voice: **Signature** headings and big numbers in Sora (geometric), the rest in Plus Jakarta Sans; **Heritage** in Fraunces (a soft old-style serif that adjusts its drawing to the size), with an italic for the quiet lines under a title, a fine rule with a gold tip under every page title, small capitals with wide spacing for labels, and prices and figures in the serif; **Aura** in Outfit throughout, with light headings and large light numbers. Fonts are self-hosted (`static/vendor/fonts/`, SIL Open Font Licence).
+
 ## How it works
 
-`BrandSettings.theme` (signature, heritage, aura, custom) and `custom_look`. A ready-made look brings its own colours (`services.LOOKS`); "custom" keeps the typed ones. The page carries `<html data-look="…">`; `static/css/looks.css` holds what each look changes (tokens for colours, corners, shadows and type, and the header and footer shapes). The deep tone of the hero band and the footer is derived from the primary colour for every look. Two fonts were added (Fraunces, Outfit; SIL Open Font Licence, in `static/vendor/fonts/`).
+`BrandSettings.theme` (signature, heritage, aura, custom) and `custom_look`. A ready-made look brings its own colours (`services.LOOKS`); "custom" keeps the typed ones. The page carries `<html data-look="…">`; `static/css/looks.css` holds what each look changes (tokens for colours, corners, shadows and type, and the header and footer shapes). The deep tone of the hero band and the footer is derived from the primary colour for every look. Three fonts were added (Fraunces, Outfit, Sora).
 
 ## A bug found on the way
 
