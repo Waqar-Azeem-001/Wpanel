@@ -34,9 +34,9 @@ def nav_of(html):
 
 # --- Sign in and create account -------------------------------------------------------------------------------------
 
-def test_the_sign_in_screen_is_a_split_screen_without_the_site_navigation():
+def test_the_sign_in_screen_is_one_centred_card_without_the_site_navigation():
     html = HttpClient(**HOST).get(reverse("accounts:login")).content.decode()
-    assert 'class="auth"' in html and 'class="auth-art"' in html and 'class="auth-panel"' in html
+    assert 'class="auth auth-center"' in html and 'class="auth-panel"' in html and 'class="auth-brand"' in html
     assert "navbar" not in html and 'id="rail"' not in html
     assert reverse("accounts:password_reset") in html and reverse("accounts:register") in html
     assert "data-toggle-password" in html  # show / hide the password
@@ -81,7 +81,7 @@ def test_registration_still_creates_an_account_and_signs_the_person_in():
 @pytest.mark.parametrize("name", ["accounts:password_reset"])
 def test_the_password_pages_share_the_sign_in_design(name):
     html = HttpClient(**HOST).get(reverse(name)).content.decode()
-    assert 'class="auth"' in html and "navbar" not in html
+    assert 'class="auth auth-center"' in html and "navbar" not in html
 
 
 def test_password_reset_and_the_link_it_sends_still_work(make_user, mailoutbox):

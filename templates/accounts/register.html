@@ -17,6 +17,6 @@
   {% include "partials/auth_field.html" with field=form.password_confirm toggle=True %}
   <button type="submit" class="btn btn-primary auth-submit">{% trans "Create account" %}</button>
 </form>
-<p class="auth-alt">{% trans "Already have an account?" %} <a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></p>
 <p class="auth-legal">{% trans "By creating an account you agree to our terms of service and privacy policy." %}</p>
+<p class="auth-alt">{% trans "Already have an account?" %} <a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></p>
 {% endblock %}

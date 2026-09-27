@@ -1,28 +1,17 @@
 {% extends "layouts/_root.html" %}
 {% load i18n %}
-{# Sign in, create account and password reset: a split screen. The left side is the product; the right side is the form. #}
+{# Sign in, create account and password reset: one centred card on a soft field, the brand above it and (on sign in) a few help articles below. #}
 {% block body_class %}auth-body{% endblock %}
 {% block frame %}
-<div class="auth">
-  <aside class="auth-art" aria-label="{{ SITE_NAME }}">
-    <a class="auth-logo" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt=""><span class="visually-hidden">{{ SITE_NAME }}</span>{% else %}{{ SITE_NAME }}{% endif %}</a>
-    <div>
-      <p class="auth-headline">{% trans "Your hosting, domains and billing in one place." %}</p>
-      <ul class="auth-points">
-        <li><i class="bi bi-hdd-rack" aria-hidden="true"></i><span><strong>{% trans "Everything you run" %}</strong>{% trans "Manage services, domains and renewals from one dashboard." %}</span></li>
-        <li><i class="bi bi-receipt" aria-hidden="true"></i><span><strong>{% trans "Billing that is easy to follow" %}</strong>{% trans "Invoices, quotes and payment history whenever you need them." %}</span></li>
-        <li><i class="bi bi-life-preserver" aria-hidden="true"></i><span><strong>{% trans "Support that follows up" %}</strong>{% trans "Open a ticket and track every reply in one thread." %}</span></li>
-      </ul>
-      {% block art_extra %}{% endblock %}
-    </div>
-    <p class="auth-art-foot">{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}{% endif %}{% if brand.support_email %} &middot; {{ brand.support_email }}{% endif %}</p>
-  </aside>
+<div class="auth auth-center">
   <main id="main" class="auth-panel" tabindex="-1">
+    <a class="auth-brand" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="{{ SITE_NAME }}">{% else %}{{ SITE_NAME }}{% endif %}</a>
     <div class="auth-card{% block card_class %}{% endblock %}">
-      <a class="auth-card-logo" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="{{ SITE_NAME }}">{% else %}{{ SITE_NAME }}{% endif %}</a>
       {% include "components/messages.html" %}
       {% block content %}{% endblock %}
     </div>
+    {% block art_extra %}{% endblock %}
+    <p class="auth-art-foot">{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}{% endif %}{% if brand.support_email %} &middot; <a href="mailto:{{ brand.support_email }}">{{ brand.support_email }}</a>{% endif %}</p>
   </main>
 </div>
 {% endblock %}

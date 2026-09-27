@@ -47,7 +47,10 @@ def _page(request, queryset, per_page=25):
 
 def _client_picker(request, *, title, create_url):
     term = request.GET.get("q", "").strip()
-    clients = search_clients(Client.objects.all(), term).order_by("company_name", "first_name", "id")[:15] if term else []
+    if term:
+        clients = search_clients(Client.objects.all(), term).order_by("company_name", "first_name", "id")[:15]
+    else:  # nothing typed: the clients added most recently, so the usual ones are one click away
+        clients = Client.objects.order_by("-created_at", "-id")[:10]
     return render(request, "billing/staff/client_picker.html", {
         "title": title, "create_url": create_url, "clients": clients, "q": term, "section": title.lower()})
 

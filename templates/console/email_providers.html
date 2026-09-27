@@ -4,46 +4,21 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{% trans "Email provider" %}</h1>
-  <p class="page-sub">How the platform sends email.</p></div>
-<p class="text-secondary">{% trans "The mail server every message is sent through. Only one can be in use. Its password is encrypted and is never shown again; leave it blank when editing to keep it." %}</p>
-<section class="shop-card mb-4">
-  <h2 class="shop-title">Sending and receiving</h2>
-  <div class="row g-3">
-    <div class="col-md-6"><p class="small text-secondary mb-1">Emails are sent <strong>from</strong></p>
-      <p class="mb-2">{% if active_provider %}<strong>{{ active_provider.from_email }}</strong> <a class="small" href="{% url 'console:email_providers' %}?edit={{ active_provider.pk }}">change</a>{% else %}<span class="text-danger">no provider is in use yet</span>{% endif %}</p>
-      <p class="small text-secondary mb-0">The address is set on the provider below. Customers who reply write to the &ldquo;Replies go to&rdquo; address, if you set one.</p></div>
-    <div class="col-md-6"><p class="small text-secondary mb-1">Orders, payments and tickets that need a person</p>
-      <p class="small mb-0">Staff see them in the bell and the dashboard. To also get an <strong>email copy</strong> at a shared address (orders@, billing@ or your own), add it below.</p></div>
-  </div>
-  {% if can_manage %}
-  <form method="post" action="{% url 'console:email_settings_save' %}" novalidate class="mt-3">{% csrf_token %}
-    <div class="row g-3">
-      {% include "orders/_field.html" with field=settings_form.reply_to wide=True %}
-      {% include "orders/_field.html" with field=settings_form.alert_emails wide=True %}
-      <div class="col-12"><p class="small text-secondary mb-1">Copy an email to those addresses when:</p></div>
-      {% include "orders/_field.html" with field=settings_form.alert_new_order %}
-      {% include "orders/_field.html" with field=settings_form.alert_payment_reported %}
-      {% include "orders/_field.html" with field=settings_form.alert_tickets %}
-      {% include "orders/_field.html" with field=settings_form.alert_new_client %}
-      {% include "orders/_field.html" with field=settings_form.alert_affiliates %}
-      {% include "orders/_field.html" with field=settings_form.alert_cancellations %}
-    </div>
-    <button class="btn btn-primary mt-2" type="submit">Save</button>
-  </form>
-  {% endif %}
-</section>
+  <p class="page-sub">{% trans "The mail server every message is sent through, where replies go, and who gets a copy of the alerts. Passwords are encrypted and never shown again." %}</p></div>
 {% if not providers %}<div class="alert alert-warning" role="alert">{% trans "No email provider is set up, so no email (invoices, password links, ticket replies) can be delivered." %}</div>{% endif %}
-<div class="row g-4">
-  <div class="col-lg-6">
-    <section class="card"><div class="card-header">{% trans "Providers" %}</div>
-      <ul class="list-group list-group-flush">
+<div class="shop-layout wide-side">
+  <div class="shop-main">
+    <section class="shop-card">
+      <h2 class="shop-title mb-2">{% trans "Providers" %}</h2>
+      <ul class="row-list">
         {% for p in providers %}
-        <li class="list-group-item">
-          <div class="d-flex justify-content-between align-items-center"><span><strong>{{ p.name }}</strong> {% if p.is_active %}<span class="badge text-bg-success">{% trans "In use" %}</span>{% endif %}<div class="small text-secondary">{{ p.host }}:{{ p.port }} · {{ p.from_email }}</div></span>
+        <li>
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <span><strong>{{ p.name }}</strong> {% if p.is_active %}<span class="badge text-bg-success">{% trans "In use" %}</span>{% endif %}<span class="d-block small text-secondary">{{ p.host }}:{{ p.port }} &middot; {{ p.from_email }}</span></span>
             {% if can_manage %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'console:email_providers' %}?edit={{ p.pk }}">{% trans "Edit" %}</a>{% endif %}</div>
           {% if can_manage %}
           <div class="d-flex flex-wrap gap-2 mt-2">
-            <form method="post" action="{% url 'console:email_provider_test' p.pk %}" class="d-flex flex-wrap gap-2">{% csrf_token %}
+            <form method="post" action="{% url 'console:email_provider_test' p.pk %}" class="inline-test">{% csrf_token %}
               <input class="form-control form-control-sm" type="email" name="to_email" required placeholder="{% trans 'Send a test to…' %}" aria-label="{% trans 'Send a test to' %}">
               <button class="btn btn-sm btn-outline-primary" type="submit">{% trans "Test" %}</button></form>
             <a class="btn btn-sm btn-outline-secondary" href="{% url 'console:email_provider_check' p.pk %}">{% trans "Check deliverability" %}</a>
@@ -51,21 +26,54 @@
           </div>
           {% endif %}
         </li>
-        {% empty %}<li class="list-group-item text-secondary">{% trans "None yet." %}</li>{% endfor %}
+        {% empty %}<li class="text-secondary">{% trans "None yet." %}</li>{% endfor %}
       </ul>
+    </section>
+
+    <section class="shop-card">
+      <h2 class="shop-title mb-1">Sending and receiving</h2>
+      <p class="small text-secondary mb-3">Emails are sent from {% if active_provider %}<strong>{{ active_provider.from_email }}</strong> (set on the provider){% else %}<span class="text-danger">no provider yet</span>{% endif %}. Orders, payments and tickets that need a person also show in the bell and on the dashboard; add an address here to get an email copy too.</p>
+      {% if can_manage %}
+      <form method="post" action="{% url 'console:email_settings_save' %}" novalidate>{% csrf_token %}
+        <div class="row g-3">
+          {% include "orders/_field.html" with field=settings_form.reply_to %}
+          {% include "orders/_field.html" with field=settings_form.alert_emails %}
+          <div class="col-12"><p class="small fw-semibold mb-1">Copy an email to those addresses when</p>
+            <div class="check-grid">
+              {% for f in settings_form %}{% if f.name|slice:":6" == "alert_" and f.name != "alert_emails" %}<label class="check-pill">{{ f }} <span>{{ f.label }}</span></label>{% endif %}{% endfor %}
+            </div></div>
+        </div>
+        <button class="btn btn-primary mt-3" type="submit">Save</button>
+      </form>
+      {% endif %}
     </section>
   </div>
   {% if can_manage %}
-  <div class="col-lg-6">
-    <section class="card"><div class="card-body">
-      <h2 class="h5">{% if editing %}{% trans "Edit" %} {{ editing.name }}{% else %}{% trans "Add a provider" %}{% endif %}</h2>
+  <aside class="shop-side">
+    <section class="shop-card">
+      <h2 class="shop-title mb-2">{% if editing %}{% trans "Edit" %} {{ editing.name }}{% else %}{% trans "Add a provider" %}{% endif %}</h2>
       <form method="post" action="{% url 'console:email_provider_save' %}" novalidate>{% csrf_token %}
         {% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
-        {% include "partials/form.html" %}
-        <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% trans "Save" %}</button>{% if editing %}<a class="btn btn-outline-secondary" href="{% url 'console:email_providers' %}">{% trans "Cancel" %}</a>{% endif %}</div>
+        {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+        <div class="row g-3">
+          {% include "orders/_field.html" with field=form.name %}
+          {% include "orders/_field.html" with field=form.host %}
+          {% include "orders/_field.html" with field=form.port %}
+          {% include "orders/_field.html" with field=form.timeout %}
+          {% include "orders/_field.html" with field=form.username %}
+          {% include "orders/_field.html" with field=form.password %}
+          {% include "orders/_field.html" with field=form.from_email wide=True %}
+          {% include "orders/_field.html" with field=form.envelope_from wide=True %}
+          <div class="col-12"><div class="check-grid">
+            <label class="check-pill">{{ form.use_tls }} <span>{{ form.use_tls.label }}</span></label>
+            <label class="check-pill">{{ form.use_ssl }} <span>{{ form.use_ssl.label }}</span></label>
+            <label class="check-pill">{{ form.is_active }} <span>{{ form.is_active.label }}</span></label>
+          </div></div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-primary" type="submit">{% trans "Save" %}</button>{% if editing %}<a class="btn btn-outline-secondary" href="{% url 'console:email_providers' %}">{% trans "Cancel" %}</a>{% endif %}</div>
       </form>
-    </div></section>
-  </div>
+    </section>
+  </aside>
   {% endif %}
 </div>
 {% endblock %}

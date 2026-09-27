@@ -1,10 +1,59 @@
 {% load i18n %}
-<footer class="app-footer">
-  <div class="container-xxl d-flex flex-wrap justify-content-between gap-2">
+{% if ui_area == "staff" %}
+<footer class="app-footer app-footer-slim">
+  <div class="container-xxl d-flex flex-wrap justify-content-between align-items-center gap-2">
     <span>{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}{% endif %}</span>
-    <span>
+    <span class="foot-links">
+      <a href="{% url 'dashboard' %}">{% trans "Dashboard" %}</a>
+      <a href="{% url 'help:index' %}">{% trans "Help centre" %}</a>
       {% if brand.support_email %}<a href="mailto:{{ brand.support_email }}">{{ brand.support_email }}</a>{% endif %}
-      {% if not user.is_authenticated or ui_area == "client" %}<a class="ms-3" href="{% url 'help:index' %}">{% trans "Knowledgebase" %}</a>{% endif %}
     </span>
   </div>
 </footer>
+{% else %}
+<footer class="app-footer site-footer">
+  <div class="container-xxl">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="foot-logo" href="{% url 'home' %}">{% if brand.has_logo %}<img src="{% url 'brand_logo' %}?v={{ brand.version }}" alt="{{ SITE_NAME }}">{% else %}{{ SITE_NAME }}{% endif %}</a>
+        <p>{% trans "Hosting, domains and support, managed from one account." %}</p>
+        {% if brand.support_email %}<p><i class="bi bi-envelope" aria-hidden="true"></i> <a href="mailto:{{ brand.support_email }}">{{ brand.support_email }}</a></p>{% endif %}
+      </div>
+      <nav class="foot-col" aria-label="{% trans 'Store' %}">
+        <h2>{% trans "Store" %}</h2>
+        <ul>
+          <li><a href="{% url 'catalog:product_list' %}">{% trans "Hosting plans" %}</a></li>
+          <li><a href="{% url 'catalog:addons' %}">{% trans "Add-ons" %}</a></li>
+          <li><a href="{% url 'domains_public:search' %}">{% trans "Register a domain" %}</a></li>
+        </ul>
+      </nav>
+      <nav class="foot-col" aria-label="{% trans 'Support' %}">
+        <h2>{% trans "Support" %}</h2>
+        <ul>
+          <li><a href="{% url 'help:index' %}">{% trans "Help centre" %}</a></li>
+          {% if user.is_authenticated %}<li><a href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a></li>
+          <li><a href="{% url 'support_customer:list' %}">{% trans "My tickets" %}</a></li>{% endif %}
+          {% if brand.support_email %}<li><a href="mailto:{{ brand.support_email }}">{% trans "Email us" %}</a></li>{% endif %}
+        </ul>
+      </nav>
+      <nav class="foot-col" aria-label="{% trans 'Account' %}">
+        <h2>{% trans "Account" %}</h2>
+        <ul>
+          {% if user.is_authenticated %}
+          <li><a href="{% url 'dashboard' %}">{% trans "Overview" %}</a></li>
+          <li><a href="{% url 'orders_customer:list' %}">{% trans "Orders" %}</a></li>
+          <li><a href="{% url 'billing_customer:invoice_list' %}">{% trans "Invoices" %}</a></li>
+          <li><a href="{% url 'affiliates_customer:dashboard' %}">{% trans "Affiliate programme" %}</a></li>
+          {% else %}
+          <li><a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></li>
+          <li><a href="{% url 'accounts:register' %}">{% trans "Create an account" %}</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    <div class="foot-base">
+      <span>{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}. {% trans "All rights reserved." %}{% endif %}</span>
+    </div>
+  </div>
+</footer>
+{% endif %}

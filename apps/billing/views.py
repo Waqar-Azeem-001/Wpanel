@@ -51,6 +51,18 @@ def payment_method_save(request):
 
 @require_POST
 @portal_permission_required(perm("manage_billing"))
+def payment_method_delete(request, pk):
+    method = get_object_or_404(PaymentMethod, pk=pk)
+
+    def action():
+        name = services.delete_payment_method(request.user, method, request=request)
+        return f"Deleted '{name}'. Payments already made with it keep its name."
+
+    return run_action(request, action, "billing_staff:payment_methods")
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
 def payment_method_status(request, pk):
     method = get_object_or_404(PaymentMethod, pk=pk)
     enabled = request.POST.get("is_active") == "on"

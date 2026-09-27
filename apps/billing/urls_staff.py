@@ -39,6 +39,7 @@ urlpatterns = [
     path("payment-methods/", views.payment_methods, name="payment_methods"),
     path("payment-methods/save/", views.payment_method_save, name="payment_method_save"),
     path("payment-methods/<int:pk>/status/", views.payment_method_status, name="payment_method_status"),
+    path("payment-methods/<int:pk>/delete/", views.payment_method_delete, name="payment_method_delete"),
     path("tax-rules/", views.tax_rules, name="tax_rules"),
     path("tax-rules/save/", views.tax_rule_save, name="tax_rule_save"),
     path("tax-rules/<int:pk>/status/", views.tax_rule_status, name="tax_rule_status"),

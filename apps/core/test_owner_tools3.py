@@ -292,7 +292,7 @@ def test_the_new_ticket_page_lists_the_customers_recent_tickets(owner_user, acme
 
 def test_the_sign_in_page_has_remember_me_and_the_help_column(customer):
     page = browser().get(reverse("accounts:login")).content.decode()
-    assert "Keep me signed in" in page and "Not registered yet?" in page and "auth-card-logo" in page
+    assert "Keep me signed in" in page and "Not registered yet?" in page and "auth-brand" in page
 
 
 def test_remember_me_keeps_the_session_for_thirty_days_and_otherwise_ends_with_the_browser(customer):
@@ -317,3 +317,97 @@ def test_the_reported_payment_buttons_sit_side_by_side_and_confirm_pays_the_invo
     assert browser(manager).post(reverse("billing_staff:transaction_confirm", args=[reported.pk])).status_code == 302
     invoice.refresh_from_db()
     assert invoice.status == "paid"
+
+
+# --- Round 4 (E6): deleting a payment method, the footer, the invoice sender, the client picker, the ticket page -------------------------------
+
+def test_a_payment_method_can_be_deleted_and_payments_made_with_it_keep_its_name(boss, manager, acme, owner_user):
+    method = billing.save_payment_method(boss, "jc", name="JazzCash", kind="jazzcash", account_number="0300")
+    invoice = issued(manager, acme)
+    reported = payments.report_payment(owner_user, invoice, method=method, reference="TT-1", amount="100.00")
+    page = browser(boss).get(reverse("billing_staff:payment_methods")).content.decode()
+    assert reverse("billing_staff:payment_method_delete", args=[method.pk]) in page and "data-confirm" in page
+    done = browser(boss).post(reverse("billing_staff:payment_method_delete", args=[method.pk]))
+    assert done.status_code == 302 and not PaymentMethod.objects.filter(pk=method.pk).exists()
+    reported.refresh_from_db()
+    assert reported.payment_method_id is None and "JazzCash" in reported.method_name
+    from apps.audit.models import AuditEvent
+
+    assert AuditEvent.objects.filter(action="payment_method.deleted").exists()
+
+
+def test_only_people_who_manage_billing_can_delete_a_payment_method(boss, staff):
+    method = billing.save_payment_method(boss, "jc", name="JazzCash", kind="jazzcash", account_number="0300")
+    agent = staff(Role.SUPPORT_AGENT)
+    assert browser(agent).post(reverse("billing_staff:payment_method_delete", args=[method.pk])).status_code == 403
+    assert PaymentMethod.objects.filter(pk=method.pk).exists()
+    assert browser().post(reverse("billing_staff:payment_method_delete", args=[method.pk])).status_code == 302  # to sign in
+
+
+def test_the_invoice_pdf_names_the_seller_from_the_brand_when_billing_settings_are_empty(manager, acme):
+    from apps.branding import services as branding
+    from apps.billing.models import BillingSettings
+
+    BillingSettings.objects.update_or_create(pk=1, defaults={"company_name": "", "address": "", "email": "", "phone": ""})
+    invoice = issued(manager, acme)
+    content = pdf.render_invoice_pdf(invoice)
+    assert branding.get().name.encode() in content
+    BillingSettings.objects.filter(pk=1).update(company_name="Webhostera Ltd", address="Blue Area, Islamabad", email="billing@webhostera.pk", phone="+92 51 1")
+    content = pdf.render_invoice_pdf(invoice)
+    for expected in (b"Webhostera Ltd", b"Blue Area, Islamabad", b"billing@webhostera.pk", b"+92 51 1"):
+        assert expected in content
+
+
+def test_a_paid_invoice_is_marked_after_its_content_so_tables_cannot_hide_it(manager, acme):
+    invoice = issued(manager, acme)
+    payments.record_payment(manager, invoice, amount="100.00")
+    invoice.refresh_from_db()
+    content = pdf.render_invoice_pdf(invoice)
+    assert content.rfind(b"PAID") > content.rfind(b"Amount due")  # the mark is the last thing drawn on the page
+
+
+def test_the_client_footer_has_columns_and_the_staff_footer_is_slim(owner_user, boss):
+    page = browser(owner_user).get(reverse("dashboard")).content.decode()
+    assert page.count('class="foot-col"') == 3 and "Hosting plans" in page and "Open a ticket" in page and "Affiliate programme" in page
+    staff_page = browser(boss).get(reverse("console:dashboard")).content.decode()
+    assert "app-footer-slim" in staff_page and "foot-col" not in staff_page
+    assert "site-footer" in browser().get(reverse("catalog:product_list")).content.decode()  # the store, signed out, has it too
+
+
+def test_the_burger_is_only_drawn_for_a_phone_and_the_space_between_fields_is_not_doubled():
+    from pathlib import Path
+
+    css = Path("static/css/shell.css").read_text(encoding="utf-8")
+    assert ".chrome-burger.chrome-burger { display: none; }" in css
+    assert ".canvas .row > .field, .canvas .row > .field.form-check { margin-bottom: 0; }" in css
+
+
+def test_the_new_invoice_page_lists_recent_clients_and_searches(manager, acme):
+    page = browser(manager).get(reverse("billing_staff:invoice_new")).content.decode()
+    assert "Recent clients" in page and "Acme Ltd" in page and f"client={acme.pk}" in page
+    hit = browser(manager).get(reverse("billing_staff:invoice_new") + "?q=acme").content.decode()
+    assert "matching" in hit and "Acme Ltd" in hit
+    miss = browser(manager).get(reverse("billing_staff:invoice_new") + "?q=zzzz").content.decode()
+    assert "No clients match" in miss
+
+
+def test_the_customer_ticket_page_has_the_details_beside_the_conversation(owner_user, acme):
+    from apps.support import services as support_services
+    from apps.support.models import Department
+
+    department = Department.objects.filter(is_active=True).first() or Department.objects.create(name="Sales", is_active=True)
+    ticket = support_services.open_ticket(owner_user, acme, department=department, subject="Slow site", body="It is slow")
+    page = browser(owner_user).get(reverse("support_customer:ticket", args=[ticket.pk])).content.decode()
+    assert "Ticket details" in page and "While you wait" in page and "shop-layout" in page and "Close this ticket" in page
+    assert page.index("Slow site") < page.index("Ticket details") and "It is slow" in page
+
+
+def test_the_sign_in_card_is_centred_with_the_brand_above_and_no_dark_side_panel(customer):
+    page = browser().get(reverse("accounts:login")).content.decode()
+    assert "auth-center" in page and "auth-brand" in page and "auth-art" not in page.replace("auth-art-foot", "")
+    assert page.index("auth-legal") < page.index("auth-alt")  # the small print sits above the "not registered yet" strip
+
+
+def test_the_email_provider_page_is_two_columns_with_the_form_beside_the_lists(boss):
+    page = browser(boss).get(reverse("console:email_providers")).content.decode()
+    assert "wide-side" in page and "Add a provider" in page and "Sending and receiving" in page and "check-pill" in page

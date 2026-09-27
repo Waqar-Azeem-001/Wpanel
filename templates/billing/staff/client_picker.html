@@ -1,28 +1,29 @@
 {% extends "base.html" %}
 {% block title %}New {{ title|lower }} · {{ SITE_NAME }}{% endblock %}
-{% block container %}wide{% endblock %}
+{% block container %}wide shop-page{% endblock %}
 {% block content %}
-<h1>Billing</h1>
-<section class="card"><div class="card-body">
-  <h2>Choose a client</h2>
-  <form class="filters" method="get">
-    <div class="field grow"><label for="id_q">Find a client</label><input type="search" name="q" id="id_q" value="{{ q }}" placeholder="Name, company or email" autofocus></div>
-    <div class="field"><button class="btn btn-outline-primary" type="submit">Search</button></div>
-  </form>
-  {% if q %}
-  <div class="table-responsive">
-  <table class="table">
-    <thead><tr><th>Client</th><th>Email</th><th></th></tr></thead>
-    <tbody>
-    {% for client in clients %}
-      <tr><td>{{ client.display_name }}</td><td>{{ client.email }}</td>
-          <td><a class="btn btn-primary btn-sm" href="{% url create_url %}?client={{ client.pk }}">Continue</a></td></tr>
-    {% empty %}
-      <tr><td colspan="3" class="text-secondary">No clients match.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-  {% else %}<p class="text-secondary">Search for the client this document is for.</p>{% endif %}</div>
-</section>
+<div class="page-head"><h1>New {{ title|lower|slice:":-1" }}</h1><p class="page-sub">Choose the client it is for. You can then add the lines, a discount and notes.</p></div>
+<div class="shop-main">
+  <section class="shop-card">
+    <form class="picker-search" method="get" role="search">
+      <label class="visually-hidden" for="id_q">Find a client</label>
+      <input type="search" name="q" id="id_q" class="form-control" value="{{ q }}" placeholder="Search by name, company or email" autofocus>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i> Search</button>
+    </form>
+  </section>
+  <section class="shop-card p-0">
+    <header class="picker-head"><h2 class="shop-title mb-0">{% if q %}Clients matching &ldquo;{{ q }}&rdquo;{% else %}Recent clients{% endif %}</h2>{% if q %}<a class="small" href="{{ request.path }}">Show recent</a>{% endif %}</header>
+    <div class="table-responsive"><table class="table mb-0 align-middle">
+      <thead><tr><th>Client</th><th>Email</th><th></th></tr></thead>
+      <tbody>
+      {% for client in clients %}
+        <tr><td><strong>{{ client.display_name }}</strong></td><td>{{ client.email }}</td>
+            <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="{% url create_url %}?client={{ client.pk }}">Continue</a></td></tr>
+      {% empty %}
+        <tr><td colspan="3" class="text-secondary">{% if q %}No clients match.{% else %}No clients yet.{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+</div>
 {% endblock %}

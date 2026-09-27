@@ -100,6 +100,16 @@ def set_payment_method_active(actor, method, is_active, *, request=None):
     return method
 
 
+@transaction.atomic
+def delete_payment_method(actor, method, *, request=None):
+    """Remove a payment method. Payments and orders that used it keep its name (they store it), and only lose the link."""
+    _require(actor, "manage_billing")
+    name, code = method.name, method.code
+    audit.record("payment_method.deleted", actor=actor, target=method, metadata={"name": name, "code": code}, request=request)
+    method.delete()
+    return name
+
+
 # --- Tax rules -----------------------------------------------------------------------------
 
 @transaction.atomic

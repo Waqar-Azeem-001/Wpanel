@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head"><h1>Payment methods</h1>
   <p class="page-sub">Where customers send money: your bank accounts, JazzCash, EasyPaisa and so on. Add as many as you like; they are shown at checkout, on orders, on invoices and in the invoice PDF.</p></div>
-<div class="row g-4">
+<div class="row g-3">
   <div class="col-lg-7">
     {% for method in methods %}
     <section class="shop-card mb-3{% if not method.is_active %} pay-off{% endif %}">
@@ -14,7 +14,9 @@
         {% if can_manage %}<div class="d-flex gap-2 align-items-center">
           <form method="post" action="{% url 'billing_staff:payment_method_status' method.pk %}">{% csrf_token %}
             <label class="d-flex align-items-center gap-2 mb-0 small"><input class="form-check-input" type="checkbox" name="is_active" {% if method.is_active %}checked{% endif %} data-submit-on-change> {% if method.is_active %}Shown{% else %}Hidden{% endif %}</label></form>
-          <a class="btn btn-sm btn-outline-secondary" href="{% url 'billing_staff:payment_methods' %}?edit={{ method.pk }}">Edit</a></div>{% endif %}
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'billing_staff:payment_methods' %}?edit={{ method.pk }}">Edit</a>
+          <form method="post" action="{% url 'billing_staff:payment_method_delete' method.pk %}" data-confirm="Delete {{ method.name }}? Payments already made with it keep its name.">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Delete {{ method.name }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form></div>{% endif %}
       </header>
       {% if method.detail_rows %}<dl class="facts">{% for label, value in method.detail_rows %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>{% endif %}
       {% if method.instructions %}<p class="text-secondary mb-0">{{ method.instructions|linebreaksbr }}</p>{% endif %}
@@ -30,12 +32,12 @@
       <h2 class="shop-title mb-3">{% if editing %}Edit {{ editing.name }}{% else %}Add a payment method{% endif %}</h2>
       <form method="post" action="{% url 'billing_staff:payment_method_save' %}" novalidate>{% csrf_token %}
         <div class="row g-3">
-          {% include "orders/_field.html" with field=form.kind wide=True %}
-          {% include "orders/_field.html" with field=form.name wide=True %}
-          {% include "orders/_field.html" with field=form.bank_name wide=True %}
-          {% include "orders/_field.html" with field=form.account_title wide=True %}
-          {% include "orders/_field.html" with field=form.account_number wide=True %}
-          {% include "orders/_field.html" with field=form.swift_code wide=True %}
+          {% include "orders/_field.html" with field=form.kind %}
+          {% include "orders/_field.html" with field=form.name %}
+          {% include "orders/_field.html" with field=form.bank_name %}
+          {% include "orders/_field.html" with field=form.account_title %}
+          {% include "orders/_field.html" with field=form.account_number %}
+          {% include "orders/_field.html" with field=form.swift_code %}
           {% include "orders/_field.html" with field=form.instructions wide=True %}
           {% include "orders/_field.html" with field=form.sort_order %}
           {% include "orders/_field.html" with field=form.provider %}

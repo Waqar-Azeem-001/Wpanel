@@ -23,6 +23,25 @@ from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Tabl
 
 from .models import BillingSettings, InvoiceStatus, PaymentMethod, TransactionStatus, TransactionType
 
+
+class _Doc(SimpleDocTemplate):
+    """A document that can put a faint mark (PAID) over each page once its content is drawn, so tables cannot hide it."""
+
+    mark = None
+
+    def afterPage(self):  # noqa: N802 - reportlab's hook name
+        if not self.mark:
+            return
+        canvas = self.canv
+        canvas.saveState()
+        canvas.setFillColor(self.mark[1])
+        canvas.setFillAlpha(0.09)
+        canvas.setFont("Helvetica-Bold", 120)
+        canvas.translate(A4[0] / 2, A4[1] / 2)
+        canvas.rotate(35)
+        canvas.drawCentredString(0, 0, self.mark[0])
+        canvas.restoreState()
+
 INK = colors.HexColor("#1f2933")
 MUTED = colors.HexColor("#616e7c")
 LINE = colors.HexColor("#d9dee5")
@@ -56,6 +75,7 @@ def _styles():
                                  alignment=2),
         "brand": ParagraphStyle("brand", parent=base, fontName="Helvetica-Bold", fontSize=16, leading=20),
         "h": ParagraphStyle("h", parent=base, fontName="Helvetica-Bold", fontSize=8, leading=10, textColor=MUTED),
+        "hnum": ParagraphStyle("hnum", parent=base, fontName="Helvetica-Bold", fontSize=8, leading=10, textColor=MUTED, alignment=2),
         "num": ParagraphStyle("num", parent=base, fontName="Helvetica", fontSize=9, leading=12, alignment=2, textColor=INK),
         "numbold": ParagraphStyle("numbold", parent=base, fontName="Helvetica-Bold", fontSize=10, leading=13, alignment=2,
                                   textColor=INK),
@@ -164,13 +184,8 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
 
     def page(canvas, pdf_doc):
         canvas.saveState()
-        if paid_stamp:  # a settled invoice carries a faint diagonal PAID
-            canvas.setFillColor(GREEN)
-            canvas.setFillAlpha(0.07)
-            canvas.setFont("Helvetica-Bold", 120)
-            canvas.translate(A4[0] / 2, A4[1] / 2)
-            canvas.rotate(35)
-            canvas.drawCentredString(0, 0, "PAID")
+        canvas.setFillColor(accent)
+        canvas.rect(0, A4[1] - 4 * mm, A4[0], 4 * mm, stroke=0, fill=1)  # the brand colour across the top
         canvas.restoreState()
         canvas.saveState()
         canvas.setStrokeColor(LINE)
@@ -181,8 +196,9 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
         canvas.drawRightString(A4[0] - 18 * mm, 9 * mm, f"Page {pdf_doc.page}")
         canvas.restoreState()
 
-    pdf = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=14 * mm,
+    pdf = _Doc(buffer, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=14 * mm,
                             bottomMargin=18 * mm, title=title, author=seller.company_name or "", invariant=1, pageCompression=0)
+    pdf.mark = ("PAID", GREEN) if paid_stamp else None
     story = []
 
     brand_cell = logo or Paragraph(f'<font color="{accent.hexval().replace("0x", "#")}">{_t(brand_name)}</font>', st["brand"])
@@ -199,12 +215,22 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
                               ("RIGHTPADDING", (1, 0), (1, 0), 0)]))
     story += [head, Spacer(1, 7 * mm)]
 
-    seller_lines = _lines(seller.company_name, seller.address, seller.email, seller.phone,
-                          f"Tax ID: {seller.tax_id}" if seller.tax_id else "")
+    # The seller: the billing settings, and where those are empty the brand's own name and support address.
+    from apps.branding import services as branding
+
+    seller_name = seller.company_name or brand_name
+    seller_email = seller.email or branding.get().support_email
+    seller_lines = (f"<b>{_t(seller_name)}</b><br/>" + _lines(seller.address, seller_email, seller.phone,
+                                                              f"Tax ID: {seller.tax_id}" if seller.tax_id else ""))
+    buyer = _address(doc)
+    if doc.billing_name or doc.billing_company:
+        first, _sep, rest = buyer.partition("<br/>")
+        buyer = f"<b>{first}</b>" + (f"<br/>{rest}" if rest else "")
     people = Table([[Paragraph("FROM", st["h"]), Paragraph("BILL TO", st["h"])],
-                    [Paragraph(seller_lines or _t(brand_name), st["body"]), Paragraph(_address(doc), st["body"])]],
+                    [Paragraph(seller_lines, st["body"]), Paragraph(buyer, st["body"])]],
                    colWidths=[WIDTH / 2, WIDTH / 2])
-    people.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+    people.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("BOTTOMPADDING", (0, 0), (0, 0), 3)]))
     story += [people, Spacer(1, 5 * mm)]
 
     cells = [(k, v) for k, v in meta_rows[2:]]  # the number and status are already in the header
@@ -214,8 +240,8 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
         cells.append(("Total", _money(doc.currency, doc.total)))
     story += [_band(cells[-4:], st, accent), Spacer(1, 6 * mm)]
 
-    rows = [[Paragraph("DESCRIPTION", st["h"]), Paragraph("QTY", st["h"]), Paragraph("UNIT PRICE", st["h"]),
-             Paragraph("AMOUNT", st["h"])]]
+    rows = [[Paragraph("DESCRIPTION", st["h"]), Paragraph("QTY", st["hnum"]), Paragraph("UNIT PRICE", st["hnum"]),
+             Paragraph("AMOUNT", st["hnum"])]]
     for item in doc.items.all():
         rows.append([Paragraph(_t(item.description), st["body"]), Paragraph(str(item.quantity), st["num"]),
                      Paragraph(_t(_money(doc.currency, item.unit_price)), st["num"]),
@@ -224,7 +250,7 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), HEAD_BG), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE),
         ("VALIGN", (0, 0), (-1, -1), "TOP"), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fafbfc")])]))
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [None, colors.HexColor("#fafbfc")])]))
     story += [table, Spacer(1, 4 * mm)]
 
     totals = [["Subtotal", _money(doc.currency, doc.subtotal)]]
@@ -277,6 +303,10 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
         story += [Spacer(1, 6 * mm), Paragraph("NOTES", st["h"]), Paragraph(_lines(*doc.notes.splitlines()), st["body"])]
     if footer_extra:
         story += [Spacer(1, 6 * mm), Paragraph(_lines(*footer_extra.splitlines()), st["muted"])]
+    if kind == "Invoice" and doc.status == InvoiceStatus.PAID:
+        story += [Spacer(1, 8 * mm), Paragraph(_t("This invoice has been paid in full. Thank you."), st["muted"])]
+    elif kind == "Invoice" and doc.status in (InvoiceStatus.UNPAID, InvoiceStatus.PARTIALLY_PAID) and doc.due_date:
+        story += [Spacer(1, 6 * mm), Paragraph(_t(f"Payment is due by {doc.due_date.isoformat()}."), st["muted"])]
 
     pdf.build(story, onFirstPage=page, onLaterPages=page)
     return buffer.getvalue()
