@@ -10,6 +10,7 @@ urlpatterns = [
     path("tlds/", views.staff_tld_list, name="tld_list"),
     path("tlds/save/", views.staff_tld_save, name="tld_save"),
     path("tlds/<int:pk>/status/", views.staff_tld_status, name="tld_status"),
+    path("whois/", views.staff_whois, name="whois"),
     path("<int:pk>/", views.staff_domain_detail, name="detail"),
     path("<int:pk>/complete/", views.staff_domain_complete, name="complete"),
     path("<int:pk>/cancel/", views.staff_domain_cancel, name="cancel"),

@@ -159,7 +159,8 @@ def test_staff_menus_follow_their_permissions(agent, technical, manager, admin):
     assert top(manager) == ["Overview", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting",
                             "Domains", "Lifecycle", "Support", "Reports", "Activity log", "Providers", "Settings"]
     assert top(admin) == ["Overview", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting", "Domains",
-                          "Lifecycle", "Support", "Reports", "Activity log", "Providers", "Notifications", "Settings"]
+                          "Lifecycle", "Support", "Reports", "Activity log", "Automation", "Providers", "Notifications",
+                          "Settings"]
 
 
 def test_the_rail_groups_its_entries_under_headings(admin):

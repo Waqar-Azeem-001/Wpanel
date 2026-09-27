@@ -731,7 +731,18 @@ RBAC review, **MFA (TOTP), optional for staff and customers alike**, secure sess
 
 ------------------------------------------------------------------------
 
-# PHASE 17 — RELIABILITY & FAILURE HANDLING ⬜
+# PHASE 17 — RELIABILITY & FAILURE HANDLING 🟡
+
+> **Slice 1 delivered** (`docs/phase-17-gap-report.md`): Rule 1 inspection found most of this phase's own scenario
+> list already built in earlier phases to a high standard - idempotent/resumable order fulfilment with a stuck-order
+> sweep (Phase 09), duplicate-webhook and delayed-callback handling by recording a gateway's event id before applying
+> it (Phase 09), and retrying email delivery with backoff (Phase 11). This slice closed the two concrete gaps that
+> inspection found: automation status (`console:automation`, a "Background jobs" check on the System Health widget,
+> and `TaskRun` recording every Celery task's last run from one place via Celery's own signals) and a WHOIS lookup
+> tool (`apps.domains.whois`, verified against the real public WHOIS system, not mocked). Deferred to a later slice:
+> scheduled hosting usage sync (blocked on the WHM adapter's own unrelated pre-existing "needs live verification"
+> item), expiry of abandoned payments/unpaid orders, backup/hold-before-delete for automatic termination, and
+> attachment retention.
 
 Scenarios: registrar unavailable, WHM unavailable, payment callback delayed, email failure, provisioning failure, duplicate webhook, network timeout, worker failure.
 
@@ -878,7 +889,7 @@ Before marking any phase 🟢:
 | 14 Reports | 🟢 | 1197 ✅ | ✅ | D2 crawl: 0 broken | f1246ba | — |
 | 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4) | 1661 ✅ | ✅ | crawler green | 7e5f35b | — |
 | 16 Security | 🟢 (slice 1: MFA/lockout/headers; slice 2: RBAC review, mandatory-MFA and step-up re-auth tried then reverted per owner feedback) | 2046 ✅ | ✅ | crawler green | 3737541, e05ae9d | — |
-| 17 Reliability | ⬜ | — | — | — | — | — |
+| 17 Reliability | 🟡 (slice 1: found most of the phase's scenarios already built in earlier phases; added automation status and WHOIS lookup) | 2066 ✅ | ✅ | crawler green | — | — |
 | 18 Testing & Readiness | ⬜ | — | — | — | — | — |
 | 19 Production Launch | ⬜ | — | — | — | — | — |
 

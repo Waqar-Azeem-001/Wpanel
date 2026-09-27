@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}WHOIS lookup · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>WHOIS lookup</h1>
+  <p class="page-sub">A public WHOIS record for any domain - not a registrar action, just a look-up.</p></div>
+<form class="filters mb-3" method="get">
+  <div class="field grow"><label for="id_q">Domain</label><input type="text" name="q" id="id_q" value="{{ q }}" placeholder="example.com" autofocus></div>
+  <div class="field"><button class="btn btn-outline-primary" type="submit">Look up</button></div>
+</form>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if result %}
+<div class="card"><div class="card-body"><pre class="mb-0" style="white-space: pre-wrap; word-break: break-word;">{{ result }}</pre></div></div>
+{% elif q and not error %}
+<p class="text-secondary">No record came back for {{ q }}.</p>
+{% endif %}
+{% endblock %}

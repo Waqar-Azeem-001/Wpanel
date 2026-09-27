@@ -8,3 +8,6 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from . import checks  # noqa: F401  (registers the menu registry check)
+        from . import celery_signals
+
+        celery_signals.register()

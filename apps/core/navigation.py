@@ -153,6 +153,8 @@ ITEMS = [
          permission="view_domains"),
     item("staff.domains.pricing", _("Pricing by extension"), "domains_staff:tld_list", areas=STAFF,
          parent="staff.domains", permission="view_domains"),
+    item("staff.domains.whois", _("WHOIS lookup"), "domains_staff:whois", areas=STAFF, parent="staff.domains",
+         permission="view_domains"),
     item("staff.lifecycle", _("Lifecycle"), areas=STAFF, section=_("Operations"), icon="bi-arrow-repeat"),
     item("staff.lifecycle.overview", _("Overview"), "lifecycle_staff:overview", areas=STAFF, parent="staff.lifecycle",
          any_permission=("view_hosting", "view_domains")),
@@ -176,6 +178,8 @@ ITEMS = [
          permission="view_reports", icon="bi-graph-up"),
     item("staff.activity", _("Activity log"), "console:audit_log", areas=STAFF, section=_("Insights"),
          permission="view_audit_log", icon="bi-clock-history"),
+    item("staff.automation", _("Automation"), "console:automation", areas=STAFF, section=_("Insights"),
+         permission="view_settings", icon="bi-gear-wide-connected"),
 
     item("staff.providers", _("Providers"), areas=STAFF, section=_("System"), icon="bi-plug"),
     item("staff.providers.servers", _("Servers"), "catalog_staff:server_list", areas=STAFF, parent="staff.providers",

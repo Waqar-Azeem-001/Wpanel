@@ -131,10 +131,18 @@ def _cache():
     return cache.get("console.health") == "ok", "read and write"
 
 
+def _celery():
+    from apps.core.tasks import ping
+
+    pong = ping.apply_async().get(timeout=3)
+    return pong == "pong", "a worker replied"
+
+
 def health_widget(user):
     return {"checks": [
         _check("Database", _database),
         _check("Cache", _cache),
+        _check("Background jobs", _celery),
         _check("Email provider", lambda: ((p := EmailProvider.objects.filter(is_active=True).first()) is not None,
                                           p.name if p else "none is active: emails will not be delivered")),
         _check("Domain registrar", lambda: ((p := RegistrarProvider.objects.filter(is_active=True).first()) is not None,

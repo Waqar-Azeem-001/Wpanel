@@ -117,3 +117,32 @@ def audit_purge(request):
     else:
         messages.success(request, f"{count} audit entr{'y' if count == 1 else 'ies'} deleted.")
     return redirect("console:audit_log")
+
+
+@portal_permission_required(perm("view_settings"))
+def automation(request):
+    """
+    Job queue status (Phase 17): whether a worker is actually consuming from the broker right now, and the last
+    run of every scheduled job - each one answered from ``TaskRun``, one row per task name, kept current by
+    ``apps.core.celery_signals`` rather than anything this page computes itself.
+    """
+    from django.conf import settings as project_settings
+
+    from apps.core.models import TaskRun
+    from apps.core.tasks import ping
+
+    try:
+        worker_ok, worker_detail = ping.apply_async().get(timeout=3) == "pong", "a worker replied"
+    except Exception as exc:  # noqa: BLE001 - no worker running, or it never answered - both are "not ok"
+        worker_ok, worker_detail = False, str(exc) or type(exc).__name__
+
+    runs = {r.name: r for r in TaskRun.objects.all()}
+    scheduled_names = set()
+    jobs = []
+    for key, entry in sorted(project_settings.CELERY_BEAT_SCHEDULE.items()):
+        scheduled_names.add(entry["task"])
+        jobs.append({"key": key, "task": entry["task"], "schedule": str(entry["schedule"]),
+                     "run": runs.get(entry["task"])})
+    on_demand = TaskRun.objects.exclude(name__in=scheduled_names).order_by("-finished_at", "-started_at")[:20]
+    return render(request, "console/automation.html", {
+        "worker_ok": worker_ok, "worker_detail": worker_detail, "jobs": jobs, "on_demand": on_demand})

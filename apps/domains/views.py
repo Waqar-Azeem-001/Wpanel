@@ -365,3 +365,18 @@ def staff_tld_status(request, pk):
         return "Updated."
 
     return _run(request, action, "domains_staff:tld_list")
+
+
+@portal_permission_required(perm("view_domains"))
+def staff_whois(request):
+    """A raw WHOIS lookup (Phase 17): not a registrar operation, just the public WHOIS system - see ``whois.py``."""
+    from . import whois
+
+    name = request.GET.get("q", "").strip()
+    result, error = "", ""
+    if name:
+        try:
+            result = whois.lookup(name)
+        except whois.WhoisError as exc:
+            error = str(exc)
+    return render(request, "domains/staff/whois.html", {"q": name, "result": result, "error": error})

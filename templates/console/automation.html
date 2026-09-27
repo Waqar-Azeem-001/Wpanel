@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Automation" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Automation" %}</h1>
+  <p class="page-sub">{% trans "Whether background jobs are actually running, and when each scheduled one last did." %}</p></div>
+
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h6 mb-2">{% trans "Background worker" %}</h2>
+  {% if worker_ok %}
+  <p class="mb-0">{% status_badge "ok" _("Running") %} {% trans "A worker answered just now." %}</p>
+  {% else %}
+  <p class="mb-0">{% status_badge "failed" _("Not responding") %} {% trans "No worker answered within 3 seconds - scheduled and on-demand jobs (email, provisioning, renewals...) will not run until one is." %}</p>
+  <p class="small text-secondary mb-0">{{ worker_detail }}</p>
+  {% endif %}
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header">{% trans "Scheduled jobs" %}</div>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Job" %}</th><th>{% trans "Runs" %}</th><th>{% trans "Last started" %}</th><th>{% trans "Last finished" %}</th><th>{% trans "Result" %}</th></tr></thead>
+    <tbody>
+    {% for job in jobs %}
+      <tr>
+        <td><strong>{{ job.key }}</strong><div class="small text-secondary">{{ job.task }}</div></td>
+        <td class="small text-secondary">{{ job.schedule }}</td>
+        {% if job.run %}
+        <td class="text-nowrap">{{ job.run.started_at|fdatetime|default:"—" }}</td>
+        <td class="text-nowrap">{{ job.run.finished_at|fdatetime|default:"—" }}</td>
+        <td>
+          {% if job.run.status == "success" %}{% status_badge "ok" _("Success") %}
+          {% elif job.run.status == "failure" %}{% status_badge "failed" _("Failure") %}
+          {% else %}{% status_badge "pending" _("Running") %}{% endif %}
+          {% if job.run.detail %}<div class="small text-secondary text-break">{{ job.run.detail|truncatechars:200 }}</div>{% endif %}
+        </td>
+        {% else %}
+        <td class="text-secondary" colspan="3">{% trans "Never run yet." %}</td>
+        {% endif %}
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="text-secondary">{% trans "No scheduled jobs are configured." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card">
+  <div class="card-header">{% trans "Other recent jobs" %}</div>
+  <p class="text-secondary small px-3 pt-2 mb-0">{% trans "Jobs queued on demand rather than on a schedule - an order's provisioning, for instance." %}</p>
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>{% trans "Task" %}</th><th>{% trans "Finished" %}</th><th>{% trans "Result" %}</th></tr></thead>
+    <tbody>
+    {% for run in on_demand %}
+      <tr>
+        <td>{{ run.name }}</td>
+        <td class="text-nowrap">{{ run.finished_at|fdatetime|default:run.started_at|fdatetime|default:"—" }}</td>
+        <td>
+          {% if run.status == "success" %}{% status_badge "ok" _("Success") %}
+          {% elif run.status == "failure" %}{% status_badge "failed" _("Failure") %}
+          {% else %}{% status_badge "pending" _("Running") %}{% endif %}
+          {% if run.detail %}<div class="small text-secondary text-break">{{ run.detail|truncatechars:200 }}</div>{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3" class="text-secondary">{% trans "Nothing queued on demand has run yet." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

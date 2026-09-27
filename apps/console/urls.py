@@ -10,6 +10,7 @@ urlpatterns = [
     path("widgets/<slug:key>/", views.widget, name="widget"),
     path("widgets/<slug:key>/move/<str:direction>/", views.widget_move, name="widget_move"),
     path("search/", views.search, name="search"),
+    path("utilities/automation/", views.automation, name="automation"),
     path("utilities/audit/", views.audit_log, name="audit_log"),
     path("utilities/audit/export/", views.audit_export, name="audit_export"),
     path("utilities/audit/purge/", views.audit_purge, name="audit_purge"),
