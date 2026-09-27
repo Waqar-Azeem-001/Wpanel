@@ -16,7 +16,7 @@
       <td>
         {% if can_manage %}
         <form method="post" action="{% url 'billing_staff:tax_rule_status' rule.pk %}">{% csrf_token %}
-          <label><input type="checkbox" name="is_active" {% if rule.is_active %}checked{% endif %} onchange="this.form.submit()"> </label>
+          <label><input type="checkbox" name="is_active" {% if rule.is_active %}checked{% endif %} data-submit-on-change> </label>
         </form>
         {% else %}{{ rule.is_active|yesno:"Yes,No" }}{% endif %}
       </td>

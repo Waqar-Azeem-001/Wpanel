@@ -1,0 +1,8 @@
+Hello {{ user.get_short_name }},
+
+Two-factor sign-in was turned on for your {{ site_name }} account. From now on, signing in also asks for a code from
+your authenticator app.
+
+If you did not do this, sign in and turn it off in Profile & security, then change your password.
+
+{{ site_name }}

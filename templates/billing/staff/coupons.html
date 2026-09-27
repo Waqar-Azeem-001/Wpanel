@@ -19,7 +19,7 @@
       <td>
         {% if can_manage %}
         <form method="post" action="{% url 'billing_staff:coupon_status' coupon.pk %}">{% csrf_token %}
-          <label><input type="checkbox" name="is_active" {% if coupon.is_active %}checked{% endif %} onchange="this.form.submit()"> </label>
+          <label><input type="checkbox" name="is_active" {% if coupon.is_active %}checked{% endif %} data-submit-on-change> </label>
         </form>
         {% else %}{{ coupon.is_active|yesno:"Yes,No" }}{% endif %}
       </td>

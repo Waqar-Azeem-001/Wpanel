@@ -1,6 +1,8 @@
 import re
 import uuid
 
+from django.shortcuts import redirect
+
 from .request_context import request_id_var
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -56,4 +58,56 @@ class StripNullBytesMiddleware:
         if (request.method in ("POST", "PUT", "PATCH") and not request.path.startswith("/api/")
                 and request.content_type in self.FORM_TYPES):
             request.POST = self._cleaned(request.POST)
+        return self.get_response(request)
+
+
+class SecurityHeadersMiddleware:
+    """
+    Two headers Django has no setting for (Phase 16): a Content Security Policy and a Permissions Policy, on every
+    response that does not already carry its own (an uploaded file, an internal preview, already sets a tighter one -
+    see apps.branding.views._image and apps.support.views_customer.attachment - and is left alone). Every script and
+    stylesheet the portal serves is its own (no CDN, no inline script anywhere - see apps/core/test_ui.py), so the
+    policy can be strict without breaking anything: no inline or third-party script, no framing, no browser feature
+    a hosting portal has no reason to ask for.
+    """
+
+    CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+          "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+          "frame-ancestors 'none'")
+    PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if not response.has_header("Content-Security-Policy"):
+            response["Content-Security-Policy"] = self.CSP
+        if not response.has_header("Permissions-Policy"):
+            response["Permissions-Policy"] = self.PERMISSIONS_POLICY
+        return response
+
+
+class RequireStaffMFAMiddleware:
+    """
+    Two-factor sign-in is mandatory for staff (Phase 16). It does not block signing in - a correct password still
+    signs someone in - but every page under the staff console (``/staff/...``) redirects to the setup page until it
+    is turned on, so it cannot simply be postponed forever. Customers, the API, and the setup/account pages
+    themselves (which live outside ``/staff/``) are never affected.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, "user", None)
+        if (user is not None and getattr(user, "is_authenticated", False) and user.is_staff
+                and not user.mfa_enabled and request.path.startswith("/staff/")):
+            from django.contrib import messages
+            from django.urls import reverse
+
+            setup_url = reverse("accounts:mfa_setup")
+            if request.path != setup_url:
+                messages.warning(request, "Two-factor sign-in is required for staff. Set it up to continue.")
+                return redirect(setup_url)
         return self.get_response(request)

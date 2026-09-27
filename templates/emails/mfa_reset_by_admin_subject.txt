@@ -1,0 +1,1 @@
+Two-factor sign-in was reset on your {{ site_name }} account

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Your recovery codes" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Your recovery codes" %}</h1>
+  <p class="page-sub">{% trans "Save these somewhere safe (a password manager, printed and locked away). Each works once, in place of a code from your app, if you ever lose it. They are shown only this once." %}</p></div>
+<section class="card"><div class="card-body">
+  <ul class="recovery-codes list-unstyled font-monospace">{% for code in codes %}<li>{{ code }}</li>{% endfor %}</ul>
+  <a class="btn btn-primary" href="{% url 'accounts:mfa_setup' %}">{% trans "I have saved these codes" %}</a>
+</div></section>
+{% endblock %}

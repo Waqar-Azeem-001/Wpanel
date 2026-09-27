@@ -1,0 +1,7 @@
+Hello {{ user.get_short_name }},
+
+Two-factor sign-in was turned off for your {{ site_name }} account. Signing in now needs only your password.
+
+If you did not do this, contact us straight away and change your password.
+
+{{ site_name }}

@@ -19,6 +19,9 @@ class RegisterSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, trim_whitespace=False)
+    mfa_code = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False,
+                                     help_text="A 6-digit authenticator code, or a recovery code. Required once two-factor "
+                                               "sign-in is on for the account; a first attempt without one gets 'mfa_required'.")
 
 
 class TokenPairSerializer(serializers.Serializer):

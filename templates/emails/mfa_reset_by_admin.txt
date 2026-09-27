@@ -1,0 +1,8 @@
+Hello {{ user.get_short_name }},
+
+Our team reset two-factor sign-in on your {{ site_name }} account, at your request or because you lost access to
+your authenticator app. It is now off; set it up again from Profile & security when you are ready.
+
+If you did not ask for this, contact us straight away.
+
+{{ site_name }}

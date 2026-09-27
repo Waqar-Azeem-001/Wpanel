@@ -705,7 +705,13 @@ All daily operations from the staff area. Django admin no longer needed for rout
 
 ------------------------------------------------------------------------
 
-# PHASE 16 — SECURITY HARDENING ⬜
+# PHASE 16 — SECURITY HARDENING 🟡
+
+> **Slice 1 delivered** (`docs/phase-16-gap-report.md`): two-factor sign-in (TOTP), mandatory for staff and optional
+> for customers, with recovery codes and a Super Admin reset; account lockout beyond the API rate limit; a Content
+> Security Policy and Permissions Policy. Everything else FOUND already in place (CSRF, secure sessions, rate
+> limiting, webhook signatures, API auth, open-redirect protection, audit coverage) is listed in that report, along
+> with what is deferred to a later slice (RBAC re-audit, "Login as Client", step-up re-authentication).
 
 RBAC review, **MFA (TOTP) for staff mandatory, customers optional**, secure sessions, CSRF, rate limiting, account lockout beyond throttling, secure passwords, credential protection, server-side billing validation, webhook signature verification, API authentication, sensitive-action confirmation (confirmation modal component + re-authentication for the most sensitive actions), "Login as Client" audited with banner, security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy), open-redirect protection on every `next` parameter.
 

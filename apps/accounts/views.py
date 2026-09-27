@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core.exceptions import ServiceError
 
-from . import forms, services
+from . import forms, mfa, services
 
 
 def _apply_error(form, exc, password_field=None):
@@ -31,6 +31,13 @@ def _safe_next(request, default="accounts:profile"):
 REMEMBER_ME_SECONDS = 60 * 60 * 24 * 30
 
 
+def _finish_login(request, user, *, remember, next_url):
+    login(request, user)
+    # Ticked: stay signed in for 30 days. Not ticked: until the browser is closed (and never longer than the session age).
+    request.session.set_expiry(REMEMBER_ME_SECONDS if remember else 0)
+    return redirect(next_url)
+
+
 @sensitive_post_parameters("password")
 def login_view(request):
     if request.user.is_authenticated:
@@ -43,14 +50,101 @@ def login_view(request):
         except ServiceError as exc:
             _apply_error(form, exc)
         else:
-            login(request, user)
-            # Ticked: stay signed in for 30 days. Not ticked: until the browser is closed (and never longer than the session age).
-            request.session.set_expiry(REMEMBER_ME_SECONDS if remember else 0)
-            return redirect(_safe_next(request))
+            if user.mfa_enabled:
+                services.start_mfa_challenge(request, user, remember=remember, next_url=_safe_next(request))
+                return redirect("accounts:mfa_verify")
+            return _finish_login(request, user, remember=remember, next_url=_safe_next(request))
     from apps.support import kb
 
     return render(request, "accounts/login.html", {"form": form, "next": request.GET.get("next", ""),
                                                    "help_articles": list(kb.public_articles()[:3])})
+
+
+@sensitive_post_parameters("code")
+def mfa_verify_view(request):
+    """The second step of signing in: a code from the authenticator app, or a recovery code. Reached only mid sign-in."""
+    user = services.get_pending_mfa_user(request)
+    if user is None:
+        messages.info(request, "That sign-in has expired. Please sign in again.")
+        return redirect("accounts:login")
+    form = forms.MFACodeForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            ok = services.mfa_verify_code_or_recovery(user, form.cleaned_data["code"])
+        except ServiceError as exc:
+            form.add_error(None, exc.message)
+        else:
+            if ok:
+                remember = request.session.get(services.MFA_PENDING_REMEMBER_KEY, False)
+                next_url = request.session.get(services.MFA_PENDING_NEXT_KEY) or "accounts:profile"
+                services.clear_mfa_pending(request)
+                return _finish_login(request, user, remember=remember, next_url=next_url)
+            form.add_error("code", "That code is not right.")
+    return render(request, "accounts/mfa_verify.html", {"form": form, "email": user.email})
+
+
+@login_required
+def mfa_setup_view(request):
+    """Turn two-factor sign-in on: shows the secret to add to an authenticator app, then confirms it with a code."""
+    if request.user.mfa_enabled:
+        return render(request, "accounts/mfa_setup.html", {
+            "enabled": True, "confirm_form": forms.MFACodeForm(), "password_form": forms.MFAPasswordConfirmForm(),
+            "recovery_remaining": request.user.mfa_recovery_codes.filter(used_at__isnull=True).count()})
+    form = forms.MFACodeForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            codes = services.mfa_confirm_setup(request.user, form.cleaned_data["code"], request=request)
+        except ServiceError as exc:
+            form.add_error("code", exc.message)
+        else:
+            request.session["mfa_new_recovery_codes"] = codes
+            return redirect("accounts:mfa_recovery_codes")
+    secret, uri = services.mfa_begin_setup(request.user)
+    return render(request, "accounts/mfa_setup.html", {
+        "enabled": False, "confirm_form": form, "secret": secret, "secret_formatted": mfa.formatted(secret),
+        "otpauth_uri": uri})
+
+
+@login_required
+def mfa_recovery_codes_view(request):
+    """Shown exactly once, right after setup (or after regenerating): the ten codes are removed from the session as they are shown."""
+    codes = request.session.pop("mfa_new_recovery_codes", None)
+    if not codes:
+        return redirect("accounts:mfa_setup")
+    return render(request, "accounts/mfa_recovery_codes.html", {"codes": codes})
+
+
+@require_POST
+@login_required
+def mfa_disable_view(request):
+    form = forms.MFAPasswordConfirmForm(request.POST)
+    if form.is_valid():
+        try:
+            services.mfa_disable(request.user, password=form.cleaned_data["password"], request=request)
+        except ServiceError as exc:
+            messages.error(request, exc.message)
+        else:
+            messages.success(request, "Two-factor sign-in is now off.")
+            return redirect("accounts:mfa_setup")
+    messages.error(request, "Enter your current password to turn two-factor sign-in off.")
+    return redirect("accounts:mfa_setup")
+
+
+@require_POST
+@login_required
+def mfa_recovery_regenerate_view(request):
+    form = forms.MFAPasswordConfirmForm(request.POST)
+    if form.is_valid():
+        try:
+            codes = services.mfa_regenerate_recovery_codes(request.user, password=form.cleaned_data["password"], request=request)
+        except ServiceError as exc:
+            messages.error(request, exc.message)
+        else:
+            request.session["mfa_new_recovery_codes"] = codes
+            return redirect("accounts:mfa_recovery_codes")
+    else:
+        messages.error(request, "Enter your current password to make new recovery codes.")
+    return redirect("accounts:mfa_setup")
 
 
 @require_POST

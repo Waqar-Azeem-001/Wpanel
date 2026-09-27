@@ -195,7 +195,7 @@ def test_every_shell_has_the_shared_furniture(client, manager):
 def test_every_link_in_the_navigation_opens_for_the_person_who_sees_it(client, who, owner, agent, manager, admin):
     """Rule 5.6: if you can see a link you can open it. (A menu entry that led to a 403 would fail here.)"""
     users = {"customer": owner, "agent": agent, "manager": manager, "admin": admin,
-             "superuser": User.objects.create_superuser(email="root@example.com", password="x")}
+             "superuser": User.objects.create_superuser(email="root@example.com", password="x", mfa_enabled=True)}
     if who != "anonymous":
         client.force_login(users[who])
     start = "/" if who == "anonymous" else reverse("accounts:profile")

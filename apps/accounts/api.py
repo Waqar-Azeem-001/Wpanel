@@ -8,6 +8,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from apps.core.exceptions import ServiceError
 from apps.core.permissions import HasPortalPermission
 
 from . import serializers as s
@@ -40,7 +41,16 @@ class LoginView(AuthThrottleMixin, APIView):
     def post(self, request, *args, **kwargs):
         serializer = s.LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = services.authenticate_user(request=request, **serializer.validated_data)
+        data = serializer.validated_data
+        code = data.pop("mfa_code", "")
+        user = services.authenticate_user(request=request, email=data["email"], password=data["password"])
+        if user.mfa_enabled:
+            if not code:
+                raise ServiceError("Enter your authenticator code or a recovery code.", code="mfa_required",
+                                   status_code=status.HTTP_401_UNAUTHORIZED)
+            if not services.mfa_verify_code_or_recovery(user, code):
+                raise ServiceError("That code is not right.", code="mfa_invalid_code",
+                                   status_code=status.HTTP_401_UNAUTHORIZED)
         return Response(services.issue_tokens(user, request=request))
 
 

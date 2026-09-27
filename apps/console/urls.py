@@ -18,6 +18,7 @@ urlpatterns = [
     path("users/<int:pk>/password/", views_users.user_set_password, name="user_set_password"),
     path("users/<int:pk>/reset-link/", views_users.user_reset_link, name="user_reset_link"),
     path("users/<int:pk>/setup-link/", views_users.user_setup_link, name="user_setup_link"),
+    path("users/<int:pk>/mfa-reset/", views_users.user_mfa_reset, name="user_mfa_reset"),
     path("setup/staff/", views_setup.staff_users, name="staff_users"),
     path("setup/staff/new/", views_setup.staff_user_create, name="staff_user_create"),
     path("setup/staff/<int:pk>/role/", views_setup.staff_user_role, name="staff_user_role"),

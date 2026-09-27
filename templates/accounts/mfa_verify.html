@@ -1,0 +1,13 @@
+{% extends "layouts/auth.html" %}
+{% load i18n %}
+{% block title %}{% trans "Enter your code" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>{% trans "Enter your code" %}</h1>
+<p class="auth-sub">{% blocktrans %}Open your authenticator app for {{ email }} and enter the 6-digit code, or use a recovery code.{% endblocktrans %}</p>
+<form method="post" class="auth-form" novalidate>{% csrf_token %}
+  {% include "partials/auth_errors.html" %}
+  {% include "partials/auth_field.html" with field=form.code %}
+  <button type="submit" class="btn btn-primary auth-submit">{% trans "Continue" %}</button>
+</form>
+<p class="auth-alt"><a href="{% url 'accounts:login' %}">{% trans "Back to sign in" %}</a></p>
+{% endblock %}

@@ -271,6 +271,12 @@
     recalc();
   })();
 
+  // --- An input marked data-select-on-click selects all its text on click (no inline script needed) --------------------------
+  doc.addEventListener("click", function (event) {
+    var field = event.target.closest("[data-select-on-click]");
+    if (field) { field.select(); }
+  });
+
   // --- A checkbox marked data-submit-on-change sends its form when it changes (no inline script needed) -------------------------
   doc.addEventListener("change", function (event) {
     if (event.target.matches("input[data-submit-on-change]") && event.target.form) { event.target.form.submit(); }

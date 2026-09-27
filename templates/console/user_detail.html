@@ -17,6 +17,7 @@
         <div><dt>{% trans "Status" %}</dt><dd>{{ person.get_status_display }}</dd></div>
         <div><dt>{% trans "Email" %}</dt><dd>{% if person.is_email_verified %}{% trans "Verified" %}{% else %}{% trans "Not verified" %}{% endif %}</dd></div>
         <div><dt>{% trans "Password" %}</dt><dd>{% if person.has_usable_password %}{% trans "Set" %}{% else %}{% trans "Invited, not set yet" %}{% endif %}</dd></div>
+        <div><dt>{% trans "Two-factor sign-in" %}</dt><dd>{% if person.mfa_enabled %}{% status_badge "active" "On" %}{% elif person.is_staff %}{% status_badge "pending_registration" "Required, not set up" %}{% else %}{% status_badge "cancelled" "Off" %}{% endif %}</dd></div>
         <div><dt>{% trans "Joined" %}</dt><dd>{{ person.date_joined|fdatetime }}</dd></div>
         <div><dt>{% trans "Last sign-in" %}</dt><dd>{% if person.last_login %}{{ person.last_login|fdatetime }}{% else %}{% trans "Never" %}{% endif %}</dd></div>
         {% if person.phone %}<div><dt>{% trans "Phone" %}</dt><dd>{{ person.phone }}</dd></div>{% endif %}
@@ -86,6 +87,16 @@
         <p class="small text-secondary mt-2 mb-0" data-generated-note hidden></p>
       </form>
       {% endif %}
+    </div></section>
+    {% endif %}
+
+    {% if can_reset_mfa %}
+    <section class="panel"><div class="panel-body">
+      <h2 class="h6 mb-3">{% trans "Two-factor sign-in" %}</h2>
+      <p class="text-secondary small">{% trans "Lost their authenticator app? Turn it off so they can set it up again from their own profile." %}</p>
+      <form method="post" action="{% url 'console:user_mfa_reset' person.pk %}" data-confirm="{% trans 'Turn off two-factor sign-in for this person?' %}">{% csrf_token %}
+        <button class="btn btn-outline-secondary" type="submit">{% trans "Reset two-factor sign-in" %}</button>
+      </form>
     </div></section>
     {% endif %}
 

@@ -26,6 +26,10 @@
 </div></section>
 <section class="card"><div class="card-body">
   <h2 class="h5">{% trans "Security" %}</h2>
-  <a class="btn btn-outline-primary" href="{% url 'accounts:password_change' %}">{% trans "Change password" %}</a>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <a class="btn btn-outline-primary" href="{% url 'accounts:password_change' %}">{% trans "Change password" %}</a>
+    <a class="btn btn-outline-primary" href="{% url 'accounts:mfa_setup' %}">{% trans "Two-factor sign-in" %}</a>
+    {% if user.mfa_enabled %}{% status_badge "active" "On" %}{% elif user.is_staff %}{% status_badge "pending_registration" "Required" %}{% else %}{% status_badge "cancelled" "Off" %}{% endif %}
+  </div>
 </div></section>
 {% endblock %}

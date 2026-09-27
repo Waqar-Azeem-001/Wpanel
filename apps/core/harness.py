@@ -71,7 +71,9 @@ class World:
 
 
 def _make_user(email, role):
-    user = User.objects.create_user(email=email, password=PASSWORD, role=role)
+    # Two-factor sign-in is mandatory for staff (Phase 16); the harness models an already-set-up staff account so the
+    # crawler exercises the pages behind that requirement, not the setup redirect (which has its own, narrower test).
+    user = User.objects.create_user(email=email, password=PASSWORD, role=role, mfa_enabled=True)
     sync_role_membership(user)
     return user
 
@@ -82,7 +84,7 @@ def build_world():
     admin = _make_user("admin@harness.test", Role.ADMIN)
     agent = _make_user("agent@harness.test", Role.SUPPORT_AGENT)
     technical = _make_user("technical@harness.test", Role.TECHNICAL)
-    root = User.objects.create_superuser(email="root@harness.test", password=PASSWORD)
+    root = User.objects.create_superuser(email="root@harness.test", password=PASSWORD, mfa_enabled=True)
     sync_role_membership(root)
 
     # --- the catalogue -----------------------------------------------------------------------------------------------

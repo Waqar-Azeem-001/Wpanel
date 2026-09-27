@@ -419,7 +419,7 @@ def test_someone_who_may_only_view_users_sees_no_controls_and_cannot_post(world)
     """No built-in role views users without managing them, but a custom permission set could: the page and the view must both hold."""
     from django.contrib.auth.models import Permission
 
-    viewer = User.objects.create_user(email="viewer@example.com", password=PASSWORD, role=Role.SUPPORT_AGENT)
+    viewer = User.objects.create_user(email="viewer@example.com", password=PASSWORD, role=Role.SUPPORT_AGENT, mfa_enabled=True)
     account_services.sync_role_membership(viewer)
     viewer.user_permissions.add(Permission.objects.get(codename="view_users"))
     viewer = User.objects.get(pk=viewer.pk)

@@ -18,7 +18,7 @@
       <td>
         {% if can_manage %}
         <form method="post" action="{% url 'domains_staff:tld_status' pricing.pk %}">{% csrf_token %}
-          <label><input type="checkbox" name="is_active" {% if pricing.is_active %}checked{% endif %} onchange="this.form.submit()"></label>
+          <label><input type="checkbox" name="is_active" {% if pricing.is_active %}checked{% endif %} data-submit-on-change></label>
         </form>
         {% else %}{{ pricing.is_active|yesno:"Yes,No" }}{% endif %}
       </td>

@@ -196,7 +196,7 @@ def test_the_users_entry_is_for_people_who_may_view_users(agent, technical, mana
 
 
 def test_the_django_admin_link_is_for_superusers_only_and_is_not_the_main_way_in(owner, admin):
-    superuser = User.objects.create_superuser(email="root@example.com", password="x")
+    superuser = User.objects.create_superuser(email="root@example.com", password="x", mfa_enabled=True)
     tech = "Database admin (technical)"
     assert tech not in [c.label for c in navigation.build(request_for(admin), "staff")["account"][0].children]
     assert tech in [c.label for c in navigation.build(request_for(superuser), "staff")["account"][0].children]

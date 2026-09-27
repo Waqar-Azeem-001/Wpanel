@@ -26,6 +26,8 @@ NOT_CLICKABLE_EXACT = {
     "accounts:register": "the sign-up form is only offered to signed-out visitors",
     "accounts:login": "signed-in people are sent away from it; the anonymous crawl reaches it",
     "console:staff_users": "the old Staff & Roles address, kept for bookmarks; it redirects to the Users screen",
+    "accounts:mfa_verify": "reached mid sign-in, only with a pending two-factor challenge in the session (tested in test_owner_tools4)",
+    "accounts:mfa_recovery_codes": "reached once, right after setting up or regenerating recovery codes (tested in test_owner_tools4)",
 }
 
 

@@ -891,3 +891,7 @@ html[data-bs-theme="dark"] .auth-center .auth-panel::before, html[data-bs-theme=
 .me-vars button { padding: .15rem .55rem; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface); color: var(--text); font: 500 .78rem var(--font-mono, monospace); cursor: pointer; }
 .me-vars button:hover { border-color: var(--accent); background: var(--accent-subtle); }
 .me-preview { width: 100%; height: 34rem; border: 1px solid var(--border-strong); border-radius: var(--radius-input, 8px); background: #f3f4fa; }
+
+/* Two-factor sign-in: the recovery codes, shown once */
+.recovery-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem 1.5rem; margin: 0 0 1.25rem; padding: 1rem 1.25rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-panel, 10px); font-size: 1rem; }
+@media (max-width: 480px) { .recovery-codes { grid-template-columns: 1fr; } }

@@ -12,7 +12,7 @@
 <section class="card mb-3"><div class="card-body">
   <h2 class="h5">{% trans "Your referral link" %}</h2>
   <div class="d-flex flex-wrap gap-2 mb-2">
-    <input id="ref-link" type="text" class="form-control font-monospace flex-grow-1" readonly value="{{ link }}" aria-label="Your referral link" onclick="this.select()">
+    <input id="ref-link" type="text" class="form-control font-monospace flex-grow-1" readonly value="{{ link }}" aria-label="Your referral link" data-select-on-click>
     <button class="btn btn-primary" type="button" data-copy="#ref-link"><i class="bi bi-clipboard" aria-hidden="true"></i> <span>{% trans "Copy link" %}</span></button>
   </div>
   <p class="mb-3"><span class="text-secondary me-2">{% trans "Share it:" %}</span>

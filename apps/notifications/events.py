@@ -62,6 +62,10 @@ EVENTS = _events(
           sensitive=True),
     Event("account.password_changed_by_admin", "Your password was changed by our team", C.ACCOUNT,
           "password_changed_by_admin", essential=True),
+    Event("account.mfa_enabled", "Two-factor sign-in was turned on", C.ACCOUNT, "mfa_enabled", essential=True),
+    Event("account.mfa_disabled", "Two-factor sign-in was turned off", C.ACCOUNT, "mfa_disabled", essential=True),
+    Event("account.mfa_reset_by_admin", "Two-factor sign-in was reset by our team", C.ACCOUNT,
+          "mfa_reset_by_admin", essential=True),
     # --- Billing & payments (always sent) -----------------------------------------------------------------
     Event("invoice.issued", "A new invoice", C.BILLING, "invoice_issued", essential=True),
     Event("invoice.due_soon", "An invoice is due soon", C.BILLING, "invoice_due_soon", essential=True),

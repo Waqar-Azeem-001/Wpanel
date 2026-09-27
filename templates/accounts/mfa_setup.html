@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Two-factor sign-in" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Two-factor sign-in" %}</h1>
+  <p class="page-sub">{% trans "A code from an authenticator app (Google Authenticator, Authy, 1Password...), on top of your password." %}</p></div>
+
+{% if enabled %}
+<section class="card mb-3"><div class="card-body">
+  <p class="mb-0">{% status_badge "active" "On" %} {% trans "Two-factor sign-in is on for your account." %}</p>
+  <p class="text-secondary mb-0 mt-2">{% blocktrans %}{{ recovery_remaining }} unused recovery code(s) remain, for when your authenticator app is not to hand.{% endblocktrans %}</p>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">{% trans "New recovery codes" %}</h2>
+  <p class="text-secondary">{% trans "Makes ten new codes and stops the old ones working. Your current password confirms it is really you." %}</p>
+  <form method="post" action="{% url 'accounts:mfa_recovery_regenerate' %}" novalidate data-confirm="{% trans 'Replace your recovery codes? The old ones will stop working.' %}">{% csrf_token %}
+    {% include "partials/form.html" with form=password_form %}
+    <button type="submit" class="btn btn-outline-secondary">{% trans "Make new recovery codes" %}</button>
+  </form>
+</div></section>
+
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Turn it off" %}</h2>
+  <p class="text-secondary">{% trans "Signing in will need only your password. Your current password confirms it is really you." %}</p>
+  <form method="post" action="{% url 'accounts:mfa_disable' %}" novalidate data-confirm="{% trans 'Turn off two-factor sign-in?' %}">{% csrf_token %}
+    {% include "partials/form.html" with form=password_form %}
+    <button type="submit" class="btn btn-outline-danger">{% trans "Turn off two-factor sign-in" %}</button>
+  </form>
+</div></section>
+
+{% else %}
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">1. {% trans "Add this account to your authenticator app" %}</h2>
+  <p class="text-secondary">{% trans "Open your authenticator app, add an account, and type in this key (or tap the address on a phone that has the app installed):" %}</p>
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <input id="mfa-secret" type="text" class="form-control font-monospace flex-grow-1" readonly value="{{ secret_formatted }}" aria-label="{% trans 'Secret key' %}" data-select-on-click>
+    <button class="btn btn-outline-primary" type="button" data-copy="#mfa-secret"><i class="bi bi-clipboard" aria-hidden="true"></i> <span>{% trans "Copy" %}</span></button>
+  </div>
+  <p class="mb-0"><a href="{{ otpauth_uri }}">{% trans "Open in an authenticator app" %}</a></p>
+</div></section>
+
+<section class="card"><div class="card-body">
+  <h2 class="h5">2. {% trans "Confirm it" %}</h2>
+  <p class="text-secondary">{% trans "Enter the 6-digit code the app is now showing." %}</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" with form=confirm_form %}
+    <button type="submit" class="btn btn-primary">{% trans "Turn on two-factor sign-in" %}</button>
+  </form>
+</div></section>
+{% endif %}
+{% endblock %}

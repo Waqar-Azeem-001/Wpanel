@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
@@ -50,6 +51,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     email_verified_at = models.DateTimeField(null=True, blank=True)
 
+    # Two-factor sign-in (TOTP, Phase 16): mandatory for staff, optional for a customer. The secret is encrypted the
+    # same way a provider credential is (apps.core.crypto); it exists (non-blank) once someone has started setting
+    # up, but only counts as active once ``mfa_enabled`` is set, which happens after a code confirms it.
+    mfa_secret_encrypted = models.TextField(blank=True, editable=False)
+    mfa_enabled = models.BooleanField(default=False, editable=False)
+    mfa_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
+
     # Derived from ``status`` and ``role`` on save; never set directly.
     is_active = models.BooleanField(default=True, editable=False)
     is_staff = models.BooleanField(default=False, editable=False)
@@ -101,3 +109,22 @@ class PortalAccess(models.Model):
         managed = False
         default_permissions = ()
         permissions = PORTAL_PERMISSIONS
+
+
+class MFARecoveryCode(models.Model):
+    """
+    One single-use recovery code for signing in without the authenticator app (a lost phone). Ten are made when MFA is
+    confirmed or regenerated; each is stored hashed (Django's own password hasher — the same one-way protection as an
+    account password) and is spent the moment it is used.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mfa_recovery_codes")
+    code_hash = models.CharField(max_length=128)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "used_at"])]
+
+    def __str__(self):
+        return f"Recovery code for {self.user_id} ({'used' if self.used_at else 'unused'})"
