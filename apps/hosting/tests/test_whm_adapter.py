@@ -52,18 +52,46 @@ def test_authorization_header_and_url_format():
 
 def test_create_account_success_returns_username_as_provider_ref():
     adapter = _adapter()
-    with mock.patch("requests.get", return_value=_response({"metadata": {"result": 1}})):
+    with mock.patch("requests.post", return_value=_response({"metadata": {"result": 1}})):
         result = adapter.create_account(username="example", domain="example.com", package="starter",
                                         contact_email="a@b.com", password="x")
     assert result == {"provider_ref": "example"}
 
 
+def test_create_account_sends_the_password_as_a_post_body_never_in_the_url_or_query_string():
+    """The password is a fresh secret for a new account - it must never reach WHM's own access log, a browser's
+    history, or a proxy's log, all of which see the URL and query string but not a POST body."""
+    adapter = _adapter()
+    with mock.patch("requests.post", return_value=_response({"metadata": {"result": 1}})) as mocked:
+        adapter.create_account(username="example", domain="example.com", package="starter",
+                               contact_email="a@b.com", password="s3cret-P4ss")
+    args, kwargs = mocked.call_args
+    assert args[0] == "https://whm.example.com:2087/json-api/createacct"  # the URL itself carries no query string
+    assert "s3cret-P4ss" not in args[0]
+    assert kwargs["params"] == {"api.version": 1}  # only the version marker rides in the query string
+    assert kwargs["data"]["password"] == "s3cret-P4ss"  # the secret itself is in the POST body
+
+
 def test_result_zero_raises_hosting_error_with_reason():
     adapter = _adapter()
-    with mock.patch("requests.get", return_value=_response({"metadata": {"result": 0, "reason": "Account exists"}})):
+    with mock.patch("requests.post", return_value=_response({"metadata": {"result": 0, "reason": "Account exists"}})):
         with pytest.raises(HostingError, match="Account exists"):
             adapter.create_account(username="example", domain="example.com", package="starter",
                                    contact_email="a@b.com", password="x")
+
+
+def test_a_network_failure_while_creating_an_account_never_lets_the_password_reach_the_error_message():
+    import requests
+
+    adapter = _adapter()
+    leaky = requests.ConnectionError(
+        "HTTPSConnectionPool(host='whm.example.com', port=2087): Max retries exceeded with url: "
+        "/json-api/createacct?api.version=1&password=s3cret-P4ss")
+    with mock.patch("requests.post", side_effect=leaky):
+        with pytest.raises(HostingError) as caught:
+            adapter.create_account(username="example", domain="example.com", package="starter",
+                                   contact_email="a@b.com", password="s3cret-P4ss")
+    assert "s3cret-P4ss" not in str(caught.value)
 
 
 def test_network_failure_raises_hosting_error():
@@ -102,7 +130,7 @@ def test_get_status_raises_when_account_unknown():
 
 
 def test_get_usage_parses_disk_and_bandwidth():
-    def fake_get(url, headers, params, timeout, verify):
+    def fake_get(url, headers, params, data, timeout, verify):
         if "accountsummary" in url:
             return _response({"metadata": {"result": 1},
                               "data": {"acct": [{"diskused": "150M", "disklimit": "1000M"}]}})

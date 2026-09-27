@@ -28,17 +28,29 @@ class WhmApiAdapter(HostingAdapter):
         scheme = "https" if self.use_ssl else "http"
         return f"{scheme}://{self.host}:{self.port}/json-api"
 
-    def _call(self, function, params=None):
+    def _call(self, function, params=None, *, sensitive=False):
+        """
+        ``sensitive=True`` (only ``create_account``, which carries a new password) sends ``params`` as a POST body
+        instead of a GET query string, so it never appears in this server's own request URL - which the WHM/Apache
+        access log on the *other* end would otherwise record in the clear, and which a network error's own message
+        would otherwise quote back at us (see ``_redact_url`` below, for defence in depth on that second part).
+        """
         headers = {"Authorization": f"whm {self.credentials.get('api_username', '')}:"
                                     f"{self.credentials.get('api_token', '')}"}
-        query = {"api.version": 1, **(params or {})}
+        query = {"api.version": 1}
+        body = None
+        if sensitive:
+            body = params or {}
+        else:
+            query.update(params or {})
         try:
-            response = requests.get(f"{self._base_url()}/{function}", headers=headers, params=query,
-                                    timeout=self.timeout, verify=self.verify_ssl)
+            request = requests.post if sensitive else requests.get
+            response = request(f"{self._base_url()}/{function}", headers=headers, params=query, data=body,
+                               timeout=self.timeout, verify=self.verify_ssl)
             response.raise_for_status()
             payload = response.json()
         except requests.RequestException as exc:
-            raise HostingError(f"Could not reach the server: {exc}") from exc
+            raise HostingError(f"Could not reach the server: {_redact_url(exc)}") from exc
         except ValueError as exc:
             raise HostingError("The server returned an unexpected (non-JSON) response.") from exc
 
@@ -49,7 +61,7 @@ class WhmApiAdapter(HostingAdapter):
 
     def create_account(self, *, username, domain, package, contact_email, password):
         self._call("createacct", {"username": username, "domain": domain, "plan": package,
-                                  "contactemail": contact_email, "password": password})
+                                  "contactemail": contact_email, "password": password}, sensitive=True)
         # WHM's own username is the natural, stable reference for this account.
         return {"provider_ref": username}
 
@@ -93,6 +105,18 @@ class WhmApiAdapter(HostingAdapter):
         except (HostingError, TypeError, ValueError):
             pass
         return result
+
+
+def _redact_url(exc):
+    """
+    A network exception's own message often quotes the request URL back (``requests.ConnectionError``,
+    ``requests.HTTPError``...); if a query string ever ended up on it, this is the last line of defence against a
+    password reaching an error message that a Super Admin sees on the order/audit history (``createacct`` itself
+    is sent as a POST body precisely so it never has one, but a defence that only works for one call site is not a
+    defence). Cuts the string at the first ``?``, which is always where a query string starts.
+    """
+    text = str(exc)
+    return text.split("?", 1)[0]
 
 
 def _parse_size_mb(value):
