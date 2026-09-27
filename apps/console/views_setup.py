@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts import services as account_services
 from apps.accounts.models import User
 from apps.accounts.roles import STAFF_ROLES, perm
+from apps.core import bulk
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text
@@ -156,6 +157,19 @@ def email_provider_delete(request, pk):
     return redirect("console:email_providers")
 
 
+@require_POST
+@portal_permission_required(perm("manage_providers"))
+def email_provider_bulk(request):
+    """"With selected": delete every ticked email provider."""
+    if request.POST.get("do") != "delete":
+        messages.error(request, "Choose what to do with the selected providers.")
+    else:
+        bulk.run(request, EmailProvider.objects.all(), bulk.selected_ids(request),
+                 lambda p: notification_services.delete_email_provider(request.user, p, request=request),
+                 verb="provider(s) deleted", label=lambda p: p.name)
+    return bulk.back_to(request, "console:email_providers")
+
+
 @portal_permission_required(perm("manage_providers"))
 def email_provider_check(request, pk):
     """Why "sent" may still not mean "received": SPF, DKIM and DMARC as a receiving server sees them (public DNS only)."""
@@ -225,3 +239,16 @@ def registrar_delete(request, pk):
     _flash(request, lambda: (domain_services.delete_registrar_provider(request.user, provider, request=request),
                              f"{provider.name} deleted.")[1])
     return redirect("console:registrars")
+
+
+@require_POST
+@portal_permission_required(perm("manage_providers"))
+def registrar_bulk(request):
+    """"With selected": delete every ticked registrar."""
+    if request.POST.get("do") != "delete":
+        messages.error(request, "Choose what to do with the selected registrars.")
+    else:
+        bulk.run(request, RegistrarProvider.objects.all(), bulk.selected_ids(request),
+                 lambda p: domain_services.delete_registrar_provider(request.user, p, request=request),
+                 verb="registrar(s) deleted", label=lambda p: p.name)
+    return bulk.back_to(request, "console:registrars")

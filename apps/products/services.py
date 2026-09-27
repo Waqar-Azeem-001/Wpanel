@@ -5,7 +5,7 @@ of its own.
 """
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import ProtectedError, Q
 
 from apps.accounts.roles import perm
 from apps.audit import services as audit
@@ -324,3 +324,16 @@ def set_server_status(actor, server, new_status, *, request=None):
     audit.record("server.status_changed", actor=actor, target=server,
                  metadata={"from": previous, "to": new_status}, request=request)
     return server
+
+
+def delete_server(actor, server, *, request=None):
+    """Remove a server with no hosting accounts on it. One that is in use is refused (the accounts on it would lose
+    their server), the same way a category still holding products or add-ons is refused rather than deleted."""
+    _require_hosting(actor, "manage_hosting")
+    name = server.name
+    try:
+        server.delete()
+    except ProtectedError:
+        raise ServiceError("This server still has hosting accounts on it. Move them to another server first.",
+                           code="server_in_use")
+    audit.record("server.deleted", actor=actor, metadata={"name": name}, request=request)

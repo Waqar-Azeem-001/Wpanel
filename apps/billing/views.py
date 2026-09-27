@@ -1,8 +1,10 @@
 """Staff pages for billing configuration. Rules live in ``services``."""
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
+from apps.core import bulk
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import run_action
@@ -59,6 +61,19 @@ def payment_method_delete(request, pk):
         return f"Deleted '{name}'. Payments already made with it keep its name."
 
     return run_action(request, action, "billing_staff:payment_methods")
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
+def payment_method_bulk(request):
+    """"With selected": delete every ticked payment method (payments already made with one keep its name)."""
+    if request.POST.get("do") != "delete":
+        messages.error(request, "Choose what to do with the selected payment methods.")
+    else:
+        bulk.run(request, PaymentMethod.objects.all(), bulk.selected_ids(request),
+                 lambda m: services.delete_payment_method(request.user, m, request=request),
+                 verb="payment method(s) deleted", label=lambda m: m.name)
+    return bulk.back_to(request, "billing_staff:payment_methods")
 
 
 @require_POST

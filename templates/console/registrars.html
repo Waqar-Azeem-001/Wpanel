@@ -10,15 +10,26 @@
 <div class="row g-4">
   <div class="col-lg-6">
     <section class="card"><div class="card-header">{% trans "Registrars" %}</div>
+      {% if can_manage and providers %}
+      <form id="rp-bulk" method="post" action="{% url 'console:registrar_bulk' %}" data-confirm="{% trans 'Delete every ticked registrar?' %}">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="do" value="delete">
+      </form>
+      {% endif %}
       <ul class="list-group list-group-flush">
         {% for p in providers %}
         <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <span><strong>{{ p.name }}</strong> {% if p.is_active %}<span class="badge text-bg-success">{% trans "In use" %}</span>{% endif %}<div class="small text-secondary">{{ p.get_kind_display }}{% if p.sandbox %} · {% trans "sandbox" %}{% endif %}</div></span>
+          <span>{% if can_manage %}<input class="form-check-input me-1" type="checkbox" name="ids" value="{{ p.pk }}" form="rp-bulk" aria-label="{% trans 'Select' %} {{ p.name }}">{% endif %}<strong>{{ p.name }}</strong> {% if p.is_active %}<span class="badge text-bg-success">{% trans "In use" %}</span>{% endif %}<div class="small text-secondary">{{ p.get_kind_display }}{% if p.sandbox %} · {% trans "sandbox" %}{% endif %}</div></span>
           {% if can_manage %}<span class="d-flex flex-wrap gap-2"><a class="btn btn-sm btn-outline-secondary" href="{% url 'console:registrars' %}?edit={{ p.pk }}">{% trans "Edit" %}</a>
             {% if not p.is_active %}<form method="post" action="{% url 'console:registrar_delete' p.pk %}" data-confirm="{% trans 'Delete this registrar?' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Delete" %}</button></form>{% endif %}</span>{% endif %}
         </li>
         {% empty %}<li class="list-group-item text-secondary">{% trans "None yet." %}</li>{% endfor %}
       </ul>
+      {% if can_manage and providers %}
+      <div class="d-flex flex-wrap align-items-center gap-2 p-2 bulk-bar">
+        <span class="fw-semibold me-1">{% trans "With selected:" %}</span>
+        <button class="btn btn-sm btn-outline-danger" type="submit" form="rp-bulk">{% trans "Delete selected" %}</button>
+      </div>
+      {% endif %}
     </section>
   </div>
   {% if can_manage %}

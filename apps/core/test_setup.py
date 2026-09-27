@@ -337,6 +337,6 @@ def test_the_setup_menu_offers_these_screens_only_to_who_may_open_them(world):
         menus = navigation.build(request, "staff")
         return {c.label for e in menus["main"] for c in (e.children or [e])}
 
-    assert {"Users", "Email provider", "Domain registrar"} <= labels("admin")
-    assert "Users" in labels("manager") and "Email provider" not in labels("manager")
-    assert not {"Users", "Email provider", "Domain registrar"} & labels("support agent")
+    assert {"All users", "Email provider", "Domain registrar"} <= labels("admin")
+    assert "All users" in labels("manager") and "Email provider" not in labels("manager")
+    assert not {"All users", "Email provider", "Domain registrar"} & labels("support agent")

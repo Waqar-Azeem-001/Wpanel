@@ -50,26 +50,62 @@ changed - only that it can now be done for several records in one action, with t
 reporting every other bulk action in the project already has (a record that cannot be deleted is named in the
 "could not be changed" message, the rest still go through).
 
-### Deliberately not touched
+## The same day, extended further on request: menus and every remaining list
 
-- **Payment methods, email providers, registrars**: these are small, settings-style lists (a business typically has
-  one or two of each) shown as cards, not table rows - the bulk-select pattern needs a table, and the practical
-  benefit of ticking several cards at once is close to nil for a list this short. Single delete stays.
-- **Domains, orders, hosting accounts, transactions, servers, renewals**: none of these support deleting a record
-  at all today, by design - they are financial, provisioning or audit records (Phase 16's credential/audit
-  principles apply here too). Adding a bulk-delete button to one of these would mean deciding, for the first time,
-  that the underlying record should be hard-deletable at all - a data-integrity decision, not a UI convenience, so
-  it was not made unilaterally here. If any of these should in fact be deletable (e.g. a domain entered by mistake,
-  never registered), say which one and the same reusable pattern drops in quickly.
+Two menu items opened a page directly with nothing listed under them, unlike every sibling in their section
+(`apps/core/navigation.py`): **Users** (People) now has **All users** underneath it, and **Hosting** (Operations) now
+has **All hosting accounts** underneath it - both go to the exact page the item always opened, just reached the same
+way as every other group in the mega-menu.
+
+The bulk-delete rollout was then asked for on the remaining lists too. What each one actually got depends on what a
+*hard delete* would mean for that kind of record:
+
+- **Payment methods, email providers, registrars** (`billing_staff:payment_method_bulk`,
+  `console:email_provider_bulk`, `console:registrar_bulk`): genuine bulk delete, same as categories/billables/
+  articles. These are shown as cards, not table rows, so there is no `data-select-all` box - each is checked
+  individually (the standard list is short enough, in practice, that this is not a loss) - using a checkbox and
+  button that reference an external `<form>` by its `id` (the HTML `form="..."` attribute) rather than nesting one
+  form inside another, since each card already holds its own small forms (the "Shown/Hidden" toggle, single delete).
+- **Domains, orders, hosting accounts** (`domains_staff:bulk`, `orders_staff:bulk`, `hosting_staff:bulk`): a real
+  hard delete would fail for nearly every row that is ticked - almost every domain is referenced by the order item
+  that bought it, almost every order has an invoice, almost every hosting account is referenced by the order item
+  that created it, and Django's own `on_delete=PROTECT` on each of those relationships refuses the delete outright.
+  Rather than ship a "Delete" button that mostly just reports failures, the bulk action is the verb that already
+  works regardless of that history and already means "get rid of this" for each of these: **cancel** for a domain
+  still pending or failed, **cancel** for an order still awaiting payment (or failed/fraud, for staff), **terminate**
+  for an account that is active or suspended - the exact same rule, and for hosting the exact same real call to the
+  server, as doing it one at a time already had.
+- **Servers** (`catalog_staff:server_bulk`, plus a single-item `server_delete` that did not exist before): a new,
+  genuine delete - safe because `HostingAccount.server` is `PROTECT`, so a server still hosting an account simply
+  refuses (`apps/products/services.py:delete_server`), the same shape as a category still holding a product.
+
+### Still deliberately not touched: transactions and renewals
+
+- **Transactions** are the record of money actually received (or refunded). `Invoice.amount_paid`/`amount_refunded`
+  are *derived from* the succeeded transactions against it - deleting one would not be refused by anything (no
+  `PROTECT` sits in front of it), it would silently leave an invoice's own totals wrong and remove the one audit
+  trail a business has for "this payment happened". This is a different kind of risk from everything above - the
+  others fail loudly and safely if attempted on the wrong record; this one would not fail at all, it would corrupt
+  bookkeeping quietly. Not added without asking specifically about this one.
+- **Renewals** (`ServiceChange`) is the same kind of record as an order or a transaction, not a different case: each
+  row is "tied to the invoice that pays for it" (its own docstring) via `on_delete=PROTECT`, and its frozen figures
+  are what a later billing audit re-derives a renewal's proration from (`apps/renewals/services.py`). There is not
+  even an existing single-item "cancel" for a person to click today, only an internal `void_changes(invoice)` the
+  system calls when the invoice itself is cancelled - so this is not "a bulk-delete pattern that would mostly fail
+  and cancel is the real verb" the way domains/orders/hosting were; it is squarely the same financial-audit-record
+  case as transactions, and held back for the same reason and the same explicit ask.
 
 ## VERIFIED
 
-`apps/core/test_owner_tools3.py` (the KPI strip's CSS), `apps/core/test_console.py` (12 new tests: default order,
-moving up/down and it persisting past a fresh request, the edges doing nothing, an unknown/not-visible key being
-ignored, a stale saved key never resurfacing a panel someone has since lost the permission for, the controls needing
-POST and staff, and the open-redirect check on the referer), `apps/core/test_lists.py` (7 new tests: each of the
-three bulk deletes doing the right thing and reporting the rest, and each needing its list's own manage permission).
-Browser-checked (Chromium, 1440 and 390 wide): the KPI strip at 7 and 7, moving a panel and reloading to confirm it
-stuck, and the full categories bulk-delete flow (tick two, confirm, deleted, success message) - no overflow, no
-console errors at either width. Full suite passes; migrated the local `db.sqlite3` for the one new field
-(`dashboard_widget_order`).
+`apps/core/test_owner_tools3.py` (the KPI strip's CSS), `apps/core/test_console.py` (12 tests for arranging panels:
+default order, moving up/down and it persisting past a fresh request, the edges doing nothing, an unknown/not-visible
+key being ignored, a stale saved key never resurfacing a panel someone has since lost the permission for, the
+controls needing POST and staff, and the open-redirect check on the referer), `apps/core/test_lists.py` (21 tests
+across every bulk action added: categories/billables/articles/servers/payment-methods/email-providers/registrars
+deleting the right rows and reporting the rest, domains/orders/hosting cancelling or terminating only what the single
+-item rule already allowed, and every one of them needing its own manage permission), `apps/core/test_setup.py`
+(the menu's "All users"/"All hosting accounts" labels). Browser-checked (Chromium, 1440 and 390 wide): the KPI strip
+at 7 and 7, moving a panel and reloading to confirm it stuck, the People and Operations mega-menus showing the new
+sub-items, the categories and payment-methods bulk-delete flows end to end (tick, confirm, deleted, success message)
+- no overflow, no console errors at either width. Full suite passes; migrated the local `db.sqlite3` for the one new
+field (`dashboard_widget_order`) - nothing else in this document needed a schema change.

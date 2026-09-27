@@ -6,6 +6,7 @@ app_name = "domains_staff"
 
 urlpatterns = [
     path("", views.staff_domain_list, name="list"),
+    path("bulk/", views.staff_domain_bulk, name="bulk"),
     path("tlds/", views.staff_tld_list, name="tld_list"),
     path("tlds/save/", views.staff_tld_save, name="tld_save"),
     path("tlds/<int:pk>/status/", views.staff_tld_status, name="tld_status"),

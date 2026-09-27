@@ -297,6 +297,136 @@ def test_the_bulk_delete_lists_offer_the_checkboxes_only_to_who_may_manage_them(
     assert "With selected:" not in agent and 'name="ids"' not in agent
 
 
+# --- Bulk "cancel"/"terminate": domains, orders, hosting accounts (a real hard delete would fail almost every ---
+# --- time here, protected by the order/invoice that made the record - see docs/e12-dashboard-and-bulk-delete.md --
+
+def test_bulk_cancels_every_ticked_pending_domain_and_reports_the_rest(world):
+    from apps.domains.models import Domain, DomainStatus
+
+    pending = world.objects["domains"][DomainStatus.PENDING_REGISTRATION]
+    active = world.objects["domains"][DomainStatus.ACTIVE]
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("domains_staff:bulk"), {"ids": [pending.pk, active.pk], "do": "cancel"})
+    shown = follow_messages(client, response)
+    assert Domain.objects.get(pk=pending.pk).status == DomainStatus.CANCELLED
+    assert Domain.objects.get(pk=active.pk).status == DomainStatus.ACTIVE  # a live domain is left alone
+    assert any("cancelled" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
+def test_bulk_domain_cancel_needs_manage_domains(world):
+    from apps.domains.models import DomainStatus
+
+    pending = world.objects["domains"][DomainStatus.PENDING_REGISTRATION]
+    url = reverse("domains_staff:bulk")
+    assert browser(world.people["support agent"]).post(url, {"ids": [pending.pk], "do": "cancel"}).status_code == 403
+
+
+def test_bulk_cancels_every_ticked_order_awaiting_payment_and_reports_the_rest(world):
+    from apps.orders.models import Order, OrderStatus
+
+    pending = world.objects["orders"][OrderStatus.PENDING_PAYMENT]
+    active = world.objects["orders"][OrderStatus.ACTIVE]
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("orders_staff:bulk"), {"ids": [pending.pk, active.pk], "do": "cancel"})
+    shown = follow_messages(client, response)
+    assert Order.objects.get(pk=pending.pk).status == OrderStatus.CANCELLED
+    assert Order.objects.get(pk=active.pk).status == OrderStatus.ACTIVE
+    assert any("order(s) cancelled" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
+def test_bulk_order_cancel_needs_manage_orders_or_be_the_clients_own(world):
+    from apps.orders.models import OrderStatus
+
+    pending = world.objects["orders"][OrderStatus.PENDING_PAYMENT]
+    url = reverse("orders_staff:bulk")
+    assert browser(world.people["customer owner"]).post(url, {"ids": [pending.pk], "do": "cancel"}).status_code == 403
+
+
+def test_bulk_terminates_every_ticked_active_or_suspended_hosting_account_and_reports_the_rest(world):
+    from apps.hosting.models import HostingAccount, HostingStatus
+
+    active = world.objects["accounts"][HostingStatus.ACTIVE]
+    pending = world.objects["accounts"][HostingStatus.PENDING]
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("hosting_staff:bulk"), {"ids": [active.pk, pending.pk], "do": "terminate"})
+    shown = follow_messages(client, response)
+    assert HostingAccount.objects.get(pk=active.pk).status == HostingStatus.TERMINATED
+    assert HostingAccount.objects.get(pk=pending.pk).status == HostingStatus.PENDING
+    assert any("account(s) terminated" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
+def test_bulk_hosting_terminate_needs_manage_hosting(world):
+    from apps.hosting.models import HostingStatus
+
+    active = world.objects["accounts"][HostingStatus.ACTIVE]
+    url = reverse("hosting_staff:bulk")
+    assert browser(world.people["support agent"]).post(url, {"ids": [active.pk], "do": "terminate"}).status_code == 403
+
+
+# --- Bulk delete: servers, payment methods, email providers, registrars ------------------------------------------
+
+def test_bulk_deletes_every_ticked_server_with_nothing_hosted_on_it_and_reports_the_rest(world):
+    from apps.hosting.models import HostingStatus
+    from apps.products.models import Server
+
+    empty = Server.objects.create(name="Spare box", hostname="spare.harness.test")
+    in_use = world.objects["accounts"][HostingStatus.ACTIVE].server
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("catalog_staff:server_bulk"), {"ids": [empty.pk, in_use.pk], "do": "delete"})
+    shown = follow_messages(client, response)
+    assert not Server.objects.filter(pk=empty.pk).exists()
+    assert Server.objects.filter(pk=in_use.pk).exists()
+    assert any("server(s) deleted" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
+def test_bulk_server_delete_needs_manage_hosting(world):
+    from apps.products.models import Server
+
+    empty = Server.objects.create(name="Spare box 2", hostname="spare2.harness.test")
+    url = reverse("catalog_staff:server_bulk")
+    assert browser(world.people["support agent"]).post(url, {"ids": [empty.pk], "do": "delete"}).status_code == 403
+    assert Server.objects.filter(pk=empty.pk).exists()
+
+
+def test_bulk_deletes_every_ticked_payment_method(world):
+    from apps.billing.models import PaymentMethod
+
+    one = PaymentMethod.objects.create(name="Test wallet", kind="jazzcash", code="test-wallet")
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("billing_staff:payment_method_bulk"), {"ids": [one.pk], "do": "delete"})
+    assert any("payment method(s) deleted" in m for m in follow_messages(client, response))
+    assert not PaymentMethod.objects.filter(pk=one.pk).exists()
+
+
+def test_bulk_deletes_every_ticked_email_provider_and_leaves_the_active_one(world):
+    from apps.notifications.models import EmailProvider
+
+    spare = EmailProvider.objects.create(name="Spare SMTP", host="smtp.spare.test", from_email="a@spare.test")
+    active = EmailProvider.objects.filter(is_active=True).first()
+    if active is None:
+        active = EmailProvider.objects.create(name="Live SMTP", host="smtp.live.test", from_email="a@live.test",
+                                              is_active=True)
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("console:email_provider_bulk"), {"ids": [spare.pk, active.pk], "do": "delete"})
+    shown = follow_messages(client, response)
+    assert not EmailProvider.objects.filter(pk=spare.pk).exists()
+    assert EmailProvider.objects.filter(pk=active.pk).exists()
+    assert any("provider(s) deleted" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
+def test_bulk_deletes_every_ticked_registrar_and_leaves_the_active_one(world):
+    from apps.domains.models import RegistrarProvider
+
+    spare = RegistrarProvider.objects.create(name="Spare registrar")
+    active = RegistrarProvider.objects.get(is_active=True)  # the harness world already has one in use
+    admin = world.people["admin"]
+    client, response = bulk_post(admin, reverse("console:registrar_bulk"), {"ids": [spare.pk, active.pk], "do": "delete"})
+    shown = follow_messages(client, response)
+    assert not RegistrarProvider.objects.filter(pk=spare.pk).exists()
+    assert RegistrarProvider.objects.filter(pk=active.pk).exists()
+    assert any("registrar(s) deleted" in m for m in shown) and any("could not be changed" in m for m in shown)
+
+
 # --- The confirmation modal -------------------------------------------------------------------------------------------
 
 def test_no_page_uses_the_browsers_own_confirm_box():

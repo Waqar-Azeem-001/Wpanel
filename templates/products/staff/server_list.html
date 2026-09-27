@@ -11,26 +11,38 @@
     {% if perms.accounts.manage_hosting %}<a class="btn btn-primary" href="{% url 'catalog_staff:server_create' %}">Add server</a>{% endif %}
   </div>
 </div>
+<form method="post" action="{% url 'catalog_staff:server_bulk' %}" data-confirm="Delete every ticked server? One with hosting accounts on it is left alone.">{% csrf_token %}
+<input type="hidden" name="next" value="{{ request.get_full_path }}">
 <div class="table-responsive">
 <table class="table">
-  <thead><tr><th>Name</th><th>Hostname</th><th>IP</th><th>Status</th><th>Products</th>{% if perms.accounts.manage_hosting %}<th></th>{% endif %}</tr></thead>
+  <thead><tr>{% if perms.accounts.manage_hosting %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all aria-label="Select all servers"></th>{% endif %}<th>Name</th><th>Hostname</th><th>IP</th><th>Status</th><th>Products</th>{% if perms.accounts.manage_hosting %}<th></th>{% endif %}</tr></thead>
   <tbody>
   {% for server in servers %}
     <tr>
+      {% if perms.accounts.manage_hosting %}<td><input class="form-check-input" type="checkbox" name="ids" value="{{ server.pk }}" aria-label="Select {{ server.name }}"></td>{% endif %}
       <td>{{ server.name }}</td>
       <td>{{ server.hostname }}</td>
       <td>{{ server.ip_address|default:"—" }}</td>
       <td>{% status_badge server.status server.get_status_display %}</td>
       <td>{{ server.products.count }}</td>
       {% if perms.accounts.manage_hosting %}
-      <td><a href="{% url 'catalog_staff:server_edit' server.pk %}">Edit</a></td>
+      <td class="d-flex gap-2"><a href="{% url 'catalog_staff:server_edit' server.pk %}">Edit</a>
+        <button class="btn btn-sm btn-outline-danger" type="submit" formaction="{% url 'catalog_staff:server_delete' server.pk %}" formnovalidate data-confirm="Delete {{ server.name }}?">Delete</button></td>
       {% endif %}
     </tr>
   {% empty %}
-    <tr><td colspan="6" class="text-secondary">No servers yet.</td></tr>
+    <tr><td colspan="7" class="text-secondary">No servers yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
+{% if perms.accounts.manage_hosting and servers %}
+<div class="d-flex flex-wrap align-items-center gap-2 p-3 bulk-bar">
+  <span class="fw-semibold me-1">With selected:</span>
+  <input type="hidden" name="do" value="delete">
+  <button class="btn btn-sm btn-outline-danger" type="submit">Delete selected</button>
+</div>
+{% endif %}
+</form>
 <p class="text-secondary">Server credentials and WHM connections arrive in Phase 05 (Hosting/WHM Provisioning).</p>
 {% endblock %}

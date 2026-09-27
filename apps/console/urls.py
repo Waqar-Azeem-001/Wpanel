@@ -28,9 +28,11 @@ urlpatterns = [
     path("setup/email/save/", views_setup.email_provider_save, name="email_provider_save"),
     path("setup/email/settings/", views_setup.email_settings_save, name="email_settings_save"),
     path("setup/email/<int:pk>/delete/", views_setup.email_provider_delete, name="email_provider_delete"),
+    path("setup/email/bulk/", views_setup.email_provider_bulk, name="email_provider_bulk"),
     path("setup/email/<int:pk>/test/", views_setup.email_provider_test, name="email_provider_test"),
     path("setup/email/<int:pk>/check/", views_setup.email_provider_check, name="email_provider_check"),
     path("setup/registrar/", views_setup.registrars, name="registrars"),
     path("setup/registrar/save/", views_setup.registrar_save, name="registrar_save"),
     path("setup/registrar/<int:pk>/delete/", views_setup.registrar_delete, name="registrar_delete"),
+    path("setup/registrar/bulk/", views_setup.registrar_bulk, name="registrar_bulk"),
 ]

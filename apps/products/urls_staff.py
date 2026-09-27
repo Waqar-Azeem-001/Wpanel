@@ -37,4 +37,6 @@ urlpatterns = [
     path("servers/new/", views.staff_server_create, name="server_create"),
     path("servers/<int:pk>/edit/", views.staff_server_edit, name="server_edit"),
     path("servers/<int:pk>/status/", views.staff_server_status, name="server_status"),
+    path("servers/<int:pk>/delete/", views.staff_server_delete, name="server_delete"),
+    path("servers/bulk/", views.staff_server_bulk, name="server_bulk"),
 ]

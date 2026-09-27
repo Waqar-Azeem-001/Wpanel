@@ -456,3 +456,28 @@ def staff_server_status(request, pk):
         else:
             messages.success(request, f"Status set to {server.get_status_display()}.")
     return redirect("catalog_staff:server_edit", pk=server.pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def staff_server_delete(request, pk):
+    server = get_object_or_404(Server, pk=pk)
+
+    def action():
+        services.delete_server(request.user, server, request=request)
+        return f"Server '{server.name}' deleted."
+
+    return run_action(request, action, "catalog_staff:server_list")
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def staff_server_bulk(request):
+    """"With selected": delete every ticked server with nothing hosted on it (the same rule as one at a time)."""
+    if request.POST.get("do") != "delete":
+        messages.error(request, "Choose what to do with the selected servers.")
+    else:
+        bulk.run(request, Server.objects.all(), bulk.selected_ids(request),
+                 lambda s: services.delete_server(request.user, s, request=request),
+                 verb="server(s) deleted", label=lambda s: s.name)
+    return bulk.back_to(request, "catalog_staff:server_list")

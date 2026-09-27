@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
 from apps.clients.services import single_contact_client
-from apps.core import portal
+from apps.core import bulk, portal
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.orders.models import ItemKind, OrderItem
@@ -89,7 +89,24 @@ def staff_hosting_list(request):
         if filter_form.cleaned_data["status"]:
             queryset = queryset.filter(status=filter_form.cleaned_data["status"])
     page = Paginator(queryset.order_by("-created_at"), 25).get_page(request.GET.get("page"))
-    return render(request, "hosting/staff/list.html", {"filter_form": filter_form, "page": page})
+    return render(request, "hosting/staff/list.html", {"filter_form": filter_form, "page": page,
+                                                        "can_manage": request.user.has_perm(perm("manage_hosting"))})
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def staff_hosting_bulk(request):
+    """"With selected": terminate every ticked account that is active or suspended (the same rule, and the same
+    real call to the server, as one at a time). There is no bulk delete here: a real hosting account is almost
+    always protected from being removed from the database by the order it came from, and its row is how the system
+    remembers a service exists at all until it is properly terminated - "terminate" is the meaningful bulk action."""
+    if request.POST.get("do") != "terminate":
+        messages.error(request, "Choose what to do with the selected accounts.")
+    else:
+        bulk.run(request, HostingAccount.objects.all(), bulk.selected_ids(request),
+                 lambda a: services.terminate_account(request.user, a, request=request),
+                 verb="account(s) terminated", label=lambda a: a.domain)
+    return bulk.back_to(request, "hosting_staff:list")
 
 
 @portal_permission_required(perm("view_hosting"))

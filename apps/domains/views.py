@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
 from apps.clients.services import single_contact_client
-from apps.core import portal
+from apps.core import bulk, portal
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 
@@ -180,7 +180,24 @@ def staff_domain_list(request):
         if filter_form.cleaned_data["status"]:
             queryset = queryset.filter(status=filter_form.cleaned_data["status"])
     page = Paginator(queryset.order_by("-created_at"), 25).get_page(request.GET.get("page"))
-    return render(request, "domains/staff/list.html", {"filter_form": filter_form, "page": page})
+    return render(request, "domains/staff/list.html", {"filter_form": filter_form, "page": page,
+                                                        "can_manage": request.user.has_perm(perm("manage_domains"))})
+
+
+@require_POST
+@portal_permission_required(perm("manage_domains"))
+def staff_domain_bulk(request):
+    """"With selected": cancel every ticked domain that is still pending or failed (the same rule as one at a
+    time - a live or already-registered domain is reported as a failure, not silently skipped). There is no bulk
+    delete here: almost every real domain is protected by the order/invoice it came from, so "cancel" - which
+    already works regardless of that history - is the meaningful bulk action for a domain a person wants gone."""
+    if request.POST.get("do") != "cancel":
+        messages.error(request, "Choose what to do with the selected domains.")
+    else:
+        bulk.run(request, Domain.objects.all(), bulk.selected_ids(request),
+                 lambda d: services.cancel_domain_request(request.user, d, request=request),
+                 verb="domain request(s) cancelled", label=lambda d: d.name)
+    return bulk.back_to(request, "domains_staff:list")
 
 
 @portal_permission_required(perm("view_domains"))

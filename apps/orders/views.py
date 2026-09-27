@@ -13,6 +13,7 @@ from apps.accounts.roles import perm
 from apps.billing.models import PaymentMethod
 from apps.clients import services as client_services
 from apps.clients.services import single_contact_client
+from apps.core import bulk
 from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, query_id, run_action
@@ -430,6 +431,22 @@ def staff_order_cancel(request, pk):
         return "Order cancelled."
 
     return run_action(request, action, "orders_staff:detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_orders"))
+def staff_order_bulk(request):
+    """"With selected": cancel every ticked order that is still awaiting payment, or failed/flagged as fraud (the
+    same rule as one at a time). There is no bulk delete here: almost every real order already has an invoice,
+    which protects it from being deleted at the database level, so "cancel" is the meaningful bulk action for an
+    order a person wants gone."""
+    if request.POST.get("do") != "cancel":
+        messages.error(request, "Choose what to do with the selected orders.")
+    else:
+        bulk.run(request, Order.objects.all(), bulk.selected_ids(request),
+                 lambda o: services.cancel_order(request.user, o, request=request),
+                 verb="order(s) cancelled", label=lambda o: o.reference)
+    return bulk.back_to(request, "orders_staff:list")
 
 
 def _staff_order_action(request, pk, function, message, *, needs_reason=False):

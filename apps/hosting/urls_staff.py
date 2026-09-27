@@ -6,6 +6,7 @@ app_name = "hosting_staff"
 
 urlpatterns = [
     path("", views.staff_hosting_list, name="list"),
+    path("bulk/", views.staff_hosting_bulk, name="bulk"),
     path("<int:pk>/", views.staff_hosting_detail, name="detail"),
     path("<int:pk>/assign-server/", views.staff_hosting_assign_server, name="assign_server"),
     path("<int:pk>/complete/", views.staff_hosting_complete, name="complete"),
