@@ -479,11 +479,11 @@ def assign_role(actor, user, role, *, request=None):
 
 # --- Two-factor sign-in (TOTP, Phase 16) -----------------------------------------------------------------------
 #
-# Mandatory for staff, optional for a customer (enforced by apps.core.middleware.RequireStaffMFAMiddleware, not here:
-# a person can still be signed in without it, they are just steered to set it up). The maths lives in ``mfa`` (no
-# database, no request); this is the part that touches the account: the secret at rest (encrypted like a provider
-# credential), the recovery codes (hashed like a password, one-time), and the pause between "password was right" and
-# "really signed in" while the code is checked.
+# Optional for everyone: a customer or a staff member turns it on themselves, from their own profile, whenever they
+# want it - nothing forces it or steers anyone towards it. The maths lives in ``mfa`` (no database, no request); this
+# is the part that touches the account: the secret at rest (encrypted like a provider credential), the recovery codes
+# (hashed like a password, one-time), and the pause between "password was right" and "really signed in" while the
+# code is checked.
 
 MFA_PENDING_SESSION_KEY = "mfa_pending_user_id"
 MFA_PENDING_EXPIRES_KEY = "mfa_pending_expires"

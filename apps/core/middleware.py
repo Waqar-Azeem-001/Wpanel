@@ -1,8 +1,6 @@
 import re
 import uuid
 
-from django.shortcuts import redirect
-
 from .request_context import request_id_var
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -86,28 +84,3 @@ class SecurityHeadersMiddleware:
         if not response.has_header("Permissions-Policy"):
             response["Permissions-Policy"] = self.PERMISSIONS_POLICY
         return response
-
-
-class RequireStaffMFAMiddleware:
-    """
-    Two-factor sign-in is mandatory for staff (Phase 16). It does not block signing in - a correct password still
-    signs someone in - but every page under the staff console (``/staff/...``) redirects to the setup page until it
-    is turned on, so it cannot simply be postponed forever. Customers, the API, and the setup/account pages
-    themselves (which live outside ``/staff/``) are never affected.
-    """
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        user = getattr(request, "user", None)
-        if (user is not None and getattr(user, "is_authenticated", False) and user.is_staff
-                and not user.mfa_enabled and request.path.startswith("/staff/")):
-            from django.contrib import messages
-            from django.urls import reverse
-
-            setup_url = reverse("accounts:mfa_setup")
-            if request.path != setup_url:
-                messages.warning(request, "Two-factor sign-in is required for staff. Set it up to continue.")
-                return redirect(setup_url)
-        return self.get_response(request)

@@ -3,7 +3,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts import services
 from apps.accounts.models import User
-from apps.accounts.roles import STAFF_ROLES, Role
+from apps.accounts.roles import Role
 
 PASSWORD = "Str0ng-Passw0rd!x"
 
@@ -34,10 +34,6 @@ def api():
 @pytest.fixture
 def make_user(db):
     def _make(email="user@example.com", role=Role.CUSTOMER, password=PASSWORD, **extra):
-        # Two-factor sign-in is mandatory for staff (Phase 16): a fixture staff account models one that has already
-        # completed that setup, so existing tests keep exercising the page behind it rather than the setup redirect.
-        # A test for the redirect itself passes mfa_enabled=False explicitly, which this default never overrides.
-        extra.setdefault("mfa_enabled", role in STAFF_ROLES)
         user = User.objects.create_user(email=email, password=password, role=role, **extra)
         services.sync_role_membership(user)
         return user

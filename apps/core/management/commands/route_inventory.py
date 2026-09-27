@@ -36,10 +36,19 @@ def view_label(callback):
 
 
 def permission_aliases(module_source):
-    """``VIEW = portal_permission_required(perm("view_x"))`` style aliases -> the permissions they require."""
+    """
+    A module-level name that stands for one or more permissions, resolved back to the codenames so ``access_of`` can
+    follow it wherever it is used: ``VIEW = portal_permission_required(perm("view_x"))`` (used as ``@VIEW``), or the
+    bare ``VIEW = perm("view_x")`` / ``VIEW, MANAGE = perm("view_x"), perm("manage_x")`` (used as
+    ``@portal_permission_required(VIEW)``) - both styles are common across the staff views.
+    """
     found = {}
     for name, body in re.findall(r"^([A-Z_]+)\s*=\s*(portal_permission_required\([^\n]*\))", module_source, re.M):
         found[name] = re.findall(r'perm\("(\w+)"\)', body)
+    for names, body in re.findall(r"^([A-Z_]+(?:\s*,\s*[A-Z_]+)*)\s*=\s*(perm\([^\n]*\))\s*$", module_source, re.M):
+        codes = re.findall(r'perm\("(\w+)"\)', body)
+        for name, code in zip((n.strip() for n in names.split(",")), codes):
+            found[name] = [code]
     return found
 
 
@@ -70,10 +79,15 @@ def access_of(callback):
     aliases = permission_aliases(module_source)
     for token in re.findall(r"@([A-Z_]+)\b", head):
         perms.update(aliases.get(token, []))
+    for call_args in re.findall(r"portal_permission_required\(([^)]*)\)", head):
+        for bare_name in re.findall(r"\b([A-Z_]{2,})\b", call_args):
+            perms.update(aliases.get(bare_name, []))
     if "login_required" in head:
         notes.append("signed in")
     if "reviewer_required" in head:
         notes.append("perm: view_hosting or view_domains")
+    if "_superuser_only" in head:
+        notes.append("Super Admin only")
     if perms:
         notes.append("perm: " + ", ".join(sorted(perms)))
     if "_login_and_permission" in source:

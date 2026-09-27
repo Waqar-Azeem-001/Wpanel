@@ -36,15 +36,31 @@
 {% elif order.status == "terminated" %}
 <section class="card mb-3"><div class="card-body"><h2 class="h5">{% trans "Terminated" %}</h2><p class="mb-0">{% trans "These services have been terminated." %}</p></div></section>
 {% endif %}
-{% for invoice in order.invoices.all %}
+{% with order_invoices=order.invoices.all %}
+{% if order_invoices %}
 <section class="card mb-3"><div class="card-body">
-  <h2 class="h5">{% trans "Invoice" %}</h2>
-  <p class="mb-0"><a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{{ invoice.number }}</a>
-    {% status_badge invoice.display_status invoice.display_status_label %}
-    &middot; {% trans "balance" %} {{ invoice.balance_due|money:invoice.currency }}
-    {% if invoice.can_be_paid %}&middot; <a class="btn btn-sm btn-primary" href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{% trans "Pay now" %}</a>{% endif %}</p>
+  <h2 class="h5">{% trans "Invoice" %}{{ order_invoices|length|pluralize }}</h2>
+  <div class="table-responsive">
+  <table class="table align-middle mb-0">
+    <thead><tr><th>{% trans "Invoice" %}</th><th>{% trans "Status" %}</th><th>{% trans "Due" %}</th>
+      <th class="text-end">{% trans "Total" %}</th><th class="text-end">{% trans "Balance" %}</th><th></th></tr></thead>
+    <tbody>
+    {% for invoice in order_invoices %}
+      <tr>
+        <td><a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{{ invoice.number }}</a></td>
+        <td>{% status_badge invoice.display_status invoice.display_status_label %}</td>
+        <td>{{ invoice.due_date|fdate|default:"—" }}</td>
+        <td class="text-end">{{ invoice.total|money:invoice.currency }}</td>
+        <td class="text-end">{{ invoice.balance_due|money:invoice.currency }}</td>
+        <td class="text-end">{% if invoice.can_be_paid %}<a class="btn btn-sm btn-primary" href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{% trans "Pay now" %}</a>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
 </div></section>
-{% endfor %}
+{% endif %}
+{% endwith %}
 
 <div class="row g-4">
   <div class="col-lg-7">

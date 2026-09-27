@@ -51,9 +51,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     email_verified_at = models.DateTimeField(null=True, blank=True)
 
-    # Two-factor sign-in (TOTP, Phase 16): mandatory for staff, optional for a customer. The secret is encrypted the
-    # same way a provider credential is (apps.core.crypto); it exists (non-blank) once someone has started setting
-    # up, but only counts as active once ``mfa_enabled`` is set, which happens after a code confirms it.
+    # Two-factor sign-in (TOTP, Phase 16): optional for everyone, staff and customers alike - someone turns it on
+    # themselves from their profile. The secret is encrypted the same way a provider credential is
+    # (apps.core.crypto); it exists (non-blank) once someone has started setting up, but only counts as active once
+    # ``mfa_enabled`` is set, which happens after a code confirms it.
     mfa_secret_encrypted = models.TextField(blank=True, editable=False)
     mfa_enabled = models.BooleanField(default=False, editable=False)
     mfa_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)

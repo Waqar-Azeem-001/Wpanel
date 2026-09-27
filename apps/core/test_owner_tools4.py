@@ -1,6 +1,7 @@
 """
-Phase 16 (security hardening): two-factor sign-in (TOTP), mandatory for staff and optional for a customer; account
-lockout beyond the API's per-IP rate limit; security response headers; and the API login carrying the same rules.
+Phase 16 (security hardening): two-factor sign-in (TOTP), optional for everyone (staff turn it on themselves from
+their profile, the same as a customer); account lockout beyond the API's per-IP rate limit; security response
+headers; and the API login carrying the same rules.
 """
 import time
 
@@ -30,8 +31,8 @@ def browser(user=None):
 
 @pytest.fixture
 def boss(make_user):
-    # This file is about two-factor sign-in itself, so its own fixtures start without it (unlike the global ``staff``
-    # fixture, which models an account that already completed the mandatory setup).
+    # This file is about two-factor sign-in itself, so its own fixtures start without it, even though the global
+    # ``staff`` fixture models an account that already turned it on.
     return make_user("super_admin@example.com", role=Role.SUPER_ADMIN, mfa_enabled=False)
 
 
@@ -254,15 +255,14 @@ def test_a_manager_cannot_reset_anyone_elses_two_factor_sign_in(manager, make_us
     assert other.mfa_enabled
 
 
-# --- Mandatory for staff, optional for a customer -----------------------------------------------------------------------------------
+# --- Optional for everyone: staff are never forced into it, but can turn it on the same way a customer can -------------------------
 
-def test_staff_without_it_are_sent_to_set_it_up_and_a_customer_never_is(staff, customer):
+def test_staff_without_it_reach_the_console_normally_the_same_as_a_customer(staff, customer):
     fresh_staff = staff(Role.SUPPORT_AGENT)
     fresh_staff.mfa_enabled = False
     fresh_staff.save(update_fields=["mfa_enabled"])
-    page = browser(fresh_staff).get(reverse("console:dashboard"), follow=True)
-    assert page.redirect_chain and page.redirect_chain[-1][0] == reverse("accounts:mfa_setup")
-    assert browser(customer).get(reverse("dashboard")).status_code in (200, 302)  # never redirected there
+    assert browser(fresh_staff).get(reverse("console:dashboard")).status_code == 200  # never sent to set it up
+    assert browser(customer).get(reverse("dashboard")).status_code in (200, 302)
 
 
 def test_once_set_up_staff_reach_the_console_normally(staff):
@@ -273,7 +273,7 @@ def test_once_set_up_staff_reach_the_console_normally(staff):
     assert browser(fresh_staff).get(reverse("console:dashboard")).status_code == 200
 
 
-def test_the_setup_page_itself_never_redirects_even_before_its_done(staff):
+def test_the_setup_page_is_reachable_to_opt_in_whenever_someone_wants_it(staff):
     fresh_staff = staff(Role.MANAGER)
     fresh_staff.mfa_enabled = False
     fresh_staff.save(update_fields=["mfa_enabled"])
@@ -384,3 +384,31 @@ def test_no_inline_event_handler_remains_now_that_script_src_has_no_unsafe_inlin
     pattern = re.compile(r"\bon(click|submit|change|load|error|input|keyup|keydown|mouseover)=", re.I)
     offenders = [str(p) for p in Path("templates").rglob("*.html") if pattern.search(p.read_text(encoding="utf-8"))]
     assert offenders == []
+
+
+# --- RBAC review (Phase 16 slice 2): route-inventory accuracy, and step-up re-authentication for the most sensitive actions ------------
+
+def test_the_route_inventory_resolves_every_staff_permission_alias_and_names_no_route_bare_public():
+    from apps.core.management.commands.route_inventory import collect
+
+    rows = collect()
+    staff_rows = [r for r in rows if r[0] == "Staff"]
+    assert len(staff_rows) > 50  # a sanity floor: the inventory actually walked the staff URLs
+    bare_public = [f"{name} {path}" for area, path, name, view, access in staff_rows if access == "public"]
+    assert bare_public == [], "a /staff/ route the inventory could not explain:\n" + "\n".join(bare_public)
+    by_name = {name: access for _area, _path, name, _view, access in staff_rows}
+    assert "perm: view_users" in by_name["console:staff_users"]  # was "public": portal_permission_required(VIEW_USERS)
+    assert "Super Admin only" in by_name["notifications_staff:templates"]  # was "public": a custom decorator, not perm()
+    assert "perm: view_support" in by_name["support_staff:departments"]  # was "public": portal_permission_required(VIEW)
+
+
+def test_permission_aliases_resolves_both_the_wrapped_and_the_bare_alias_style():
+    from apps.core.management.commands.route_inventory import permission_aliases
+
+    source = (
+        'VIEW = portal_permission_required(perm("view_x"))\n'
+        'A, B = perm("view_y"), perm("manage_y")\n'
+        'SOLO = perm("view_z")\n'
+    )
+    aliases = permission_aliases(source)
+    assert aliases["VIEW"] == ["view_x"] and aliases["A"] == ["view_y"] and aliases["B"] == ["manage_y"] and aliases["SOLO"] == ["view_z"]

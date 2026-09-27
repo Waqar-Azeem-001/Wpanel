@@ -707,13 +707,25 @@ All daily operations from the staff area. Django admin no longer needed for rout
 
 # PHASE 16 — SECURITY HARDENING 🟡
 
-> **Slice 1 delivered** (`docs/phase-16-gap-report.md`): two-factor sign-in (TOTP), mandatory for staff and optional
-> for customers, with recovery codes and a Super Admin reset; account lockout beyond the API rate limit; a Content
-> Security Policy and Permissions Policy. Everything else FOUND already in place (CSRF, secure sessions, rate
-> limiting, webhook signatures, API auth, open-redirect protection, audit coverage) is listed in that report, along
-> with what is deferred to a later slice (RBAC re-audit, "Login as Client", step-up re-authentication).
+> **Slice 1 delivered** (`docs/phase-16-gap-report.md`): two-factor sign-in (TOTP), optional for everyone, with
+> recovery codes and a Super Admin reset; account lockout beyond the API rate limit; a Content Security Policy and
+> Permissions Policy. Everything else FOUND already in place (CSRF, secure sessions, rate limiting, webhook
+> signatures, API auth, open-redirect protection, audit coverage) is listed in that report, along with what is
+> deferred to a later slice (RBAC re-audit, "Login as Client").
+>
+> **Slice 2 delivered** (same report, "Slice 2" section): an RBAC review - fixed the route inventory's own
+> under-reporting of a few genuinely-guarded `/staff/...` routes as "public" (a documentation-accuracy bug, not a
+> real gap), and flagged one vestigial permission (`manage_reports`, granted but checked by no view; reports are
+> read-only) for cleanup whenever `roles.py` is next touched. Deferred: "Login as Client" (no such feature exists to
+> gate).
+>
+> **Also in slice 2, tried and reverted the same day**: two-factor sign-in was briefly made mandatory for staff and a
+> step-up "confirm it's you" re-authentication was built for the four most sensitive staff actions. Both were tried
+> and found to interrupt routine staff work rather than read as a safeguard for a small, trusted team, so both were
+> removed - two-factor sign-in is optional for staff exactly as it is for a customer, and there is no re-confirmation
+> step. See the gap report's "Revised after this slice" note for the full reasoning.
 
-RBAC review, **MFA (TOTP) for staff mandatory, customers optional**, secure sessions, CSRF, rate limiting, account lockout beyond throttling, secure passwords, credential protection, server-side billing validation, webhook signature verification, API authentication, sensitive-action confirmation (confirmation modal component + re-authentication for the most sensitive actions), "Login as Client" audited with banner, security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy), open-redirect protection on every `next` parameter.
+RBAC review, **MFA (TOTP), optional for staff and customers alike**, secure sessions, CSRF, rate limiting, account lockout beyond throttling, secure passwords, credential protection, server-side billing validation, webhook signature verification, API authentication, sensitive-action confirmation (confirmation modal component), "Login as Client" audited with banner, security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy), open-redirect protection on every `next` parameter.
 
 **Audit:** authentication changes, security changes, user changes, product changes, price changes, invoice changes, payment verification, provisioning, suspension, termination, domain changes, admin actions.
 
