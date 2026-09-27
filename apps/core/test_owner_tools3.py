@@ -498,3 +498,14 @@ def test_the_alert_settings_page_offers_the_new_alerts_and_says_who_gets_them_by
     page = browser(boss).get(reverse("console:email_providers")).content.decode()
     assert "An invoice is issued, paid, refunded or cancelled" in page and "An order is activated or cancelled" in page
     assert "Super Admin" in page
+
+
+# --- The KPI strip never ends in a blank box (E11) ------------------------------------------------------------------------------------
+
+def test_the_kpi_strip_is_flex_so_a_short_last_row_fills_the_width():
+    from pathlib import Path
+
+    css = Path("static/css/shell.css").read_text(encoding="utf-8")
+    assert ".kpi-strip { display: flex; flex-wrap: wrap;" in css
+    assert ".kpi { flex: 1 1 150px;" in css
+    assert "grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));" not in css  # the old grid left the trailing cells blank
