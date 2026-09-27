@@ -1,0 +1,140 @@
+/*
+ * The looks (Phase E9). The portal ships three ready-made brands and a custom one. Each look is a set of tokens (colours, type, corners,
+ * shadows) plus the few shapes that are not tokens (the header and the footer). "signature" is the base design in theme.css and shell.css and needs
+ * nothing here; "heritage" and "aura" change it. The page carries the look as <html data-look="...">, and a custom brand borrows one of them.
+ * Light and dark are handled together: colours are set for data-bs-theme="light" and "dark" separately, shapes and type for both.
+ */
+@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("../vendor/fonts/fraunces-latin-wght-normal.woff2") format("woff2-variations"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("../vendor/fonts/outfit-latin-wght-normal.woff2") format("woff2-variations"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+
+/* The deep tone (hero band, footer) is the brand colour taken down to near black, so every look and every custom colour has its own. */
+html[data-look] { --navy: color-mix(in srgb, var(--brand-primary) 32%, #04060b); --navy-2: color-mix(in srgb, var(--brand-primary) 48%, #04060b); }
+html[data-look] .app-footer.site-footer { --foot-bg: color-mix(in srgb, var(--brand-primary) 24%, #05070c); }
+
+/* =============================== HERITAGE: classic and calm ====================================================================== */
+html[data-look="heritage"] {
+  --font-heading: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --radius-panel: 4px; --radius-button: 3px; --radius-input: 3px; --radius-modal: 6px;
+}
+html[data-look="heritage"][data-bs-theme="light"] {
+  --bg: #f6f3ec; --surface: #fffdf9; --surface-2: #f1ede3; --elevated: #fffdf9; --text: #1c231f; --muted: #5d665f; --border: #e2dccd; --border-strong: #cdc5b1;
+}
+html[data-look="heritage"][data-bs-theme="dark"] {
+  --bg: #0e120f; --surface: #151a16; --surface-2: #1b221d; --elevated: #1b221d; --text: #eeeadf; --muted: #a3a99f; --border: #252e27; --border-strong: #36423a;
+}
+html[data-look="heritage"] :is(h1, h2, h3, .page-head > h1, .shop-title, .auth-card h1, .foot-cta h2, .look-name, .hero-title) { font-family: var(--font-heading); font-weight: 500; letter-spacing: 0; }
+html[data-look="heritage"] .page-head > h1 { font-size: 1.85rem; }
+html[data-look="heritage"] :is(.card, .shop-card, .kpi-strip, .panel, .help-card, .cat-tile, .opt-card, .upsell-box, .search-line, .cat-nav, .help-banner, .auth-card, .table-responsive, .plan-card, .quick) { border-radius: 5px; }
+html[data-look="heritage"] .shop-card, html[data-look="heritage"] .auth-card { border-radius: 6px; }
+html[data-look="heritage"] .chip, html[data-look="heritage"] .chrome-icon, html[data-look="heritage"] .chrome-search { border-radius: 3px; }
+html[data-look="heritage"] .chrome-search { border-radius: 4px; }
+html[data-look="heritage"] .btn { letter-spacing: .02em; }
+html[data-look="heritage"] .chrome { border-bottom: 1px solid var(--border); box-shadow: inset 0 3px 0 var(--brand-accent); }
+html[data-look="heritage"] .chrome-bar { padding-top: 3px; }
+html[data-look="heritage"] .brand-text strong { font-family: var(--font-heading); font-weight: 600; font-size: 1.02rem; letter-spacing: 0; }
+html[data-look="heritage"] .topnav-link { letter-spacing: .01em; }
+html[data-look="heritage"] .topnav-link.is-current::after { height: 2px; background: var(--brand-accent); }
+html[data-look="heritage"] .app-footer.site-footer { --foot-text: #b4c3ba; }
+html[data-look="heritage"] .foot-cta { background: linear-gradient(100deg, var(--brand-primary-dark), var(--brand-primary)); border-bottom: 3px solid var(--brand-accent); }
+html[data-look="heritage"] .foot-col h2::after { background: var(--brand-accent); }
+html[data-look="heritage"] .foot-contact .bi, html[data-look="heritage"] .foot-chip .bi { color: var(--brand-accent); }
+html[data-look="heritage"] .foot-chip { border-radius: 3px; }
+html[data-look="heritage"] .app-footer.site-footer .foot-top, html[data-look="heritage"] .foot-theme { border-radius: 3px; }
+html[data-look="heritage"] .foot-theme button { border-radius: 2px; }
+html[data-look="heritage"] .auth-center .auth-panel { background: radial-gradient(760px 380px at 50% -8%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%), var(--bg); }
+html[data-look="heritage"] .auth-card { box-shadow: 0 1px 0 var(--border), 0 24px 48px rgba(28, 35, 31, .07); }
+html[data-look="heritage"] .btn-primary { --bs-btn-hover-bg: color-mix(in srgb, var(--brand-primary) 82%, #000); }
+
+/* ================================= AURA: soft and refined ======================================================================== */
+html[data-look="aura"] {
+  --font-ui: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif; --bs-body-font-size: .92rem;
+  --radius-panel: 20px; --radius-button: 999px; --radius-input: 14px; --radius-modal: 26px;
+  --shadow-panel: 0 10px 34px rgba(106, 44, 145, .08); --shadow-hover: 0 14px 40px rgba(106, 44, 145, .16);
+  --topbar-h: 4.4rem;
+}
+html[data-look="aura"][data-bs-theme="light"] {
+  --bg: #f7f3fb; --surface: #ffffff; --surface-2: #f3edf9; --elevated: #ffffff; --text: #241a30; --muted: #6c6179; --border: #eadff5; --border-strong: #d8c8ea;
+}
+html[data-look="aura"][data-bs-theme="dark"] {
+  --bg: #130c1b; --surface: #1b1225; --surface-2: #231830; --elevated: #231830; --text: #f1ebf8; --muted: #a99eb8; --border: #2f2242; --border-strong: #44325c;
+  --shadow-panel: 0 10px 34px rgba(0, 0, 0, .35);
+}
+html[data-look="aura"] :is(h1, h2, h3, .page-head > h1, .shop-title) { font-weight: 500; letter-spacing: -.01em; }
+html[data-look="aura"] .page-head > h1 { font-size: 1.75rem; font-weight: 500; }
+html[data-look="aura"] :is(.card, .kpi-strip, .panel, .help-card, .cat-tile, .opt-card, .upsell-box, .search-line, .cat-nav, .help-banner, .table-responsive, .plan-card, .quick) { border-radius: 20px; box-shadow: var(--shadow-panel); }
+html[data-look="aura"] .shop-card { border-radius: 24px; box-shadow: var(--shadow-panel); }
+html[data-look="aura"] .auth-card { border-radius: 30px; box-shadow: 0 24px 60px rgba(106, 44, 145, .14); }
+html[data-look="aura"] .auth-alt { border-radius: 0 0 30px 30px; }
+html[data-look="aura"] .chip { border-radius: 50%; }
+html[data-look="aura"] :is(.check-pill, .look-card) { border-radius: 16px; }
+html[data-look="aura"] .btn { font-weight: 500; --bs-btn-padding-x: 1.25rem; }
+html[data-look="aura"] .btn-sm { --bs-btn-padding-x: .95rem; }
+html[data-look="aura"] .status-badge, html[data-look="aura"] .badge { border-radius: 999px; }
+/* the header floats as a rounded bar (wide screens; a phone keeps the plain bar and the sheet) */
+@media (min-width: 992px) {
+  html[data-look="aura"] .chrome { padding: .7rem var(--gutter) 0; background: linear-gradient(var(--bg) 62%, transparent); border: 0; }
+  html[data-look="aura"] .chrome-bar { height: 3.5rem; padding: 0 1rem 0 1.1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; box-shadow: var(--shadow-panel); }
+  html[data-look="aura"] .topnav-list, html[data-look="aura"] .topnav-item { height: 3.5rem; }
+  html[data-look="aura"] .topnav-item { display: flex; align-items: center; }
+  html[data-look="aura"] .topnav-link { height: 2.3rem; padding: 0 1rem; border-radius: 999px; }
+  html[data-look="aura"] .topnav-link:hover, html[data-look="aura"] .topnav-link[aria-expanded="true"] { background: var(--surface-2); }
+  html[data-look="aura"] .topnav-link.is-current { background: var(--accent-subtle); color: var(--accent-ink); }
+  html[data-look="aura"] .topnav-link.is-current::after { display: none; }
+  html[data-look="aura"] .groupnav { background: transparent; border: 0; }
+  html[data-look="aura"] .groupnav a.is-current { border-bottom-color: var(--brand-accent); }
+}
+html[data-look="aura"] .brand-text strong { font-weight: 600; letter-spacing: -.01em; }
+html[data-look="aura"] .chrome-search { border-radius: 999px; }
+html[data-look="aura"] .app-footer.site-footer { --foot-text: #c0b3d3; border-radius: 34px 34px 0 0; }
+html[data-look="aura"] .foot-cta { background: linear-gradient(100deg, var(--brand-primary-dark), var(--brand-primary) 55%, color-mix(in srgb, var(--brand-accent) 55%, var(--brand-primary))); }
+html[data-look="aura"] .foot-col h2::after { background: var(--brand-accent); width: 2.2rem; border-radius: 4px; }
+html[data-look="aura"] .foot-contact .bi, html[data-look="aura"] .foot-chip .bi { color: var(--brand-accent); }
+html[data-look="aura"] .auth-center .auth-panel { background: radial-gradient(640px 420px at 12% 8%, color-mix(in srgb, var(--brand-accent) 26%, transparent), transparent 70%), radial-gradient(700px 460px at 92% 96%, color-mix(in srgb, var(--brand-primary) 18%, transparent), transparent 70%), var(--bg); }
+html[data-look="aura"] .canvas .nav-tabs { border-radius: 999px; }
+
+/* ==================== the choices on the Brand page (each card draws its own look, whatever look is active) ==================== */
+.look-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .9rem; }
+.look-card { position: relative; display: flex; flex-direction: column; gap: .35rem; padding: .7rem .7rem .85rem; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); cursor: pointer; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.look-card:hover { border-color: var(--border-strong); }
+.look-card:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.look-card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.look-name { display: flex; align-items: center; justify-content: space-between; margin-top: .3rem; font-weight: 650; font-size: 1rem; }
+.look-tick { display: none; color: var(--accent); }
+.look-card:has(input:checked) .look-tick { display: inline; }
+.look-tag { font-size: .8rem; line-height: 1.4; color: var(--muted); }
+.look-swatches { display: flex; gap: .35rem; margin-top: .15rem; }
+.look-swatches i { width: 1.15rem; height: 1.15rem; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .15); }
+.look-preview { position: relative; display: flex; flex-direction: column; height: 8.4rem; border-radius: 10px; overflow: hidden; border: 1px solid rgba(0, 0, 0, .08); }
+.lp-bar { display: flex; align-items: center; gap: .25rem; height: 1.5rem; padding: 0 .55rem; flex: none; }
+.lp-bar i { width: .38rem; height: .38rem; border-radius: 50%; background: currentColor; opacity: .3; }
+.lp-body { flex: 1; display: flex; align-items: center; gap: .6rem; padding: 0 .7rem; }
+.lp-body b { font-size: 1.7rem; line-height: 1; font-weight: 600; }
+.lp-lines { display: grid; gap: .28rem; flex: 1; }
+.lp-lines i { display: block; height: .28rem; border-radius: 2px; background: currentColor; opacity: .18; }
+.lp-lines i:first-child { width: 90%; }
+.lp-lines i:last-child { width: 60%; }
+.lp-btn { width: 2.3rem; height: .95rem; }
+.lp-foot { height: 1.2rem; flex: none; }
+.look-preview.is-signature { background: #f1f3f6; color: #0e1116; }
+.is-signature .lp-bar { background: #fff; border-bottom: 1px solid #e6e8ec; box-shadow: inset 0 -2px 0 #2a6af2; }
+.is-signature .lp-body b { font-family: "Plus Jakarta Sans", system-ui, sans-serif; color: #2a6af2; }
+.is-signature .lp-btn { background: #2a6af2; border-radius: 6px; }
+.is-signature .lp-foot { background: #0b1b3f; }
+.look-preview.is-heritage { background: #f6f3ec; color: #1c231f; }
+.is-heritage .lp-bar { background: #fffdf9; border-bottom: 1px solid #e2dccd; box-shadow: inset 0 3px 0 #c9a24a; }
+.is-heritage .lp-body b { font-family: "Fraunces", Georgia, serif; font-weight: 500; color: #0f5c46; }
+.is-heritage .lp-btn { background: #0f5c46; border-radius: 2px; }
+.is-heritage .lp-foot { background: #0b2a20; border-top: 2px solid #c9a24a; }
+.look-preview.is-aura { background: #f7f3fb; color: #241a30; }
+.is-aura .lp-bar { margin: .4rem .5rem 0; padding: 0 .6rem; height: 1.3rem; background: #fff; border-radius: 999px; box-shadow: 0 4px 12px rgba(106, 44, 145, .12); }
+.is-aura .lp-body b { font-family: "Outfit", system-ui, sans-serif; font-weight: 500; color: #6a2c91; }
+.is-aura .lp-btn { background: #6a2c91; border-radius: 999px; }
+.is-aura .lp-foot { background: #241436; border-radius: 12px 12px 0 0; }
+.look-preview.is-custom { background: linear-gradient(135deg, var(--surface-2), var(--surface)); align-items: center; justify-content: center; }
+.lp-custom { display: grid; place-items: center; margin: auto; width: 3.4rem; height: 3.4rem; border-radius: 50%; background: var(--accent-subtle); color: var(--accent-ink); font-size: 1.6rem; }
+.look-custom { display: none; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+form:has(input[name="theme"][value="custom"]:checked) .look-custom { display: flex; }
+.logo-previews figure.on-dark img { background: none; padding: 0; }

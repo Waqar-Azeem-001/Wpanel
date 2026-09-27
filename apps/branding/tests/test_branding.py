@@ -393,3 +393,92 @@ def test_the_webhostera_seed_carries_its_five_policy_pages():
     assert [item["title"] for item in links] == ["Acceptable Use Policy", "Terms of Services", "Refund Policy", "Shipping Policy", "Return Policy"]
     assert all(item["url"].startswith("https://webhostera.pk/") for item in links)
     assert services.clean_policy_links(links) == links
+
+
+# --- The looks: three ready-made brands and a custom one ---------------------------------------------------------------------------------
+
+def brand_post(**extra):
+    data = {"site_name": "Acme", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "footer_text": "",
+            "date_format": "%d %b %Y", "money_format": "code_before"}
+    data.update(extra)
+    return data
+
+
+def test_out_of_the_box_the_colours_typed_in_apply_and_a_look_replaces_them(admin):
+    assert services.get().theme == "custom" and services.get().primary == "#2459d6" and services.get().look == "signature"
+    for key, look in services.LOOKS.items():
+        services.save_settings(admin, values={"theme": key})
+        brand = services.get()
+        assert (brand.theme, brand.look, brand.primary, brand.accent) == (key, key, look["primary"], look["accent"])
+    services.save_settings(admin, values={"theme": "custom", "custom_look": "aura", "primary_color": "#7a1f3d", "accent_color": "#f2c94c"})
+    brand = services.get()
+    assert (brand.theme, brand.look, brand.primary, brand.accent) == ("custom", "aura", "#7a1f3d", "#f2c94c")
+
+
+def test_every_ready_made_look_passes_the_contrast_rules_and_is_really_different():
+    for key, look in services.LOOKS.items():
+        assert services.contrast_ratio(look["primary"], "#ffffff") >= services.MIN_CONTRAST, key
+        assert max(services.contrast_ratio(look["accent"], "#ffffff"), services.contrast_ratio(look["accent"], services.DARK_TEXT)) >= services.MIN_CONTRAST, key
+    assert len({look["primary"] for look in services.LOOKS.values()}) == 3 and len({look["accent"] for look in services.LOOKS.values()}) == 3
+
+
+def test_typing_colours_in_while_a_look_is_chosen_means_custom_colours_on_that_look(admin):
+    services.save_settings(admin, values={"theme": "heritage"})
+    services.save_settings(admin, values={"primary_color": "#123456"})  # what an API call or an old form does
+    brand = services.get()
+    assert (brand.theme, brand.look, brand.primary) == ("custom", "heritage", "#123456")
+
+
+def test_an_unknown_look_is_refused(admin):
+    with pytest.raises(ValidationError):
+        services.save_settings(admin, values={"theme": "neon"})
+    with pytest.raises(ValidationError):
+        services.save_settings(admin, values={"custom_look": "neon"})
+
+
+@pytest.mark.parametrize("theme,expected", [("signature", "signature"), ("heritage", "heritage"), ("aura", "aura")])
+def test_the_page_carries_the_look_and_the_brand_colours_come_after_the_stylesheets_they_override(client, admin, theme, expected):
+    services.save_settings(admin, values={"theme": theme})
+    page = client.get(reverse("accounts:login")).content.decode()
+    assert f'data-look="{expected}"' in page
+    assert page.index("css/theme.css") < page.index("css/looks.css") < page.index("/brand.css?v=")  # the colours must win over the defaults
+    css = client.get(reverse("brand_css")).content.decode()
+    assert f"--brand-primary: {services.LOOKS[expected]['primary']}" in css and f"--brand-accent: {services.LOOKS[expected]['accent']}" in css
+
+
+def test_a_custom_brand_borrows_the_structure_of_a_look(client, admin):
+    services.save_settings(admin, values={"theme": "custom", "custom_look": "heritage", "primary_color": "#7a1f3d"})
+    page = client.get(reverse("accounts:login")).content.decode()
+    assert 'data-look="heritage"' in page and "--brand-primary: #7a1f3d" in client.get(reverse("brand_css")).content.decode()
+
+
+def test_the_brand_page_shows_the_looks_and_saves_the_choice(client, admin):
+    client.force_login(admin)
+    page = client.get(reverse("brand_staff:settings")).content.decode()
+    for name in ("Signature", "Heritage", "Aura", "Custom"):
+        assert f'<span class="look-name">{name}' in page
+    assert 'name="theme" value="custom" checked' in page and "Your own colours" in page
+    saved = client.post(reverse("brand_staff:settings"), brand_post(theme="aura"))
+    assert saved.status_code == 302 and services.get().theme == "aura"
+    assert 'name="theme" value="aura" checked' in client.get(reverse("brand_staff:settings")).content.decode()
+    kept = client.post(reverse("brand_staff:settings"), brand_post())  # a post that does not mention the look keeps it
+    assert kept.status_code == 302 and services.get().theme == "aura"
+    bad = client.post(reverse("brand_staff:settings"), brand_post(theme="neon"))
+    assert bad.status_code == 200 and services.get().theme == "aura"
+
+
+def test_the_look_stylesheet_and_fonts_are_shipped_and_every_look_is_written_for_both_themes():
+    from pathlib import Path
+
+    css = Path("static/css/looks.css").read_text(encoding="utf-8")
+    for look in ("heritage", "aura"):
+        assert f'html[data-look="{look}"][data-bs-theme="light"]' in css and f'html[data-look="{look}"][data-bs-theme="dark"]' in css
+    for font in ("fraunces-latin-wght-normal.woff2", "outfit-latin-wght-normal.woff2"):
+        assert font in css and Path("static/vendor/fonts", font).read_bytes()[:4] == b"wOF2"
+
+
+def test_pdfs_and_emails_take_the_colour_of_the_look(admin):
+    from apps.notifications import services as notifications
+
+    services.save_settings(admin, values={"theme": "heritage"})
+    assert notifications._brand_context()["brand"].primary == services.LOOKS["heritage"]["primary"]

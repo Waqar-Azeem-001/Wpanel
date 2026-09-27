@@ -1,5 +1,5 @@
 {% load static i18n %}<!doctype html>
-<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-bs-theme="light">
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-bs-theme="light" data-look="{{ brand.look|default:'signature' }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,9 +8,11 @@
   <script src="{% static 'js/theme.js' %}"></script>
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/font/bootstrap-icons.min.css' %}">
-  <link rel="stylesheet" href="{% url 'brand_css' %}?v={{ brand.version }}">
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
   <link rel="stylesheet" href="{% static 'css/shell.css' %}">
+  <link rel="stylesheet" href="{% static 'css/looks.css' %}">
+  {# The brand colours come last, so they override the defaults written in theme.css (they used to come first and lose). #}
+  <link rel="stylesheet" href="{% url 'brand_css' %}?v={{ brand.version }}">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>

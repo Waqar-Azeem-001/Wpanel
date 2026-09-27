@@ -21,11 +21,22 @@ class BrandForm(forms.ModelForm):
                                 widget=forms.ClearableFileInput(attrs={"accept": "image/png,image/x-icon,image/jpeg,image/gif,image/webp"}))
     remove_mark_dark = forms.BooleanField(required=False, label="Remove the current icon for dark backgrounds")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("theme", "custom_look"):  # a post that does not mention them keeps what is saved
+            self.fields[name].required = False
+
+    def clean_theme(self):
+        return self.cleaned_data.get("theme") or self.instance.theme or "custom"
+
+    def clean_custom_look(self):
+        return self.cleaned_data.get("custom_look") or self.instance.custom_look or "signature"
+
     class Meta:
         model = BrandSettings
         fields = ["site_name", "primary_color", "accent_color", "support_email", "footer_text", "date_format",
-                  "money_format"]
+                  "money_format", "theme", "custom_look"]
         widgets = {"primary_color": forms.TextInput(attrs={"type": "color"}),
                    "accent_color": forms.TextInput(attrs={"type": "color"})}
-        labels = {"site_name": "Company / site name", "primary_color": "Primary colour", "accent_color": "Accent colour",
+        labels = {"theme": "Look", "custom_look": "Type, corners and header", "site_name": "Company / site name", "primary_color": "Primary colour", "accent_color": "Accent colour",
                   "date_format": "How dates are written", "money_format": "How money is written"}

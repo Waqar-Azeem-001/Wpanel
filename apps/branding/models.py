@@ -43,6 +43,10 @@ class MenuSetting(models.Model):
         return f"{self.area}:{self.key}"
 
 
+LOOKS = (("signature", "Signature"), ("heritage", "Heritage"), ("aura", "Aura"))
+THEMES = LOOKS + (("custom", "Custom"),)
+
+
 class BrandSettings(models.Model):
     """
     Single row (pk=1): how the portal presents itself. Brand is configuration, never hard-coded (roadmap Rule 6): name,
@@ -54,6 +58,10 @@ class BrandSettings(models.Model):
                                      help_text="Buttons, links and highlights. Must be dark enough for white text.")
     accent_color = models.CharField(max_length=7, default="#1f7a4d", validators=[validate_hex],
                                     help_text="Highlights and call-to-action buttons; white or dark text is chosen to suit it.")
+    # The look: a ready-made brand (its own colours, type, corners and header), or "custom": your own colours on one of the looks.
+    theme = models.CharField(max_length=12, choices=THEMES, default="custom")
+    custom_look = models.CharField(max_length=12, choices=LOOKS, default="signature",
+                                   help_text="With your own colours: the type, corners and header of this look.")
     support_email = models.EmailField(blank=True)
     footer_text = models.CharField(max_length=300, blank=True)
     date_format = models.CharField(max_length=12, choices=DATE_FORMATS, default="%d %b %Y")

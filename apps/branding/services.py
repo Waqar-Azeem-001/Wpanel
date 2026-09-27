@@ -30,7 +30,17 @@ logger = logging.getLogger(__name__)
 CACHE_KEY = "branding.settings.v1"
 MENU_CACHE_KEY = "branding.menu.v1"
 TEXT_FIELDS = ("site_name", "primary_color", "accent_color", "support_email", "footer_text", "date_format",
-               "money_format")
+               "money_format", "theme", "custom_look")
+# The ready-made looks: each has its own colours, type, corners and header (see static/css/looks.css). "custom" keeps the colours typed in
+# the settings and borrows the structure of one of these.
+LOOKS = {
+    "signature": {"label": "Signature", "primary": "#2a6af2", "accent": "#c8fc35",
+                  "tagline": "Modern and confident. Royal blue with a lime highlight, crisp corners, a bright header."},
+    "heritage": {"label": "Heritage", "primary": "#0f5c46", "accent": "#c9a24a",
+                 "tagline": "Classic and calm. Deep green and warm gold on ivory, serif headings, fine hairlines."},
+    "aura": {"label": "Aura", "primary": "#6a2c91", "accent": "#f0a8c8",
+             "tagline": "Soft and refined. Plum and rose on lavender, rounded shapes, a floating header."},
+}
 MIN_CONTRAST = 4.5
 IMAGE_LIMITS = {"logo": (512 * 1024, 2048), "favicon": (128 * 1024, 512), "logo_dark": (512 * 1024, 2048),
                 "mark_dark": (128 * 1024, 512)}  # (bytes, longest side in pixels)
@@ -94,21 +104,29 @@ class Brand:
     has_logo_dark: bool = False
     has_mark_dark: bool = False
     policy_links: tuple = ()
+    theme: str = "signature"
+    look: str = "signature"  # the structure in use: the ready-made look, or the one a custom brand borrows
 
 
 def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=False):
-    primary = row["primary_color"]
+    theme = row.get("theme") or "custom"
+    if theme in LOOKS:  # a ready-made look brings its own colours; "custom" keeps the ones typed in
+        primary, accent, look = LOOKS[theme]["primary"], LOOKS[theme]["accent"], theme
+    else:
+        primary, accent, look = row["primary_color"], row["accent_color"], row.get("custom_look") or "signature"
+        theme = "custom"
     return Brand(
         name=row["site_name"] or settings.SITE_NAME, primary=primary, primary_dark=mix(primary, "#000000", 0.18),
         primary_rgb=", ".join(str(c) for c in _rgb(primary)), primary_subtle=mix(primary, "#ffffff", 0.9),
         primary_light_rgb=", ".join(str(c) for c in _rgb(mix(primary, "#ffffff", 0.45))),
-        accent=row["accent_color"], accent_text=readable_text(row["accent_color"]), support_email=row["support_email"], footer_text=row["footer_text"],
+        accent=accent, accent_text=readable_text(accent), support_email=row["support_email"], footer_text=row["footer_text"],
         date_format=row["date_format"], money_format=row["money_format"], has_logo=has_logo,
         has_favicon=has_favicon, version=row["version"], has_logo_dark=has_logo_dark, has_mark_dark=has_mark_dark,
-        policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()))
+        policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()), theme=theme, look=look)
 
 
-DEFAULTS = {"site_name": "", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "",
+DEFAULTS = {"site_name": "", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "theme": "custom",
+            "custom_look": "signature",
             "footer_text": "", "date_format": "%d %b %Y", "money_format": "code_before", "version": 1}
 
 
@@ -232,6 +250,9 @@ def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=Fa
     row.full_clean()
     _check_colors({f: getattr(row, f) for f in ("primary_color", "accent_color")})
     changed = [f for f in TEXT_FIELDS if before[f] != getattr(row, f)]
+    if "theme" not in values and row.theme in LOOKS and any(c in values and getattr(row, c) != before[c] for c in ("primary_color", "accent_color")):
+        row.custom_look, row.theme = row.theme, "custom"  # typing colours in (say through the API) means your own colours, on the look in use
+        changed.append("theme")
     for kind, data, remove in (("logo", logo, remove_logo), ("favicon", favicon, remove_favicon),
                                ("logo_dark", logo_dark, remove_logo_dark), ("mark_dark", mark_dark, remove_mark_dark)):
         if data:

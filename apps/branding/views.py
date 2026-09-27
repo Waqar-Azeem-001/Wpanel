@@ -94,7 +94,9 @@ def settings_page(request):
     current = services.get()
     policy_rows = posted_policy_links(request) if request.method == "POST" and "policy_form" in request.POST else [
         {"title": title, "url": url} for title, url in current.policy_links]
-    return render(request, "branding/settings.html", {"form": form, "can_manage": can_manage, "current": current,
+    looks = [{"key": key, **look} for key, look in services.LOOKS.items()]
+    return render(request, "branding/settings.html", {"form": form, "can_manage": can_manage, "current": current, "looks": looks,
+                                                      "chosen_theme": form["theme"].value() or "custom",
                                                       "policy_rows": policy_rows, "section": "brand"})
 
 

@@ -1,26 +1,84 @@
 {% extends "base.html" %}
 {% block title %}Brand · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide shop-page{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Brand</h1><p class="page-sub">The name, logo and colours customers see.</p></div>
-<p class="text-secondary">How the portal presents itself: name, logo, favicon, colours, support email, footer and how dates and money are written. Changes apply everywhere at once, including emails and the mobile API.</p>
-<form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
-  <section class="card"><div class="card-body">
-    <h2>Identity</h2>
+<div class="page-head"><h1>Brand</h1><p class="page-sub">How the portal looks and what it is called. Changes apply everywhere at once: the store, the client area, emails, PDFs and the mobile API.</p></div>
+<form method="post" enctype="multipart/form-data" novalidate class="shop-main">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{% for e in form.non_field_errors %}<p class="mb-0">{{ e }}</p>{% endfor %}</div>{% endif %}
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-palette"></i></span><div class="grow"><h2 class="shop-title">Look</h2><p class="text-secondary mb-0">Choose a ready-made look, each with its own colours, type, corners and header, or use your own colours.</p></div></header>
+    <div class="look-grid" role="radiogroup" aria-label="Look">
+      {% for look in looks %}
+      <label class="look-card{% if chosen_theme == look.key %} is-chosen{% endif %}">
+        <input class="visually-hidden" type="radio" name="theme" value="{{ look.key }}"{% if chosen_theme == look.key %} checked{% endif %}{% if not can_manage %} disabled{% endif %}>
+        <span class="look-preview is-{{ look.key }}" aria-hidden="true">
+          <span class="lp-bar"><i></i><i></i><i></i></span>
+          <span class="lp-body"><b>Aa</b><span class="lp-lines"><i></i><i></i></span><span class="lp-btn"></span></span>
+          <span class="lp-foot"></span>
+        </span>
+        <span class="look-name">{{ look.label }} <i class="bi bi-check-circle-fill look-tick" aria-hidden="true"></i></span>
+        <span class="look-tag">{{ look.tagline }}</span>
+        <span class="look-swatches"><i style="background:{{ look.primary }}"></i><i style="background:{{ look.accent }}"></i></span>
+      </label>
+      {% endfor %}
+      <label class="look-card look-card-custom{% if chosen_theme == 'custom' %} is-chosen{% endif %}">
+        <input class="visually-hidden" type="radio" name="theme" value="custom"{% if chosen_theme == 'custom' %} checked{% endif %}{% if not can_manage %} disabled{% endif %}>
+        <span class="look-preview is-custom" aria-hidden="true"><span class="lp-custom"><i class="bi bi-sliders2"></i></span></span>
+        <span class="look-name">Custom <i class="bi bi-check-circle-fill look-tick" aria-hidden="true"></i></span>
+        <span class="look-tag">Your own two colours, on the type, corners and header of any look.</span>
+        <span class="look-swatches"><i style="background:{{ form.primary_color.value }}"></i><i style="background:{{ form.accent_color.value }}"></i></span>
+      </label>
+    </div>
+    {% if form.theme.errors %}<p class="text-danger small">{{ form.theme.errors.0 }}</p>{% endif %}
+    <div class="look-custom row g-3">
+      <div class="col-12"><h3 class="h6 mb-0">Your own colours</h3></div>
+      {% include "orders/_field.html" with field=form.primary_color %}
+      {% include "orders/_field.html" with field=form.accent_color %}
+      {% include "orders/_field.html" with field=form.custom_look wide=True %}
+    </div>
+  </section>
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-building"></i></span><div class="grow"><h2 class="shop-title">Identity</h2><p class="text-secondary mb-0">The name customers see, and where the footer and emails point them.</p></div></header>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.site_name %}
+      {% include "orders/_field.html" with field=form.support_email %}
+      {% include "orders/_field.html" with field=form.footer_text wide=True %}
+      {% include "orders/_field.html" with field=form.date_format %}
+      {% include "orders/_field.html" with field=form.money_format %}
+    </div>
+  </section>
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-image"></i></span><div class="grow"><h2 class="shop-title">Logos</h2><p class="text-secondary mb-0">A logo for light backgrounds and a light one for dark backgrounds; the small icon is the favicon.</p></div></header>
     {% if current.has_logo or current.has_logo_dark %}<div class="logo-previews">
       {% if current.has_logo %}<figure class="on-light"><img class="brand-logo-preview" src="{% url 'brand_logo' %}?v={{ current.version }}" alt="Current logo"><figcaption>On a light background</figcaption></figure>{% endif %}
       {% if current.has_logo_dark %}<figure class="on-dark"><img class="brand-logo-preview" src="{% url 'brand_logo_dark' %}?v={{ current.version }}" alt="Current logo for dark backgrounds"><figcaption>On a dark background</figcaption></figure>{% endif %}
     </div>{% endif %}
-    {% include "partials/form.html" %}
-    <h2 class="mt-4">Policy pages</h2>
-    <p class="text-secondary">Links to your terms, refund policy and so on. They appear in the footer, on sign in and create account, and at checkout. Each opens in a new tab.</p>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.logo %}
+      {% include "orders/_field.html" with field=form.remove_logo %}
+      {% include "orders/_field.html" with field=form.logo_dark %}
+      {% include "orders/_field.html" with field=form.remove_logo_dark %}
+      {% include "orders/_field.html" with field=form.favicon %}
+      {% include "orders/_field.html" with field=form.remove_favicon %}
+      {% include "orders/_field.html" with field=form.mark_dark %}
+      {% include "orders/_field.html" with field=form.remove_mark_dark %}
+    </div>
+  </section>
+
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span><div class="grow"><h2 class="shop-title">Policy pages</h2><p class="text-secondary mb-0">Links to your terms, refund policy and so on. They appear in the footer, on sign in and create account, and at checkout, and open in a new tab.</p></div></header>
     <input type="hidden" name="policy_form" value="1">
     <div data-rows>
       <div data-rows-body>{% for row in policy_rows %}{% include "branding/_policy_row.html" with title=row.title url=row.url %}{% endfor %}</div>
       <template data-rows-template>{% include "branding/_policy_row.html" with title="" url="" %}</template>
       {% if can_manage %}<button class="btn btn-outline-primary btn-sm mt-1" type="button" data-rows-add><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a policy link</button>{% endif %}
     </div>
-    {% if can_manage %}<div class="d-flex flex-wrap gap-2 align-items-center mt-3"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
-    {% else %}<p class="text-secondary">You can view these settings but not change them.</p>{% endif %}</div>
-</section>
+  </section>
+
+  {% if can_manage %}<div class="d-flex justify-content-end"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
+  {% else %}<p class="text-secondary">You can view these settings but not change them.</p>{% endif %}
 </form>
 {% endblock %}
