@@ -159,7 +159,8 @@ def test_the_customer_strip_lists_only_customer_pages(world):
 
 def test_the_brand_in_the_header_is_the_mark_and_the_name(world):
     html = page_of(world.people["manager"], "console:dashboard").content.decode().split('<a class="chrome-brand"')[1].split("</a>")[0]
-    assert 'class="brand-mark"' in html or 'class="brand-mark is-letter"' in html or 'class="brand-logo"' in html
+    assert any(marker in html for marker in ('class="brand-mark"', 'class="brand-mark mark-on-light"', 'class="brand-mark is-letter"', 'class="brand-logo"'))
+    assert 'class="brand-mark mark-on-dark"' in html  # the world has a light icon for the dark theme too
     assert "Staff console" in html and 'class="brand-text"' in html
 
 
