@@ -63,6 +63,7 @@
 
   <div>
     <button class="btn btn-primary btn-lg w-100 place-order" type="submit"{% if not methods %} disabled{% endif %}>{% if guest %}{% trans "Create my account and place the order" %}{% else %}{% trans "Place order" %}{% endif %}</button>
+    {% if brand.policy_links %}<p class="small text-secondary mt-2 mb-0">{% trans "By placing an order you agree to our policies:" %} {% include "components/policy_links.html" with inline=True %}</p>{% endif %}
     {% if guest %}<p class="small text-secondary mt-2 mb-0">{% trans "By placing the order you create an account and agree to our terms of service and privacy policy." %}</p>{% endif %}
   </div>
   </form>

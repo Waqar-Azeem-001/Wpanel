@@ -93,6 +93,7 @@ class Brand:
     version: int
     has_logo_dark: bool = False
     has_mark_dark: bool = False
+    policy_links: tuple = ()
 
 
 def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=False):
@@ -103,7 +104,8 @@ def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=F
         primary_light_rgb=", ".join(str(c) for c in _rgb(mix(primary, "#ffffff", 0.45))),
         accent=row["accent_color"], accent_text=readable_text(row["accent_color"]), support_email=row["support_email"], footer_text=row["footer_text"],
         date_format=row["date_format"], money_format=row["money_format"], has_logo=has_logo,
-        has_favicon=has_favicon, version=row["version"], has_logo_dark=has_logo_dark, has_mark_dark=has_mark_dark)
+        has_favicon=has_favicon, version=row["version"], has_logo_dark=has_logo_dark, has_mark_dark=has_mark_dark,
+        policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()))
 
 
 DEFAULTS = {"site_name": "", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "",
@@ -119,7 +121,8 @@ def get():
             has_logo = BrandSettings.objects.filter(pk=1, logo_type__gt="").exists()
             has_favicon = BrandSettings.objects.filter(pk=1, favicon_type__gt="").exists()
             cached = {**{f: getattr(row, f) for f in TEXT_FIELDS}, "version": row.version, "has_logo": has_logo,
-                      "has_favicon": has_favicon, "has_logo_dark": bool(row.logo_dark_type), "has_mark_dark": bool(row.mark_dark_type)}
+                      "has_favicon": has_favicon, "has_logo_dark": bool(row.logo_dark_type), "has_mark_dark": bool(row.mark_dark_type),
+                      "policy_links": list(row.policy_links or [])}
             cache.set(CACHE_KEY, cached, 300)
         return _brand_from(cached, cached["has_logo"], cached["has_favicon"], cached.get("has_logo_dark", False),
                            cached.get("has_mark_dark", False))
@@ -166,6 +169,34 @@ def validate_image(kind, data):
     return content_type
 
 
+MAX_POLICY_LINKS = 12
+
+
+def clean_policy_links(rows):
+    """[{"title", "url"}] from what was typed: empty rows are dropped, an address must be a web address, a repeat is dropped."""
+    from urllib.parse import urlparse
+
+    clean, seen = [], set()
+    for row in rows or ():
+        title, url = (row.get("title") or "").strip(), (row.get("url") or "").strip()
+        if not title and not url:
+            continue
+        if not title:
+            raise ValidationError("Give each policy link a title.")
+        if len(title) > 60:
+            raise ValidationError(f"The title \"{title[:20]}...\" is longer than 60 characters.")
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc or len(url) > 300 or " " in url:
+            raise ValidationError(f"\"{title}\" needs a web address that starts with http or https.")
+        if url in seen:
+            continue
+        seen.add(url)
+        clean.append({"title": title, "url": url})
+    if len(clean) > MAX_POLICY_LINKS:
+        raise ValidationError(f"At most {MAX_POLICY_LINKS} policy links.")
+    return clean
+
+
 DARK_TEXT = "#14213d"
 
 
@@ -188,7 +219,7 @@ def _check_colors(values):
 
 @transaction.atomic
 def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=False, remove_favicon=False,
-                  logo_dark=None, mark_dark=None, remove_logo_dark=False, remove_mark_dark=False, request=None):
+                  logo_dark=None, mark_dark=None, remove_logo_dark=False, remove_mark_dark=False, policy_links=None, request=None):
     """Staff (``manage_settings``): change the brand. ``logo`` / ``favicon`` are the uploaded file bytes."""
     if not actor.has_perm(perm("manage_settings")):
         raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
@@ -211,6 +242,11 @@ def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=Fa
             setattr(row, kind, None)
             setattr(row, f"{kind}_type", "")
             changed.append(f"{kind} removed")
+    if policy_links is not None:
+        links = clean_policy_links(policy_links)
+        if links != list(row.policy_links or []):
+            row.policy_links = links
+            changed.append("policy links")
     if changed:
         row.version += 1
         row.save()

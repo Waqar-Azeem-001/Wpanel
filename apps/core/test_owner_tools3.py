@@ -440,3 +440,61 @@ def test_the_pattern_files_are_shipped_and_used_by_the_footer_and_sign_in():
         assert text.lstrip().startswith("<svg") and "<script" not in text and "onload" not in text
     css = Path("static/css/shell.css").read_text(encoding="utf-8")
     assert css.count("pattern-white.svg") >= 3 and "pattern-black.svg" in css
+
+
+# --- Alerts the owner was not getting (E8): sent to the Super Admin by default, with the details, for invoices and orders too ------------------
+
+def alert_mails(address):
+    return [m for m in mail.outbox if address in m.to]
+
+
+def test_with_no_alert_address_set_the_super_admin_gets_the_alert_by_email_with_the_details(boss, manager, acme):
+    assert NotificationSettings.load().addresses == []
+    invoice = issued(manager, acme)
+    mail.outbox.clear()
+    payments.record_payment(manager, invoice, amount="100.00", reference="TT-5")
+    got = alert_mails(boss.email)
+    assert got, "the Super Admin is told when an invoice is paid"
+    body = got[0].body
+    assert "paid" in got[0].subject.lower() and "Acme Ltd" in body and "Total: USD 100.00" in body and "Balance due: USD 0.00" in body
+    html = next(b for b, kind in got[0].alternatives if kind == "text/html")
+    assert "Client: Acme Ltd" in html and "Open it in the portal" in html
+
+
+def test_a_new_order_alert_lists_who_what_and_how_much(boss, owner_user, acme):
+    from apps.orders import services as order_services  # noqa: F401 - the checkout builds the description below
+
+    from apps.orders.models import Order, OrderItem
+
+    order = Order.objects.create(client=acme, currency="USD", subtotal=D("100"), total=D("110"), tax_total=D("10"), tax_name="Sales tax",
+                                 payment_method_name="JazzCash", billing_email="ada@acme.test")
+    OrderItem.objects.create(order=order, kind="product", description="Business hosting, 12 months", unit_price=D("100"), line_total=D("100"))
+    text = notifications.describe_order(order)
+    for expected in ("Client: Acme Ltd <ada@acme.test>", "Business hosting, 12 months: USD 100.00", "Sales tax: USD 10.00", "Total: USD 110.00",
+                     "Payment method: JazzCash"):
+        assert expected in text
+
+
+def test_each_new_kind_of_alert_can_be_switched_off(boss, manager, acme):
+    NotificationSettings.objects.update_or_create(pk=1, defaults={"alert_invoices": False})
+    invoice = issued(manager, acme)
+    mail.outbox.clear()
+    payments.record_payment(manager, invoice, amount="100.00")
+    assert not [m for m in alert_mails(boss.email) if "paid: Acme" in m.subject]  # switched off: no email copy
+    assert boss.notifications.filter(event="invoice.team_update", title__contains="paid").exists()  # the bell still tells them
+
+
+def test_an_invoice_being_issued_or_cancelled_reaches_the_team_bell_and_the_super_admin(boss, manager, acme):
+    actor = manager  # the person who acts is left out of the bell; the Super Admin is not that person
+    mail.outbox.clear()
+    invoice = invoicing.issue_invoice(actor, invoicing.create_invoice(actor, acme, lines=lines(("Hosting", 1, "50.00"))))
+    assert boss.notifications.filter(event="invoice.team_update", title__contains="issued").exists()
+    assert any("issued" in m.subject for m in alert_mails(boss.email))
+    invoicing.cancel_invoice(actor, invoice, reason="Duplicate")
+    assert boss.notifications.filter(event="invoice.team_update", title__contains="cancelled").exists()
+
+
+def test_the_alert_settings_page_offers_the_new_alerts_and_says_who_gets_them_by_default(boss):
+    page = browser(boss).get(reverse("console:email_providers")).content.decode()
+    assert "An invoice is issued, paid, refunded or cancelled" in page and "An order is activated or cancelled" in page
+    assert "Super Admin" in page

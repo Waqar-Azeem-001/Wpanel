@@ -11,7 +11,15 @@
       {% if current.has_logo_dark %}<figure class="on-dark"><img class="brand-logo-preview" src="{% url 'brand_logo_dark' %}?v={{ current.version }}" alt="Current logo for dark backgrounds"><figcaption>On a dark background</figcaption></figure>{% endif %}
     </div>{% endif %}
     {% include "partials/form.html" %}
-    {% if can_manage %}<div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
+    <h2 class="mt-4">Policy pages</h2>
+    <p class="text-secondary">Links to your terms, refund policy and so on. They appear in the footer, on sign in and create account, and at checkout. Each opens in a new tab.</p>
+    <input type="hidden" name="policy_form" value="1">
+    <div data-rows>
+      <div data-rows-body>{% for row in policy_rows %}{% include "branding/_policy_row.html" with title=row.title url=row.url %}{% endfor %}</div>
+      <template data-rows-template>{% include "branding/_policy_row.html" with title="" url="" %}</template>
+      {% if can_manage %}<button class="btn btn-outline-primary btn-sm mt-1" type="button" data-rows-add><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a policy link</button>{% endif %}
+    </div>
+    {% if can_manage %}<div class="d-flex flex-wrap gap-2 align-items-center mt-3"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
     {% else %}<p class="text-secondary">You can view these settings but not change them.</p>{% endif %}</div>
 </section>
 </form>

@@ -84,14 +84,16 @@ class NotificationSettingsForm(forms.Form):
     reply_to = forms.EmailField(required=False, label="Replies go to",
                                 help_text="When a customer replies to an email, it goes here. Blank = the From address.")
     alert_emails = forms.CharField(required=False, label="Send team alerts to", widget=forms.Textarea(attrs={"rows": 3}),
-                                   help_text="One address per line. Each gets an email for the alerts ticked below, in addition to "
-                                             "staff notifications.")
+                                   help_text="One address per line. Each gets an email for the alerts ticked below. Leave it blank and the alerts go to "
+                                             "the Super Admin's own email address. Staff also see them in the bell.")
     alert_new_order = forms.BooleanField(required=False, label="A new order is placed")
     alert_payment_reported = forms.BooleanField(required=False, label="A customer says they have paid")
     alert_tickets = forms.BooleanField(required=False, label="A new ticket or a customer reply")
     alert_new_client = forms.BooleanField(required=False, label="Someone creates an account")
     alert_affiliates = forms.BooleanField(required=False, label="Someone applies to be an affiliate")
     alert_cancellations = forms.BooleanField(required=False, label="A customer asks to cancel a service")
+    alert_invoices = forms.BooleanField(required=False, label="An invoice is issued, paid, refunded or cancelled")
+    alert_order_updates = forms.BooleanField(required=False, label="An order is activated or cancelled")
 
     def clean_alert_emails(self):
         from django.core.validators import validate_email

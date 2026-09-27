@@ -24,7 +24,9 @@ def footer_info():
         from apps.products.models import CategoryKind
 
         info["categories"] = [c for c in categories.active() if c.kind == CategoryKind.PLANS][:7]
-        info["methods"] = list(PaymentMethod.objects.filter(is_active=True).order_by("sort_order", "name").values_list("name", flat=True)[:8])
+        icons = {"bank": "bi-bank", "jazzcash": "bi-phone", "easypaisa": "bi-phone"}
+        info["methods"] = [{"name": name, "icon": icons.get(kind, "bi-credit-card")} for name, kind in
+                           PaymentMethod.objects.filter(is_active=True).order_by("sort_order", "name").values_list("name", "kind")[:8]]
         row = BillingSettings.load()
         info["phone"], info["address"] = row.phone, row.address
     except Exception:  # noqa: BLE001 - a footer must never break a page

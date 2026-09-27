@@ -185,6 +185,7 @@ def _notify_active(order):
         "order.active", order.client, title=f"Order {order.reference} is active", body="Your services are ready.",
         link=link, context={"order": order, "link": link,
                             "items": list(order.items.select_related("hosting_account", "domain"))})
+    notifications.team_order_update(order, "is active")
 
 
 def sweep(now=None):

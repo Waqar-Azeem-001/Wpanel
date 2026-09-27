@@ -1,0 +1,3 @@
+{% extends "layouts/email.html" %}
+{% block content %}{% for line in body_lines %}<p style="margin:0 0 6px 0;{% if line|slice:':2' == '  ' %}padding-left:14px;color:#3a4454{% endif %}">{{ line }}</p>
+{% endfor %}{% endblock %}

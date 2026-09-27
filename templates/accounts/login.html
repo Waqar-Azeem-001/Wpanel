@@ -19,5 +19,6 @@
   <button type="submit" class="btn btn-primary auth-submit">{% trans "Sign in" %}</button>
 </form>
 <p class="auth-legal">{% trans "By signing in you agree to our terms of service and privacy policy." %}</p>
+{% if brand.policy_links %}<div class="auth-policies">{% include "components/policy_links.html" %}</div>{% endif %}
 <p class="auth-alt">{% trans "Not registered yet?" %} <a href="{% url 'accounts:register' %}">{% trans "Create a new account" %}</a></p>
 {% endblock %}

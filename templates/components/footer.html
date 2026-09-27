@@ -38,7 +38,7 @@
           <p>{% trans "Hosting, domains and support, managed from one account." %}</p>
           <ul class="foot-contact">
             {% if brand.support_email %}<li><i class="bi bi-envelope" aria-hidden="true"></i><a href="mailto:{{ brand.support_email }}">{{ brand.support_email }}</a></li>{% endif %}
-            {% if foot.phone %}<li><i class="bi bi-telephone" aria-hidden="true"></i><span>{{ foot.phone }}</span></li>{% endif %}
+            {% if foot.phone %}<li><i class="bi bi-telephone" aria-hidden="true"></i><a href="tel:{{ foot.phone|cut:' ' }}">{{ foot.phone }}</a></li>{% endif %}
             {% if foot.address %}<li><i class="bi bi-geo-alt" aria-hidden="true"></i><span>{{ foot.address|linebreaksbr }}</span></li>{% endif %}
           </ul>
         </div>
@@ -80,12 +80,22 @@
           </ul>
         </nav>
       </div>
-      {% if foot.methods %}
-      <div class="foot-pay"><span>{% trans "You can pay by" %}</span>{% for name in foot.methods %}<span class="foot-chip">{{ name }}</span>{% endfor %}</div>
+      {% if foot.methods or brand.policy_links %}
+      <div class="foot-bottom">
+        {% if foot.methods %}<div class="foot-pay"><span class="foot-pay-label"><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "You can pay by" %}</span>{% for method in foot.methods %}<span class="foot-chip"><i class="bi {{ method.icon }}" aria-hidden="true"></i>{{ method.name }}</span>{% endfor %}</div>{% endif %}
+        {% if brand.policy_links %}<nav class="foot-policies" aria-label="{% trans 'Policies' %}">{% include "components/policy_links.html" %}</nav>{% endif %}
+      </div>
       {% endif %}
       <div class="foot-base">
         <span>{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}. {% trans "All rights reserved." %}{% endif %}</span>
-        <span class="foot-links"><a href="{% url 'help:index' %}">{% trans "Help centre" %}</a>{% if brand.support_email %}<a href="mailto:{{ brand.support_email }}">{{ brand.support_email }}</a>{% endif %}</span>
+        <span class="foot-tools">
+          <span class="foot-theme" role="group" aria-label="{% trans 'Theme' %}">
+            <button type="button" data-theme-choice="light" aria-pressed="false" title="{% trans 'Light' %}"><i class="bi bi-sun" aria-hidden="true"></i><span class="visually-hidden">{% trans "Light" %}</span></button>
+            <button type="button" data-theme-choice="dark" aria-pressed="false" title="{% trans 'Dark' %}"><i class="bi bi-moon-stars" aria-hidden="true"></i><span class="visually-hidden">{% trans "Dark" %}</span></button>
+            <button type="button" data-theme-choice="system" aria-pressed="false" title="{% trans 'Match my device' %}"><i class="bi bi-circle-half" aria-hidden="true"></i><span class="visually-hidden">{% trans "Match my device" %}</span></button>
+          </span>
+          <a class="foot-top" href="#main"><i class="bi bi-arrow-up" aria-hidden="true"></i> {% trans "Back to top" %}</a>
+        </span>
       </div>
     </div>
   </div>

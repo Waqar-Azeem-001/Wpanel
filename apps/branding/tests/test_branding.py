@@ -336,3 +336,60 @@ def test_the_brand_page_takes_the_dark_images_and_previews_both(client, admin):
     page = client.get(reverse("brand_staff:settings")).content.decode()
     assert "On a light background" in page and "On a dark background" in page and "Logo for dark backgrounds" in page
     assert AuditEvent.objects.filter(action="brand.updated").latest("pk").metadata["changed"].count("logo_dark") == 1
+
+
+# --- Policy links (terms, refunds...) -----------------------------------------------------------------------------------------------------
+
+POLICIES = [{"title": "Terms of Services", "url": "https://shop.example/terms/"}, {"title": "Refund Policy", "url": "https://shop.example/refunds/"}]
+
+
+def test_policy_links_are_saved_in_order_cleaned_and_read_back(admin):
+    services.save_settings(admin, policy_links=[*POLICIES, {"title": "", "url": ""}, {"title": "Again", "url": "https://shop.example/terms/"}])
+    assert services.get().policy_links == (("Terms of Services", "https://shop.example/terms/"), ("Refund Policy", "https://shop.example/refunds/"))
+    assert "policy links" in AuditEvent.objects.filter(action="brand.updated").latest("pk").metadata["changed"]
+    services.save_settings(admin, policy_links=[])
+    assert services.get().policy_links == ()
+    services.save_settings(admin, values={"footer_text": "x"})  # a save that does not mention the links leaves them alone
+    services.save_settings(admin, policy_links=POLICIES)
+    services.save_settings(admin, values={"footer_text": "y"})
+    assert len(services.get().policy_links) == 2
+
+
+@pytest.mark.parametrize("bad", [
+    [{"title": "Terms", "url": "javascript:alert(1)"}], [{"title": "Terms", "url": "/terms/"}], [{"title": "Terms", "url": "https://a b/"}],
+    [{"title": "", "url": "https://shop.example/x/"}], [{"title": "T" * 61, "url": "https://shop.example/x/"}],
+    [{"title": f"P{i}", "url": f"https://shop.example/{i}/"} for i in range(13)]])
+def test_a_policy_link_must_be_a_titled_web_address(admin, bad):
+    with pytest.raises(ValidationError):
+        services.save_settings(admin, policy_links=bad)
+    assert services.get().policy_links == ()
+
+
+def test_the_brand_page_edits_the_policy_rows_and_they_show_in_the_footer_sign_in_and_checkout(client, admin, customer):
+    client.force_login(admin)
+    saved = client.post(reverse("brand_staff:settings"), {
+        "site_name": "Acme", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "footer_text": "",
+        "date_format": "%d %b %Y", "money_format": "code_before", "policy_form": "1",
+        "policy_title": ["Terms of Services", "", "Refund Policy"], "policy_url": ["https://shop.example/terms/", "", "https://shop.example/refunds/"]})
+    assert saved.status_code == 302 and len(services.get().policy_links) == 2
+    page = client.get(reverse("brand_staff:settings")).content.decode()
+    assert 'value="Terms of Services"' in page and "Add a policy link" in page
+    anonymous = client.__class__(HTTP_HOST="localhost")
+    for url in (reverse("accounts:login"), reverse("accounts:register"), reverse("catalog:product_list")):
+        html = anonymous.get(url).content.decode()
+        assert 'href="https://shop.example/terms/"' in html and 'target="_blank" rel="noopener noreferrer"' in html, url
+    bad = client.post(reverse("brand_staff:settings"), {
+        "site_name": "Acme", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "footer_text": "",
+        "date_format": "%d %b %Y", "money_format": "code_before", "policy_form": "1", "policy_title": ["Terms"], "policy_url": ["not a link"]})
+    assert bad.status_code == 200 and b"web address" in bad.content and b'value="not a link"' in bad.content
+    assert len(services.get().policy_links) == 2  # nothing was saved
+
+
+def test_the_webhostera_seed_carries_its_five_policy_pages():
+    import json
+    from pathlib import Path
+
+    links = json.loads(Path("apps/branding/seed/webhostera-policies.json").read_text(encoding="utf-8"))
+    assert [item["title"] for item in links] == ["Acceptable Use Policy", "Terms of Services", "Refund Policy", "Shipping Policy", "Return Policy"]
+    assert all(item["url"].startswith("https://webhostera.pk/") for item in links)
+    assert services.clean_policy_links(links) == links

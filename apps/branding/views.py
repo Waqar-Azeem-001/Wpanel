@@ -84,14 +84,24 @@ def settings_page(request):
                     logo_dark=data["logo_dark"].read() if data.get("logo_dark") else None,
                     mark_dark=data["mark_dark"].read() if data.get("mark_dark") else None,
                     remove_logo=data.get("remove_logo"), remove_favicon=data.get("remove_favicon"),
-                    remove_logo_dark=data.get("remove_logo_dark"), remove_mark_dark=data.get("remove_mark_dark"))
+                    remove_logo_dark=data.get("remove_logo_dark"), remove_mark_dark=data.get("remove_mark_dark"),
+                    policy_links=posted_policy_links(request) if "policy_form" in request.POST else None)
             except ACTION_ERRORS as exc:
                 apply_form_error(form, exc)
             else:
                 messages.success(request, "Brand settings saved.")
                 return redirect("brand_staff:settings")
-    return render(request, "branding/settings.html", {"form": form, "can_manage": can_manage,
-                                                      "current": services.get(), "section": "brand"})
+    current = services.get()
+    policy_rows = posted_policy_links(request) if request.method == "POST" and "policy_form" in request.POST else [
+        {"title": title, "url": url} for title, url in current.policy_links]
+    return render(request, "branding/settings.html", {"form": form, "can_manage": can_manage, "current": current,
+                                                      "policy_rows": policy_rows, "section": "brand"})
+
+
+def posted_policy_links(request):
+    """The policy rows as typed: [{"title", "url"}], the boxes repeating their names."""
+    titles, urls = request.POST.getlist("policy_title"), request.POST.getlist("policy_url")
+    return [{"title": title, "url": urls[i] if i < len(urls) else ""} for i, title in enumerate(titles)]
 
 
 def _menu_rows():

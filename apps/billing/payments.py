@@ -130,6 +130,8 @@ def _tell_customer(event, invoice, **context):
 
 def _notify_payment(invoice, tx):
     _tell_customer("payment.received", invoice, payment=tx)
+    invoice.refresh_from_db()
+    notifications.team_invoice_update(invoice, "paid" if invoice.status == "paid" else f"payment of {tx.currency} {tx.amount:,.2f} received")
 
 
 def _audit_payment(action, actor, tx, invoice, request=None, **extra):
@@ -204,6 +206,7 @@ def report_payment(actor, invoice, *, method, amount=None, reference="", note=""
     notifications.notify_team(
         "payment.reported", "manage_billing", exclude=actor,
         title=f"{invoice.reference}: {invoice.client.display_name} reports a payment of {tx.currency} {tx.amount}",
+        body="\n".join((f"Method: {tx.method_name}", f"Reference: {tx.reference or '-'}", notifications.describe_invoice(invoice))),
         link=reverse("billing_staff:invoice_detail", args=[invoice.pk]))
     return tx
 
@@ -276,6 +279,8 @@ def refund_payment(actor, payment, *, amount=None, reason="", request=None):
     recompute_invoice(invoice, actor=actor)
     _audit_payment("payment.refunded", actor, refund, invoice, request, parent_id=payment.pk)
     _tell_customer("payment.refunded", invoice, refund=refund)
+    invoice.refresh_from_db()
+    notifications.team_invoice_update(invoice, f"refund of {refund.currency} {refund.amount:,.2f}", exclude=actor)
     return refund
 
 

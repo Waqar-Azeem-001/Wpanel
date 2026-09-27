@@ -1,0 +1,2 @@
+{% comment %}The store's policy pages (Brand settings), opening in a new tab. inline=True makes it a run of links in a sentence.{% endcomment %}
+{% if inline %}{% for title, url in brand.policy_links %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}<ul class="policy-links">{% for title, url in brand.policy_links %}<li><a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ title }}</a></li>{% endfor %}</ul>{% endif %}

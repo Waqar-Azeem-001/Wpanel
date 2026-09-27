@@ -91,6 +91,7 @@ def _announce(order, new):
         link = reverse("orders_customer:detail", args=[order.pk])
         notifications.dispatch_client("order.cancelled", order.client, title=f"Order {order.reference} was cancelled",
                                       link=link, context={"order": order, "link": link})
+        notifications.team_order_update(order, "was cancelled")
     elif new == S.FAILED:
         notifications.notify_team("order.failed", "manage_orders",
                                   title=f"Order {order.reference} could not be fully fulfilled",

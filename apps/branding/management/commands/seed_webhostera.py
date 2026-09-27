@@ -97,9 +97,12 @@ class Command(BaseCommand):
                 "(before taking any orders) so invoices and clients use PKR."))
 
     def brand(self):
+        import json
+
         branding.save_settings(SYSTEM, values=BRAND, logo=(SEED / "webhostera-logo.png").read_bytes(),
-                               favicon=(SEED / "webhostera-icon.png").read_bytes())
-        self.stdout.write("Brand: Web Host Era (colours, logo, favicon, footer).")
+                               favicon=(SEED / "webhostera-icon.png").read_bytes(),
+                               policy_links=json.loads((SEED / "webhostera-policies.json").read_text(encoding="utf-8")))
+        self.stdout.write("Brand: Web Host Era (colours, logo, favicon, footer, policy links).")
 
     def plans(self):
         server = Server.objects.first() or products.create_server(SYSTEM, {

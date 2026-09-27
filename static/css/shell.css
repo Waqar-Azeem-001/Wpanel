@@ -829,3 +829,35 @@ html[data-bs-theme="dark"] .auth-center .auth-panel::before, html[data-bs-theme=
 .logo-previews figcaption { margin-top: .4rem; font-size: .75rem; color: var(--muted); }
 .logo-previews figure.on-dark figcaption { color: #aab6d3; }
 .logo-previews img { height: 40px; width: auto; max-width: 240px; }
+.policy-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1.4rem; }
+.foot-policies { margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--foot-line, var(--border)); }
+.app-footer.site-footer .foot-policies a { color: var(--foot-text); font-size: .85rem; }
+.app-footer.site-footer .foot-policies a:hover { color: #fff; }
+.auth-policies { margin-top: .8rem; }
+.auth-policies .policy-links { justify-content: center; }
+.auth-policies a { font-size: .78rem; color: var(--muted); }
+
+/* Footer, bottom part: the ways to pay on the left and the policies on the right in one row, then the copyright line */
+.foot-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; margin-top: 2.2rem; padding: 1.25rem 0; border-top: 1px solid var(--foot-line); }
+.foot-bottom .foot-pay { margin: 0; padding: 0; border: 0; gap: .5rem; }
+.foot-pay-label { display: inline-flex; align-items: center; gap: .4rem; margin-right: .5rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: #fff; }
+.foot-pay-label .bi { color: #6fd39a; font-size: .95rem; }
+.foot-chip { display: inline-flex; align-items: center; gap: .4rem; }
+.foot-chip .bi { color: var(--brand-primary-light, #7f9df0); font-size: .9rem; }
+.foot-bottom .foot-policies { margin: 0; padding: 0; border: 0; }
+.foot-policies .policy-links { gap: .3rem 0; }
+.foot-policies .policy-links li + li::before { content: "·"; margin: 0 .7rem; color: rgba(255, 255, 255, .35); }
+.foot-bottom + .foot-base { margin-top: 0; }
+.foot-base { margin-top: 1.4rem; }
+.foot-base .foot-links a { color: var(--foot-text); }
+@media (max-width: 767.98px) { .foot-bottom { flex-direction: column; align-items: flex-start; } .foot-policies .policy-links li + li::before { margin: 0 .5rem; } }
+.foot-col h2::after { content: ""; display: block; width: 1.6rem; height: 2px; margin-top: .5rem; border-radius: 2px; background: var(--brand-primary-light, #7f9df0); }
+.foot-contact a { color: #e6ecfa; }
+.foot-tools { display: inline-flex; align-items: center; gap: 1rem; }
+.foot-theme { display: inline-flex; padding: .15rem; border: 1px solid var(--foot-line); border-radius: 999px; background: rgba(255, 255, 255, .05); }
+.foot-theme button { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border: 0; border-radius: 50%; background: none; color: var(--foot-text); font-size: .9rem; cursor: pointer; }
+.foot-theme button:hover { color: #fff; }
+.foot-theme button[aria-pressed="true"] { background: rgba(255, 255, 255, .16); color: #fff; }
+.app-footer.site-footer .foot-top { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .85rem; border: 1px solid var(--foot-line); border-radius: 999px; color: #e6ecfa; font-size: .82rem; }
+.app-footer.site-footer .foot-top:hover { background: rgba(255, 255, 255, .08); text-decoration: none; }
+@media (max-width: 767.98px) { .foot-base { padding-bottom: 4.5rem; } }

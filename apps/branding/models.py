@@ -68,6 +68,8 @@ class BrandSettings(models.Model):
     logo_dark_type = models.CharField(max_length=30, blank=True, editable=False)
     mark_dark = models.BinaryField(null=True, blank=True, editable=False)
     mark_dark_type = models.CharField(max_length=30, blank=True, editable=False)
+    # The policy pages the store links to (terms, refunds...): [{"title": "...", "url": "..."}], in the order shown.
+    policy_links = models.JSONField(default=list, blank=True, editable=False)
 
     version = models.PositiveIntegerField(default=1, editable=False, help_text="Bumped on every change (cache busting).")
     updated_at = models.DateTimeField(auto_now=True)

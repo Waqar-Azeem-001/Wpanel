@@ -330,11 +330,11 @@ def _issue(invoice, *, actor, snapshot=None, notify=True, request=None):
     if settled:
         invoice_paid.send(sender=Invoice, invoice=invoice, actor=actor)
     if notify:
-        notify_invoice_issued(invoice)
+        notify_invoice_issued(invoice, actor=actor)
     return invoice
 
 
-def notify_invoice_issued(invoice):
+def notify_invoice_issued(invoice, actor=None):
     from django.urls import reverse
 
     link = reverse("billing_customer:invoice_detail", args=[invoice.pk])
@@ -343,6 +343,7 @@ def notify_invoice_issued(invoice):
         title=f"Invoice {invoice.number} for {invoice.currency} {invoice.total}", link=link,
         body=f"Due {invoice.due_date:%d %b %Y}." if invoice.balance_due and invoice.due_date else "",
         context={"invoice": invoice, "items": list(invoice.items.all()), "link": link})
+    notifications.team_invoice_update(invoice, "issued", exclude=actor)
 
 
 @transaction.atomic
@@ -393,6 +394,7 @@ def cancel_invoice_internal(invoice, *, actor, reason="", request=None):
     audit.record("invoice.cancelled", actor=actor, target=invoice, metadata={"reason": invoice.cancel_reason},
                  request=request)
     invoice_cancelled.send(sender=Invoice, invoice=invoice, actor=actor, reason=invoice.cancel_reason)
+    notifications.team_invoice_update(invoice, "cancelled", exclude=actor)
     return invoice
 
 

@@ -80,6 +80,7 @@ def _provider_connection(provider):
 CTA_LABELS = {
     "invoice_issued": "View and pay the invoice", "invoice_due_soon": "Pay the invoice", "invoice_overdue": "Pay the invoice now",
     "quote_sent": "Review the quote", "payment_received": "View the invoice", "payment_refunded": "View the invoice",
+    "team_alert": "Open it in the portal",
 }
 # Emails that carry a PDF of the document they are about, made when the email is sent: an invoice email carries the invoice as it
 # stands (unpaid while something is owed, paid once it is settled), a quote email the quote.
@@ -470,7 +471,75 @@ ALERT_SETTINGS = {
     "order.new": "alert_new_order", "order.failed": "alert_new_order", "payment.reported": "alert_payment_reported",
     "ticket.unassigned": "alert_tickets", "ticket.customer_reply": "alert_tickets", "client.new": "alert_new_client",
     "affiliate.applied": "alert_affiliates", "cancellation.requested_team": "alert_cancellations",
+    "invoice.team_update": "alert_invoices", "order.team_update": "alert_order_updates",
 }
+
+
+def _recipients(setting):
+    """The alert addresses; with none set, the Super Admins' own email addresses, so an alert is never lost for want of a setting."""
+    if setting.addresses:
+        return list(setting.addresses)
+    from apps.accounts.models import User
+
+    return list(dict.fromkeys(User.objects.filter(is_active=True, is_superuser=True).exclude(email="").values_list("email", flat=True)))
+
+
+def money(currency, amount):
+    return f"{currency} {amount:,.2f}"
+
+
+def describe_order(order):
+    """The order as a few readable lines for a team alert: who, what, how much, how they will pay."""
+    client = order.client
+    lines = [f"Client: {client.display_name} <{order.billing_email or client.email}>" + (f", {client.phone}" if client.phone else ""),
+             f"Order {order.reference}: {order.get_status_display()}"]
+    for item in order.items.all().order_by("id"):
+        lines.append(f"  - {item.description}" + (f" ({item.domain_name})" if item.domain_name and item.domain_name not in item.description else "")
+                     + f": {money(order.currency, item.line_total)}")
+    if order.discount_total:
+        lines.append(f"Discount: -{money(order.currency, order.discount_total)}" + (f" ({order.coupon_code})" if order.coupon_code else ""))
+    if order.tax_total:
+        lines.append(f"{order.tax_name or 'Tax'}: {money(order.currency, order.tax_total)}")
+    lines.append(f"Total: {money(order.currency, order.total)}")
+    if order.payment_method_name:
+        lines.append(f"Payment method: {order.payment_method_name}")
+    return "\n".join(lines)
+
+
+def describe_invoice(invoice):
+    """The invoice as a few readable lines for a team alert."""
+    client = invoice.client
+    lines = [f"Client: {client.display_name} <{invoice.billing_email or client.email}>",
+             f"Invoice {invoice.number or invoice.reference}: {invoice.display_status_label}"]
+    for item in invoice.items.all():
+        lines.append(f"  - {item.description}: {money(invoice.currency, item.amount)}")
+    lines += [f"Total: {money(invoice.currency, invoice.total)}", f"Paid: {money(invoice.currency, invoice.amount_paid)}",
+              f"Balance due: {money(invoice.currency, invoice.balance_due)}"]
+    if invoice.due_date:
+        lines.append(f"Due: {invoice.due_date:%d %b %Y}")
+    return "\n".join(lines)
+
+
+def team_invoice_update(invoice, what, *, exclude=None):
+    """Tell the team an invoice changed (issued, payment received, refunded, cancelled): the bell, and the alert copies. Never raises."""
+    from django.urls import reverse
+
+    try:
+        notify_team("invoice.team_update", "view_billing", exclude=exclude,
+                    title=f"{invoice.number or invoice.reference} {what}: {invoice.client.display_name}",
+                    body=describe_invoice(invoice), link=reverse("billing_staff:invoice_detail", args=[invoice.pk]))
+    except Exception:  # noqa: BLE001 - an alert must never break the payment or the invoice
+        logger.exception("Could not send the invoice alert")
+
+
+def team_order_update(order, what, *, exclude=None):
+    from django.urls import reverse
+
+    try:
+        notify_team("order.team_update", "view_orders", exclude=exclude, title=f"Order {order.reference} {what}: {order.client.display_name}",
+                    body=describe_order(order), link=reverse("orders_staff:detail", args=[order.pk]))
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not send the order alert")
 
 
 def alert_addresses(event, *, title, body="", link=""):
@@ -480,10 +549,11 @@ def alert_addresses(event, *, title, body="", link=""):
     try:
         setting = NotificationSettings.load()
         flag = ALERT_SETTINGS.get(event)
-        if not flag or not getattr(setting, flag) or not setting.addresses:
+        if not flag or not getattr(setting, flag):
             return []
         return [send_email(to_email=address, template="team_alert", event="team.alert",
-                           context={"title": title, "body": body, "link": link}) for address in setting.addresses]
+                           context={"title": title, "body": body, "body_lines": body.splitlines(), "link": link})
+                for address in _recipients(setting)]
     except Exception:  # noqa: BLE001 - an alert copy must never break the action that caused it
         logger.exception("Could not copy the %s alert to the alert addresses", event)
         return []
