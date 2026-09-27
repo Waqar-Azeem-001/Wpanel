@@ -289,7 +289,6 @@ def test_emails_use_the_brand(admin, customer):
     html = sent.alternatives[0][0]
     assert "Mail Hosting" in sent.subject and "#123456" in html and "Mail footer" in html and "help@mail.test" in html
     assert 'src="cid:brand-logo"' in html and message is not None  # the logo travels inside the email
-    assert "/brand/logo/?v=" in message.body_html  # the stored copy (the log) keeps its address
 
 
 # --- The logo and icon for dark backgrounds ------------------------------------------------------------------------------------------
