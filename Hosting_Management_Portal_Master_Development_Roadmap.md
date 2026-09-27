@@ -705,7 +705,7 @@ All daily operations from the staff area. Django admin no longer needed for rout
 
 ------------------------------------------------------------------------
 
-# PHASE 16 — SECURITY HARDENING 🟡
+# PHASE 16 — SECURITY HARDENING 🟢
 
 > **Slice 1 delivered** (`docs/phase-16-gap-report.md`): two-factor sign-in (TOTP), optional for everyone, with
 > recovery codes and a Super Admin reset; account lockout beyond the API rate limit; a Content Security Policy and
@@ -877,7 +877,7 @@ Before marking any phase 🟢:
 | 13 Affiliates | 🟢 | 1134 ✅ | ✅ | D2 crawl: 0 broken | a2e8989 | — |
 | 14 Reports | 🟢 | 1197 ✅ | ✅ | D2 crawl: 0 broken | f1246ba | — |
 | 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4) | 1661 ✅ | ✅ | crawler green | 7e5f35b | — |
-| 16 Security | ⬜ | — | — | — | — | — |
+| 16 Security | 🟢 (slice 1: MFA/lockout/headers; slice 2: RBAC review, mandatory-MFA and step-up re-auth tried then reverted per owner feedback) | 2046 ✅ | ✅ | crawler green | 3737541, e05ae9d | — |
 | 17 Reliability | ⬜ | — | — | — | — | — |
 | 18 Testing & Readiness | ⬜ | — | — | — | — | — |
 | 19 Production Launch | ⬜ | — | — | — | — | — |
@@ -905,7 +905,7 @@ Before marking any phase 🟢:
 
 ## Recommended order
 
-D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → 16 Security → 17 Reliability → D5 → 18 → 19
+D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → **17 Reliability (next)** → D5 → 18 → 19
 
 ------------------------------------------------------------------------
 
@@ -922,14 +922,14 @@ Use this section whenever something is discovered but intentionally postponed.
 | Item | Status | Reason | Target |
 |---|---|---|---|
 | More email provider kinds (API senders), bounce handling, admin-editable templates | Deferred | SMTP only; no click tracking or bounce handling; templates are files, not editable in admin | Post-MVP |
-| MFA | Deferred | Roadmap places MFA in security hardening | Phase 16 |
-| Account lockout beyond rate limiting | Deferred | Auth endpoints throttled (10/min); failures audited | Phase 16 |
+| MFA | Closed (Phase 16 slice 1) | TOTP, optional for everyone (staff and customers alike, after slice 2 reverted mandatory-for-staff on owner feedback) - `apps/accounts/mfa.py` | — |
+| Account lockout beyond rate limiting | Closed (Phase 16 slice 1) | Per-account lockout after 5 wrong passwords/codes, on top of the existing per-IP throttle | — |
 | Staff admin portal (non-Django-admin UI for roles/status/audit) | Done (D4d, D6) | Users, roles, status, audit log, providers and setup screens are app screens; Django admin is a superuser-only technical door ("Database admin") | — |
 | Error tracking service (e.g. Sentry) and monitoring | Deferred | Structured logging with request IDs in place | Phase 18 |
 | TLS termination / certificates | Deferred | Compose Nginx serves HTTP only | Phase 19 |
 | Docker Compose stack run end to end | Open | No Docker on dev machine; CI covers PostgreSQL/Redis/Celery | Phase 19 |
-| Require verified email before purchase | Deferred ⚠️ Re-triage | Verification tracked; purchase gating belongs to checkout (Phase 06 is 🟢) | Re-triage → Phase 16 |
-| Customer self-service sub-user invitations | Deferred | Staff manage contacts; needs customer-side permission design | Phase 15/16 |
+| Require verified email before purchase | Deferred ⚠️ Re-triage | Verification tracked; purchase gating belongs to checkout (Phase 06 is 🟢); not part of Phase 16's actual scope, which is now 🟢 too | Post-MVP |
+| Customer self-service sub-user invitations | Deferred | Staff manage contacts; needs customer-side permission design; not part of Phase 16's actual scope | Post-MVP |
 | Closing a client suspends users/services | Deferred ⚠️ Re-triage | Service lifecycle rules belong to cancellation phase (Phase 12 is 🟢) | Re-triage |
 | Server credentials / WHM adapter | Open ⚠️ Re-triage | Server model was minimal in Phase 03; Phase 05 extended it with WHM connection fields | Re-triage (likely closed by Phase 05) |
 | Multi-currency product pricing | Deferred | Single store currency for MVP | Post-MVP |
@@ -946,11 +946,11 @@ Use this section whenever something is discovered but intentionally postponed.
 | Antivirus scanning of ticket attachments | Open | Uploads are type/content checked, stored privately, only downloaded, but not scanned (e.g. ClamAV) | Before launch |
 | Reply-by-email / email-to-ticket | Deferred | Customers reply in the portal; team alerts for unassigned tickets delivered in Phase 11 | Post-MVP |
 | SLA timers, escalation, ticket merge, satisfaction rating | Deferred | Not in the roadmap's Phase 10 list | Post-MVP |
-| Attachment retention / cleanup | Deferred | Files are kept with their ticket | Phase 16/17 |
+| Attachment retention / cleanup | Deferred | Files are kept with their ticket; a retention job fits Phase 17 (background jobs), not Phase 16's actual scope | Phase 17 |
 | Add-on provisioning; add-ons and custom cycles in staff Add Order | Deferred | Add-ons are recorded against the plan, not provisioned separately | Post-MVP |
 | Order suspend/terminate act on hosting only; refunds do not cancel fulfilled services | Deferred | Domains are registrations and are left alone; a refund does not undo what was fulfilled | Post-MVP |
 | No real payment gateway adapter (Stripe unavailable in Pakistan) | Decided | 2026-09-25: payments are manual (COD / bank / wallet); each method = an account with instructions; staff record amount, account, transaction ID and date received. Test gateway stays dev-only (`ALLOW_TEST_PAYMENT_GATEWAY`). A real gateway = one adapter class | Until a gateway is chosen |
-| Invoices/quotes visible to any contact of the client | Deferred | Restrict financial documents to owner/billing contacts | Phase 15/16 |
+| Invoices/quotes visible to any contact of the client | Deferred | Restrict financial documents to owner/billing contacts; a permissions-design decision, not part of Phase 16's actual scope | Post-MVP |
 | Reminder schedule is fixed | Deferred | Only on/off is configurable | Phase 15 |
 | Credit balances (carrying forfeited upgrade credit forward); refunds do not reverse a renewal/upgrade | Deferred | Credit beyond the new price is forfeited and shown as such; a refund never undoes a service change | Post-MVP |
 | Downgrades / billing-cycle changes online; renewal of EXPIRED domains | Deferred | Only upgrades are offered online; staff handle the rest (unsuspend-on-payment closed in Phase 12) | Post-MVP |
@@ -963,7 +963,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Automatic termination has no backup / hold-before-delete step | Deferred | Off by default; deletes data when on | Phase 17 |
 | Lifecycle timings are global; refunds on cancellation are a staff decision | Deferred | Not per product or client; refund always a staff decision (suggested only) | Post-MVP |
 | Affiliates: no multi-tier or per-product rules, no coupon-code attribution, no payout batch export | Deferred | One level; a rule applies to the whole invoice; payouts recorded by staff | Post-MVP |
-| Affiliate fraud beyond hold period and rejection | Deferred | Portal keeps no address/device data by design; staff review and can reject | Phase 16 |
+| Affiliate fraud beyond hold period and rejection | Deferred | Portal keeps no address/device data by design; staff review and can reject; not part of Phase 16's actual scope | Post-MVP |
 | Terms-of-service acceptance at checkout | Deferred | No ToS page/versioning yet | Phase 15 |
 | Web cart needs exactly one client; no client chooser | Deferred | API takes client_id; staff "Add Order" exists (Phase 09) | Phase 15 / D3 |
 | Announcements, Network Status, Downloads pages | Deferred (new) | Not in MVP; menu entries hidden per Rule 5.2 | Post-MVP |
@@ -1098,15 +1098,15 @@ Use this section whenever something is discovered but intentionally postponed.
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–15 and D0–D4 (including D3b) are 🟢; D6 (sign-in, shell, Users) is done locally. See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages) and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The project stays **local** until the owner asks to deploy. See also `docs/d3b-modern-look.md` and `docs/d4-staff-area.md`.
+Phases 01–16 and D0–D8 (including D3b) are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
 
-## Start: Phase 16 — Security Hardening
+## Start: Phase 17 — Reliability & Failure Handling
 
-**Do not start coding before Rule 1 inspection.** Scope is the Phase 16 section above: RBAC review, MFA (TOTP) mandatory for staff and optional for customers, secure sessions, CSRF, rate limiting, account lockout beyond throttling, password policy, credential protection, server-side billing validation, audit of security changes.
+**Do not start coding before Rule 1 inspection.** Scope is the Phase 17 section above: registrar/WHM/payment-callback/email/provisioning failure handling with retry vs. manual-review, duplicate-webhook and network-timeout/worker-failure scenarios, scheduled hosting usage sync (Phase 05's WHM adapter still needs live verification before that sync means anything real), expiry of abandoned payment attempts and unpaid orders, backup/hold-before-delete for automatic termination, attachment retention/cleanup (carried over from Phase 10/16 triage), and the job-queue status page linked from Utilities (carried over from D4/15; WHOIS lookup and automation status belong here too).
 
-Carry-overs from D4 that belong here: Staff online / failed-login widgets, restricting invoices and quotes to owner/billing contacts, customer sub-user invitation permission design. Payments stay manual (no gateway). Everything stays local until the owner approves a deployment.
+Payments stay manual (no gateway). Everything stays local until the owner approves a deployment.
 
-Then Phase 17 (Reliability, including the job-queue page, WHOIS and automation status), D5 (Visual QA), 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
+Then D5 (Visual QA), 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
 
 ------------------------------------------------------------------------
 
