@@ -46,6 +46,7 @@ from apps.orders.models import Order, OrderStatus
 from apps.products import services as products
 from apps.products.models import BillingCycle, ProductType
 from apps.renewals import services as renewals
+from apps.storefronts import services as storefronts
 from apps.support import kb
 from apps.support import services as support
 from apps.support.models import Department, Ticket, TicketStatus
@@ -92,6 +93,10 @@ def build_world():
     products.set_price(manager, product, billing_cycle=BillingCycle.ANNUAL, price="100.00")
     products.set_product_servers(manager, product, [server.pk])
     products.set_product_status(manager, product, "active")
+    products.update_product(admin, product, {"publish_externally": True})
+    storefront, _storefront_secret = storefronts.create_storefront(
+        admin, {"name": "Web Host Era UK", "site_url": "https://uk.harness.test"})
+    storefronts.publish_product(admin, product, storefront, featured=True)
     addon = products.create_addon(manager, {"name": "Backups", "description": "Daily"})
     products.set_price(manager, addon, billing_cycle=BillingCycle.ANNUAL, price="20.00")
     products.set_addon_status(manager, addon, "active")
@@ -246,6 +251,7 @@ def build_world():
     world.objects.update(orders=orders, invoices=invoices, quotes=quotes, accounts=accounts, domains=domain_rows,
                          cancellations=cancellations, tickets=tickets, affiliates=affiliate_rows, commissions=commissions,
                          payout=payout, coupon=coupon, addon=addon, product=product, server=server, method=method,
+                         storefront=storefront,
                          article=article, category=category, canned=canned, billable_item=item, part_tx=part_tx,
                          paid_tx=paid_tx, pending_tx=pending_tx, failed_tx=failed_tx, refunded_tx=refunded_tx)
     return world

@@ -237,6 +237,13 @@ class Product(CatalogItem):
                                        related_name="upsold_from", help_text="A bigger plan to suggest in the cart.")
     recommended_addons = models.ManyToManyField("products.Addon", blank=True, related_name="recommended_for",
                                                 help_text="Add-ons to highlight with this plan.")
+    # External storefronts (apps.storefronts, e.g. a WordPress site): the master switch - off hides this plan from
+    # every connected storefront regardless of which ones it is individually linked to (StorefrontProduct). Kept
+    # here rather than in apps.storefronts because it is a plain fact about the product itself, the same shape as
+    # auto_setup/default_auto_renew above, not a per-storefront setting.
+    publish_externally = models.BooleanField(
+        default=False, help_text="Allow connected external storefronts (e.g. a WordPress site) to show this plan at "
+                                 "all. Which storefronts is chosen separately, below.")
 
     @property
     def limit_items(self):

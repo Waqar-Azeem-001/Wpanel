@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "apps.branding",
     "apps.support",
     "apps.console",
+    "apps.storefronts",
 ]
 
 MIDDLEWARE = [
@@ -193,6 +194,7 @@ REST_FRAMEWORK = {
         "anon": env("THROTTLE_ANON", default="60/min"),
         "user": env("THROTTLE_USER", default="300/min"),
         "auth": env("THROTTLE_AUTH", default="10/min"),
+        "storefront": env("THROTTLE_STOREFRONT", default="120/min"),
     },
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

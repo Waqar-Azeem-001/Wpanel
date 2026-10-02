@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ storefront.name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p class="mb-2"><a href="{% url 'storefronts_staff:list' %}">&larr; External storefronts</a></p>
+<div class="page-head">
+  <h1>{{ storefront.name }}</h1>
+  {% status_badge storefront.status storefront.get_status_display %}
+</div>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <section class="card mb-3"><div class="card-body">
+      <h2 class="h6">Connection</h2>
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Website</dt><dd class="col-sm-8">{{ storefront.site_url }}</dd>
+        <dt class="col-sm-4">Type</dt><dd class="col-sm-8">{{ storefront.get_integration_type_display }}</dd>
+        <dt class="col-sm-4">Public id</dt><dd class="col-sm-8"><code>{{ storefront.public_id }}</code></dd>
+        <dt class="col-sm-4">Secret</dt><dd class="col-sm-8 text-secondary">Set, not shown again - rotate it for a new one.</dd>
+        <dt class="col-sm-4">Last used</dt><dd class="col-sm-8">{{ storefront.last_accessed_at|fdatetime|default:"Never" }}</dd>
+        <dt class="col-sm-4">Connected</dt><dd class="col-sm-8">{{ storefront.created_at|fdatetime }}</dd>
+      </dl>
+      {% if storefront.notes %}<p class="text-secondary mt-2 mb-0">{{ storefront.notes|linebreaksbr }}</p>{% endif %}
+      {% if can_manage %}
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <form method="post" action="{% url 'storefronts_staff:status' storefront.pk %}" data-confirm="{% if storefront.is_active %}Disable this storefront? Its credential stops working immediately.{% else %}Enable this storefront again?{% endif %}">{% csrf_token %}
+          <button class="btn btn-sm {% if storefront.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}" type="submit">{% if storefront.is_active %}Disable{% else %}Enable{% endif %}</button>
+        </form>
+        <form method="post" action="{% url 'storefronts_staff:rotate' storefront.pk %}" data-confirm="Rotate the secret? The current one stops working immediately - update the storefront's plugin with the new one shown next.">{% csrf_token %}
+          <button class="btn btn-sm btn-outline-secondary" type="submit">Rotate secret</button>
+        </form>
+      </div>
+      {% endif %}
+    </div></section>
+
+    <section class="card"><div class="card-header">Plans published here ({{ published|length }})</div>
+      <div class="table-responsive"><table class="table mb-0 align-middle">
+        <thead><tr><th>Plan</th><th>Shown as</th><th>Featured</th><th class="text-end">Order</th></tr></thead>
+        <tbody>
+        {% for link in published %}
+          <tr>
+            <td><a href="{% url 'catalog_staff:product_detail' link.product.slug %}">{{ link.product.name }}</a>{% if not link.product.publish_externally %} <span class="small text-danger">(externally off)</span>{% endif %}</td>
+            <td>{{ link.display_title }}</td>
+            <td>{% if link.featured %}Yes{% else %}—{% endif %}</td>
+            <td class="text-end">{{ link.sort_order }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="text-secondary">No plans published to this storefront yet - open a plan and choose it under "External storefronts".</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+  </div>
+
+  {% if can_manage %}
+  <div class="col-lg-5">
+    <section class="card"><div class="card-body">
+      <h2 class="h6">Edit</h2>
+      <form method="post" action="{% url 'storefronts_staff:edit' storefront.pk %}" novalidate>{% csrf_token %}
+        {% include "partials/form.html" %}
+        <button type="submit" class="btn btn-primary mt-2">Save</button>
+      </form>
+    </div></section>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -183,14 +183,26 @@ def staff_product_detail(request, slug):
     product = get_object_or_404(Product.objects.prefetch_related("prices", "servers"), slug=slug)
     can_manage = request.user.has_perm(perm("manage_products"))
     can_manage_hosting = request.user.has_perm(perm("manage_hosting"))
-    return render(request, "products/staff/product_detail.html", {
+    context = {
         "product": product,
         "can_manage": can_manage,
         "status_form": forms.ProductStatusForm(initial={"status": product.status}),
         "price_form": forms.PriceForm(),
         "servers_form": forms.ProductServersForm(initial={"servers": product.servers.all()})
         if can_manage_hosting or can_manage else None,
-    })
+    }
+    if can_manage and request.user.has_perm(perm("view_providers")):
+        from apps.storefronts.models import ExternalStorefront, StorefrontStatus
+
+        links = {link.storefront_id: link for link in product.storefront_links.all()}
+        first_link = next(iter(links.values()), None)
+        context.update(
+            storefronts=ExternalStorefront.objects.filter(status=StorefrontStatus.ACTIVE),
+            published_storefront_ids=set(links),
+            storefront_featured=bool(first_link and first_link.featured),
+            storefront_sort_order=first_link.sort_order if first_link else 100,
+        )
+    return render(request, "products/staff/product_detail.html", context)
 
 
 @portal_permission_required(perm("manage_products"))
@@ -201,6 +213,7 @@ def staff_product_edit(request, slug):
         "whm_package_name": product.whm_package_name, "category": product.category_id,
         "auto_setup": product.auto_setup, "default_auto_renew": product.default_auto_renew,
         "upsell_product": product.upsell_product_id, "recommended_addons": list(product.recommended_addons.all()),
+        "publish_externally": product.publish_externally,
     }
     form = forms.ProductForm(request.POST or None, initial=initial, existing_limits=product.ordered_limits())
     form.fields["upsell_product"].queryset = Product.objects.exclude(pk=product.pk)

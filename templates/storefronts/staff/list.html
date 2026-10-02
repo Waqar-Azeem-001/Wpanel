@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}External storefronts · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>External storefronts</h1>
+  <p class="page-sub">Websites outside this project - a WordPress site running the storefront plugin, for instance - that may read a chosen slice of the catalog.</p>
+  {% if can_manage %}<a class="btn btn-primary" href="{% url 'storefronts_staff:create' %}">Connect a storefront</a>{% endif %}
+</div>
+<div class="card">
+  <div class="table-responsive"><table class="table mb-0 align-middle">
+    <thead><tr><th>Name</th><th>Website</th><th>Type</th><th>Status</th><th class="text-end">Published plans</th><th>Last used</th></tr></thead>
+    <tbody>
+    {% for s in storefronts %}
+      <tr>
+        <td><a href="{% url 'storefronts_staff:detail' s.pk %}">{{ s.name }}</a></td>
+        <td class="text-secondary">{{ s.site_url }}</td>
+        <td>{{ s.get_integration_type_display }}</td>
+        <td>{% status_badge s.status s.get_status_display %}</td>
+        <td class="text-end">{{ s.product_count }}</td>
+        <td class="text-secondary">{{ s.last_accessed_at|fdatetime|default:"Never" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-secondary">No storefronts connected yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

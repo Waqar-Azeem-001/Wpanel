@@ -79,6 +79,10 @@ class ProductForm(FirstPriceMixin, forms.Form):
     recommended_addons = forms.ModelMultipleChoiceField(
         queryset=Addon.objects.all(), required=False, widget=forms.CheckboxSelectMultiple, label="Recommended add-ons",
         help_text="Highlighted first in the cart and on the plan page.")
+    publish_externally = forms.BooleanField(
+        required=False, label="Publish to connected storefronts",
+        help_text="Allow a connected external storefront (e.g. a WordPress site) to show this plan. Which "
+                  "storefronts is chosen further down, once the plan exists.")
 
     def __init__(self, *args, existing_limits=None, with_price=False, **kwargs):  # existing_limits: [(key, value)] in order, or None for a new plan
         super().__init__(*args, **kwargs)

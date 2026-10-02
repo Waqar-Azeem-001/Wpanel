@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<p class="mb-2"><a href="{% url 'storefronts_staff:list' %}">&larr; External storefronts</a></p>
+<div class="page-head"><h1>{{ title }}</h1>
+  <p class="page-sub">A website outside this project that may read a chosen slice of the catalog through the API. Its credential is shown once, right after you connect it - copy it then.</p></div>
+<section class="card"><div class="card-body">
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+      <button type="submit" class="btn btn-primary">Connect</button>
+      <a href="{% url 'storefronts_staff:list' %}">Cancel</a>
+    </div>
+  </form>
+</div></section>
+{% endblock %}

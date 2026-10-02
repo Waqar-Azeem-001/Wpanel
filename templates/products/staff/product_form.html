@@ -44,6 +44,7 @@
       <div class="col-md-6"></div>
       {% include "orders/_field.html" with field=form.auto_setup %}
       {% include "orders/_field.html" with field=form.default_auto_renew %}
+      {% include "orders/_field.html" with field=form.publish_externally %}
       {% include "orders/_field.html" with field=form.upsell_product wide=True %}
       <div class="field col-12"><label>{{ form.recommended_addons.label }}</label>
         <div class="check-grid">{% for option in form.recommended_addons %}<label class="check-pill">{{ option.tag }} <span>{{ option.choice_label }}</span></label>{% empty %}<p class="text-secondary mb-0">No add-ons yet. Create them under Products &rsaquo; Add-ons.</p>{% endfor %}</div>

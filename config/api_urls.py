@@ -19,6 +19,7 @@ from apps.notifications.api import EmailMessageViewSet, NotificationViewSet, Pre
 from apps.orders import api as orders_api
 from apps.products.api import AddonViewSet, ProductViewSet, ServerViewSet
 from apps.renewals import api as renewals_api
+from apps.storefronts import api as storefronts_api
 from apps.support import api as support_api
 
 router = DefaultRouter()
@@ -52,6 +53,7 @@ router.register("service-changes", renewals_api.ServiceChangeViewSet, basename="
 router.register("transactions", billing_docs.TransactionViewSet, basename="transaction")
 router.register("quotes", billing_docs.QuoteViewSet, basename="quote")
 router.register("billable-items", billing_docs.BillableItemViewSet, basename="billable-item")
+router.register("storefront/products", storefronts_api.StorefrontProductViewSet, basename="storefront-product")
 
 auth_patterns = [
     path("register/", accounts_api.RegisterView.as_view(), name="register"),
@@ -70,6 +72,10 @@ urlpatterns = [
     path("auth/", include(auth_patterns)),
     path("me/", accounts_api.MeView.as_view(), name="me"),
     path("domains/availability/", AvailabilityView.as_view(), name="domain-availability"),
+    path("storefront/categories/", storefronts_api.StorefrontCategoryListView.as_view(), name="storefront-categories"),
+    path("storefront/addons/", storefronts_api.StorefrontAddonListView.as_view(), name="storefront-addons"),
+    path("storefront/domains/pricing/", storefronts_api.StorefrontTldPricingListView.as_view(),
+        name="storefront-domain-pricing"),
     path("hosting-accounts/<int:pk>/renew/", renewals_api.HostingRenewView.as_view(), name="hosting-renew"),
     path("hosting-accounts/<int:pk>/upgrade/", renewals_api.HostingUpgradesView.as_view(), name="hosting-upgrade"),
     path("hosting-accounts/<int:pk>/term/", renewals_api.HostingTermView.as_view(), name="hosting-term"),

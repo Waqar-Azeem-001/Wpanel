@@ -190,6 +190,8 @@ ITEMS = [
          parent="staff.providers", permission="view_providers"),
     item("staff.providers.payments", _("Payment methods"), "billing_staff:payment_methods", areas=STAFF,
          parent="staff.providers", permission="view_billing"),
+    item("staff.providers.storefronts", _("External storefronts"), "storefronts_staff:list", areas=STAFF,
+         parent="staff.providers", permission="view_providers"),
     item("staff.notifications", _("Notifications"), areas=STAFF, section=_("System"), icon="bi-envelope"),
     item("staff.notifications.stats", _("Delivery statistics"), "notifications_staff:overview", areas=STAFF,
          parent="staff.notifications", permission="view_settings"),

@@ -212,6 +212,8 @@ def test_no_address_is_written_by_hand_in_a_template_or_in_code():
             rel = file.relative_to(root).as_posix()
             if rel == "apps/core/checks.py":  # the deploy check that insists SITE_URL is https names the scheme
                 continue
+            if rel == "apps/core/harness.py":  # test-support fixture data (e.g. a storefront's site_url, a real
+                continue                       # URLField) - imported only by tests, same category as test_*.py below
             if "/tests/" in rel or "/test_" in rel or rel.endswith("tests.py") or "migrations" in rel or "vendor" in rel:
                 continue
             for number, line in enumerate(file.read_text(encoding="utf-8").splitlines(), 1):
