@@ -36,7 +36,7 @@ def footer_info():
 # --- Status badges (v2 Section 9.3): the colour of a status is decided here, once ------------------------------------
 TONES = {
     "success": {"active", "paid", "resolved", "approved", "completed", "registered", "succeeded", "accepted", "done",
-                "sent", "ok", "verified", "enabled"},
+                "sent", "ok", "verified", "enabled", "delivered"},
     "warning": {"pending", "pending_payment", "processing", "provisioning", "partially_paid", "customer_reply",
                 "renewal_due", "grace", "queued", "pending_registration", "scheduled", "awaiting_review", "high"},
     "danger": {"unpaid", "overdue", "fraud", "failed", "suspended", "rejected", "expired", "declined",

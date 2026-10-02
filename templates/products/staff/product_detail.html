@@ -104,16 +104,32 @@
         {% endfor %}
       </div>
     </div>
-    <div class="row g-3 mt-1">
-      <div class="col-auto field form-check">
-        <input class="form-check-input" type="checkbox" id="id_storefront_featured" name="featured"{% if storefront_featured %} checked{% endif %}>
-        <label class="form-check-label" for="id_storefront_featured">Featured</label>
-      </div>
-      <div class="col-auto field"><label for="id_storefront_sort_order">Sort order</label>
-        <input class="form-control form-control-sm" type="number" id="id_storefront_sort_order" name="sort_order" value="{{ storefront_sort_order }}"></div>
-    </div>
-    <button type="submit" class="btn btn-outline-primary mt-2">Save storefront publishing</button>
+    <button type="submit" class="btn btn-outline-primary mt-2">Save "Available on"</button>
   </form>
+
+  {% if published_storefront_ids %}
+  <h3 class="h6 mt-4">How it looks on each one</h3>
+  {% for link in storefront_links %}
+  <form method="post" action="{% url 'storefronts_staff:product_link_update' product.slug link.storefront_id %}" class="border rounded p-3 mb-2">{% csrf_token %}
+    <div class="fw-semibold mb-2">{{ link.storefront.name }}</div>
+    <div class="row g-2">
+      <div class="col-md-5 field"><label>Title override</label>
+        <input class="form-control form-control-sm" type="text" name="title_override" value="{{ link.title_override }}" placeholder="{{ product.name }}"></div>
+      <div class="col-md-5 field"><label>Description override</label>
+        <input class="form-control form-control-sm" type="text" name="description_override" value="{{ link.description_override }}" placeholder="{{ product.description|default:"(none)" }}"></div>
+      <div class="col-md-2 field"><label>Sort order</label>
+        <input class="form-control form-control-sm" type="number" name="sort_order" value="{{ link.sort_order }}"></div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between mt-2">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="id_featured_{{ link.storefront_id }}" name="featured"{% if link.featured %} checked{% endif %}>
+        <label class="form-check-label" for="id_featured_{{ link.storefront_id }}">Featured</label>
+      </div>
+      <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+    </div>
+  </form>
+  {% endfor %}
+  {% endif %}
   {% else %}
   <p class="text-secondary mb-0">No storefronts are connected yet. Add one under <a href="{% url 'storefronts_staff:list' %}">External storefronts</a>.</p>
   {% endif %}

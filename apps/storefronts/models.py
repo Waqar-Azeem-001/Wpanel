@@ -7,6 +7,7 @@ one implementation).
 """
 from django.db import models
 
+from apps.core import crypto
 from apps.core.models import TimeStampedModel
 
 
@@ -35,7 +36,8 @@ class ExternalStorefront(TimeStampedModel):
     public_id = models.CharField(max_length=48, unique=True, editable=False,
                                  help_text="Sent alongside the secret; not itself sensitive.")
     secret_hash = models.CharField(max_length=128, editable=False)
-    webhook_url = models.URLField(blank=True, help_text="Reserved for a later slice (catalog-change notifications).")
+    webhook_url = models.URLField(blank=True, help_text="Where to ping this storefront when a published plan changes.")
+    webhook_secret_encrypted = models.TextField(blank=True, editable=False)
     notes = models.TextField(blank=True)
     last_accessed_at = models.DateTimeField(null=True, blank=True, editable=False)
 
@@ -48,6 +50,39 @@ class ExternalStorefront(TimeStampedModel):
     @property
     def is_active(self):
         return self.status == StorefrontStatus.ACTIVE
+
+    def set_webhook_secret(self, raw):
+        """Reversibly encrypted (unlike ``secret_hash`` above) because, unlike the inbound API credential, this
+        one is never compared - it must be read back in full every time *we* sign an outgoing delivery. Same
+        mechanism as ``PaymentProvider.set_webhook_secret`` (``apps.billing.models``)."""
+        self.webhook_secret_encrypted = crypto.encrypt(raw)
+
+    def get_webhook_secret(self):
+        return crypto.decrypt(self.webhook_secret_encrypted)
+
+
+class WebhookDeliveryStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    DELIVERED = "delivered", "Delivered"
+    FAILED = "failed", "Failed"
+
+
+class StorefrontWebhookDelivery(TimeStampedModel):
+    """One "something changed, please refetch" ping - a record of what was attempted, not a payload WordPress is
+    meant to trust (Rule 3: the plugin always refetches from the read API; this never carries catalog data)."""
+
+    storefront = models.ForeignKey(ExternalStorefront, on_delete=models.CASCADE, related_name="webhook_deliveries")
+    event = models.CharField(max_length=50)
+    status = models.CharField(max_length=16, choices=WebhookDeliveryStatus.choices, default=WebhookDeliveryStatus.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    response_status = models.PositiveSmallIntegerField(null=True, blank=True)
+    error = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.event} -> {self.storefront} ({self.status})"
 
 
 class StorefrontProduct(models.Model):

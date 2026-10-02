@@ -51,7 +51,9 @@ def staff_storefront_detail(request, pk):
     edit_form = forms.StorefrontForm(initial=_initial(storefront)) if can_manage else None
     return render(request, "storefronts/staff/detail.html", {
         "storefront": storefront, "can_manage": can_manage, "form": edit_form,
-        "published": storefront.published_products.select_related("product").order_by("sort_order", "product__name")})
+        "published": storefront.published_products.select_related("product").order_by("sort_order", "product__name"),
+        "has_webhook_secret": bool(storefront.webhook_secret_encrypted),
+        "deliveries": storefront.webhook_deliveries.all()[:10]})
 
 
 @require_POST
@@ -97,6 +99,19 @@ def staff_storefront_rotate(request, pk):
     return redirect("storefronts_staff:detail", pk=pk)
 
 
+@require_POST
+@portal_permission_required(MANAGE)
+def staff_storefront_rotate_webhook_secret(request, pk):
+    storefront = get_object_or_404(ExternalStorefront, pk=pk)
+    try:
+        raw_secret = services.rotate_webhook_secret(request.user, storefront, request=request)
+    except ACTION_ERRORS as exc:
+        messages.error(request, error_text(exc))
+    else:
+        messages.success(request, f"Webhook signing secret for '{storefront.name}' - shown once, copy it now: {raw_secret}")
+    return redirect("storefronts_staff:detail", pk=pk)
+
+
 def _run(request, action, view_name, **kwargs):
     try:
         result = action()
@@ -115,13 +130,32 @@ def _run(request, action, view_name, **kwargs):
 def staff_product_publish(request, slug):
     product = get_object_or_404(Product, slug=slug)
     storefront_ids = [int(v) for v in request.POST.getlist("storefronts") if v.isdigit()]
-    featured = request.POST.get("featured") == "on"
-    sort_order = int(request.POST.get("sort_order") or 100) if (request.POST.get("sort_order") or "").isdigit() else 100
     try:
-        services.set_product_storefronts(request.user, product, storefront_ids, featured=featured,
-                                         sort_order=sort_order, request=request)
+        services.set_product_storefronts(request.user, product, storefront_ids, request=request)
     except ACTION_ERRORS as exc:
         messages.error(request, error_text(exc))
     else:
         messages.success(request, "Storefront publishing updated.")
+    return redirect("catalog_staff:product_detail", slug=slug)
+
+
+@require_POST
+@portal_permission_required(perm("manage_products"))
+def staff_product_link_update(request, slug, storefront_id):
+    """Save one storefront's own title/description override, featured flag and sort order for this plan."""
+    product = get_object_or_404(Product, slug=slug)
+    storefront = get_object_or_404(ExternalStorefront, pk=storefront_id)
+    sort_order = request.POST.get("sort_order", "")
+    overrides = {
+        "title_override": request.POST.get("title_override", "").strip(),
+        "description_override": request.POST.get("description_override", "").strip(),
+        "featured": request.POST.get("featured") == "on",
+        "sort_order": int(sort_order) if sort_order.isdigit() else 100,
+    }
+    try:
+        services.publish_product(request.user, product, storefront, request=request, **overrides)
+    except ACTION_ERRORS as exc:
+        messages.error(request, error_text(exc))
+    else:
+        messages.success(request, f"Updated how this plan looks on '{storefront.name}'.")
     return redirect("catalog_staff:product_detail", slug=slug)

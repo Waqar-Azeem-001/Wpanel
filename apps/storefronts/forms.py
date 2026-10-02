@@ -9,5 +9,6 @@ class StorefrontForm(forms.Form):
                               assume_scheme="https")
     integration_type = forms.ChoiceField(choices=StorefrontType.choices, initial=StorefrontType.WORDPRESS)
     webhook_url = forms.URLField(required=False, label="Webhook URL", assume_scheme="https",
-                                 help_text="Reserved for a later slice (catalog-change notifications). Leave blank for now.")
+                                 help_text="Where to ping this storefront when a published plan changes. Needs its own "
+                                           "signing secret (generate one below) before anything is actually sent.")
     notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)

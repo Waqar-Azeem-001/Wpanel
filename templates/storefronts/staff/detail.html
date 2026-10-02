@@ -33,6 +33,34 @@
       {% endif %}
     </div></section>
 
+    <section class="card mb-3"><div class="card-body">
+      <h2 class="h6">Webhook (optional)</h2>
+      <dl class="row mb-0">
+        <dt class="col-sm-4">URL</dt><dd class="col-sm-8">{{ storefront.webhook_url|default:"Not set - see Edit." }}</dd>
+        <dt class="col-sm-4">Signing secret</dt>
+        <dd class="col-sm-8 text-secondary">{% if has_webhook_secret %}Set, not shown again - rotate it for a new one.{% else %}Not generated yet.{% endif %}</dd>
+      </dl>
+      {% if can_manage %}
+      <form method="post" action="{% url 'storefronts_staff:rotate_webhook_secret' storefront.pk %}"{% if has_webhook_secret %} data-confirm="Rotate the webhook signing secret? Deliveries signed with the old one will no longer verify."{% endif %} class="mt-3">{% csrf_token %}
+        <button class="btn btn-sm btn-outline-secondary" type="submit">{% if has_webhook_secret %}Rotate{% else %}Generate{% endif %} signing secret</button>
+      </form>
+      {% endif %}
+      {% if deliveries %}
+      <h3 class="h6 mt-3">Recent deliveries</h3>
+      <div class="table-responsive"><table class="table table-sm mb-0">
+        <thead><tr><th>When</th><th>Event</th><th>Status</th><th>Attempts</th></tr></thead>
+        <tbody>
+        {% for d in deliveries %}
+          <tr>
+            <td>{{ d.created_at|fdatetime }}</td><td>{{ d.event }}</td>
+            <td>{% status_badge d.status d.get_status_display %}</td><td>{{ d.attempts }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% endif %}
+    </div></section>
+
     <section class="card"><div class="card-header">Plans published here ({{ published|length }})</div>
       <div class="table-responsive"><table class="table mb-0 align-middle">
         <thead><tr><th>Plan</th><th>Shown as</th><th>Featured</th><th class="text-end">Order</th></tr></thead>

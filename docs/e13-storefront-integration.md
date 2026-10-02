@@ -1,6 +1,6 @@
-# E13: External / WordPress Storefront Integration (Slice 1)
+# E13: External / WordPress Storefront Integration
 
-**Date:** 2026-10-02
+**Date:** 2026-10-02 (slice 1), 2026-10-03 (slice 2: webhook invalidation, per-storefront overrides)
 **Baseline:** Phases 01-16 (both slices), D0-D8, E1-E12 and Phase 17 slice 1 complete, all local (not deployed).
 **Source:** `WP_Requirement.md` (owner-supplied 16-step specification, pasted in full and followed point by point).
 
@@ -163,15 +163,61 @@ code path in which the raw value could even reach `metadata`).
   rule here.
 - **Single global store currency** (`settings.STORE_CURRENCY`) - also pre-existing; the storefront API reports
   this one currency on every price, same as the rest of the project.
-- **Webhook-based cache invalidation is deferred** (Step 11 of the spec explicitly permits this): `webhook_url`
-  exists on `ExternalStorefront` and is stored, but nothing calls it yet. A future slice would need: a signed
-  payload (HMAC, constant-time comparison), retry with backoff, an audit trail of deliveries, and SSRF protection
-  on the stored URL (reject loopback/link-local/private ranges before ever issuing the request) - safer to defer
-  than to ship a fragile, unauthenticated version now.
 - **No reveal-after-creation for a storefront secret, by design** - a lost or leaked secret is rotated, never
-  retrieved; this is the spec's own Step 14 requirement, not a gap.
+  retrieved; this is the spec's own Step 14 requirement, not a gap. The same is true of the webhook signing
+  secret added in slice 2.
 - **No per-storefront addon or domain-pricing scoping** - Steps 6 and 7 of the spec never asked for either; adding
   them would be scope not requested.
+- **Webhook pings cover publish/unpublish and content changes to an already-published plan** (name, description,
+  status, price, and the global `publish_externally` switch - see slice 2 below) **but not every conceivable
+  change** - e.g. a category's own name changing does not currently ping the storefronts of the plans in it. The
+  trigger list can grow the same way (a signal in `apps/storefronts/signals.py`) without touching `apps.products`.
+
+## Slice 2 (2026-10-03): webhook invalidation and per-storefront overrides
+
+Both items the slice 1 report above listed as deferred were implemented, at the owner's request immediately
+following that report, rather than left for later:
+
+**Webhook-based cache invalidation (Step 11).** `ExternalStorefront` gained a `webhook_secret_encrypted` field
+(reversibly encrypted via the project's existing `apps.core.crypto` - the same mechanism `PaymentProvider` already
+uses for a gateway's webhook secret in `apps/billing/models.py` - because, unlike the inbound API credential, this
+one must be read back in full every time *we* sign an outgoing delivery, not merely compared). A new
+`StorefrontWebhookDelivery` model records every attempt (event, status, attempts, HTTP status, error).
+`apps/storefronts/webhooks.py` holds the SSRF guard (`assert_safe_webhook_url`: rejects anything not `https`,
+resolves the hostname, and refuses a private/loopback/link-local/reserved/multicast/unspecified address - checked
+again on every send, not only when the URL was saved) and the signing function (`t=<unix time>,v1=<hmac-sha256
+hex>`, the same shape as the project's existing gateway-webhook signing in `apps.billing.gateways`, so there is one
+convention for "how this project proves it sent something", not two). `apps/storefronts/tasks.py`'s
+`deliver_webhook_task` (Celery, `autoretry_for`/`retry_backoff`, mirroring `apps.notifications.tasks.deliver_email`)
+retries a transient failure (network error, non-2xx) but not a permanent one (unsafe URL, DNS failure, no secret
+configured). Two trigger points, both broker-outage-safe (`transaction.on_commit`, the same pattern as order
+fulfilment's `schedule()`):
+  - `publish_product`/`unpublish_product` (`apps/storefronts/services.py`) ping the one storefront involved.
+  - `apps/storefronts/signals.py` (connected in `StorefrontsConfig.ready()`) pings every storefront a plan is
+    already published to when that plan's own `Product` row or any of its `ProductPrice` rows are saved or a
+    price is removed - **`apps.products` needed no changes at all** for this (Rule 3): the signal is entirely
+    owned by `apps.storefronts`, guarded by a cheap "does this product have any storefront links at all" check
+    before doing anything, so an ordinary product/price save elsewhere in the project is unaffected.
+  A staff member generates/rotates the signing secret from the storefront's own detail page (shown once, exactly
+  like the API credential); the page also lists the 10 most recent delivery attempts.
+
+**Per-storefront override screen.** `set_product_storefronts` (the "Available on" checkboxes) now only adds or
+drops links - it no longer writes a shared featured/sort_order onto every linked storefront on every resave,
+which would have clobbered a title/description/featured/sort_order set from the row below it. The product detail
+page's "External storefronts" section now shows one editable row per storefront the plan is already published to
+(`storefronts_staff:product_link_update`), each with its own title override, description override, featured flag
+and sort order, posting independently - the full capability `StorefrontProduct` already had in slice 1 is now
+reachable from the UI, not only from the service layer.
+
+**Verified:** 23 new tests (`apps/storefronts/tests/test_webhooks.py` 19, plus 4 more in `test_web.py`) - the SSRF
+guard (safe/unsafe/unresolvable), signing, one delivery attempt (success, non-2xx, unsafe URL, missing secret, all
+without ever calling `requests.post` when they shouldn't), `notify_catalog_changed`'s no-op-until-configured
+behaviour, both trigger points, both product-save and price-save signals (and that an unrelated, unpublished
+product notifies nobody), secret rotation audited without the raw value ever appearing in the audit row, and the
+new staff views' permission gates. Browser-checked (Chromium, 1440 wide, scratch database): the storefront detail
+page's Webhook card (URL, secret status, Generate/Rotate button with its `data-confirm` prompt, recent-deliveries
+table) and the product page's per-storefront override rows (filled in, edited, saved, flash message confirms which
+storefront changed) - no console errors, no overflow. Full project suite green throughout.
 
 ## Deferred WordPress-side requirements (for whoever builds the plugin; not part of this slice)
 
@@ -179,7 +225,13 @@ code path in which the raw value could even reach `metadata`).
   read; send the `Authorization: Storefront ...` header from the server side (e.g. via WordPress's HTTP API),
   never from client-side JavaScript.
 - Cache the catalog responses locally (there is no pagination - a fetch returns the whole published catalog) and
-  refresh on a schedule (e.g. hourly) until a webhook exists to say "something changed, refetch now".
+  refresh on a schedule (e.g. hourly) as a baseline, and additionally on receiving a webhook ping (see below).
+- Verify every incoming webhook ping before trusting it: recompute `hmac_sha256(secret, f"{t}." + raw_body)` from
+  the `t=...,v1=...` value in the `X-Storefront-Signature` header using the webhook signing secret (generated
+  separately from the API secret, on the storefront's own detail page) and compare with a constant-time comparison
+  - then simply refetch the catalog from the read API; the ping's own JSON body (`{"event": ..., "storefront":
+  ...}`) carries no catalog data and must never be trusted as if it did (Rule 3 - WordPress never stores a second
+  copy of pricing logic, and it never trusts a push payload as the source of truth either).
 - Link "Order now" buttons straight to each plan's `order_url` - never attempt to build a cart or compute a price
   in WordPress; this project's own checkout is always the one source of truth for what a customer is actually
   charged.
@@ -222,9 +274,22 @@ Example product (list or detail - same shape):
 No envelope, no pagination (`{"results": [...]}`) - list endpoints return a plain JSON array, since a storefront
 is expected to fetch and cache the whole published catalog rather than page through it.
 
+**Webhook ping** (slice 2) - a POST to the storefront's own `webhook_url`, signed in the `X-Storefront-Signature`
+header (`t=<unix time>,v1=<hmac-sha256 hex of "{t}." + raw body>`, keyed by the webhook signing secret generated
+on that storefront's detail page - separate from the API secret above):
+
+```json
+{"event": "product.updated", "storefront": "sf_AK41EUMVKo4pLGzu"}
+```
+
+`event` is one of `product.published`, `product.updated`, `product.unpublished` - informational only. The body
+carries no catalog data; on receiving one (of any event, with a verified signature), the plugin should simply
+refetch from the read API above.
+
 ## Deferred to a later slice
 
-- Webhook-based cache invalidation (signed, retryable, auditable, SSRF-safe) - see Known limitations above.
-- A richer per-storefront override screen exposing the independent `title_override`/`description_override`/
-  per-pair featured/sort_order that `StorefrontProduct` already supports (the current staff screen deliberately
-  only offers one shared pair, matching the spec's own mockup).
+- Expanding the webhook trigger list beyond publish/unpublish and an already-published plan's own name,
+  description, status or price (e.g. a category rename does not currently trigger a ping for the plans in it).
+- A dead-letter view or manual "retry this delivery" action in the staff UI - today a failed delivery is visible
+  in the storefront detail page's recent-deliveries table and retried automatically (up to 5 times, with backoff)
+  by Celery, but there is no way to force a retry sooner, or to resend a specific past delivery, from the UI.

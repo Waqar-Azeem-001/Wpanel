@@ -194,13 +194,10 @@ def staff_product_detail(request, slug):
     if can_manage and request.user.has_perm(perm("view_providers")):
         from apps.storefronts.models import ExternalStorefront, StorefrontStatus
 
-        links = {link.storefront_id: link for link in product.storefront_links.all()}
-        first_link = next(iter(links.values()), None)
         context.update(
             storefronts=ExternalStorefront.objects.filter(status=StorefrontStatus.ACTIVE),
-            published_storefront_ids=set(links),
-            storefront_featured=bool(first_link and first_link.featured),
-            storefront_sort_order=first_link.sort_order if first_link else 100,
+            published_storefront_ids=set(product.storefront_links.values_list("storefront_id", flat=True)),
+            storefront_links=product.storefront_links.select_related("storefront"),
         )
     return render(request, "products/staff/product_detail.html", context)
 

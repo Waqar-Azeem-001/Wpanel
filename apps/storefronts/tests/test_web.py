@@ -94,6 +94,16 @@ def test_rotating_shows_the_new_secret_once(client, admin, storefront):
     assert "shown once" in response.content.decode().lower() or "shown once" in str(list(response.context["messages"])).lower()
 
 
+def test_generating_a_webhook_secret_shows_it_once_and_needs_manage_providers(client, admin, manager, storefront):
+    client.force_login(manager)
+    assert client.post(f"/staff/storefronts/{storefront.pk}/webhook-secret/").status_code == 403
+    client.force_login(admin)
+    response = client.post(f"/staff/storefronts/{storefront.pk}/webhook-secret/", follow=True)
+    assert "shown once" in str(list(response.context["messages"])).lower()
+    storefront.refresh_from_db()
+    assert storefront.webhook_secret_encrypted
+
+
 # --- Publishing a plan from the product page ------------------------------------------------------------------
 
 def test_the_product_detail_page_offers_the_storefront_checkboxes_to_admin_only(client, admin, manager, storefront, product):
@@ -109,10 +119,40 @@ def test_the_product_detail_page_offers_the_storefront_checkboxes_to_admin_only(
 def test_publishing_a_product_to_a_storefront_from_the_product_page(client, admin, storefront, product):
     client.force_login(admin)
     response = client.post(f"/staff/storefronts/products/{product.slug}/publish/",
-                           {"storefronts": [storefront.pk], "sort_order": "5"}, follow=True)
+                           {"storefronts": [storefront.pk]}, follow=True)
     assert response.status_code == 200
     assert storefront.published_products.filter(product=product).exists()
     assert AuditEvent.objects.filter(action="storefront.product_published").exists()
+
+
+def test_resaving_the_available_on_checkboxes_does_not_clobber_an_existing_override(client, admin, storefront, product):
+    """Setting a title override from the per-storefront row, then resaving the plain checkbox list above it (e.g.
+    checking a second storefront too), must not silently wipe what was just set."""
+    services.publish_product(admin, product, storefront, title_override="My Own Title", featured=True, sort_order=3)
+    client.force_login(admin)
+    client.post(f"/staff/storefronts/products/{product.slug}/publish/", {"storefronts": [storefront.pk]})
+    link = storefront.published_products.get(product=product)
+    assert link.title_override == "My Own Title" and link.featured and link.sort_order == 3
+
+
+def test_editing_one_storefront_s_own_title_and_sort_order_for_a_plan(client, admin, storefront, product):
+    services.publish_product(admin, product, storefront)
+    client.force_login(admin)
+    response = client.post(f"/staff/storefronts/products/{product.slug}/publish/{storefront.pk}/", {
+        "title_override": "Starter (UK)", "description_override": "Local UK plan", "featured": "on", "sort_order": "7",
+    }, follow=True)
+    assert response.status_code == 200
+    link = storefront.published_products.get(product=product)
+    assert link.title_override == "Starter (UK)" and link.featured and link.sort_order == 7
+    assert AuditEvent.objects.filter(action="storefront.product_updated").exists()
+
+
+def test_editing_a_storefront_s_override_needs_manage_products(client, manager, storefront, product):
+    services.publish_product(manager, product, storefront)
+    client.force_login(manager)  # manager has manage_products in this fixture
+    response = client.post(f"/staff/storefronts/products/{product.slug}/publish/{storefront.pk}/",
+                           {"title_override": "x", "sort_order": "1"})
+    assert response.status_code in (200, 302)
 
 
 def test_unchecking_every_storefront_unpublishes_the_product(client, admin, storefront, product):

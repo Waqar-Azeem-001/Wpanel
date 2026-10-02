@@ -2,6 +2,7 @@
 Business logic for external storefronts. Web views and the storefront-facing API both call these; neither holds a
 rule of its own (the same shape as every other app in this project).
 """
+import logging
 import secrets
 
 from django.contrib.auth.hashers import check_password, make_password
@@ -12,6 +13,8 @@ from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
 from .models import ExternalStorefront, StorefrontProduct, StorefrontStatus
+
+logger = logging.getLogger(__name__)
 
 STOREFRONT_FIELDS = ("name", "site_url", "integration_type", "webhook_url", "notes")
 PUBLIC_ID_BYTES = 12
@@ -92,6 +95,18 @@ def rotate_secret(actor, storefront, *, request=None):
     return raw_secret
 
 
+def rotate_webhook_secret(actor, storefront, *, request=None):
+    """A fresh webhook signing secret (separate from the API credential above - this one we keep readable
+    ourselves, to sign every outgoing delivery; see ``ExternalStorefront.set_webhook_secret``). Returns the raw
+    value - shown once, never stored or logged anywhere else."""
+    _require(actor)
+    raw_secret = _generate_secret()
+    storefront.set_webhook_secret(raw_secret)
+    storefront.save(update_fields=["webhook_secret_encrypted", "updated_at"])
+    audit.record("storefront.webhook_secret_rotated", actor=actor, target=storefront, request=request)
+    return raw_secret
+
+
 def authenticate_storefront(public_id, raw_secret):
     """None if the credential is wrong, unknown, or the storefront is disabled - deliberately the same outcome for
     all three, so a caller learns nothing about which part was wrong."""
@@ -104,6 +119,35 @@ def authenticate_storefront(public_id, raw_secret):
 
     ExternalStorefront.objects.filter(pk=storefront.pk).update(last_accessed_at=timezone.now())
     return storefront
+
+
+# --- Telling a storefront something changed (Step 11 - optional, deferrable; deferred no longer) -------------------
+
+def notify_catalog_changed(storefront, event, *, request=None):
+    """Queue a signed "refetch your catalog" ping (``apps/storefronts/webhooks.py``) once the surrounding
+    transaction commits - a broker outage must never be why a plan's own save fails (the same pattern as order
+    fulfilment's ``schedule()``). A no-op if this storefront has no webhook configured yet."""
+    if not storefront.webhook_url or not storefront.webhook_secret_encrypted:
+        return
+
+    def enqueue():
+        from .models import StorefrontWebhookDelivery
+        from .tasks import deliver_webhook_task
+
+        delivery = StorefrontWebhookDelivery.objects.create(storefront=storefront, event=event)
+        try:
+            deliver_webhook_task.delay(delivery.pk)
+        except Exception:  # noqa: BLE001 - a broker hiccup must not be why the caller's own action fails
+            logger.exception("Could not queue webhook delivery %s", delivery.pk)
+
+    transaction.on_commit(enqueue)
+
+
+def storefronts_for(product):
+    """Every storefront a plan is currently published to - used to fan out a "please refetch" ping when the plan
+    itself changes (``apps/storefronts/signals.py``), not to decide what a storefront's API response contains
+    (that is ``products_for`` below, the other direction)."""
+    return ExternalStorefront.objects.filter(published_products__product=product).distinct()
 
 
 # --- Which plans a storefront may show -----------------------------------------------------------------------
@@ -120,6 +164,7 @@ def publish_product(actor, product, storefront, *, request=None, **overrides):
     if not unchanged:
         audit.record("storefront.product_published" if created else "storefront.product_updated", actor=actor,
                      target=product, metadata={"storefront": storefront.name}, request=request)
+        notify_catalog_changed(storefront, "product.published" if created else "product.updated", request=request)
     return link
 
 
@@ -129,21 +174,23 @@ def unpublish_product(actor, product, storefront, *, request=None):
     if deleted:
         audit.record("storefront.product_unpublished", actor=actor, target=product,
                      metadata={"storefront": storefront.name}, request=request)
+        notify_catalog_changed(storefront, "product.unpublished", request=request)
 
 
-def set_product_storefronts(actor, product, storefront_ids, *, featured=False, sort_order=100, request=None):
+def set_product_storefronts(actor, product, storefront_ids, *, request=None):
     """
-    Replace the full set of storefronts a plan is published to in one call (the product edit page's "Available on"
-    checkboxes, plus one shared Featured/Sort order for this product - a per-storefront override, if ever needed, is
-    still just a row in ``StorefrontProduct`` and can be set from a later, more detailed screen): publishes to every
-    id in ``storefront_ids`` not already linked, updates the featured/sort_order on every id already linked, and
-    unpublishes from every currently-linked storefront not in the set. Each add/update/remove is its own audited call.
+    Replace the full set of storefronts a plan is published to (the product page's "Available on" checkboxes):
+    publishes to every id in ``storefront_ids`` not already linked (with blank/default overrides - set those
+    separately from each storefront's own row, once it exists), and unpublishes from every currently-linked
+    storefront not in the set. Deliberately does not touch the overrides of a storefront that was already linked
+    and stays linked - resaving this checkbox list must never clobber a title/description/featured/sort_order a
+    staff member set from the per-storefront row below it.
     """
     _require(actor, "manage_products")
     wanted = set(storefront_ids)
     existing = set(StorefrontProduct.objects.filter(product=product).values_list("storefront_id", flat=True))
-    for storefront in ExternalStorefront.objects.filter(pk__in=wanted):
-        publish_product(actor, product, storefront, featured=featured, sort_order=sort_order, request=request)
+    for storefront in ExternalStorefront.objects.filter(pk__in=wanted - existing):
+        publish_product(actor, product, storefront, request=request)
     for storefront in ExternalStorefront.objects.filter(pk__in=existing - wanted):
         unpublish_product(actor, product, storefront, request=request)
 
