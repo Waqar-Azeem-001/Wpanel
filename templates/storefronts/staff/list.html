@@ -4,7 +4,7 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>External storefronts</h1>
-  <p class="page-sub">Websites outside this project - a WordPress site running the storefront plugin, for instance - that may read a chosen slice of the catalog.</p>
+  <p class="page-sub">Websites outside this project - a WordPress site running the storefront plugin, for instance - that may read a chosen slice of the catalog. <a href="{% url 'storefronts_staff:guide' %}">Setup guide</a> - which value comes from where, step by step with screenshots.</p>
   {% if can_manage %}<a class="btn btn-primary" href="{% url 'storefronts_staff:create' %}">Connect a storefront</a>{% endif %}
 </div>
 <div class="card">

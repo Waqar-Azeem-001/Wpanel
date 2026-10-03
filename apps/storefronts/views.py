@@ -23,6 +23,13 @@ def _initial(storefront):
 
 
 @portal_permission_required(VIEW)
+def staff_storefront_guide(request):
+    """A step-by-step, screenshotted version of docs/storefront-connection-guide.md, inside the app itself -
+    which value (public id, secret) comes from where, and what a future plugin would still need to build."""
+    return render(request, "storefronts/staff/guide.html")
+
+
+@portal_permission_required(VIEW)
 def staff_storefront_list(request):
     rows = ExternalStorefront.objects.annotate(product_count=Count("published_products"))
     return render(request, "storefronts/staff/list.html", {

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Storefront setup guide · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p class="mb-2"><a href="{% url 'storefronts_staff:list' %}">&larr; External storefronts</a></p>
+<div class="page-head"><h1>Connecting an external storefront</h1>
+  <p class="page-sub">Exactly what exists today, which value comes from where, and what it is for.</p>
+</div>
+
+<div class="alert alert-warning" role="alert">
+  <strong>No WordPress plugin exists yet.</strong> Connecting a storefront here gives you a credential and a
+  read-only API - it does not, by itself, make anything appear on a real WordPress site, because nothing is
+  installed there yet to use it. Everything below is the side that is already built and tested; the last section
+  explains what a plugin (or any other integration) would still need to do.
+</div>
+
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">1. Connect a storefront</h2>
+  <p><strong>System &rarr; External storefronts &rarr; Connect a storefront.</strong> Before any connection exists, the list is empty:</p>
+  <img src="{% static 'img/storefront-guide/01-empty-list.png' %}" alt="Empty storefront list" class="img-fluid border rounded mb-3">
+  <p>Fill in a name (for your own reference only - it is never sent anywhere) and the site's own address, then <strong>Connect</strong>:</p>
+  <img src="{% static 'img/storefront-guide/02-connect-form.png' %}" alt="The connect form" class="img-fluid border rounded mb-3">
+  <ul>
+    <li><strong>Name</strong> - whatever helps you tell storefronts apart later. Internal label only.</li>
+    <li><strong>Website</strong> - the storefront's own address. Recorded for reference; nothing is fetched from it.</li>
+    <li><strong>Integration type</strong> - WordPress today, the only kind this project currently models.</li>
+    <li><strong>Webhook URL</strong> - optional; leave blank unless you already want catalog-change pings (see section 5).</li>
+  </ul>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">2. Copy the credential - shown exactly once</h2>
+  <p>The moment you connect, the page flashes the <strong>only time the raw secret ever exists</strong> outside this one message:</p>
+  <img src="{% static 'img/storefront-guide/03-credential-shown-once.png' %}" alt="The credential, shown once" class="img-fluid border rounded mb-3">
+  <table class="table table-sm w-auto">
+    <thead><tr><th>Value</th><th>Where it comes from</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Public id</strong> (<code>sf_...</code>)</td>
+          <td>Generated automatically when you connect; also shown permanently on the storefront's own detail page afterwards - not secret, safe to note down any time.</td>
+          <td>Identifies <em>which</em> storefront is calling, the same way a username identifies an account.</td></tr>
+      <tr><td><strong>Secret</strong> (the long random string)</td>
+          <td>Generated automatically, shown <strong>only in this one flash message</strong>. Walking away without copying it means rotating for a new one.</td>
+          <td>Proves the caller really is that storefront. Both values together go in one HTTP header - section 3.</td></tr>
+    </tbody>
+  </table>
+  <p class="text-secondary mb-0">If you lose it, there is no "show secret again" anywhere, on purpose. Use <strong>Rotate secret</strong> on the storefront's own detail page for a new one - this invalidates the old one immediately.</p>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">3. What the two values are actually used for</h2>
+  <p>Whatever eventually calls the API (today: nothing; in future: a WordPress plugin, or any other script) sends both values in a single request header, on every request:</p>
+  <pre class="bg-body-tertiary p-2 rounded"><code>Authorization: Storefront sf_ARLezQj_-6P64Mn1:hIGfPQb6Gx_2NGMr_ASpioGlPLFjacz3X4LeZsPLpYQ</code></pre>
+  <p class="mb-0">That is the <em>entire</em> authentication mechanism - no login form, no session, no cookie. A request with a missing, wrong or disabled storefront's credential gets <code>401 Unauthorized</code> and nothing else.</p>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">4. Choose which plans this storefront may show</h2>
+  <p>A storefront sees nothing until a plan is explicitly published to it - connecting one does not expose your whole catalog. Open a plan (<strong>Commerce &rarr; Products &amp; plans &rarr; (a plan) &rarr; External storefronts</strong>), switch on <strong>Publish externally</strong> if it is not already, tick the storefront under <strong>Available on</strong>, and save:</p>
+  <img src="{% static 'img/storefront-guide/04-publish-a-plan.png' %}" alt="Publishing a plan to a storefront" class="img-fluid border rounded mb-3">
+  <p>The storefront's own detail page then lists everything published to it:</p>
+  <img src="{% static 'img/storefront-guide/05-storefront-detail.png' %}" alt="A storefront with one plan published" class="img-fluid border rounded mb-3">
+  <p class="mb-0">Two independent switches control visibility, and <strong>both</strong> must be on: <strong>Publish externally</strong> (on the plan - a global kill-switch) and <strong>Available on</strong> (per storefront, which specific ones show it).</p>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">5. What calling the API actually returns</h2>
+  <table class="table table-sm">
+    <thead><tr><th>Endpoint</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /api/v1/storefront/products/</code></td><td>Every plan published to this storefront.</td></tr>
+      <tr><td><code>GET /api/v1/storefront/products/&lt;slug-or-id&gt;/</code></td><td>One plan, same shape.</td></tr>
+      <tr><td><code>GET /api/v1/storefront/categories/</code></td><td>Only categories that hold a published plan.</td></tr>
+      <tr><td><code>GET /api/v1/storefront/addons/</code></td><td>Every active add-on (global, not per-storefront).</td></tr>
+      <tr><td><code>GET /api/v1/storefront/domains/pricing/</code></td><td>Every active TLD's register/renew/transfer price.</td></tr>
+    </tbody>
+  </table>
+  <p class="mb-0">No pagination - a storefront fetches and caches the whole response. The full shapes and a worked
+    example are in <code>docs/e13-storefront-integration.md</code>. The golden rule for anything that ever consumes
+    this API: it only ever <em>displays</em> what these return and links "Order now" straight to each plan's
+    <code>order_url</code> - the customer finishes the purchase on this portal's own checkout. It never calculates a
+    price, a discount or tax itself. Optional webhook pings (a signed "please refetch" signal, no catalog data) are
+    covered in the same doc.</p>
+</div></section>
+
+<section class="card"><div class="card-body">
+  <h2 class="h5">If/when a WordPress plugin gets built</h2>
+  <p>It would need to, at minimum:</p>
+  <ol>
+    <li>A settings screen inside WP admin where staff paste the public id and secret from section 2.</li>
+    <li>Store them in WordPress options - server-side only, never in a cookie or anything a visitor's browser can read.</li>
+    <li>Call the endpoints in section 5 with the <code>Authorization</code> header from section 3, from the server side, on a schedule.</li>
+    <li>Cache the result and render it as whatever the site's own plans/pricing page looks like.</li>
+    <li>Link every "Order now" button straight to that plan's own <code>order_url</code> - never build a cart or collect payment details inside WordPress itself.</li>
+  </ol>
+  <p class="mb-0">None of this exists yet. This page is what whoever builds it would start from.</p>
+</div></section>
+{% endblock %}

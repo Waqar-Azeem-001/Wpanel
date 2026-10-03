@@ -6,6 +6,7 @@ app_name = "storefronts_staff"
 
 urlpatterns = [
     path("", views.staff_storefront_list, name="list"),
+    path("guide/", views.staff_storefront_guide, name="guide"),
     path("new/", views.staff_storefront_create, name="create"),
     path("<int:pk>/", views.staff_storefront_detail, name="detail"),
     path("<int:pk>/edit/", views.staff_storefront_edit, name="edit"),
