@@ -107,6 +107,29 @@ def test_changing_a_role_is_audited_and_the_person_is_signed_out_of_the_api(worl
     assert AuditEvent.objects.filter(action="account.role_changed", target_id=str(agent.pk)).exists()
 
 
+def test_extra_permissions_are_granted_beyond_the_role_and_shown_on_the_page(world):
+    admin = browser(world.people["admin"])
+    agent = world.people["support agent"]
+    page = admin.get(reverse("console:user_detail", args=[agent.pk])).content.decode()
+    assert "Extra permissions" in page and "Can manage affiliates" in page
+    response = admin.post(reverse("console:user_extra_permissions", args=[agent.pk]),
+                          {"permissions": ["manage_affiliates", "manage_support"]})
+    assert "Extra permissions saved" in " ".join(notes(admin, response))
+    agent = User.objects.get(pk=agent.pk)
+    assert agent.has_perm("accounts.manage_affiliates")
+    assert AuditEvent.objects.filter(action="account.extra_permissions_changed", target_id=str(agent.pk)).exists()
+
+
+def test_a_manager_cannot_set_extra_permissions_and_nobody_can_set_their_own(world):
+    manager = browser(world.people["manager"])
+    admin = browser(world.people["admin"])
+    agent, me = world.people["support agent"], world.people["admin"]
+    assert manager.post(reverse("console:user_extra_permissions", args=[agent.pk]),
+                        {"permissions": ["manage_affiliates"]}).status_code == 403
+    response = admin.post(reverse("console:user_extra_permissions", args=[me.pk]), {"permissions": ["manage_affiliates"]})
+    assert "cannot change your own" in " ".join(notes(admin, response))
+
+
 def test_nobody_can_change_their_own_role_or_status_and_an_admin_cannot_touch_an_admin(world):
     admin = browser(world.people["admin"])
     me, other_admin = world.people["admin"], world.people["super admin"]

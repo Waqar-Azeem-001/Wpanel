@@ -14,6 +14,11 @@ def manager(staff):
 
 
 @pytest.fixture
+def admin(staff):
+    return staff(Role.ADMIN)
+
+
+@pytest.fixture
 def registrar():
     return RegistrarProvider.objects.create(name="Test", kind="manual", is_active=True)
 
@@ -180,3 +185,16 @@ def test_staff_tld_list_and_status_toggle(client, manager, com_pricing):
     client.post(f"/staff/domains/tlds/{com_pricing.pk}/status/", {})  # unchecked -> inactive
     com_pricing.refresh_from_db()
     assert com_pricing.is_active is False
+
+
+def test_domain_settings_page_needs_view_settings_and_only_admin_can_save(client, manager, admin):
+    client.force_login(manager)  # a manager has no settings access at all
+    assert client.get("/staff/domains/settings/").status_code == 403
+
+    client.force_login(admin)
+    assert client.get("/staff/domains/settings/").status_code == 200
+    response = client.post("/staff/domains/settings/", {}, follow=True)  # unchecked -> off
+    assert response.status_code == 200
+    from apps.domains.models import DomainSettings
+
+    assert DomainSettings.load().auto_register is False

@@ -168,6 +168,29 @@ def test_dispatch_client_reaches_owner_and_billing_contacts_only(manager, owner,
     assert not Notification.objects.filter(user__email="tech@acme.test").exists()
 
 
+def test_dispatch_client_also_copies_the_alternate_email_when_set(manager, owner, client_obj):
+    client_obj.alternate_email = "cc@acme.test"
+    client_obj.save(update_fields=["alternate_email"])
+    mail.outbox.clear()
+    sent = services.dispatch_client("order.cancelled", client_obj, title="Cancelled", link="/o/",
+                                    context={"order": type("O", (), {"billing_name": "A", "reference": "O1",
+                                                                     "cancel_reason": ""})(), "link": "/o/"})
+    recipients = {m.to[0] for m in mail.outbox}
+    assert recipients == {owner.email, "cc@acme.test"} and len(sent) == 2
+
+
+def test_dispatch_client_does_not_double_send_when_the_alternate_email_matches_a_recipient(client_obj):
+    from apps.clients.models import ClientContact
+
+    ClientContact.objects.filter(client=client_obj).delete()
+    client_obj.alternate_email = client_obj.email
+    client_obj.save(update_fields=["alternate_email"])
+    mail.outbox.clear()
+    services.dispatch_client("hosting.suspended", client_obj,
+                             context={"account": type("A", (), {"domain": "d.com"})(), "link": "/", "reason": ""})
+    assert [m.to for m in mail.outbox] == [[client_obj.email]]
+
+
 def test_dispatch_client_falls_back_to_the_clients_own_address(client_obj):
     from apps.clients.models import ClientContact
 

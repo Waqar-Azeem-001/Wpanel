@@ -365,7 +365,7 @@ def purge_guest_carts(*, days=30):
 
 # --- Checkout -------------------------------------------------------------------------------
 
-def checkout(actor, cart, *, payment_method_code, notes="", request=None):
+def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, request=None):
     """
     Turn a cart into an order awaiting payment.
 
@@ -374,6 +374,11 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
     it is refused if any line, the coupon or a domain is no longer valid. Safe
     against a double submit: the first call closes the cart, so a repeat is
     rejected rather than creating a second order.
+
+    ``notify_client`` always defaults on (a customer checking out their own cart must always hear about it) and is
+    only ever turned off by staff placing an order on a client's behalf (``orders_staff:new``) - the order and its
+    invoice are still created and payable either way; this only controls whether the client is emailed about it
+    right now, or staff share it with them separately later (the invoice's own "Email invoice" button).
     """
     _require_own_cart(actor, cart)
     # Ask the database, not the (possibly stale) instance: a repeat submit must be told the
@@ -428,7 +433,8 @@ def checkout(actor, cart, *, payment_method_code, notes="", request=None):
                      metadata={"client_id": client.pk, "total": str(order.total), "items": len(priced.lines),
                                "coupon": order.coupon_code, "payment_method": method.code}, request=request)
         invoice = create_invoice_for_order(order, actor=actor)
-        _notify_order_placed(actor, order, method, invoice)
+        if notify_client:
+            _notify_order_placed(actor, order, method, invoice)
         notifications.notify_team("order.new", "view_orders", exclude=actor, title=f"New order {order.reference}",
                                   body=notifications.describe_order(order),
                                   link=reverse("orders_staff:detail", args=[order.pk]))

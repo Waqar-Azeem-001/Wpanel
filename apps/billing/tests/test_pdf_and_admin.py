@@ -57,6 +57,20 @@ def test_quote_pdf_and_draft_pdf(manager, client_obj):
     assert b"Draft" in pdf.render_invoice_pdf(draft)
 
 
+def test_quote_pdf_shows_the_footer_terms_and_the_highlight_line(manager, client_obj):
+    row = BillingSettings.load()
+    row.quote_footer = "Prices valid for 30 days. 50% deposit required."
+    row.quote_highlight = "Trusted by 200+ businesses across Pakistan and the Gulf."
+    row.save()
+    quote = invoicing.send_quote(manager, invoicing.create_quote(manager, client_obj, lines=lines(("Build", 1, "10"))))
+    content = pdf.render_quote_pdf(quote)
+    assert b"Prices valid for 30 days" in content
+    assert b"Trusted by 200+ businesses" in content
+    # An invoice never shows the quote-only fields, and a quote never shows the invoice footer.
+    invoice = issued(manager, client_obj)
+    assert b"Trusted by 200+ businesses" not in pdf.render_invoice_pdf(invoice)
+
+
 def test_many_lines_paginate(manager, client_obj):
     invoice = issued(manager, client_obj, *[(f"Item {i}", 1, "1.00") for i in range(95)])
     assert pdf.render_invoice_pdf(invoice).count(b"/Type /Page\n") >= 2

@@ -4,7 +4,7 @@ import json
 from django import forms
 
 from apps.accounts.models import AccountStatus
-from apps.accounts.roles import STAFF_ROLES, Role
+from apps.accounts.roles import PORTAL_PERMISSIONS, STAFF_ROLES, Role
 from apps.domains.models import RegistrarProvider
 
 STAFF_ROLE_CHOICES = [(r.value, r.label) for r in Role if r in STAFF_ROLES]
@@ -54,6 +54,12 @@ class StaffRoleForm(forms.Form):
 class StaffStatusForm(forms.Form):
     status = forms.ChoiceField(choices=AccountStatus.choices)
     reason = forms.CharField(max_length=500, required=False)
+
+
+class ExtraPermissionsForm(forms.Form):
+    permissions = forms.MultipleChoiceField(
+        choices=[(c, n) for c, n in PORTAL_PERMISSIONS], required=False, widget=forms.CheckboxSelectMultiple,
+        help_text="In addition to whatever the role above already grants everyone holding it.")
 
 
 class EmailProviderForm(forms.Form):

@@ -913,6 +913,7 @@ Before marking any phase 🟢:
 | E3 Store categories and redesigned cart and checkout (owner request 2026-09-26: cards with one order summary, period menu, add-on switches, WHOIS privacy on domains, categories on the front page, bank transfer) | 🟢 local (not deployed) | 1831 ✅ (PostgreSQL 17) | ✅ 24 browser checks at 1440 and 390 (home, store, cart, checkout, order), no JS errors | crawler green | — |
 | E4 Mail deliverability, client sign-in, editable email wording, store categories, sectioned forms, invoice lines, reports and dashboard numbers (owner requests 2026-09-26) | 🟢 local (not deployed) | 1869 ✅ (PostgreSQL 17) | ✅ 41 browser checks at 1440 and 390, no JS errors | crawler green | — |
 | E13 External / WordPress storefront integration (owner spec `WP_Requirement.md`; slice 1 2026-10-02, slice 2 2026-10-03): `ExternalStorefront`/`StorefrontProduct`, versioned read-only `/api/v1/storefront/...` API with its own credentialed auth, per-product global + per-storefront publishing with a per-storefront override screen, Setup → External storefronts staff UI, signed SSRF-safe webhook cache invalidation with retry | 🟢 local (not deployed) | 2137 ✅ | ✅ staff UI + live HTTP round-trip against a running scratch server + webhook UI, no JS errors | crawler green (new fixture storefront+product seeded) | — |
+| E14 Nine owner requests 2026-10-03 (quote PDF footer/highlight, client alternate email, self-service contact invites, per-staff extra permissions, optional invoice email at Add Order + manual "Email invoice", domain registration manual/auto switch, Fraud status gates client delete, Abuse support department, upgrade proration reversed to preserve the renewal date) | 🟢 local (not deployed) | 2157 ✅ | ✅ 5 staff/customer screens + a real rendered quote PDF, no JS errors | crawler green | — |
 | D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
 
 ## Recommended order
@@ -941,7 +942,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | TLS termination / certificates | Deferred | Compose Nginx serves HTTP only | Phase 19 |
 | Docker Compose stack run end to end | Open | No Docker on dev machine; CI covers PostgreSQL/Redis/Celery | Phase 19 |
 | Require verified email before purchase | Deferred ⚠️ Re-triage | Verification tracked; purchase gating belongs to checkout (Phase 06 is 🟢); not part of Phase 16's actual scope, which is now 🟢 too | Post-MVP |
-| Customer self-service sub-user invitations | Deferred | Staff manage contacts; needs customer-side permission design; not part of Phase 16's actual scope | Post-MVP |
+| Customer self-service sub-user invitations | Partly closed (E14) | An owner contact can invite someone else onto the account (`docs/e14-nine-owner-requests.md`); role changes and removal are still staff-only | Post-MVP |
 | Closing a client suspends users/services | Deferred ⚠️ Re-triage | Service lifecycle rules belong to cancellation phase (Phase 12 is 🟢) | Re-triage |
 | Server credentials / WHM adapter | Open ⚠️ Re-triage | Server model was minimal in Phase 03; Phase 05 extended it with WHM connection fields | Re-triage (likely closed by Phase 05) |
 | Multi-currency product pricing | Deferred | Single store currency for MVP | Post-MVP |
@@ -992,6 +993,8 @@ Use this section whenever something is discovered but intentionally postponed.
 | Staff UI still missing for: payment providers (payments are manual; no gateway), webhook events, carts, coupon redemptions (Django admin only) | Open | Staff users, registrar, email provider, audit log, dashboard and global search were delivered in D4 and D6 | Phase 17 / gateway decision |
 | External storefront webhook trigger coverage | Deferred (new, E13 slice 2) | Pings fire on publish/unpublish and on an already-published plan's own name/description/status/price changing; a category rename or other indirect change does not yet trigger one (`docs/e13-storefront-integration.md`) | Next storefront slice |
 | External storefront webhook delivery: no manual retry/resend in the staff UI | Deferred (new, E13 slice 2) | Automatic retry (Celery, up to 5 attempts with backoff) and a recent-deliveries table exist; no way to force a retry sooner or resend a specific past delivery | Next storefront slice |
+| Fraud status has no workflow beyond gating client delete | Deferred (new, E14) | A label plus a safety gate (only a Fraud-status client can be deleted); no auto-suspend or review queue (`docs/e14-nine-owner-requests.md`) | Post-MVP |
+| Domain auto-register is one global switch, not per-TLD/per-product | Deferred (new, E14) | `auto_renew` (the renewal half) is already per-domain; registration's on/off is global only | Post-MVP |
 
 ## Closed
 
@@ -1069,7 +1072,8 @@ Use this section whenever something is discovered but intentionally postponed.
 | Ticket attachments validated, stored outside web-served paths, served only as authenticated downloads | Uploads are untrusted input | Active |
 | Internal notes excluded from every customer path by one function; customers never see staff email addresses | Notes never reach customers | Active |
 | Renewals/upgrades are invoices (`apps.renewals`); figures frozen on a ServiceChange; applied once when paid | One financial record; payment never lost to a service failure | Active |
-| Upgrade credit = paid × days left / term days, capped at paid, none once expired; shown as discount line | Roadmap credit rules | Active |
+| Upgrade credit = paid × days left / term days, capped at paid, none once expired; shown as discount line | Roadmap credit rules (superseded by E14 below for what is charged and whether a fresh term starts; the credit formula itself is unchanged) | Active |
+| Upgrade keeps the existing term (no fresh term, no moved renewal date) while time remains; only the new plan's own cost prorated for the remaining days is charged, less the same unused-value credit; an already-expired account still gets a fresh term, since none remains to keep | Owner request (E14, 2026-10-03), confirmed after being told it reverses the original Phase 08 design | Active |
 | Commission earned when invoice paid in full, ex-tax after discount, frozen; refunds lower unpaid, flag paid; attribution decided at sign-up | Frozen figures; refunds follow money | Active |
 | Service lifecycle stage derived from status and paid-through date; daily job uses LifecycleSettings | Reproducible; timings change without migration | Active |
 | Ending a service goes through existing hosting services, claimed with a lock-free update; automatic termination off by default | One audited path; never ended twice; failure retryable | Active |
@@ -1112,7 +1116,9 @@ Use this section whenever something is discovered but intentionally postponed.
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–16 and D0–D8 (including D3b) are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
+Phases 01–16 and D0–D8 (including D3b) are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), `docs/e14-nine-owner-requests.md`
+(quote PDF, client/contact, staff permissions, orders, domains, Fraud gate, upgrade proration reversed), and
+`docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
 
 ## Start: Phase 17 — Reliability & Failure Handling
 

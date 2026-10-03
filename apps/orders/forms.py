@@ -66,6 +66,14 @@ class CheckoutForm(forms.Form):
             is_active=True)]
 
 
+class StaffCheckoutForm(CheckoutForm):
+    """Add Order only - a customer checking out their own cart always hears about it; here staff may place an
+    order quietly (e.g. a phone order, or payment collected in person) and email the invoice later themselves
+    (the "Email invoice" button on the invoice's own page)."""
+
+    notify_client = forms.BooleanField(required=False, initial=True, label="Email the client now")
+
+
 class GuestCheckoutForm(CheckoutForm):
     """A visitor checking out: who they are (this creates their account), where they are (for tax), and how they will pay."""
 

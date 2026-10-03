@@ -174,7 +174,7 @@ def _payment_methods(st):
     return table
 
 
-def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
+def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=(), highlight=None):
     seller = BillingSettings.load()
     brand_name, accent, logo = _brand()
     st = _styles()
@@ -278,6 +278,8 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=()):
                   ("BOTTOMPADDING", (0, len(all_rows) - 1), (-1, -1), 5)]
     grid.setStyle(TableStyle(style))
     story += [grid]
+    if highlight:
+        story += [Spacer(1, 4 * mm), Paragraph(_t(highlight), st["muted"])]
 
     if kind == "Invoice" and doc.status in (InvoiceStatus.UNPAID, InvoiceStatus.PARTIALLY_PAID) and doc.balance_due > 0:
         methods = _payment_methods(st)
@@ -327,9 +329,11 @@ def render_invoice_pdf(invoice):
 
 
 def render_quote_pdf(quote):
+    settings_row = BillingSettings.load()
     meta = [("Quote no.", quote.number or "Draft"), ("Status", quote.display_status_label)]
     if quote.issue_date:
         meta.append(("Issued", quote.issue_date.isoformat()))
     if quote.valid_until:
         meta.append(("Valid until", quote.valid_until.isoformat()))
-    return _build(quote, kind="Quote", title=f"Quote {quote.reference}", meta_rows=meta)
+    return _build(quote, kind="Quote", title=f"Quote {quote.reference}", meta_rows=meta,
+                  footer_extra=settings_row.quote_footer, highlight=settings_row.quote_highlight)

@@ -37,7 +37,7 @@ from apps.products import services as product_services
 from apps.products.models import STANDARD_CYCLE_MONTHS, BillingCycle, CatalogStatus, Product
 
 from .models import ChangeKind, ChangeStatus, ServiceChange
-from .proration import Credit, add_months, unused_credit
+from .proration import Credit, add_months, prorated_cost, unused_credit
 from .signals import service_renewed
 
 logger = logging.getLogger(__name__)
@@ -284,12 +284,13 @@ class UpgradePreview:
     custom_months: int
     months: int
     current_price: Decimal
-    new_price: Decimal
+    full_term_price: Decimal
+    new_price: Decimal  # the new plan's cost for just the days remaining on the CURRENT term (prorated)
     credit: Credit
     applied_credit: Decimal
     forfeited: Decimal
     net_payable: Decimal
-    new_expiry: object
+    new_expiry: object  # unchanged from account.expires_at - an upgrade never moves the renewal date
 
     def calculation(self):
         """Everything needed to re-derive the credit later, as JSON-safe values."""
@@ -299,6 +300,7 @@ class UpgradePreview:
             "remaining_days": self.credit.remaining_days, "credit": str(self.credit.amount),
             "applied_credit": str(self.applied_credit), "forfeited": str(self.forfeited),
             "new_price": str(self.new_price), "net_payable": str(self.net_payable),
+            "full_term_price": str(self.full_term_price),
             "term_start": _day(account.term_start), "expires_at": _day(account.expires_at),
             "billing_cycle": self.billing_cycle, "custom_months": self.custom_months,
             "months": self.months, "from_product_id": self.from_product.pk, "to_product_id": self.to_product.pk,
@@ -308,9 +310,11 @@ class UpgradePreview:
     def explanation(self):
         text = (f"Upgrade from {self.from_product.name} to {self.to_product.name} "
                 f"({cycle_label(self.billing_cycle, self.custom_months)}). {self.credit.formula} "
-                f"New plan price {self.new_price} - credit {self.applied_credit} = {self.net_payable} before tax.")
+                f"{self.to_product.name} prorated for the {self.credit.remaining_days} remaining day(s) of the "
+                f"current term ({self.full_term_price} full term price) = {self.new_price} - credit "
+                f"{self.applied_credit} = {self.net_payable} before tax. The renewal date does not change.")
         if self.forfeited:
-            text += f" {self.forfeited} of credit exceeds the new price and is not carried forward."
+            text += f" {self.forfeited} of credit exceeds the prorated price and is not carried forward."
         return text
 
 
@@ -335,21 +339,31 @@ def preview_upgrade(account, new_product, *, now=None):
                                                            account.custom_months)
     except ServiceError:
         current_row = None
-    new_price = calc.money(new_row.price)
-    if current_row is not None and new_price < calc.money(current_row.price):
+    full_term_price = calc.money(new_row.price)
+    if current_row is not None and full_term_price < calc.money(current_row.price):
         raise ServiceError("Downgrades are not available online. Please contact us.", code="downgrade_not_allowed")
     if (new_product.servers.exists() and account.server_id
             and not new_product.servers.filter(pk=account.server_id).exists()):
         raise ServiceError("This plan is not available on the server your account is hosted on.",
                            code="server_mismatch")
     credit = unused_credit(account.term_paid, account.term_start, account.expires_at, now=now)
+    if account.expires_at and account.expires_at > now:
+        # Time remains on the current term: it is left exactly as it is, and only the new plan's prorated cost
+        # for what remains of it is charged (less the old plan's own unused value).
+        new_price = prorated_cost(full_term_price, credit.term_days, credit.remaining_days)
+        new_expiry = account.expires_at
+    else:
+        # Nothing to preserve - same as renewing an already-expired service (module docstring): a fresh term
+        # starts from now, at the new plan's full price.
+        new_price = full_term_price
+        new_expiry = add_months(now, months)
     applied = min(credit.amount, new_price)
     return UpgradePreview(
         account=account, from_product=account.product, to_product=new_product,
         billing_cycle=account.billing_cycle, custom_months=account.custom_months, months=months,
         current_price=calc.money(current_row.price) if current_row is not None else calc.ZERO,
-        new_price=new_price, credit=credit, applied_credit=applied, forfeited=credit.amount - applied,
-        net_payable=new_price - applied, new_expiry=add_months(now, months))
+        full_term_price=full_term_price, new_price=new_price, credit=credit, applied_credit=applied,
+        forfeited=credit.amount - applied, net_payable=new_price - applied, new_expiry=new_expiry)
 
 
 def available_upgrades(account, *, now=None):
@@ -378,7 +392,8 @@ def create_upgrade(actor, account, new_product, *, request=None):
         raise _open_change_error(pending)
     preview = preview_upgrade(account, new_product)
     description = (f"Upgrade to {new_product.name} ({cycle_label(preview.billing_cycle, preview.custom_months)})"
-                   f" - {account.domain}, new {preview.months}-month term")[:255]
+                   f" - {account.domain}, prorated for {preview.credit.remaining_days} remaining day(s)"
+                   " - the renewal date does not change")[:255]
     credit_label = (f"Credit for unused time on {preview.from_product.name} "
                     f"({preview.credit.remaining_days} of {preview.credit.term_days} days)")
     invoice = invoicing.create_draft_invoice(
@@ -422,7 +437,15 @@ def _apply_hosting(change):
             raise ServiceError("The service changed after this invoice was issued, so the upgrade was not applied. "
                                "Refund the invoice or issue a new upgrade.")
         hosting_services.change_package_as_system(account, change.to_product)
-        account.term_start, account.expires_at, account.term_paid = now, add_months(now, months), change.paid_value
+        if account.expires_at and account.expires_at > now:
+            # Time remains on the current term: it is never disturbed. Only the newly-added value (what this
+            # upgrade is worth for the days remaining) joins term_paid - the same running total an on-time
+            # renewal already adds to (above), so a later upgrade within this same term still credits correctly
+            # against the account's real, cumulative paid value.
+            account.term_paid += change.paid_value
+        else:
+            # Nothing to preserve (mirrors the renewal branch above): a fresh term starts from now.
+            account.term_start, account.expires_at, account.term_paid = now, add_months(now, months), change.paid_value
     account.save(update_fields=["term_start", "expires_at", "term_paid", "updated_at"])
     return account, account.expires_at
 

@@ -48,7 +48,10 @@ class UpgradeOptionSerializer(serializers.Serializer):
     product = serializers.CharField()
     billing_cycle = serializers.CharField()
     months = serializers.IntegerField()
+    full_term_price = serializers.DecimalField(max_digits=12, decimal_places=2)
     new_price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    new_expiry = serializers.DateTimeField(help_text="Unchanged from the account's current renewal date - an "
+                                                      "upgrade is prorated, never a fresh term.")
     term_paid = serializers.DecimalField(max_digits=12, decimal_places=2)
     term_days = serializers.IntegerField()
     remaining_days = serializers.IntegerField()
@@ -61,7 +64,9 @@ class UpgradeOptionSerializer(serializers.Serializer):
 
 def _option(preview):
     return {"product_id": preview.to_product.pk, "product": preview.to_product.name,
-            "billing_cycle": preview.billing_cycle, "months": preview.months, "new_price": preview.new_price,
+            "billing_cycle": preview.billing_cycle, "months": preview.months,
+            "full_term_price": preview.full_term_price, "new_price": preview.new_price,
+            "new_expiry": preview.new_expiry,
             "term_paid": preview.credit.term_paid, "term_days": preview.credit.term_days,
             "remaining_days": preview.credit.remaining_days, "credit": preview.credit.amount,
             "applied_credit": preview.applied_credit, "forfeited": preview.forfeited,

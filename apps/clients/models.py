@@ -12,6 +12,7 @@ class ClientStatus(models.TextChoices):
     ACTIVE = "active", "Active"
     INACTIVE = "inactive", "Inactive"
     CLOSED = "closed", "Closed"
+    FRAUD = "fraud", "Fraud"
 
 
 class Client(TimeStampedModel):
@@ -27,6 +28,8 @@ class Client(TimeStampedModel):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(help_text="Primary/billing email for the account.")
+    alternate_email = models.EmailField(blank=True, help_text="Optional. Also receives this account's emails (invoices, "
+                                                               "renewal and order notices...).")
     phone = models.CharField(max_length=32, blank=True)
 
     address_line1 = models.CharField(max_length=200, blank=True)

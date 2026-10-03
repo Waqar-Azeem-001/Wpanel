@@ -68,3 +68,9 @@ class TldPricingForm(forms.Form):
 
 class TldStatusForm(forms.Form):
     is_active = forms.BooleanField(required=False)
+
+
+class DomainSettingsForm(forms.Form):
+    auto_register = forms.BooleanField(required=False, label="Register automatically",
+                                       help_text="Off: a paid domain waits in Pending Registration for staff to "
+                                                "complete it (the domain's own page already has a Complete button).")

@@ -28,7 +28,7 @@ from apps.notifications import services as notifications
 
 from . import mfa as mfa_lib
 from .models import AccountStatus, MFARecoveryCode, User
-from .roles import PRIVILEGED_ROLES, STAFF_ROLES, Role, perm
+from .roles import ALL_CODENAMES, PRIVILEGED_ROLES, STAFF_ROLES, Role, perm
 
 logger = logging.getLogger(__name__)
 
@@ -474,6 +474,39 @@ def assign_role(actor, user, role, *, request=None):
     revoke_all_tokens(user)
     audit.record("account.role_changed", actor=actor, target=user,
                  metadata={"from": previous, "to": role}, request=request)
+    return user
+
+
+def set_extra_permissions(actor, user, codenames, *, request=None):
+    """
+    Grant this one staff member individual permissions beyond what their role gives everyone holding it (Django's
+    own per-user ``user_permissions`` - already honoured by ``has_perm()`` alongside the role's group permissions;
+    this is the first thing that actually sets it). Never touches the role itself or anyone else's access.
+    """
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+
+    from .models import PortalAccess
+
+    _require(actor, "assign_roles")
+    if user.pk == actor.pk:
+        raise ServiceError("You cannot change your own extra permissions.", code="self_action")
+    if user.role not in STAFF_ROLES:
+        raise ServiceError("Only a staff member can hold portal permissions.", code="not_staff")
+    if (user.role in PRIVILEGED_ROLES) and not actor.is_superuser:
+        raise ServiceError("Only a Super Admin can change an admin's permissions.",
+                           code="permission_denied", status_code=status.HTTP_403_FORBIDDEN)
+    unknown = set(codenames) - set(ALL_CODENAMES)
+    if unknown:
+        raise ServiceError(f"Unknown permission(s): {', '.join(sorted(unknown))}.", code="invalid_permission")
+    content_type = ContentType.objects.get_for_model(PortalAccess, for_concrete_model=False)
+    wanted = list(Permission.objects.filter(content_type=content_type, codename__in=codenames))
+    before = set(user.user_permissions.values_list("codename", flat=True))
+    user.user_permissions.set(wanted)
+    after = set(codenames)
+    if before != after:
+        audit.record("account.extra_permissions_changed", actor=actor, target=user,
+                     metadata={"added": sorted(after - before), "removed": sorted(before - after)}, request=request)
     return user
 
 

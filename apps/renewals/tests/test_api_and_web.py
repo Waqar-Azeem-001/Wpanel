@@ -57,12 +57,13 @@ def test_upgrade_options_and_upgrade(api, owner, account, pro, basic, tax):
     options = api.get(f"/api/v1/hosting-accounts/{account.pk}/upgrade/").json()
     assert [o["product"] for o in options] == ["Pro"]  # a downgrade is not offered
     option = options[0]
-    assert (option["credit"], option["net_payable"], option["remaining_days"], option["term_days"]) == (
-        "72.60", "127.40", 265, 365)
+    assert (option["credit"], option["new_price"], option["net_payable"], option["remaining_days"],
+            option["term_days"]) == ("72.60", "145.21", "72.61", 265, 365)
+    assert option["new_expiry"] is not None  # unchanged from the account's own expiry - checked precisely below
     response = api.post(f"/api/v1/hosting-accounts/{account.pk}/upgrade/", {"product": pro.pk})
     assert response.status_code == 200 and response.json()["kind"] == "upgrade"
     invoice = api.get(f"/api/v1/invoices/{response.json()['invoice_id']}/").json()
-    assert invoice["discount_total"] == "72.60" and invoice["total"] == "140.14"
+    assert invoice["discount_total"] == "72.60" and invoice["total"] == "79.87"  # 10% tax on the prorated net 72.61
 
 
 def test_tampered_credit_price_and_expiry_are_ignored(api, owner, account, pro):
@@ -73,7 +74,7 @@ def test_tampered_credit_price_and_expiry_are_ignored(api, owner, account, pro):
         "remaining_days": 9999})
     assert response.status_code == 200
     invoice = Invoice.objects.get()
-    assert invoice.subtotal == D("200.00") and invoice.discount_total == D("72.60")
+    assert invoice.subtotal == D("145.21") and invoice.discount_total == D("72.60")
     change = ServiceChange.objects.get()
     assert change.calculation["credit"] == "72.60" and change.calculation["remaining_days"] == 265
 
@@ -157,13 +158,14 @@ def test_customer_hosting_page_shows_the_term_and_renews(client, manager, owner,
 def test_the_upgrade_page_shows_the_calculation_and_creates_the_invoice(client, owner, account, pro, basic):
     client.force_login(owner)
     page = client.get(f"/account/renewals/hosting/{account.pk}/upgrade/")
-    assert b"Pro" in page.content and b"72.60" in page.content and b"127.40" in page.content
+    assert b"Pro" in page.content and b"72.60" in page.content and b"72.61" in page.content
     assert b"265 of 365 days" in page.content and b"Basic" not in page.content
+    assert b"renewal date stays" in page.content  # the account's expiry is never shown as moving
     response = client.post(f"/account/renewals/hosting/{account.pk}/upgrade/", {"product": pro.pk})
     invoice = Invoice.objects.get()
     assert response["Location"] == f"/account/billing/invoices/{invoice.pk}/"
     detail = client.get(response["Location"]).content
-    assert b"Credit for unused time" in detail and b"Days remaining" in detail and b"127.40" in detail
+    assert b"Credit for unused time" in detail and b"Days remaining" in detail and b"72.61" in detail
     again = client.post(f"/account/renewals/hosting/{account.pk}/upgrade/", {"product": basic.pk}, follow=True)
     assert b"already awaiting payment" in again.content
 

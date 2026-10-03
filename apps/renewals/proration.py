@@ -12,9 +12,12 @@ The rules, stated once:
 * When a service is renewed before it expires, the new term is added to the current one, so the paid
   value and the term length both grow; the credit is then worth the average daily rate over the whole
   paid period. It can still never exceed what was paid.
-* On an upgrade the new plan's *full* term price is charged, the unused value is credited against it
-  (never below zero; credit beyond the new price is forfeited, and shown as such), and a fresh term
-  starts at the moment the upgrade is applied.
+* On an upgrade the current term is never disturbed: the new plan's own full-term price is prorated
+  for the days remaining on it (the mirror of the unused-value calculation above, for the plan being
+  moved *to*), the old plan's unused value is credited against that prorated amount (never below zero;
+  credit beyond it is forfeited, and shown as such), and only the difference is charged. The renewal
+  date does not move and does not reset - the account renews, at the new plan's price, on the date it
+  already had.
 """
 import calendar
 from dataclasses import dataclass
@@ -66,3 +69,13 @@ def unused_credit(term_paid, term_start, expires_at, *, now=None):
         return Credit(term_paid, term_days, 0, ZERO)
     amount = min(money(term_paid * remaining / term_days), term_paid)
     return Credit(term_paid, term_days, remaining, amount)
+
+
+def prorated_cost(full_term_price, term_days, remaining_days):
+    """What the remaining part of the current term is worth at ``full_term_price`` - the new plan's own full-term
+    price at the account's billing cycle - the mirror of ``unused_credit`` above, for the plan being moved *to*
+    rather than the one being moved from. A zero-length term (should not happen - see ``_require_term``) is
+    charged in full rather than divided by zero."""
+    if term_days <= 0:
+        return money(full_term_price)
+    return money(full_term_price * remaining_days / term_days)

@@ -184,6 +184,10 @@ class BillingSettings(models.Model):
     quote_validity_days = models.PositiveSmallIntegerField(default=30, validators=[MinValueValidator(1),
                                                                                     MaxValueValidator(365)])
     invoice_footer = models.TextField(blank=True, help_text="Printed at the bottom of every invoice, e.g. bank details.")
+    quote_footer = models.TextField(blank=True, help_text="Printed at the bottom of every quote, e.g. terms and conditions.")
+    quote_highlight = models.CharField(max_length=300, blank=True,
+                                       help_text="A short line shown just below the pricing on every quote, e.g. "
+                                                "who you've worked with.")
     send_payment_reminders = models.BooleanField(
         default=True, help_text="Email customers before an invoice is due and when it becomes overdue.")
     renewal_invoice_days = models.PositiveSmallIntegerField(

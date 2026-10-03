@@ -210,6 +210,8 @@ ITEMS = [
          permission="view_billing"),
     item("staff.settings.lifecycle", _("Lifecycle timings"), "lifecycle_staff:settings", areas=STAFF,
          parent="staff.settings", permission="view_settings"),
+    item("staff.settings.domains", _("Domain registration"), "domains_staff:settings", areas=STAFF,
+         parent="staff.settings", permission="view_settings"),
     item("staff.settings.affiliates", _("Affiliate programme"), "affiliates_staff:settings", areas=STAFF,
          parent="staff.settings", permission="view_settings"),
 

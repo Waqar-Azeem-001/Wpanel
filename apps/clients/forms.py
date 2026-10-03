@@ -52,6 +52,13 @@ class AddContactForm(forms.Form):
     last_name = forms.CharField(required=False, max_length=150)
 
 
+class InviteContactForm(forms.Form):
+    email = forms.EmailField(label="Email address")
+    role = forms.ChoiceField(choices=ContactRole.choices, initial=ContactRole.TECHNICAL,
+                             help_text="Owner and billing can see invoices and change account details; "
+                                      "technical can manage services.")
+
+
 class DeleteClientForm(forms.Form):
     confirm_email = forms.CharField(label="Type the client's email to confirm", max_length=254)
     delete_logins = forms.BooleanField(required=False, initial=True,

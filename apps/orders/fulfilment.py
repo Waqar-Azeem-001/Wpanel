@@ -25,6 +25,7 @@ from apps.billing.models import InvoiceItem
 from apps.core.exceptions import ServiceError
 from apps.core.system import SYSTEM
 from apps.domains import services as domain_services
+from apps.domains.models import DomainSettings
 from apps.hosting import services as hosting_services
 from apps.notifications import services as notifications
 from apps.renewals import services as renewal_services
@@ -94,7 +95,10 @@ def _fulfil_domain_register(order, item, actor):
             domain = domain_services.request_registration(actor, order.client, item.domain_name, item.years)
             item.domain = domain
             item.save(update_fields=["domain", "updated_at"])
-    domain_services.complete_registration(actor, domain)
+    if DomainSettings.load().auto_register:
+        domain_services.complete_registration(actor, domain)
+    # Off: the order line is done (paid, recorded) and the domain itself waits in Pending Registration for staff
+    # to complete by hand (the same "Complete" button a failed/retried registration already uses).
 
 
 def _fulfil_domain_transfer(order, item, actor):

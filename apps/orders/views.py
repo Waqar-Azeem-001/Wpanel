@@ -568,11 +568,12 @@ def staff_order_new(request):
                 services.remove_item(request.user, item)
                 return "Removed."
             if do == "checkout":
-                form = forms.CheckoutForm(request.POST)
+                form = forms.StaffCheckoutForm(request.POST)
                 if not form.is_valid():
                     raise ServiceError(_form_error(form))
                 order = services.checkout(request.user, cart, payment_method_code=form.cleaned_data["payment_method"],
-                                          notes=form.cleaned_data["notes"], request=request)
+                                          notes=form.cleaned_data["notes"],
+                                          notify_client=form.cleaned_data["notify_client"], request=request)
                 messages.success(request, f"Order {order.reference} placed for {client.display_name}.")
                 return order
             raise ServiceError("Choose an action.")
@@ -592,4 +593,4 @@ def staff_order_new(request):
         "client": client, "cart": cart, "priced": priced, "here": here,
         "hosting_form": forms.StaffAddHostingForm(), "domain_form": forms.StaffAddDomainForm(),
         "transfer_form": forms.AddTransferForm(), "coupon_form": forms.CouponCodeForm(),
-        "checkout_form": forms.CheckoutForm(), "section": "orders"})
+        "checkout_form": forms.StaffCheckoutForm(), "section": "orders"})

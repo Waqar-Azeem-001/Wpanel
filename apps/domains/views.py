@@ -13,7 +13,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 
 from . import forms, services
-from .models import Domain, DnsRecord, DomainStatus, TldPricing
+from .models import Domain, DnsRecord, DomainSettings, DomainStatus, TldPricing
 
 
 def _apply_error(form, exc):
@@ -365,6 +365,30 @@ def staff_tld_status(request, pk):
         return "Updated."
 
     return _run(request, action, "domains_staff:tld_list")
+
+
+@portal_permission_required(perm("view_settings"))
+def staff_settings(request):
+    row = DomainSettings.load()
+    can_manage = request.user.has_perm(perm("manage_settings"))
+    # Not "request.POST or None": the only field is a checkbox, so unchecking it and submitting posts no keys at
+    # all - an empty-but-real POST, which must still bind the form (and clear the setting), not be treated as a GET.
+    form = forms.DomainSettingsForm(request.POST if request.method == "POST" else None,
+                                    initial={"auto_register": row.auto_register})
+    if request.method == "POST":
+        if not can_manage:
+            from django.core.exceptions import PermissionDenied
+
+            raise PermissionDenied
+        if form.is_valid():
+            try:
+                services.save_settings(request.user, request=request, **form.cleaned_data)
+            except ServiceError as exc:
+                _apply_error(form, exc)
+            else:
+                messages.success(request, "Saved.")
+                return redirect("domains_staff:settings")
+    return render(request, "domains/staff/settings.html", {"form": form, "can_manage": can_manage})
 
 
 @portal_permission_required(perm("view_domains"))

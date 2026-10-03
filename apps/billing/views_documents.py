@@ -184,6 +184,22 @@ def _issue(request, invoice):
 
 @require_POST
 @portal_permission_required(perm("manage_billing"))
+def invoice_send(request, pk):
+    """Email an already-issued invoice to the client now - the manual half of the staff Add Order "email the
+    client now" checkbox: when that was left unticked, this is how staff share it once they are ready to."""
+    invoice = get_object_or_404(Invoice, pk=pk)
+
+    def action():
+        if invoice.status == InvoiceStatus.DRAFT:
+            raise ServiceError("Issue the invoice first.", code="not_issued")
+        invoicing.notify_invoice_issued(invoice, actor=request.user)
+        return "Invoice emailed to the client."
+
+    return run_action(request, action, "billing_staff:invoice_detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
 def invoice_cancel(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk)
     form = forms.CancelForm(request.POST)

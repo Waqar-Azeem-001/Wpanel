@@ -266,34 +266,50 @@ def test_the_upgrade_calculation(account, pro):
     preview = services.preview_upgrade(account, pro)
     assert (preview.credit.term_days, preview.credit.remaining_days) == (365, 265)
     assert preview.credit.amount == D("72.60") and preview.applied_credit == D("72.60")
-    assert preview.new_price == D("200.00") and preview.net_payable == D("127.40")
+    assert preview.full_term_price == D("200.00")
+    assert preview.new_price == D("145.21") and preview.net_payable == D("72.61")  # prorated, not the full price
     assert preview.forfeited == 0 and preview.months == 12
-    assert "265 days remaining" in preview.explanation and "127.40" in preview.explanation
+    assert preview.new_expiry == account.expires_at  # the renewal date never moves on an upgrade
+    assert "265" in preview.explanation and "72.61" in preview.explanation
 
 
 def test_the_upgrade_invoice_shows_its_calculation(owner, account, pro, tax):
     change = services.create_upgrade(owner, account, pro)
     invoice = change.invoice
-    assert invoice.subtotal == D("200.00") and invoice.discount_total == D("72.60")
+    assert invoice.subtotal == D("145.21") and invoice.discount_total == D("72.60")
     assert invoice.discount_label == "Credit for unused time on Starter (265 of 365 days)"
-    assert invoice.tax_total == D("12.74") and invoice.total == D("140.14")  # 10% of the net 127.40
-    assert "72.60" in invoice.notes and "127.40" in invoice.notes
+    assert invoice.tax_total == D("7.26") and invoice.total == D("79.87")  # 10% of the net 72.61
+    assert "72.60" in invoice.notes and "72.61" in invoice.notes
     assert "Upgrade to Pro" in invoice.items.get().description
-    assert change.paid_value == D("200.00") and change.calculation["credit"] == "72.60"
+    assert "renewal date does not change" in invoice.items.get().description
+    assert change.paid_value == D("145.21") and change.calculation["credit"] == "72.60"
     assert integrity.verify_all() == []
 
 
-def test_paying_an_upgrade_changes_the_plan_and_starts_a_new_term(manager, owner, account, pro):
+def test_paying_an_upgrade_changes_the_plan_but_keeps_the_existing_term(manager, owner, account, pro):
+    original_start, original_expiry = account.term_start, account.expires_at
     change = services.create_upgrade(owner, account, pro)
-    before = timezone.now()
     pay(manager, change.invoice)
     reload(account)
     assert account.product == pro and account.package_name == "pro_pkg"
-    assert account.term_start >= before and account.expires_at == services.add_months(account.term_start, 12)
-    assert account.term_paid == D("200.00")  # the new term's valid paid value
+    assert account.term_start == original_start and account.expires_at == original_expiry  # unchanged
+    assert account.term_paid == D("245.21")  # 100.00 already paid + 145.21 prorated for the new plan
     assert reload(change).status == ChangeStatus.APPLIED
     assert AuditEvent.objects.filter(action="service.upgraded").exists()
     assert integrity.verify_all() == []
+
+
+def test_upgrading_an_already_expired_account_starts_a_fresh_term(manager, owner, account, pro):
+    """There is no existing term to preserve, so this falls back to the same "fresh term" shape a renewal of an
+    expired service already uses - never a free upgrade just because zero days happened to remain."""
+    HostingAccount.objects.filter(pk=account.pk).update(expires_at=timezone.now() - timedelta(days=3))
+    before = timezone.now()
+    change = services.create_upgrade(owner, reload(account), pro)
+    assert change.invoice.total == D("200.00")  # full price: no proration, no credit
+    pay(manager, change.invoice)
+    reload(account)
+    assert account.term_start >= before and account.expires_at == services.add_months(account.term_start, 12)
+    assert account.term_paid == D("200.00")
 
 
 def test_an_expired_plan_gets_no_credit(owner, account, pro):
@@ -308,15 +324,17 @@ def test_credit_can_never_exceed_what_was_paid(manager, owner, account, pro):
     services.set_hosting_term(manager, account, billing_cycle="annual", term_start=account.term_start,
                               expires_at=account.expires_at, term_paid="5.00")  # a big discount was paid
     preview = services.preview_upgrade(reload(account), pro)
-    assert preview.credit.amount <= D("5.00") and preview.net_payable >= D("195.00")
+    assert preview.credit.amount <= D("5.00")
+    assert preview.net_payable == preview.new_price - preview.credit.amount  # the prorated price, barely discounted
 
 
 def test_credit_beyond_the_new_price_is_forfeited_and_says_so(manager, owner, account, pro):
     services.set_hosting_term(manager, account, billing_cycle="annual", term_start=account.term_start,
                               expires_at=account.expires_at, term_paid="500.00")
     preview = services.preview_upgrade(reload(account), pro)
-    assert preview.credit.amount == D("363.01")  # 500.00 x 265/365, more than the new plan costs
-    assert preview.applied_credit == D("200.00") and preview.net_payable == 0 and preview.forfeited > 0
+    assert preview.credit.amount == D("363.01")  # 500.00 x 265/365, more than the prorated new-plan cost
+    assert preview.applied_credit == preview.new_price == D("145.21")
+    assert preview.net_payable == 0 and preview.forfeited == D("217.80")
     assert "not carried forward" in preview.explanation
     change = services.create_upgrade(owner, reload(account), pro)
     assert reload(change.invoice).status == InvoiceStatus.PAID  # nothing left to pay: applied straight away
@@ -373,11 +391,14 @@ def test_one_open_change_at_a_time(manager, owner, account, pro):
 def test_the_credit_is_frozen_at_invoicing_time(manager, owner, account, pro):
     change = services.create_upgrade(owner, account, pro)
     invoice = change.invoice
-    HostingAccount.objects.filter(pk=account.pk).update(term_paid=D("9999.00"))  # later tampering with the term
+    HostingAccount.objects.filter(pk=account.pk).update(term_paid=D("9999.00"))  # e.g. a concurrent renewal
     pay(manager, invoice)
     assert reload(change).status == ChangeStatus.APPLIED
-    assert reload(account).term_paid == D("200.00")  # the frozen figure, not the tampered one
-    assert reload(invoice).discount_total == D("72.60")  # the invoice never changes
+    # The credit and the prorated price were frozen at invoicing time and are never recomputed - but term_paid
+    # is a running total for the (unchanged) current term, exactly like a renewal's, so it still builds on
+    # whatever was already there when the upgrade was applied.
+    assert reload(account).term_paid == D("9999.00") + D("145.21")
+    assert reload(invoice).discount_total == D("72.60") and reload(invoice).subtotal == D("145.21")
 
 
 def test_a_service_that_changed_after_invoicing_is_not_upgraded_and_needs_attention(manager, owner, account, pro):

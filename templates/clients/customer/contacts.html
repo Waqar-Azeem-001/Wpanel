@@ -3,8 +3,8 @@
 {% block title %}{% trans "Contacts" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{% trans "Contacts" %}</h1></div>
-<p class="text-secondary">{% trans "People who can sign in and act for your account. Contact our support team to add or remove someone." %}</p>
-{% for client, contacts in accounts %}
+<p class="text-secondary">{% trans "People who can sign in and act for your account. An owner can invite someone else below; contact our support team to change a role or remove someone." %}</p>
+{% for client, contacts, is_owner in accounts %}
 <section class="card mb-3">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h2 class="h6 mb-0">{{ client.display_name }} <small class="text-secondary">{{ client.reference }}</small></h2>
@@ -16,6 +16,19 @@
       <tr><td>{{ contact.user.get_full_name|default:"—" }}</td><td>{{ contact.user.email }}</td><td>{% status_badge contact.role contact.get_role_display %}</td></tr>
     {% endfor %}</tbody>
   </table></div>
+  {% if is_owner %}
+  <div class="card-body border-top">
+    <h3 class="h6">{% trans "Invite someone" %}</h3>
+    <form method="post" action="{% url 'clients_customer:contacts_invite' client.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+      <div class="col-sm-5 field"><label for="id_email_{{ client.pk }}">{{ invite_form.email.label }}</label>
+        <input class="form-control" type="email" name="email" id="id_email_{{ client.pk }}" required></div>
+      <div class="col-sm-4 field"><label for="id_role_{{ client.pk }}">{% trans "Role" %}</label>
+        <select class="form-select" name="role" id="id_role_{{ client.pk }}">{% for value, label in invite_form.role.field.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-sm-3"><button class="btn btn-outline-primary w-100" type="submit">{% trans "Invite" %}</button></div>
+      <div class="col-12"><small class="text-secondary">{{ invite_form.role.help_text }}</small></div>
+    </form>
+  </div>
+  {% endif %}
 </section>
 {% empty %}
   {% url 'catalog:product_list' as plans_url %}

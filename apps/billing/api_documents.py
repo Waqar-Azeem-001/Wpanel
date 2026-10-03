@@ -201,7 +201,8 @@ class BillingSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BillingSettings
         fields = ["company_name", "address", "email", "phone", "tax_id", "invoice_prefix", "quote_prefix",
-                  "payment_terms_days", "quote_validity_days", "invoice_footer", "updated_at"]
+                  "payment_terms_days", "quote_validity_days", "invoice_footer", "quote_footer", "quote_highlight",
+                  "updated_at"]
         read_only_fields = ["updated_at"]
 
 

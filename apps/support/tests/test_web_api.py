@@ -414,12 +414,12 @@ def test_departments_and_canned_replies_over_the_api(api, owner, agent, manager)
     assert api.post("/api/v1/departments/", {"name": "X"}, format="json").status_code == 403
     assert api.get("/api/v1/canned-replies/").status_code == 403
     api.force_authenticate(agent)
-    made = api.post("/api/v1/departments/", {"name": "Abuse", "sort_order": 5, "default_assignee_id": agent.pk}, format="json")
-    assert made.status_code == 201 and made.json()["slug"] == "abuse" and made.json()["default_assignee"] == agent.email
-    hidden = api.put(f"/api/v1/departments/{made.json()['id']}/", {"name": "Abuse", "is_active": False}, format="json")
+    made = api.post("/api/v1/departments/", {"name": "Spam Reports", "sort_order": 5, "default_assignee_id": agent.pk}, format="json")
+    assert made.status_code == 201 and made.json()["slug"] == "spam-reports" and made.json()["default_assignee"] == agent.email
+    hidden = api.put(f"/api/v1/departments/{made.json()['id']}/", {"name": "Spam Reports", "is_active": False}, format="json")
     assert hidden.status_code == 200 and hidden.json()["is_active"] is False
     api.force_authenticate(owner)
-    assert "abuse" not in {d["slug"] for d in api.get("/api/v1/departments/").json()}  # customers see active only
+    assert "spam-reports" not in {d["slug"] for d in api.get("/api/v1/departments/").json()}  # customers see active only
     api.force_authenticate(agent)
     reply = api.post("/api/v1/canned-replies/", {"title": "Hi", "body": "Hello {client}"}, format="json")
     assert reply.status_code == 201 and api.get("/api/v1/canned-replies/").json()[0]["title"] == "Hi"

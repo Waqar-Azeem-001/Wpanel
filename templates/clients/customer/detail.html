@@ -18,6 +18,7 @@
       <dt class="col-sm-3">{% trans "Company" %}</dt><dd class="col-sm-9">{{ client.company_name|default:"—" }}</dd>
       <dt class="col-sm-3">{% trans "Contact" %}</dt><dd class="col-sm-9">{{ client.contact_name }}</dd>
       <dt class="col-sm-3">{% trans "Email" %}</dt><dd class="col-sm-9">{{ client.email }}</dd>
+      <dt class="col-sm-3">{% trans "Alternate email" %}</dt><dd class="col-sm-9">{{ client.alternate_email|default:"—" }}</dd>
       <dt class="col-sm-3">{% trans "Phone" %}</dt><dd class="col-sm-9">{{ client.phone|default:"—" }}</dd>
     </dl>
     <p class="text-secondary mb-0">{% trans "Only owner and billing contacts can change account details." %}</p>

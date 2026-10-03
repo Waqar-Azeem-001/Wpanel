@@ -35,10 +35,15 @@
         <form method="post" action="{% url 'billing_staff:invoice_delete' invoice.pk %}" data-confirm="Delete this draft?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete draft</button></form>
       </div>
       {% elif invoice.status == "unpaid" %}
+      <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+        <form method="post" action="{% url 'billing_staff:invoice_send' invoice.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Email invoice</button></form>
+      </div>
       <form method="post" action="{% url 'billing_staff:invoice_cancel' invoice.pk %}" data-confirm="Cancel this invoice?">{% csrf_token %}
         <div class="field"><label for="{{ cancel_form.reason.id_for_label }}">Reason (audited)</label>{{ cancel_form.reason }}</div>
         <button class="btn btn-sm btn-outline-danger" type="submit">Cancel invoice</button>
       </form>
+      {% elif invoice.status != "cancelled" %}
+      <form method="post" action="{% url 'billing_staff:invoice_send' invoice.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Email invoice</button></form>
       {% endif %}
     {% endif %}</div>
 </section>

@@ -20,6 +20,11 @@ def manager(staff):
 
 
 @pytest.fixture
+def admin(staff):
+    return staff(Role.ADMIN)
+
+
+@pytest.fixture
 def registrar():
     return RegistrarProvider.objects.create(name="Test", kind="manual", is_active=True)
 
@@ -207,6 +212,18 @@ def test_complete_registration_requires_manage_domains(customer, manager, client
     domain = services.request_registration(manager, client_obj, "example.com", 1)
     with pytest.raises(ServiceError):
         services.complete_registration(customer, domain)
+
+
+def test_domain_settings_are_validated_and_audited(admin, manager):
+    from apps.domains.models import DomainSettings
+
+    row = services.save_settings(admin, auto_register=False)
+    assert row.auto_register is False
+    assert AuditEvent.objects.filter(action="domain.settings_changed").exists()
+    assert DomainSettings.load().auto_register is False
+    with pytest.raises(ServiceError) as exc:
+        services.save_settings(manager, auto_register=True)  # managers cannot change system settings
+    assert exc.value.code == "permission_denied"
 
 
 def test_complete_registration_from_wrong_status_rejected(manager, client_obj, registrar, com_pricing):

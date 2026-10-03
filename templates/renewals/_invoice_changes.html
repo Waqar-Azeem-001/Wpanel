@@ -8,7 +8,7 @@
     {% if change.applied_at %}<span class="text-secondary">{% trans "Applied" %} {{ change.applied_at|fdatetime }}.</span>{% endif %}</p>
   {% if change.kind == "upgrade" %}
   <table class="table table-sm w-auto">
-    <tr><th class="fw-normal">{% blocktrans with months=change.calculation.months %}New plan ({{ months }} months){% endblocktrans %}</th><td class="text-end">{{ change.calculation.new_price|money:invoice.currency }}</td></tr>
+    <tr><th class="fw-normal">{% blocktrans with days=change.calculation.remaining_days %}New plan, prorated ({{ days }} day(s) remaining){% endblocktrans %}</th><td class="text-end">{{ change.calculation.new_price|money:invoice.currency }}</td></tr>
     <tr><th class="fw-normal">{% trans "Paid for the current term" %}</th><td class="text-end">{{ change.calculation.term_paid|money:invoice.currency }}</td></tr>
     <tr><th class="fw-normal">{% trans "Days remaining" %}</th><td class="text-end">{{ change.calculation.remaining_days }} of {{ change.calculation.term_days }}</td></tr>
     <tr><th class="fw-normal">{% trans "Credit for unused time" %}</th><td class="text-end">{{ change.calculation.credit|money:invoice.currency }}</td></tr>

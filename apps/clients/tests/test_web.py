@@ -67,6 +67,17 @@ def test_create_edit_status_via_web(client, manager):
     assert b"client.status_changed" in detail and b"client.updated" in detail
 
 
+def test_alternate_email_is_settable_and_shown(client, manager):
+    client.force_login(manager)
+    client.post("/staff/clients/new/", {
+        "first_name": "Cc", "email": "cc@client.test", "alternate_email": "backup@client.test", "currency": "USD",
+    })
+    new = Client.objects.get(email="cc@client.test")
+    assert new.alternate_email == "backup@client.test"
+    detail = client.get(f"/staff/clients/{new.pk}/").content.decode()
+    assert "backup@client.test" in detail
+
+
 def test_create_shows_validation_errors(client, manager):
     client.force_login(manager)
     response = client.post("/staff/clients/new/", {"first_name": "X", "email": "x@x.test", "currency": "USD",
@@ -88,6 +99,45 @@ def test_contacts_managed_via_web(client, manager, acme):
     assert b"at least one owner" in response.content
     client.post(f"/staff/clients/{acme.pk}/contacts/{contact.pk}/remove/")
     assert not acme.contacts.filter(pk=contact.pk).exists()
+
+
+def test_owner_can_invite_someone_onto_their_own_account(client, manager, acme):
+    owner = acme.contacts.get().user
+    owner.set_password("Str0ng-Passw0rd!x")
+    owner.save()
+    client.force_login(owner)
+    page = client.get("/account/client/contacts/").content
+    assert b"Invite someone" in page
+
+    response = client.post(f"/account/client/contacts/{acme.pk}/invite/",
+                           {"email": "teammate@acme.test", "role": "technical"}, follow=True)
+    assert b"added to" in response.content
+    contact = acme.contacts.get(user__email="teammate@acme.test")
+    assert contact.role == ContactRole.TECHNICAL
+
+
+def test_a_non_owner_contact_cannot_invite_anyone(client, manager, acme):
+    services.add_contact(manager, acme, email="tech@acme.test", role=ContactRole.TECHNICAL)
+    tech = User.objects.get(email="tech@acme.test")
+    tech.set_password("Str0ng-Passw0rd!x")
+    tech.save()
+    client.force_login(tech)
+    page = client.get("/account/client/contacts/").content
+    assert b"Invite someone" not in page
+    response = client.post(f"/account/client/contacts/{acme.pk}/invite/",
+                           {"email": "sneaky@acme.test", "role": "owner"}, follow=True)
+    assert b"Only an account owner" in response.content
+    assert not acme.contacts.filter(user__email="sneaky@acme.test").exists()
+
+
+def test_cannot_invite_someone_already_on_the_account(client, manager, acme):
+    owner = acme.contacts.get().user
+    owner.set_password("Str0ng-Passw0rd!x")
+    owner.save()
+    client.force_login(owner)
+    response = client.post(f"/account/client/contacts/{acme.pk}/invite/",
+                           {"email": owner.email, "role": "billing"}, follow=True)
+    assert b"already on this account" in response.content
 
 
 def test_customer_account_page_edit_and_readonly(client, manager, acme):

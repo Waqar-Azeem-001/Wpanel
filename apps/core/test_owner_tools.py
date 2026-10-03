@@ -20,7 +20,7 @@ from apps.audit.models import AuditEvent
 from apps.billing import invoicing
 from apps.billing.models import Invoice, Quote
 from apps.clients import services as client_services
-from apps.clients.models import Client
+from apps.clients.models import Client, ClientStatus
 from apps.core import currencies
 from apps.core.exceptions import ServiceError
 from apps.notifications import services as notifications
@@ -168,9 +168,17 @@ def test_the_client_contacts_tab_has_the_password_actions(boss, manager, acme, o
 
 # --- Deleting a client -----------------------------------------------------------------------------------------------------
 
+def _mark_fraud(client):
+    """Only a client marked Fraud may be deleted at all - see test_fraud_gates_deletion below."""
+    client.status = ClientStatus.FRAUD
+    client.save(update_fields=["status"])
+    return client
+
+
 def test_a_client_with_no_history_can_be_deleted_with_its_drafts_and_sign_ins(boss, manager, acme, owner):
     draft = invoicing.create_invoice(manager, acme, lines=lines())
     quote = invoicing.create_quote(manager, acme, lines=lines())
+    _mark_fraud(acme)
     result = client_services.delete_client(boss, acme, confirm_email="ADA@acme.test ")
     assert not Client.objects.filter(pk=acme.pk).exists()
     assert not Invoice.objects.filter(pk=draft.pk).exists() and not Quote.objects.filter(pk=quote.pk).exists()
@@ -180,6 +188,7 @@ def test_a_client_with_no_history_can_be_deleted_with_its_drafts_and_sign_ins(bo
 
 
 def test_the_typed_email_must_match_and_only_a_super_admin_may_delete(boss, admin, manager, acme):
+    _mark_fraud(acme)
     with pytest.raises(ServiceError) as exc:
         client_services.delete_client(boss, acme, confirm_email="someone@else.test")
     assert exc.value.code == "confirmation_mismatch"
@@ -190,8 +199,17 @@ def test_the_typed_email_must_match_and_only_a_super_admin_may_delete(boss, admi
     assert Client.objects.filter(pk=acme.pk).exists()
 
 
+def test_fraud_gates_deletion(boss, acme):
+    """An account in good standing (any status but Fraud) cannot be deleted at all, regardless of history."""
+    with pytest.raises(ServiceError) as exc:
+        client_services.delete_client(boss, acme, confirm_email=acme.email)
+    assert exc.value.code == "not_fraud"
+    assert Client.objects.filter(pk=acme.pk).exists()
+
+
 def test_a_client_with_records_cannot_be_deleted_and_the_reason_is_listed(boss, manager, acme):
     invoicing.issue_invoice(manager, invoicing.create_invoice(manager, acme, lines=lines()))
+    _mark_fraud(acme)
     assert client_services.delete_blockers(acme) == [(1, "issued invoices")]
     with pytest.raises(ServiceError) as exc:
         client_services.delete_client(boss, acme, confirm_email=acme.email)
@@ -202,11 +220,13 @@ def test_a_client_with_records_cannot_be_deleted_and_the_reason_is_listed(boss, 
 def test_sign_ins_shared_with_another_client_survive_a_deletion(boss, manager, acme, owner):
     other = client_services.create_client(manager, {"first_name": "Bo", "email": "bo@other.test"})
     client_services.add_contact(manager, other, email=owner.email, role="billing")
+    _mark_fraud(acme)
     result = client_services.delete_client(boss, acme, confirm_email=acme.email)
     assert User.objects.filter(pk=owner.pk).exists() and result["logins_deleted"] == []
 
 
 def test_client_delete_pages_and_direct_urls(boss, admin, manager, acme):
+    _mark_fraud(acme)
     url = reverse("clients_staff:delete", args=[acme.pk])
     assert browser(admin).get(url).status_code == 403 and browser(manager).post(url, {}).status_code == 403
     assert browser().get(url).status_code == 302
@@ -220,8 +240,14 @@ def test_client_delete_pages_and_direct_urls(boss, admin, manager, acme):
     assert done.status_code == 302 and not Client.objects.filter(pk=acme.pk).exists()
 
 
+def test_an_active_clients_delete_page_explains_instead_of_offering_the_form(boss, acme):
+    page = browser(boss).get(reverse("clients_staff:delete", args=[acme.pk]))
+    assert b"cannot be deleted" in page.content and b"Fraud" in page.content and b"confirm_email" not in page.content
+
+
 def test_a_client_with_history_shows_why_instead_of_the_form(boss, manager, acme):
     invoicing.issue_invoice(manager, invoicing.create_invoice(manager, acme, lines=lines()))
+    _mark_fraud(acme)
     page = browser(boss).get(reverse("clients_staff:delete", args=[acme.pk]))
     assert b"cannot be deleted" in page.content and b"issued invoices" in page.content and b"confirm_email" not in page.content
 
@@ -229,12 +255,14 @@ def test_a_client_with_history_shows_why_instead_of_the_form(boss, manager, acme
 def test_bulk_client_actions_and_bulk_delete_is_super_admin_only(boss, admin, manager, acme):
     spare = client_services.create_client(manager, {"first_name": "Zed", "email": "zed@spare.test"})
     invoicing.issue_invoice(manager, invoicing.create_invoice(manager, acme, lines=lines()))
+    _mark_fraud(acme)
     bulk = reverse("clients_staff:bulk")
     browser(admin).post(bulk, {"do": "delete", "ids": [spare.pk]})
     assert Client.objects.filter(pk=spare.pk).exists()  # an admin cannot delete
     browser(admin).post(bulk, {"do": "deactivate", "ids": [spare.pk]})
     spare.refresh_from_db()
     assert spare.status == "inactive"
+    _mark_fraud(spare)
     response = browser(boss).post(bulk, {"do": "delete", "ids": [spare.pk, acme.pk]}, follow=True)
     assert not Client.objects.filter(pk=spare.pk).exists() and Client.objects.filter(pk=acme.pk).exists()
     assert b"could not be changed" in response.content

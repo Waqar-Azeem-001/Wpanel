@@ -6,7 +6,12 @@
 <div class="page-head"><h1>{% trans "Delete client" %}</h1></div>
 <section class="card"><div class="card-body">
   <h2>{{ client.display_name }} <small class="text-secondary fs-6">{{ client.reference }}</small></h2>
-  {% if blockers %}
+  {% if not_fraud %}
+  <div class="alert alert-warning" role="alert">
+    <p class="mb-0"><strong>{% trans "This client cannot be deleted." %}</strong> {% trans "Only a client marked Fraud can be deleted - an account in good standing is closed (Status on the client page), never deleted. If this account is fraudulent, set its status to Fraud first." %}</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'clients_staff:detail' client.pk %}">{% trans "Back to the client" %}</a>
+  {% elif blockers %}
   <div class="alert alert-warning" role="alert">
     <p><strong>{% trans "This client cannot be deleted." %}</strong> {% trans "It has records that belong to the books:" %}</p>
     <ul class="mb-2">{% for count, what in blockers %}<li>{{ count }} {{ what }}</li>{% endfor %}</ul>

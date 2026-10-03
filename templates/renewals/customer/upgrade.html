@@ -6,7 +6,7 @@
 <div class="page-head"><h1>{{ account.domain }}</h1>{% status_badge account.status account.get_status_display %}</div>
 {% service_tabs account "upgrade" %}
 {% if error %}<div class="alert alert-warning" role="alert">{{ error }}</div>{% else %}
-<p class="text-secondary">{% blocktrans with plan=account.product.name paid=account.expires_at|fdate %}You are on <strong>{{ plan }}</strong>, paid through {{ paid }}. Upgrading starts a new term on the new plan. The unused value of your current term is credited against the new plan's price.{% endblocktrans %}</p>
+<p class="text-secondary">{% blocktrans with plan=account.product.name paid=account.expires_at|fdate %}You are on <strong>{{ plan }}</strong>, paid through {{ paid }}. Upgrading does not change that date or start a new term - you pay only the new plan's prorated cost for the time remaining, less the unused value of your current plan.{% endblocktrans %}</p>
 {% for preview in previews %}
 <section class="card mb-3"><div class="card-body">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
@@ -16,12 +16,12 @@
       <button class="btn btn-primary" type="submit">{% blocktrans with plan=preview.to_product.name %}Upgrade to {{ plan }}{% endblocktrans %}</button></form>
   </div>
   <table class="table table-sm w-auto mb-2">
-    <tr><th>{% blocktrans with months=preview.months %}New plan ({{ months }} months){% endblocktrans %}</th><td class="text-end">{{ preview.new_price|money }}</td></tr>
+    <tr><th>{% blocktrans with days=preview.credit.remaining_days %}New plan, prorated ({{ days }} day(s) remaining){% endblocktrans %}</th><td class="text-end">{{ preview.new_price|money }}</td></tr>
     <tr><th>{% blocktrans with days=preview.credit.remaining_days total=preview.credit.term_days %}Credit for unused time ({{ days }} of {{ total }} days){% endblocktrans %}</th><td class="text-end">&minus; {{ preview.applied_credit|money }}</td></tr>
     <tr class="fw-bold"><th>{% trans "To pay (before tax)" %}</th><td class="text-end">{{ preview.net_payable|money }}</td></tr>
   </table>
   <p class="text-secondary mb-0">{{ preview.credit.formula }}{% if preview.forfeited %} {% blocktrans with amount=preview.forfeited|money %}{{ amount }} of credit is more than this plan costs and is not carried forward.{% endblocktrans %}{% endif %}
-    {% blocktrans with date=preview.new_expiry|fdate %}Your new term would run to {{ date }} if paid today.{% endblocktrans %}</p>
+    {% blocktrans with date=preview.new_expiry|fdate %}Your renewal date stays {{ date }} - after that, it renews at this plan's full price.{% endblocktrans %}</p>
 </div></section>
 {% empty %}
 <p class="text-secondary">{% trans "There are no plans you can upgrade to right now." %}</p>

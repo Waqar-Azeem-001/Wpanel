@@ -111,6 +111,29 @@
     </div></section>
     {% endif %}
 
+    {% if extra_permissions_form %}
+    <section class="panel"><div class="panel-body">
+      <h2 class="h6 mb-3">{% trans "Extra permissions" %}</h2>
+      <p class="text-secondary small">{% trans "In addition to whatever the role above already grants everyone holding it - for this one person only." %}</p>
+      {% if can_set_extra_permissions %}
+      <form method="post" action="{% url 'console:user_extra_permissions' person.pk %}">{% csrf_token %}
+        <div class="check-grid">
+          {% for checkbox in extra_permissions_form.permissions %}
+          <label class="check-pill">{{ checkbox.tag }} <span>{{ checkbox.choice_label }}</span></label>
+          {% endfor %}
+        </div>
+        <button class="btn btn-outline-secondary mt-2" type="submit">{% trans "Save extra permissions" %}</button>
+      </form>
+      {% else %}
+      <ul class="mb-0">
+        {% for value, label in extra_permissions_form.permissions.field.choices %}
+          {% if value in extra_permissions_form.permissions.initial %}<li>{{ label }}</li>{% endif %}
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div></section>
+    {% endif %}
+
     {% if can_set_status %}
     <section class="panel"><div class="panel-body">
       <h2 class="h6 mb-3">{% if person.status == 'active' %}{% trans "Suspend this account" %}{% else %}{% trans "Reactivate this account" %}{% endif %}</h2>

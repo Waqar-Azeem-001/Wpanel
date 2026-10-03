@@ -88,6 +88,18 @@ def test_a_paid_order_becomes_active_with_its_services(manager, owner, client_ob
     assert integrity.verify_all() == []
 
 
+def test_manual_domain_registration_leaves_the_domain_pending_but_still_finishes_the_order(manager, owner, client_obj, shop, server, staff):
+    from apps.domains import services as domain_services
+    from apps.domains.models import DomainStatus
+
+    domain_services.save_settings(staff(Role.ADMIN), auto_register=False)
+    order = pay(manager, place(owner, client_obj, shop))
+    assert order.status == OrderStatus.ACTIVE  # the order line itself is done - paid and recorded
+    domain_item = order.items.get(kind="domain_register")
+    assert domain_item.fulfilment_status == FulfilmentStatus.DONE
+    assert domain_item.domain.status == DomainStatus.PENDING_REGISTRATION  # waiting for staff to complete it
+
+
 def test_the_hosting_term_starts_and_records_what_was_paid_for_the_plan(manager, owner, client_obj, shop, server, coupon):
     billing.save_tax_rule(manager, "US", name="Sales tax", rate=D("7.5"))
     order = pay(manager, place(owner, client_obj, shop, coupon="SAVE10"))

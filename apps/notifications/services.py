@@ -605,10 +605,21 @@ def notify_team(event, codename, *, title, body="", link="", context=None, exclu
     return sent
 
 
+def _alternate_copy(event, client, context, *already_sent_to):
+    """A client's optional ``alternate_email`` gets its own copy of the same email, unless that address already
+    received this one (e.g. it happens to equal the primary address)."""
+    address = client.alternate_email
+    if not address or address in already_sent_to:
+        return []
+    return [dispatch(event, email=address, context=context)]
+
+
 def dispatch_client(event, client, *, title="", body="", link="", context=None, email=None):
     """
     Reach a client about something on their account: every owner and billing contact gets it (each honouring their
-    own preferences); if the account has no such contact, the client's own address is emailed instead.
+    own preferences); if the account has no such contact, the client's own address is emailed instead. Either way,
+    the account's optional ``alternate_email`` (a second address kept purely for this - never a login) gets its own
+    copy of the email too.
 
     ``email`` sends the email once to that address (an invoice's billing address, say) and gives the contacts the
     in-app notification only.
@@ -619,11 +630,13 @@ def dispatch_client(event, client, *, title="", body="", link="", context=None, 
                     .select_related("user"))
     if email:
         sent = [dispatch(event, email=email, context=context)]
+        sent += _alternate_copy(event, client, context, email)
         return sent + [dispatch(event, user=c.user, title=title, body=body, link=link, in_app_only=True)
                        for c in contacts]
     if not contacts:
-        return [dispatch(event, email=client.email, context=context)]
-    return [dispatch(event, user=c.user, title=title, body=body, link=link, context=context) for c in contacts]
+        return [dispatch(event, email=client.email, context=context)] + _alternate_copy(event, client, context, client.email)
+    sent = [dispatch(event, user=c.user, title=title, body=body, link=link, context=context) for c in contacts]
+    return sent + _alternate_copy(event, client, context, *(c.user.email for c in contacts))
 
 
 def notify(user, *, event, title, body="", link="", email_template=None, context=None):

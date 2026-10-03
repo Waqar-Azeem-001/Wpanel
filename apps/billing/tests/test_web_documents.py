@@ -86,6 +86,23 @@ def test_create_edit_and_issue_from_the_staff_pages(client, manager, client_obj,
     assert client.get(f"/staff/billing/invoices/{invoice.pk}/edit/")["Location"].endswith(f"/invoices/{invoice.pk}/")
 
 
+def test_an_issued_invoice_can_be_emailed_to_the_client_manually(client, manager, client_obj, vat):
+    from django.core import mail
+
+    client.force_login(manager)
+    created = client.post(f"/staff/billing/invoices/create/?client={client_obj.pk}",
+                          form_data(("Hosting", 1, "50.00")))
+    invoice = Invoice.objects.get()
+    mail.outbox.clear()
+    draft_attempt = client.post(f"/staff/billing/invoices/{invoice.pk}/send/", follow=True)
+    assert b"Issue the invoice first" in draft_attempt.content and mail.outbox == []  # draft: not issued yet
+    client.post(f"/staff/billing/invoices/{invoice.pk}/issue/")
+    mail.outbox.clear()
+    response = client.post(f"/staff/billing/invoices/{invoice.pk}/send/", follow=True)
+    assert response.status_code == 200 and len(mail.outbox) == 1
+    assert b"Email invoice" in client.get(f"/staff/billing/invoices/{invoice.pk}/").content
+
+
 def test_removing_a_row_by_clearing_it(client, manager, client_obj):
     client.force_login(manager)
     invoice = invoicing.create_invoice(manager, client_obj, lines=lines(("A", 1, "10"), ("B", 1, "20")))
@@ -217,12 +234,18 @@ def test_billable_item_pages(client, manager, client_obj):
 
 
 def test_settings_page(client, manager):
+    from apps.billing.models import BillingSettings
+
     client.force_login(manager)
-    assert b'name="invoice_prefix"' in client.get("/staff/billing/settings/").content
+    page = client.get("/staff/billing/settings/").content
+    assert b'name="invoice_prefix"' in page and b'name="quote_footer"' in page and b'name="quote_highlight"' in page
     data = {"company_name": "Wpanel Ltd", "address": "1 Road", "email": "b@w.test", "phone": "", "tax_id": "NTN1",
             "invoice_prefix": "W-", "quote_prefix": "Q-", "payment_terms_days": 7, "quote_validity_days": 14,
-            "invoice_footer": "IBAN PK00", "renewal_invoice_days": 21}
+            "invoice_footer": "IBAN PK00", "quote_footer": "Valid 30 days", "quote_highlight": "Trusted by many",
+            "renewal_invoice_days": 21}
     assert client.post("/staff/billing/settings/", data).status_code == 302
+    row = BillingSettings.load()
+    assert row.quote_footer == "Valid 30 days" and row.quote_highlight == "Trusted by many"
     bad = client.post("/staff/billing/settings/", {**data, "payment_terms_days": 9999})
     assert bad.status_code == 200
     from apps.billing.models import BillingSettings

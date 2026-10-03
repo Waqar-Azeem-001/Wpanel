@@ -14,7 +14,7 @@ from apps.core.exceptions import ServiceError
 
 from . import forms, records, services
 from . import tabs as client_tabs
-from .models import Client, ClientContact
+from .models import Client, ClientContact, ClientStatus, ContactRole
 
 
 def _apply_error(form, exc):
@@ -187,7 +187,8 @@ def staff_client_delete(request, pk):
             messages.success(request, f"Client {gone['name']} deleted.{extra}")
             return redirect("clients_staff:list")
     return render(request, "clients/staff/delete.html", {"client": client, "form": form, "tab": "profile",
-                                                          "blockers": services.delete_blockers(client)})
+                                                          "blockers": services.delete_blockers(client),
+                                                          "not_fraud": client.status != ClientStatus.FRAUD})
 
 
 @require_POST
@@ -293,7 +294,27 @@ def my_client_detail(request, pk):
 
 @login_required
 def my_contacts(request):
-    """The people on each of the customer's accounts, with their roles (read-only: staff manage contacts)."""
+    """The people on each of the customer's accounts, with their roles. An owner may also invite someone else
+    onto an account here - everything else about a contact (role changes, removal) is still staff-managed."""
     clients = Client.objects.filter(contacts__user=request.user).distinct().order_by("created_at")
-    accounts = [(client, client.contacts.select_related("user").order_by("role", "id")) for client in clients]
-    return render(request, "clients/customer/contacts.html", {"accounts": accounts})
+    accounts = [(client, client.contacts.select_related("user").order_by("role", "id"),
+                services.contact_role(request.user, client) == ContactRole.OWNER) for client in clients]
+    return render(request, "clients/customer/contacts.html", {
+        "accounts": accounts, "invite_form": forms.InviteContactForm()})
+
+
+@require_POST
+@login_required
+def my_contacts_invite(request, pk):
+    client = _own_client(request, pk)
+    form = forms.InviteContactForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter a valid email address and role.")
+    else:
+        try:
+            services.invite_contact(request.user, client, request=request, **form.cleaned_data)
+        except (ServiceError, ValidationError) as exc:
+            messages.error(request, exc.message if isinstance(exc, ServiceError) else "; ".join(exc.messages))
+        else:
+            messages.success(request, f"{form.cleaned_data['email']} added to {client.display_name}.")
+    return redirect("clients_customer:contacts")

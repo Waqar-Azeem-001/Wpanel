@@ -13,6 +13,7 @@ urlpatterns = [
     path("invoices/<int:pk>/", docs.invoice_detail, name="invoice_detail"),
     path("invoices/<int:pk>/edit/", docs.invoice_edit, name="invoice_edit"),
     path("invoices/<int:pk>/issue/", docs.invoice_issue, name="invoice_issue"),
+    path("invoices/<int:pk>/send/", docs.invoice_send, name="invoice_send"),
     path("invoices/<int:pk>/cancel/", docs.invoice_cancel, name="invoice_cancel"),
     path("invoices/<int:pk>/delete/", docs.invoice_delete, name="invoice_delete"),
     path("invoices/<int:pk>/payment/", docs.invoice_record_payment, name="invoice_record_payment"),

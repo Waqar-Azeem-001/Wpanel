@@ -17,6 +17,7 @@ urlpatterns = [
     path("users/", views_users.users, name="users"),
     path("users/<int:pk>/", views_users.user_detail, name="user_detail"),
     path("users/<int:pk>/details/", views_users.user_edit, name="user_edit"),
+    path("users/<int:pk>/permissions/", views_users.user_extra_permissions, name="user_extra_permissions"),
     path("users/<int:pk>/password/", views_users.user_set_password, name="user_set_password"),
     path("users/<int:pk>/reset-link/", views_users.user_reset_link, name="user_reset_link"),
     path("users/<int:pk>/setup-link/", views_users.user_setup_link, name="user_setup_link"),

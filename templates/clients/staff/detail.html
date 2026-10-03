@@ -15,6 +15,7 @@
         <dt class="col-sm-3">{% trans "Contact" %}</dt><dd class="col-sm-9">{{ client.contact_name|default:"—" }}</dd>
         <dt class="col-sm-3">{% trans "Company" %}</dt><dd class="col-sm-9">{{ client.company_name|default:"—" }}</dd>
         <dt class="col-sm-3">{% trans "Email" %}</dt><dd class="col-sm-9">{{ client.email }}</dd>
+        <dt class="col-sm-3">{% trans "Alternate email" %}</dt><dd class="col-sm-9">{{ client.alternate_email|default:"—" }}</dd>
         <dt class="col-sm-3">{% trans "Phone" %}</dt><dd class="col-sm-9">{{ client.phone|default:"—" }}</dd>
         <dt class="col-sm-3">{% trans "Address" %}</dt><dd class="col-sm-9">{% if client.address_line1 %}{{ client.address_line1 }}{% if client.address_line2 %}, {{ client.address_line2 }}{% endif %}<br>{{ client.city }} {{ client.state }} {{ client.postcode }} {{ client.country }}{% else %}—{% endif %}</dd>
         <dt class="col-sm-3">{% trans "Tax ID" %}</dt><dd class="col-sm-9">{{ client.tax_id|default:"—" }}</dd>

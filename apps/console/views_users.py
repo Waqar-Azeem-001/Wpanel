@@ -99,6 +99,7 @@ def user_detail(request, pk, password_form=None):
         events = list(AuditEvent.objects.filter(
             Q(actor=person) | Q(target_type="accounts.user", target_id=str(person.pk))).order_by("-created_at", "-id")[:12])
     can_manage = actor.has_perm(perm("manage_users"))
+    can_set_role = can_manage and editable and actor.has_perm(perm("assign_roles")) and person.role in STAFF_ROLES
     return render(request, "console/user_detail.html", {
         "person": person, "clients": clients, "assigned_tickets": assigned_tickets, "events": events,
         "can_see_activity": can_see_activity,
@@ -110,10 +111,14 @@ def user_detail(request, pk, password_form=None):
         "can_reset_mfa": actor.is_superuser and editable and not person.is_superuser
                          and (person.mfa_enabled or person.mfa_secret_encrypted),
         "password_form": password_form or forms.SetPasswordForm(),
-        "can_set_role": can_manage and editable and actor.has_perm(perm("assign_roles")) and person.role in STAFF_ROLES,
+        "can_set_role": can_set_role,
         "role_choices": [(v, label) for v, label in forms.STAFF_ROLE_CHOICES if v in allowed_roles(actor)],
         "details_form": forms.UserDetailsForm(initial={f: getattr(person, f) for f in ("first_name", "last_name", "phone")}),
-        "status_choices": AccountStatus.choices, "can_see_clients": actor.has_perm(perm("view_clients"))})
+        "status_choices": AccountStatus.choices, "can_see_clients": actor.has_perm(perm("view_clients")),
+        "can_set_extra_permissions": can_set_role,
+        "extra_permissions_form": forms.ExtraPermissionsForm(
+            initial={"permissions": list(person.user_permissions.values_list("codename", flat=True))})
+        if person.role in STAFF_ROLES else None})
 
 
 @require_POST
@@ -130,6 +135,23 @@ def user_edit(request, pk):
             messages.error(request, error_text(exc))
         else:
             messages.success(request, "Details saved.")
+    return redirect("console:user_detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_users"), perm("assign_roles"))
+def user_extra_permissions(request, pk):
+    person = get_object_or_404(User, pk=pk, role__in=STAFF_ROLES)
+    form = forms.ExtraPermissionsForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Choose valid permissions.")
+    else:
+        try:
+            account_services.set_extra_permissions(request.user, person, form.cleaned_data["permissions"], request=request)
+        except ACTION_ERRORS as exc:
+            messages.error(request, error_text(exc))
+        else:
+            messages.success(request, "Extra permissions saved.")
     return redirect("console:user_detail", pk=pk)
 
 

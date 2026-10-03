@@ -19,7 +19,7 @@ from apps.core.exceptions import ServiceError
 
 from .adapters.base import RegistrarError
 from .adapters.registry import build_adapter
-from .models import (Domain, DomainStatus, DnsRecord, RegistrarProvider, TldPricing, domain_tld)
+from .models import (Domain, DomainSettings, DomainStatus, DnsRecord, RegistrarProvider, TldPricing, domain_tld)
 
 DNS_FIELDS = ("record_type", "name", "content", "ttl", "priority")
 
@@ -107,6 +107,25 @@ def search_domains(queryset, term):
         return queryset
     return queryset.filter(Q(name__icontains=term) | Q(client__company_name__icontains=term)
                            | Q(client__email__icontains=term))
+
+
+# --- Settings ---------------------------------------------------------------------------------
+
+def save_settings(actor, *, request=None, **values):
+    if not actor.has_perm(perm("manage_settings")):
+        raise _denied()
+    row = DomainSettings.objects.select_for_update().get_or_create(pk=1)[0]
+    fields = ("auto_register",)
+    before = {f: getattr(row, f) for f in fields}
+    for name in fields:
+        if name in values:
+            setattr(row, name, values[name])
+    row.full_clean()
+    row.save()
+    changed = {f: [before[f], getattr(row, f)] for f in fields if before[f] != getattr(row, f)}
+    if changed:
+        audit.record("domain.settings_changed", actor=actor, target=row, metadata={"changes": changed}, request=request)
+    return row
 
 
 # --- Registration ---------------------------------------------------------------------------

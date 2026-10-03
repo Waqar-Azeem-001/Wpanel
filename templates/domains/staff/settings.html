@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Domain registration · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>Domain registration</h1>
+<section class="card"><div class="card-body">
+  <h2>Settings</h2>
+  <p class="text-secondary">Renewal is controlled per domain (the customer's own "Auto-renew" toggle). This is about
+    the moment a domain order is paid and fulfilled.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form.html" %}
+    {% if can_manage %}<div class="d-flex flex-wrap gap-2 align-items-center"><button class="btn btn-primary" type="submit">Save</button></div>
+    {% else %}<p class="text-secondary">You can view this setting but not change it.</p>{% endif %}
+  </form>
+</div></section>
+{% endblock %}

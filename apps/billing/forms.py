@@ -201,6 +201,11 @@ class BillingSettingsForm(forms.Form):
                                               help_text="Create renewal invoices this many days before expiry.")
     invoice_footer = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}),
                                      help_text="Printed on every invoice, e.g. bank details.")
+    quote_footer = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}),
+                                   help_text="Printed on every quote, e.g. terms and conditions.")
+    quote_highlight = forms.CharField(required=False, max_length=300, label="Quote highlight",
+                                      help_text="A short line shown just below the pricing on every quote, "
+                                                "e.g. who you've worked with.")
 
 
 class InvoiceFilterForm(forms.Form):

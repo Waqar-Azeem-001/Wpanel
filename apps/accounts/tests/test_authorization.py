@@ -129,6 +129,46 @@ def test_users_cannot_change_their_own_role_or_status(api, staff):
     assert api.post(f"/api/v1/users/{boss.pk}/status/", {"status": "closed"}).json()["error"]["code"] == "self_action"
 
 
+def test_set_extra_permissions_grants_beyond_the_role_and_is_audited(staff):
+    from apps.accounts import services
+    from apps.accounts.models import User
+
+    boss = staff(Role.SUPER_ADMIN)
+    agent = staff(Role.SUPPORT_AGENT)
+    assert not agent.has_perm(perm("manage_affiliates"))  # not part of this role
+    services.set_extra_permissions(boss, agent, ["manage_affiliates"])
+    fresh = User.objects.get(pk=agent.pk)  # has_perm() caches on the instance; refresh_from_db() does not clear it
+    assert fresh.has_perm(perm("manage_affiliates"))
+    assert fresh.has_perm(perm("manage_support"))  # the role's own permissions still apply too
+    event = AuditEvent.objects.get(action="account.extra_permissions_changed")
+    assert event.metadata["added"] == ["manage_affiliates"] and event.metadata["removed"] == []
+
+    services.set_extra_permissions(boss, agent, [])  # revoke again
+    assert not User.objects.get(pk=agent.pk).has_perm(perm("manage_affiliates"))
+
+
+def test_set_extra_permissions_is_gated_like_role_assignment(staff, customer):
+    from apps.accounts import services
+    from apps.core.exceptions import ServiceError
+
+    manager, admin, boss = staff(Role.MANAGER), staff(Role.ADMIN), staff(Role.SUPER_ADMIN)
+    with pytest.raises(ServiceError) as exc:
+        services.set_extra_permissions(manager, admin, ["manage_providers"])  # managers cannot assign_roles at all
+    assert exc.value.code == "permission_denied"
+    with pytest.raises(ServiceError) as exc:
+        services.set_extra_permissions(admin, admin, ["manage_providers"])  # not even your own
+    assert exc.value.code == "self_action"
+    with pytest.raises(ServiceError) as exc:
+        services.set_extra_permissions(admin, boss, ["manage_providers"])  # an admin editing another admin
+    assert exc.value.code == "permission_denied"
+    with pytest.raises(ServiceError) as exc:
+        services.set_extra_permissions(boss, customer, ["manage_providers"])  # customers hold no portal permissions
+    assert exc.value.code == "not_staff"
+    with pytest.raises(ServiceError) as exc:
+        services.set_extra_permissions(boss, manager, ["not_a_real_permission"])
+    assert exc.value.code == "invalid_permission"
+
+
 def test_audit_log_readable_by_manager_and_filterable(api, staff, customer):
     manager = staff(Role.MANAGER)
     api.force_authenticate(manager)

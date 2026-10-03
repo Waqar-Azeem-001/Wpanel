@@ -211,3 +211,24 @@ class DnsRecord(TimeStampedModel):
             raise ValidationError({"priority": "Required for MX and SRV records."})
         if self.record_type not in (DnsRecordType.MX, DnsRecordType.SRV) and self.priority is not None:
             raise ValidationError({"priority": "Only used for MX and SRV records."})
+
+
+class DomainSettings(models.Model):
+    """Single row (pk=1), the same shape as ``apps.lifecycle.models.LifecycleSettings``: whether a paid order's
+    domain registers itself the moment fulfilment runs, or waits in Pending Registration for a staff member to
+    complete it by hand (the "Complete" button on the domain's own page already does this either way - this only
+    decides whether fulfilment calls it automatically)."""
+
+    auto_register = models.BooleanField(default=True, help_text="Register a paid domain automatically. Off: it "
+                                                                 "waits in Pending Registration for staff to complete.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "domain settings"
+
+    def __str__(self):
+        return "Domain settings"
+
+    @classmethod
+    def load(cls):
+        return cls.objects.get_or_create(pk=1)[0]

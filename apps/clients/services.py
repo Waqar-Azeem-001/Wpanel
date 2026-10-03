@@ -26,13 +26,13 @@ from .models import Client, ClientContact, ClientStatus, ContactRole
 
 # Fields staff may set on a client.
 STAFF_FIELDS = (
-    "company_name", "first_name", "last_name", "email", "phone", "address_line1", "address_line2", "city",
-    "state", "postcode", "country", "tax_id", "currency", "tax_exempt", "notes",
+    "company_name", "first_name", "last_name", "email", "alternate_email", "phone", "address_line1", "address_line2",
+    "city", "state", "postcode", "country", "tax_id", "currency", "tax_exempt", "notes",
 )
 # Fields a client's own owner/billing contact may change.
 CUSTOMER_FIELDS = (
-    "company_name", "first_name", "last_name", "email", "phone", "address_line1", "address_line2", "city",
-    "state", "postcode", "country", "tax_id",
+    "company_name", "first_name", "last_name", "email", "alternate_email", "phone", "address_line1", "address_line2",
+    "city", "state", "postcode", "country", "tax_id",
 )
 # Contact roles allowed to edit the client's details from the customer side.
 CUSTOMER_EDIT_ROLES = {ContactRole.OWNER, ContactRole.BILLING}
@@ -52,8 +52,9 @@ def _normalise(data):
     for key in ("country", "currency"):
         if data.get(key):
             data[key] = data[key].strip().upper()
-    if data.get("email"):
-        data["email"] = data["email"].strip().lower()
+    for key in ("email", "alternate_email"):
+        if data.get(key):
+            data[key] = data[key].strip().lower()
     return data
 
 
@@ -260,6 +261,30 @@ def add_contact(actor, client, *, email, role=ContactRole.TECHNICAL, first_name=
     return contact
 
 
+@transaction.atomic
+def invite_contact(actor, client, *, email, role=ContactRole.TECHNICAL, request=None):
+    """
+    Self-service counterpart to ``add_contact`` above: a client's own OWNER adds someone else onto the account
+    themselves, with being an owner of *this* account as the permission check - never a staff permission, since
+    customers hold none (``apps.accounts.roles``). Deliberately owner-only (not billing/technical too): who else
+    gets access to an account is a bigger decision than the billing/technical edits those two roles already allow.
+    """
+    if contact_role(actor, client) != ContactRole.OWNER:
+        raise _denied("Only an account owner can invite someone else onto this account.")
+    if role not in ContactRole.values:
+        raise ServiceError("Unknown contact role.", code="invalid_role")
+    user, created = _get_or_create_contact_user(email)
+    if ClientContact.objects.filter(client=client, user=user).exists():
+        raise ServiceError("This person is already on this account.", code="duplicate_contact")
+    contact = ClientContact.objects.create(client=client, user=user, role=role)
+    if created:
+        _send_set_password_email(user, client)
+    audit.record("client.contact_invited", actor=actor, target=client,
+                 metadata={"client_id": client.pk, "user": user.email, "role": role, "user_created": created},
+                 request=request)
+    return contact
+
+
 def _owner_count(client):
     return ClientContact.objects.filter(client=client, role=ContactRole.OWNER).count()
 
@@ -335,6 +360,10 @@ def delete_client(actor, client, *, confirm_email, delete_logins=True, request=N
     if not actor.is_superuser:
         raise _denied("Only a Super Admin can delete a client.")
     client = Client.objects.select_for_update().get(pk=client.pk)
+    if client.status != ClientStatus.FRAUD:
+        raise ServiceError("Only a client marked Fraud can be deleted. Set its status to Fraud first (Status on "
+                           "the client page) - an account in good standing is closed, never deleted.",
+                           code="not_fraud")
     if (confirm_email or "").strip().lower() != client.email.strip().lower():
         raise ServiceError("Type the client's email address exactly to confirm the deletion.", code="confirmation_mismatch")
     blockers = delete_blockers(client)

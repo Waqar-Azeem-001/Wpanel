@@ -641,8 +641,8 @@ def save_billing_settings(actor, data, *, request=None):
     _require_manage(actor)
     row = BillingSettings.load()
     fields = ("company_name", "address", "email", "phone", "tax_id", "invoice_prefix", "quote_prefix",
-              "payment_terms_days", "quote_validity_days", "invoice_footer", "renewal_invoice_days",
-              "send_payment_reminders")
+              "payment_terms_days", "quote_validity_days", "invoice_footer", "quote_footer", "quote_highlight",
+              "renewal_invoice_days", "send_payment_reminders")
     changed = [f for f in fields if f in data and getattr(row, f) != data[f]]
     for field in changed:
         setattr(row, field, data[field])

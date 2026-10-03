@@ -191,6 +191,38 @@ def test_staff_add_an_order_for_a_client(client, manager, owner, client_obj, sho
     assert order.reference.encode() in client.get("/account/orders/").content
 
 
+def test_staff_can_place_an_order_without_emailing_the_client_yet(client, manager, owner, client_obj, shop, server):
+    from django.core import mail
+
+    from apps.billing import invoicing
+
+    client.force_login(manager)
+    here = f"/staff/orders/new/?client={client_obj.pk}"
+    client.post(here, {"action": "add_hosting", "product": shop["product"].pk, "cycle": "annual", "domain": "quiet.com"})
+    mail.outbox.clear()
+    client.post(here, {"action": "checkout", "payment_method": "bank-transfer"})  # "Email the client now" unticked
+    order = Order.objects.get()
+    assert order.invoices.get().status == "unpaid"  # the invoice still exists and is issued either way
+    assert not any("quiet.com" in m.subject or order.reference in m.subject for m in mail.outbox)
+
+    # Staff share it later from the invoice's own page.
+    client.force_login(manager)
+    mail.outbox.clear()
+    invoicing.notify_invoice_issued(order.invoices.get(), actor=manager)
+    assert len(mail.outbox) == 1
+
+
+def test_staff_can_place_an_order_and_email_the_client_right_away(client, manager, owner, client_obj, shop, server):
+    from django.core import mail
+
+    client.force_login(manager)
+    here = f"/staff/orders/new/?client={client_obj.pk}"
+    client.post(here, {"action": "add_hosting", "product": shop["product"].pk, "cycle": "annual", "domain": "loud.com"})
+    mail.outbox.clear()
+    client.post(here, {"action": "checkout", "payment_method": "bank-transfer", "notify_client": "on"})
+    assert len(mail.outbox) >= 1
+
+
 def test_add_order_reports_problems_and_never_takes_a_price(client, manager, client_obj, shop):
     client.force_login(manager)
     here = f"/staff/orders/new/?client={client_obj.pk}"
