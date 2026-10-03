@@ -550,25 +550,26 @@ The crawler is the single most important UI test. A phase cannot be 🟢 if it f
 
 | WHMCS area | Our module | Status |
 |---|---|---|
-| Client management | apps.clients / accounts | Built (02) — needs D4 shell |
+| Client management | apps.clients / accounts | Built (02, D4 shell) |
 | Products/Services, addons | apps.products | Built (03) |
 | Domain registrations, TLD pricing | apps.domains | Built (04) — real registrar adapter open |
 | Servers, cPanel/WHM module | apps.hosting | Built (05) — live WHM verification open |
-| Cart / order form | apps.orders | Built (06) |
+| Cart / order form | apps.orders | Built (06, E2/E3 guest cart and redesign) |
 | Invoices, quotes, transactions, tax, coupons | apps.billing | Built (07) |
-| Renewals, upgrades, proration | apps.renewals | Built (08) |
+| Renewals, upgrades, proration | apps.renewals | Built (08, E14 upgrade-proration revision) |
 | Orders lifecycle (Pending/Active/Fraud/Cancelled) | apps.orders lifecycle | Built (09) |
 | Support tickets, departments, predefined replies, KB | apps.support | Built (10) |
-| Email templates, email log, notifications | apps.notifications | Built (11) |
-| Cancellation requests, suspension/termination automation | lifecycle | Built (12) |
+| Email templates, email log, notifications | apps.notifications | Built (11, E4/E10 editable/designed emails) |
+| Cancellation requests, suspension/termination automation | lifecycle | Built (12, Phase 17 backup-before-terminate) |
 | Affiliates | apps.affiliates | Built (13) |
-| Reports | — | Phase 14 |
-| Admin dashboard, setup, utilities, logs | — | Phase 15 + D4 |
-| Two-factor auth, security | — | Phase 16 |
-| Automation status / cron health | — | Phase 15/17 |
+| Reports | apps.reports | Built (14) — charts/scheduled reports Post-MVP (Section 26) |
+| Admin dashboard, setup, utilities, logs | apps.console + Setup | Built (D4, Phase 15, D6-D8) |
+| Two-factor auth, security | apps.accounts.mfa + Phase 16 hardening | Built (16, optional for everyone) |
+| Automation status / cron health | apps.core (`TaskRun`, `console:automation`) | Built (17) |
 | Announcements, network status, downloads | — | Post-MVP (hidden) |
 | Credit balance, add funds, mass pay | — | Post-MVP (hidden) |
 | Local payment gateways | manual methods now | Adapter when chosen (Section 26) |
+| External/WordPress storefront integration | apps.storefronts | Built (E13), no WordPress plugin itself (`docs/storefront-connection-guide.md`) |
 
 ------------------------------------------------------------------------
 
@@ -790,7 +791,7 @@ Development → Implementation → Tests → Link Crawler → Review → Commit 
 
 # 20 — MVP BOUNDARY
 
-The first production MVP contains: customer accounts, hosting products, domain products, addons, cart, checkout, invoices, transactions, payment method(s), domain API, WHM/cPanel API, hosting services, domain management, renewals, upgrades/proration, cancellation, **WHMCS-parity customer area**, **WHMCS-parity staff area and dashboard**, support tickets, notifications/email, basic reports, RBAC, MFA for staff, audit logs, REST API foundation, **zero broken internal links (crawler green)**.
+The first production MVP contains: customer accounts, hosting products, domain products, addons, cart, checkout, invoices, transactions, payment method(s), domain API, WHM/cPanel API, hosting services, domain management, renewals, upgrades/proration, cancellation, **WHMCS-parity customer area**, **WHMCS-parity staff area and dashboard**, support tickets, notifications/email, basic reports, RBAC, MFA (optional, for everyone - Phase 16 slice 2 reverted a mandatory-for-staff attempt on owner feedback), audit logs, REST API foundation, **zero broken internal links (crawler green)**.
 
 Advanced features are added after the MVP is stable.
 
@@ -966,7 +967,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | No customer self-service for suspend/terminate/change-package | Deferred ⚠️ Re-triage | No billing/cancellation workflow to hang these off at the time (08/12 now 🟢); decision log limits self-service to view + request | Re-triage |
 | No automatic multi-server capacity-based selection | Deferred | Staff pick manually when a product maps to >1 server | Post-MVP |
 | Hosting usage sync is manual, not scheduled | Deferred ⚠️ Re-triage | Needs a verified live WHM adapter first (Phase 17 slice 2 live-tested the new backup call against the owner's real WHM server and got a 403 - that item is still open) | Before launch |
-| Guest (anonymous) carts | Deferred | Cart requires a signed-in user | Post-MVP |
+| Guest (anonymous) carts | Closed (E2) | Stale - a visitor can shop without an account (`Cart.guest_token`/`is_guest`, session-kept, merged into their own cart on sign-in); this row was never updated when E2 built it | — |
 | Antivirus scanning of ticket attachments | Open | Uploads are type/content checked, stored privately, only downloaded, but not scanned (e.g. ClamAV) | Before launch |
 | Reply-by-email / email-to-ticket | Deferred | Customers reply in the portal; team alerts for unassigned tickets delivered in Phase 11 | Post-MVP |
 | SLA timers, escalation, ticket merge, satisfaction rating | Deferred | Not in the roadmap's Phase 10 list | Post-MVP |
@@ -995,14 +996,14 @@ Use this section whenever something is discovered but intentionally postponed.
 | Add Funds / Mass Payment in client area | Deferred (new) | Depends on credit balances | Post-MVP |
 | RTL layout (Urdu/Arabic) and translated UI | Deferred (new) | Strings translation-ready from D1; RTL styles later | Post-MVP |
 | Local payment gateway adapters (e.g. JazzCash, Easypaisa, bank payment gateways) | Deferred (new) | Choose provider first; one adapter class each | When chosen |
-| Phase 14 follow-ups from v2: product-sales, tax-collected, coupon-usage, churn, response-time and affiliate reports; orders-by-status view; charts; heavy reports as Celery jobs with a durable download link | Deferred | The 14 delivered reports cover the MVP list; these need a chart approach (D1 design system) and the job/status pattern | Phase 15 / D4 |
+| Phase 14 follow-ups from v2: product-sales, tax-collected, coupon-usage, churn, response-time and affiliate reports; orders-by-status view; charts; heavy reports as Celery jobs with a durable download link | Deferred ⚠️ Re-triage | The 14 delivered reports cover the MVP list; D4/Phase 15 are both now 🟢 and neither touched this (they were staff-area/admin-ops UI parity, not new report types or a charting library decision) - confirmed still genuinely unbuilt by the pre-Phase-18 audit | Post-MVP |
 | Reports: no scheduled or emailed reports, saved views or currency conversion; no chargeback data; "cancelled services" covers portal cancellations only | Deferred | On-demand CSV/XLSX/PDF only; the portal has no dispute records | Post-MVP |
 | Error pages: branded 403/404/400, standalone 500 and maintenance page exist (D1); each has its own direct test since the crawler cannot organically reach an error handler (`apps/core/test_ui.py`, all four pages including the 400 case added at D5) | Closed (D1, test gap closed D5) | Rule 5.8 | — |
 | Customers have no menu link to their cancellation requests | Closed (D1/D2) | Stale - `apps/core/navigation.py`'s `account.cancellations` entry has linked to `lifecycle_customer:list` from the account menu since D1/D2; this row was never updated when it was fixed | — |
 | Page templates are not yet wrapped for translation (shells and components are); `legacy.css` is deleted (D4e) | Open | Wrap strings as pages are touched (confirmed still the right policy at D5: 52% of templates already wrapped, customer-facing areas essentially done, staff-admin screens lag) | Post-MVP |
 | Vendored Bootstrap 5.3.3, Bootstrap Icons 1.11.3 and htmx 2.0.4 are updated by hand | Deferred | No package manager for front-end assets; versions recorded here | Post-MVP |
 | Dark mode follows the system setting only (no manual toggle); HTML emails are the text email in a branded frame | Deferred | Not required by v2 | Post-MVP |
-| Staff UI still missing for: payment providers (payments are manual; no gateway), webhook events, carts, coupon redemptions (Django admin only) | Open | Staff users, registrar, email provider, audit log, dashboard and global search were delivered in D4 and D6 | Phase 17 / gateway decision |
+| Staff UI still missing for: payment providers (payments are manual; no gateway), webhook events, carts, coupon redemptions (Django admin only) | Open | Staff users, registrar, email provider, audit log, dashboard and global search were delivered in D4 and D6; Phase 17 (now 🟢, both slices) was reliability/background-job work and never addressed this | Post-MVP / gateway decision |
 | External storefront webhook trigger coverage | Deferred (new, E13 slice 2) | Pings fire on publish/unpublish and on an already-published plan's own name/description/status/price changing; a category rename or other indirect change does not yet trigger one (`docs/e13-storefront-integration.md`) | Next storefront slice |
 | External storefront webhook delivery: no manual retry/resend in the staff UI | Deferred (new, E13 slice 2) | Automatic retry (Celery, up to 5 attempts with backoff) and a recent-deliveries table exist; no way to force a retry sooner or resend a specific past delivery | Next storefront slice |
 | Fraud status has no workflow beyond gating client delete | Deferred (new, E14) | A label plus a safety gate (only a Fraud-status client can be deleted); no auto-suspend or review queue (`docs/e14-nine-owner-requests.md`) | Post-MVP |
@@ -1021,7 +1022,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Order fulfilment from a paid order | Phase 09 | SYSTEM actor runs ordinary services; idempotent, resumable, retryable |
 | Customer "request without paying" flows | Phase 09 | Retired; creation is staff/system only in the service layer |
 | Staff not alerted when fulfilment fails | Phase 11 | Team alert on a failed order |
-| Overdue reminders / dunning | Phase 11 | Daily job: 3 days before due, then 1, 7, 14 days after (on/off in Billing settings) |
+| Overdue reminders / dunning | Phase 11 | Daily job, default 3 days before due then 1, 7, 14 days after; on/off and the day schedule itself both configurable in Billing settings (schedule made configurable in the Phase 15 follow-up) |
 | Renewals, upgrade proration | Phase 08 | Delivered |
 | Hosting terms start automatically on a paid order | Phase 09 | Fulfilment starts the term with the plan's paid value |
 | Unsuspend-on-payment | Phase 12 | A paid renewal lifts a non-payment suspension |
