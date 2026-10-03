@@ -319,6 +319,14 @@ def test_the_maintenance_page_depends_on_nothing():
     assert "We will be right back" in page and "<style>" in page
 
 
+def test_the_maintenance_pages_own_comment_actually_renders_away():
+    """Django's ``{# #}`` comment tag cannot span lines - if it ever did, this would silently leak the comment's
+    raw text into the page instead of stripping it (caught once during D5: a multi-line edit broke exactly this)."""
+    rendered = render_to_string("maintenance.html")
+    assert "{#" not in rendered and "#}" not in rendered
+    assert "We will be right back" in rendered
+
+
 # --- Assets and links -------------------------------------------------------------------------------------------------
 
 def test_no_page_loads_anything_from_the_internet():

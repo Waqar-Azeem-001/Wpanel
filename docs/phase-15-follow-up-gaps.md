@@ -56,6 +56,23 @@ crawler row (each page already has its own direct test; D5 closed the one real g
   end to end" limitation (no Docker on the dev machine) - the Django-level mechanism above is the real, tested
   feature; this is defence in depth for when the stack is eventually run for real.
 
+**Redesigned the same day (owner request: "maintenance page sahi design karoo"):** the first version was a plain
+grey box with two lines of text. Still fully self-contained (the D1 rule stands: no template logic beyond a single
+`{# #}` comment, no external stylesheet/font/image/script - `apps/core/test_ui.py
+:test_the_maintenance_page_depends_on_nothing` is unchanged), it is now a centred card with a soft shadow, an
+inline-SVG gear icon in a tinted badge (no `<img>`, so no `src=`), a three-dot "working on it" animation, full
+light/dark support via `prefers-color-scheme` (matching how every other page in the project already follows the
+visitor's system theme), `prefers-reduced-motion` turning the animations off, and a `<meta http-equiv="refresh"
+content="60">` so the page does what its own text asks the visitor to do. **A real bug caught while redesigning
+it:** Django's `{# #}` comment tag cannot span more than one line - the first redesign draft wrote the explanatory
+comment across two lines, which meant Django stopped recognising it as a comment at all and rendered its raw text
+(braces included) at the top of the visible page. Caught by actually rendering the template (not just reading its
+source, which is all the original dependency test checks) and comparing to the generated Nginx copy. Fixed by
+keeping the comment on one line, and a new regression test added alongside the existing one:
+`test_the_maintenance_pages_own_comment_actually_renders_away` renders the template for real and asserts no stray
+`{#`/`#}` survives - the original test alone would not have caught this, since it only reads the template's source
+text, never what it renders to.
+
 ## 2. Configurable reminder schedule
 
 **FOUND:** `apps.billing.reminders` already sent one reminder per invoice per stage, never twice
@@ -132,9 +149,11 @@ one, not get their account linked by support.
 
 ## VERIFIED
 
-31 new tests across `apps/branding/tests/test_branding.py`, `apps/core/test_maintenance.py` (new), `apps/notifications
-/test_wiring_web_api.py`, `apps/billing/tests/test_web_documents.py`, `apps/orders/tests/test_checkout.py`,
-`test_web.py`, `test_guest_shop.py` and `test_api.py` - full project suite green (2200 tests, up from 2169 at D5).
+32 new tests across `apps/branding/tests/test_branding.py`, `apps/core/test_maintenance.py` (new), `apps/core
+/test_ui.py` (one new test for the redesigned page's own rendering, alongside the existing dependency test),
+`apps/notifications/test_wiring_web_api.py`, `apps/billing/tests/test_web_documents.py`,
+`apps/orders/tests/test_checkout.py`, `test_web.py`, `test_guest_shop.py` and `test_api.py` - full project suite
+green (2201 tests, up from 2169 at D5).
 `manage.py check` and `makemigrations --check` both clean. Crawler green (the new client-chooser page is correctly
 allowlisted - only reachable by a customer who is a contact of more than one account, a state the shared crawl
 world's single-client fixture owner does not model; covered instead by this slice's own web tests). Migrated the
@@ -148,6 +167,12 @@ returned to normal. The billing settings page showed the reminder-days field wit
 second real client to the database and made the existing owner contact of both - `/cart/` correctly offered the
 chooser ("Beta Co" and "WHE", each with its contact email) instead of the old "contact support" message, and
 choosing one carried through to the cart. No console errors, no overflow.
+
+**The redesigned maintenance page itself** was additionally screenshotted standalone (Chromium, the actual rendered
+output - not the source file, which is how the comment bug above was caught) at 480px and 1280px, in both light and
+dark colour schemes: the card, icon and dot animation render correctly at both sizes, dark mode swaps to the dark
+token set correctly, and the page the user actually sees carries none of the `{# #}` comment text that the first
+draft briefly leaked.
 
 ## Known limitations
 

@@ -898,7 +898,7 @@ Before marking any phase 🟢:
 | 12 Cancellation | 🟢 | 1046 ✅ | ✅ | D2 crawl: 0 broken | d3f9b82 | — |
 | 13 Affiliates | 🟢 | 1134 ✅ | ✅ | D2 crawl: 0 broken | a2e8989 | — |
 | 14 Reports | 🟢 | 1197 ✅ | ✅ | D2 crawl: 0 broken | f1246ba | — |
-| 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4. Follow-up 2026-10-03: maintenance mode, configurable reminder schedule, ToS acceptance at checkout, cart client chooser - found by a pre-Phase-18 documentation audit) | 2200 ✅ | ✅ | crawler green | 7e5f35b | — |
+| 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4. Follow-up 2026-10-03: maintenance mode (redesigned the same day), configurable reminder schedule, ToS acceptance at checkout, cart client chooser - found by a pre-Phase-18 documentation audit) | 2201 ✅ | ✅ | crawler green | 7e5f35b | — |
 | 16 Security | 🟢 (slice 1: MFA/lockout/headers; slice 2: RBAC review, mandatory-MFA and step-up re-auth tried then reverted per owner feedback) | 2046 ✅ | ✅ | crawler green | 3737541, e05ae9d | — |
 | 17 Reliability | 🟢 (slice 1: found most of the phase's scenarios already built in earlier phases; added automation status and WHOIS lookup. slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention; usage sync still deferred on WHM verification) | 2167 ✅ | ✅ | crawler green; real WHM 403 handled cleanly | — | — |
 | 18 Testing & Readiness | ⬜ | — | — | — | — | — |

@@ -4,16 +4,63 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="60">
   <title>Back soon</title>
   <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif; background: #f5f6f8; color: #1d2330; text-align: center; padding: 1rem; }
-    main { max-width: 32rem; } h1 { font-size: 1.75rem; } p { color: #5d6677; line-height: 1.5; }
+    :root {
+      color-scheme: light dark;
+      --bg-a: #eef2fb; --bg-b: #f8fafc; --card: #ffffff; --ink: #141a2e; --muted: #5b6478;
+      --border: #e4e8f2; --accent: #2a5bd7; --accent-soft: #e8edfc; --dot: #c2cdea;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-a: #0b0e1a; --bg-b: #121728; --card: #171d33; --ink: #eef1fa; --muted: #99a2bd;
+        --border: #262e4a; --accent: #6d93ff; --accent-soft: #212b4d; --dot: #3a4470;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 1.5rem;
+      font-family: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+      background: radial-gradient(circle at 15% 10%, var(--bg-a), var(--bg-b) 60%);
+      color: var(--ink);
+    }
+    main {
+      width: 100%; max-width: 27rem; background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2.75rem 2.25rem 2.25rem; text-align: center;
+      box-shadow: 0 1px 2px rgba(20, 26, 46, .04), 0 24px 48px -16px rgba(20, 26, 46, .18);
+    }
+    .badge {
+      width: 4.25rem; height: 4.25rem; margin: 0 auto 1.5rem; border-radius: 50%;
+      background: var(--accent-soft); display: grid; place-items: center;
+    }
+    .badge svg { width: 2.1rem; height: 2.1rem; animation: spin 7s linear infinite; transform-origin: center; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .badge svg { animation: none; } }
+    h1 { margin: 0 0 .6rem; font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em; }
+    p { margin: 0; color: var(--muted); line-height: 1.6; font-size: .95rem; }
+    .dots { margin-top: 1.75rem; display: flex; justify-content: center; gap: .4rem; }
+    .dots i {
+      width: .5rem; height: .5rem; border-radius: 50%; background: var(--dot); display: block;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .dots i:nth-child(2) { animation-delay: .15s; }
+    .dots i:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%, 80%, 100% { opacity: .35; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-.3rem); } }
+    @media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .7; } }
   </style>
 </head>
 <body>
   <main>
+    <div class="badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent)">
+        <path d="M12 2.5a1.7 1.7 0 0 1 1.68 1.44l.14.9a7.5 7.5 0 0 1 1.65.69l.73-.55a1.7 1.7 0 0 1 2.24.15l.73.73a1.7 1.7 0 0 1 .15 2.24l-.55.73c.3.52.54 1.07.69 1.65l.9.14a1.7 1.7 0 0 1 1.44 1.68v1.03a1.7 1.7 0 0 1-1.44 1.68l-.9.14a7.5 7.5 0 0 1-.69 1.65l.55.73a1.7 1.7 0 0 1-.15 2.24l-.73.73a1.7 1.7 0 0 1-2.24.15l-.73-.55a7.5 7.5 0 0 1-1.65.69l-.14.9A1.7 1.7 0 0 1 12 21.5h-.03a1.7 1.7 0 0 1-1.68-1.44l-.14-.9a7.5 7.5 0 0 1-1.65-.69l-.73.55a1.7 1.7 0 0 1-2.24-.15l-.73-.73a1.7 1.7 0 0 1-.15-2.24l.55-.73a7.5 7.5 0 0 1-.69-1.65l-.9-.14A1.7 1.7 0 0 1 2.5 12v-.03c0-.85.62-1.57 1.44-1.68l.9-.14c.15-.58.39-1.13.69-1.65l-.55-.73a1.7 1.7 0 0 1 .15-2.24l.73-.73a1.7 1.7 0 0 1 2.24-.15l.73.55c.52-.3 1.07-.54 1.65-.69l.14-.9A1.7 1.7 0 0 1 11.97 2.5z"/>
+        <circle cx="12" cy="12" r="3.4"/>
+      </svg>
+    </div>
     <h1>We will be right back</h1>
-    <p>The portal is down for a short maintenance window. Your services and websites are not affected. Please refresh this page in a few minutes.</p>
+    <p>The portal is down for a short maintenance window. Your services and websites are not affected. This page refreshes itself, or you can check back shortly.</p>
+    <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
   </main>
 </body>
 </html>
