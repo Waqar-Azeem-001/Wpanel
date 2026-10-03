@@ -45,13 +45,18 @@ class _Doc(SimpleDocTemplate):
 INK = colors.HexColor("#1f2933")
 MUTED = colors.HexColor("#616e7c")
 LINE = colors.HexColor("#d9dee5")
-HEAD_BG = colors.HexColor("#eef2f7")
-BAND_BG = colors.HexColor("#f6f8fb")
 GREEN = colors.HexColor("#0f6e3f")
 AMBER = colors.HexColor("#8f5700")
 RED = colors.HexColor("#b42323")
 GREY = colors.HexColor("#616e7c")
 WIDTH = 174 * mm  # the printable width of an A4 page with 18 mm margins
+
+
+def _tint(colour, amount):
+    """``colour`` lightened towards white (``amount`` 0 = white, 1 = the colour itself) - so every brand colour,
+    not just one hardcoded blue, gets its own light backgrounds for the table header, the summary band and the
+    totals, instead of the same generic grey every document used before."""
+    return colors.Color(1 - (1 - colour.red) * amount, 1 - (1 - colour.green) * amount, 1 - (1 - colour.blue) * amount)
 
 
 def _t(value):
@@ -64,12 +69,12 @@ def _lines(*values):
     return "<br/>".join(_t(v) for v in values if v)
 
 
-def _styles():
+def _styles(accent):
     base = getSampleStyleSheet()["Normal"]
     return {
         "body": ParagraphStyle("body", parent=base, fontName="Helvetica", fontSize=9, leading=12, textColor=INK),
         "muted": ParagraphStyle("muted", parent=base, fontName="Helvetica", fontSize=8.5, leading=11, textColor=MUTED),
-        "title": ParagraphStyle("title", parent=base, fontName="Helvetica-Bold", fontSize=22, leading=26, textColor=INK,
+        "title": ParagraphStyle("title", parent=base, fontName="Helvetica-Bold", fontSize=23, leading=27, textColor=accent,
                                 alignment=2),
         "number": ParagraphStyle("number", parent=base, fontName="Helvetica", fontSize=10, leading=13, textColor=MUTED,
                                  alignment=2),
@@ -79,9 +84,11 @@ def _styles():
         "num": ParagraphStyle("num", parent=base, fontName="Helvetica", fontSize=9, leading=12, alignment=2, textColor=INK),
         "numbold": ParagraphStyle("numbold", parent=base, fontName="Helvetica-Bold", fontSize=10, leading=13, alignment=2,
                                   textColor=INK),
+        "numtotal": ParagraphStyle("numtotal", parent=base, fontName="Helvetica-Bold", fontSize=12, leading=15, alignment=2,
+                                   textColor=accent),
         "band_label": ParagraphStyle("band_label", parent=base, fontName="Helvetica", fontSize=7.5, leading=10, textColor=MUTED),
         "band_value": ParagraphStyle("band_value", parent=base, fontName="Helvetica-Bold", fontSize=10.5, leading=13, textColor=INK),
-        "band_big": ParagraphStyle("band_big", parent=base, fontName="Helvetica-Bold", fontSize=13, leading=16, textColor=INK),
+        "band_big": ParagraphStyle("band_big", parent=base, fontName="Helvetica-Bold", fontSize=14, leading=17, textColor=accent),
         "pill": ParagraphStyle("pill", parent=base, fontName="Helvetica-Bold", fontSize=8.5, leading=11, textColor=colors.white,
                                alignment=1),
     }
@@ -137,16 +144,17 @@ def _status_look(doc, kind):
 
 
 def _band(cells, st, accent):
-    """The summary band under the addresses: label above value, one cell each, the last one (amount due) larger."""
+    """The summary band under the addresses: label above value, one cell each, the last one (amount due) larger,
+    tinted with the brand's own colour rather than a generic grey."""
     row = []
     for index, (label, value) in enumerate(cells):
         big = index == len(cells) - 1
         row.append([Paragraph(_t(label.upper()), st["band_label"]), Paragraph(_t(value), st["band_big"] if big else st["band_value"])])
     table = Table([row], colWidths=[WIDTH / len(cells)] * len(cells))
-    table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), BAND_BG), ("BOX", (0, 0), (-1, -1), 0.4, LINE),
+    table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), _tint(accent, 0.06)), ("BOX", (0, 0), (-1, -1), 0.4, LINE),
                                ("LINEBEFORE", (0, 0), (-1, -1), 0.4, LINE), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                               ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                               ("LEFTPADDING", (0, 0), (-1, -1), 8), ("LINEABOVE", (0, 0), (-1, 0), 2, accent)]))
+                               ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 8), ("LINEABOVE", (0, 0), (-1, 0), 2.2, accent)]))
     return table
 
 
@@ -177,7 +185,7 @@ def _payment_methods(st):
 def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=(), highlight=None):
     seller = BillingSettings.load()
     brand_name, accent, logo = _brand()
-    st = _styles()
+    st = _styles(accent)
     buffer = BytesIO()
     label, tone = _status_look(doc, kind)
     paid_stamp = kind == "Invoice" and doc.status == InvoiceStatus.PAID
@@ -185,7 +193,7 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=(), highl
     def page(canvas, pdf_doc):
         canvas.saveState()
         canvas.setFillColor(accent)
-        canvas.rect(0, A4[1] - 4 * mm, A4[0], 4 * mm, stroke=0, fill=1)  # the brand colour across the top
+        canvas.rect(0, A4[1] - 6 * mm, A4[0], 6 * mm, stroke=0, fill=1)  # the brand colour across the top
         canvas.restoreState()
         canvas.saveState()
         canvas.setStrokeColor(LINE)
@@ -248,9 +256,10 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=(), highl
                      Paragraph(_t(_money(doc.currency, item.amount)), st["num"])])
     table = Table(rows, colWidths=[84 * mm, 16 * mm, 37 * mm, 37 * mm], repeatRows=1)
     table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), HEAD_BG), ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE),
+        ("BACKGROUND", (0, 0), (-1, 0), _tint(accent, 0.1)), ("LINEBELOW", (0, 0), (-1, 0), 1, accent),
+        ("LINEBELOW", (0, 1), (-1, -1), 0.4, LINE),
         ("VALIGN", (0, 0), (-1, -1), "TOP"), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [None, colors.HexColor("#fafbfc")])]))
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [None, _tint(accent, 0.03)])]))
     story += [table, Spacer(1, 4 * mm)]
 
     totals = [["Subtotal", _money(doc.currency, doc.subtotal)]]
@@ -268,14 +277,17 @@ def _build(doc, *, kind, title, meta_rows, footer_extra=None, payments=(), highl
         extra.append(["Amount due", _money(doc.currency, doc.balance_due)])
     all_rows = totals + extra
     strong = ("Total", "Amount due")
-    grid = Table([[Paragraph(_t(k), st["numbold"] if k in strong else st["num"]),
-                   Paragraph(_t(v), st["numbold"] if k in strong else st["num"])] for k, v in all_rows],
-                 colWidths=[40 * mm, 38 * mm], hAlign="RIGHT")
+    last = len(all_rows) - 1  # the number the reader is looking for - Amount due on an invoice, Total on a quote
+    grid_rows = []
+    for index, (k, v) in enumerate(all_rows):
+        name = "numtotal" if index == last else ("numbold" if k in strong else "num")
+        grid_rows.append([Paragraph(_t(k), st[name]), Paragraph(_t(v), st[name])])
+    grid = Table(grid_rows, colWidths=[40 * mm, 38 * mm], hAlign="RIGHT")
     style = [("LINEABOVE", (0, len(totals) - 1), (-1, len(totals) - 1), 0.6, INK),
-             ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]
-    if kind == "Invoice":  # the amount due is the number the reader is looking for
-        style += [("BACKGROUND", (0, len(all_rows) - 1), (-1, -1), HEAD_BG), ("TOPPADDING", (0, len(all_rows) - 1), (-1, -1), 5),
-                  ("BOTTOMPADDING", (0, len(all_rows) - 1), (-1, -1), 5)]
+             ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+             ("BACKGROUND", (0, last), (-1, last), _tint(accent, 0.12)),
+             ("TOPPADDING", (0, last), (-1, last), 6), ("BOTTOMPADDING", (0, last), (-1, last), 6),
+             ("LEFTPADDING", (0, last), (-1, last), 6), ("RIGHTPADDING", (0, last), (-1, last), 6)]
     grid.setStyle(TableStyle(style))
     story += [grid]
     if highlight:

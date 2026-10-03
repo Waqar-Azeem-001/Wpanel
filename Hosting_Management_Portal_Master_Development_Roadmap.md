@@ -1117,8 +1117,9 @@ Use this section whenever something is discovered but intentionally postponed.
 # 28 — CURRENT STARTING TASK
 
 Phases 01–16 and D0–D8 (including D3b) are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), `docs/e14-nine-owner-requests.md`
-(quote PDF, client/contact, staff permissions, orders, domains, Fraud gate, upgrade proration reversed), and
-`docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
+(quote PDF, client/contact, staff permissions, orders, domains, Fraud gate, upgrade proration reversed),
+`docs/storefront-connection-guide.md` (screenshots: connecting a storefront, where the credential comes from, what
+calls the API today and what a future WordPress plugin would still need to do), and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
 
 ## Start: Phase 17 — Reliability & Failure Handling
 

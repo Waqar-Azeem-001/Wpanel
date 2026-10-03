@@ -150,6 +150,29 @@ console errors, no overflow. The quotation PDF was rendered for real (not a snap
 set, confirming the highlight line sits directly under the pricing and the footer at the very bottom, exactly as
 asked.
 
+## Follow-up (2026-10-03, same day): PDF redesign and a storefront connection guide
+
+Shown a real rendered quote (with placeholder test data), the owner flagged two further things, not covered by
+Item 1's original footer/highlight addition:
+
+- **The PDF still looked like a generic, WHMCS-style document.** `apps/billing/pdf.py`'s visual language was almost
+  entirely grey/black with only a thin 4mm accent stripe at the very top. Redesigned to use the brand's own colour
+  throughout instead of generic greys: a new `_tint()` helper lightens *any* brand accent colour towards white for
+  the summary band, the item table's header and zebra striping, so every document is tied to that business's own
+  colour rather than one neutral palette; the document title ("QUOTE"/"INVOICE") is now set in the accent colour;
+  and the single number a reader is actually looking for (Amount due on an invoice, Total on a quote) now sits in
+  its own tinted, coloured block instead of a flat grey row. No data, calculation or test-visible text changed -
+  confirmed by the full existing `apps/billing` test suite passing unchanged (content assertions, not colour,
+  are what those tests check) and by rendering real invoice and quote PDFs (unpaid, paid-with-watermark, and a
+  quote) to inspect directly.
+- **"Store front bhi sahi ni connect ni hua" (the storefront won't connect)** turned out to be an expectations gap,
+  not a bug: the owner had tried pointing a real WordPress site at it. Confirmed with the owner (and explained)
+  that no WordPress plugin exists - the original spec for E13 explicitly excluded building one, so there is nothing
+  installed on the WordPress side to use the credentials. The owner asked for documentation instead of the plugin
+  itself. Wrote `docs/storefront-connection-guide.md` - a screenshot walkthrough (real staff-UI screenshots, not
+  mockups) of connecting a storefront, exactly which value (public id, secret) comes from where and what it is
+  for, publishing a plan to it, and what a future plugin (or any other integration) would still need to build.
+
 ## Known limitations / deferred (not asked for; noted so they are not silently assumed)
 
 - No self-service role change or removal for client contacts - only inviting is self-service; staff still handle
