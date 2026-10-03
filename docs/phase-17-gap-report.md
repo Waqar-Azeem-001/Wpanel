@@ -102,3 +102,84 @@ menu entry. Browser-checked (Chromium, 1440 and 390 wide): the Automation page s
 scheduled jobs all correctly "Never run yet." on a fresh database, and the `ping` task's own run appearing in
 "Other recent jobs" after triggering it - and the WHOIS page returning a **real** record for `example.com` from the
 public WHOIS system (not mocked) - no overflow, no console errors at either width. Full suite passes.
+
+---
+
+## Slice 2 (2026-10-03): the three items slice 1 left PARTIAL/DEFERRED
+
+Closes three of the four remaining items from slice 1's own "PARTIAL / DEFERRED" section above. The fourth
+(scheduled hosting usage sync) is still blocked on the same pre-existing, unrelated item - the WHM adapter has
+still never been exercised against a live server - and building a schedule around an unverified adapter would be
+premature; deferred again on the same reasoning, not a regression.
+
+### 1. Expiry of abandoned payment attempts and unpaid orders - MISSING, now built
+
+Neither an order stuck in Pending Payment nor a gateway payment session that was started and never finished had
+any timeout before this - both sat open indefinitely. `apps/orders/fulfilment.py` gains
+`sweep_abandoned_orders()` (daily, `ABANDONED_PENDING_PAYMENT_AFTER = 3 days`): cancels a Pending-Payment order
+whose chosen payment method is gateway-backed (`payment_method.provider` set) and old enough. Deliberately scoped
+to gateway methods only - a manual one (bank transfer, JazzCash...) has no timeout and never will: staff may
+legitimately take days to see and record a payment, and this project's payments stay manual by design (a standing
+decision, not something this slice revisits). Cancelling reuses the existing `services.cancel_order()` exactly as
+a customer/staff cancellation already does - it also cancels the order's open invoice, which itself already fails
+any stale pending transaction and releases the coupon/domain-name hold (`apps/billing/invoicing.py
+:cancel_invoice_internal`). No new status, no new field, no new cancellation path - the entire "abandoned payment
+attempt" half of this item turned out to already be handled by cancelling the order correctly in the first place.
+
+### 2. Backup / hold-before-delete before automatic termination - MISSING (no concept existed), now built
+
+Automatic termination called the adapter's `terminate_account` directly and immediately - no backup, no staging,
+no way back. `HostingAdapter` gains an abstract `backup_account(username)` (Manual: a fake reference, same shape
+as `create_account`; WHM: a real `fullaccountbackup` call - requests the backup, does not wait for it, since WHM
+generates it asynchronously). `HostingAccount` gains `backup_requested_at`/`backup_ref`; `hosting.services
+.backup_account()` is both a new staff action (**Request backup** button next to Suspend/Terminate) and what the
+lifecycle job now calls automatically. `LifecycleSettings.backup_before_terminate` (default **on**, the opposite
+default from `auto_terminate` itself - once staff have deliberately turned auto-terminate on, the safety net is on
+unless they choose otherwise): `run_lifecycle`'s auto-terminate branch now requests a backup on the first run that
+finds an account overdue, and waits - termination itself happens on a *later* run (the job runs once daily, so at
+least a day passes), by which point a real server's backup has had time to actually finish. An account that
+already has a backup on record for another reason (e.g. staff requested one by hand) is not made to wait for a
+second one. This project has no backup storage or restore flow of its own - `backup_ref` is only the adapter's own
+reference, for manual retrieval from the server/registrar side; building actual storage/restore was not asked for
+and would be a much larger, separate feature.
+
+### 3. Ticket attachment retention/cleanup - MISSING (kept forever), now built
+
+`apps.support.services.purge_stale_attachments()` (daily, `ATTACHMENT_RETENTION_AFTER = 180 days`, a plain module
+constant - mirrors `AUTO_CLOSE_AFTER`'s own existing style in the same file rather than a new settings model for
+one number): removes the stored file of an attachment on a ticket that has been **closed** (not merely resolved)
+for longer than the retention period. Mirrors `apps.notifications.services.purge_sensitive()`'s shape exactly -
+wipe the content, keep the row (`original_name`, `content_type`, the message it belongs to) so the conversation
+still shows a file was once there. The existing download view already 404s cleanly on a missing file
+(`apps/support/views_customer.py:attachment`, catches `FileNotFoundError`/`ValueError`) - no change needed there.
+
+### REUSE (slice 2)
+
+| Reused | How |
+|---|---|
+| `apps.orders.services.cancel_order` | The entire abandoned-order flow - no new cancellation path. |
+| `apps.billing.invoicing.cancel_invoice_internal` / `fail_pending_transactions` | Already resolve the "abandoned payment attempt" half when the order's invoice is cancelled. |
+| `apps.hosting.adapters.base.HostingAdapter`'s existing shape (`create_account`'s `{"provider_ref": ...}` return) | `backup_account`'s `{"backup_ref": ...}` mirrors it exactly. |
+| `apps.lifecycle.models.LifecycleSettings` / its `save_settings` fields-tuple pattern | `backup_before_terminate` added the same way `auto_terminate` already works. |
+| `apps.notifications.services.purge_sensitive()` | `purge_stale_attachments()` is the same "wipe content, keep the row" shape, not a new retention mechanism. |
+| `apps.support.services.AUTO_CLOSE_AFTER`'s plain-constant style | `ATTACHMENT_RETENTION_AFTER` follows it, rather than introducing a configurable settings row for one number. |
+| `console:automation`'s existing `CELERY_BEAT_SCHEDULE` introspection | The three new beat entries (`sweep-abandoned-orders`, `purge-stale-attachments`, already-existing automation page) show up there automatically - no code change needed to see them run. |
+
+### VERIFIED (slice 2)
+
+11 new tests across `apps/orders/tests/test_fulfilment.py` (an old gateway order is cancelled; a recent one and
+any manual-payment order, however old, are left alone), `apps/lifecycle/tests/test_services.py` (the backup-then-
+terminate two-run sequence; `backup_before_terminate=False` skips straight to terminating as before; an
+already-on-record backup does not delay termination further), `apps/support/tests/test_services.py` (a long-closed
+ticket's attachment file is purged but the row/name survive; a recently-closed or merely-resolved ticket's
+attachment is left alone; the Celery task), `apps/hosting/tests/test_services.py` + `test_web.py` (the service
+function, its audit event, permission check, and the staff button). Full project suite green (2167 tests). Crawler
+and navigation tests green (one new POST-only route, `hosting_staff:backup`, correctly exempt). Migrated the real
+local database. Browser-checked (Chromium, 1280 wide): the Lifecycle settings page's new "Backup before terminate"
+toggle (on by default) and the hosting account page's new **Request backup** button - clicked for real against a
+server already configured in this project's own local database (a live WHM server, not the Manual adapter), which
+returned a `403 Forbidden` from WHM's `fullaccountbackup` call. The error surfaced cleanly to staff (no crash, no
+leaked credentials in the message) rather than breaking the page - a genuine, useful data point for the
+pre-existing, separate "WHM API adapter needs live verification" item, not a bug in this slice: it is exactly the
+kind of thing that item exists to catch, and confirms the new code's own error handling works correctly against a
+real, unexpected server response.

@@ -69,4 +69,4 @@ class SettingsForm(forms.ModelForm):
     class Meta:
         model = LifecycleSettings
         fields = ["grace_after_days", "suspend_after_days", "terminate_after_days", "auto_suspend", "auto_terminate",
-                  "unsuspend_on_payment"]
+                  "backup_before_terminate", "unsuspend_on_payment"]

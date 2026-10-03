@@ -25,6 +25,9 @@ class ManualAdapter(HostingAdapter):
     def terminate_account(self, username, *, keep_dns=False):
         pass
 
+    def backup_account(self, username):
+        return {"backup_ref": f"manual-backup-{uuid.uuid4().hex[:12]}"}
+
     def change_package(self, username, package):
         pass
 

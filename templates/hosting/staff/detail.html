@@ -24,6 +24,7 @@
       <dt>Disk</dt><dd>{% if account.disk_used_mb is not None %}{{ account.disk_used_mb }} / {{ account.disk_limit_mb|default:"unlimited" }} MB{% else %}Not synced{% endif %}</dd>
       <dt>Bandwidth</dt><dd>{% if account.bandwidth_used_mb is not None %}{{ account.bandwidth_used_mb }} / {{ account.bandwidth_limit_mb|default:"unlimited" }} MB{% else %}Not synced{% endif %}</dd>
       <dt>Last synced</dt><dd>{{ account.last_synced_at|date:"Y-m-d H:i"|default:"Never" }}</dd>
+      <dt>Last backup</dt><dd>{% if account.backup_requested_at %}{{ account.backup_requested_at|date:"Y-m-d H:i" }} ({{ account.backup_ref }}){% else %}Never requested{% endif %}</dd>
     </dl>
 
     {% if can_manage %}
@@ -58,10 +59,16 @@
         <form method="post" action="{% url 'hosting_staff:sync_usage' account.pk %}">{% csrf_token %}
           <button class="btn btn-sm btn-outline-primary" type="submit">Sync usage</button>
         </form>
+        <form method="post" action="{% url 'hosting_staff:backup' account.pk %}">{% csrf_token %}
+          <button class="btn btn-sm btn-outline-secondary" type="submit">Request backup</button>
+        </form>
       {% endif %}
       {% if account.status == "suspended" %}
         <form method="post" action="{% url 'hosting_staff:unsuspend' account.pk %}">{% csrf_token %}
           <button class="btn btn-sm btn-outline-primary" type="submit">Unsuspend</button>
+        </form>
+        <form method="post" action="{% url 'hosting_staff:backup' account.pk %}">{% csrf_token %}
+          <button class="btn btn-sm btn-outline-secondary" type="submit">Request backup</button>
         </form>
         <form method="post" action="{% url 'hosting_staff:terminate' account.pk %}" data-confirm="Terminate this hosting account? This cannot be undone.">{% csrf_token %}
           <button class="btn btn-sm btn-outline-danger" type="submit">Terminate</button>

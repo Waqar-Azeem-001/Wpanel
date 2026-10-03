@@ -103,6 +103,11 @@ def test_staff_full_lifecycle_via_web(client, manager, client_obj, product):
     client.post(f"/staff/hosting/{account.pk}/sync-status/")
     client.post(f"/staff/hosting/{account.pk}/sync-usage/")
 
+    client.post(f"/staff/hosting/{account.pk}/backup/")
+    account.refresh_from_db()
+    assert account.backup_requested_at is not None
+    assert b"Request backup" in client.get(f"/staff/hosting/{account.pk}/").content
+
     new_product = product_services.create_product(manager, {"name": "Pro", "type": ProductType.SHARED_HOSTING,
                                                             "whm_package_name": "pro_pkg"})
     client.post(f"/staff/hosting/{account.pk}/change-package/", {"product": new_product.pk})

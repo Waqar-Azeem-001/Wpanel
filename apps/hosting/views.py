@@ -242,3 +242,15 @@ def staff_hosting_sync_usage(request, pk):
         return "Usage synced."
 
     return _run(request, action, "hosting_staff:detail", pk=pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def staff_hosting_backup(request, pk):
+    account = get_object_or_404(HostingAccount, pk=pk)
+
+    def action():
+        services.backup_account(request.user, account, request=request)
+        return "Backup requested from the server."
+
+    return _run(request, action, "hosting_staff:detail", pk=pk)

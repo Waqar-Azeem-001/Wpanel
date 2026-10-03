@@ -38,6 +38,9 @@ class LifecycleSettings(models.Model):
     auto_terminate = models.BooleanField(
         default=False, help_text="Terminate accounts automatically. Termination deletes the customer's data, so it "
                                  "is off unless you turn it on; otherwise staff terminate by hand.")
+    backup_before_terminate = models.BooleanField(
+        default=True, help_text="Request a backup from the server first, and wait a day before actually "
+                                "terminating - only used when automatic termination above is on.")
     unsuspend_on_payment = models.BooleanField(
         default=True, help_text="Lift an automatic suspension as soon as the renewal is paid.")
     updated_at = models.DateTimeField(auto_now=True)

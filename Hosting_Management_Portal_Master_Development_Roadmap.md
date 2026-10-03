@@ -731,7 +731,7 @@ RBAC review, **MFA (TOTP), optional for staff and customers alike**, secure sess
 
 ------------------------------------------------------------------------
 
-# PHASE 17 — RELIABILITY & FAILURE HANDLING 🟡
+# PHASE 17 — RELIABILITY & FAILURE HANDLING 🟢
 
 > **Slice 1 delivered** (`docs/phase-17-gap-report.md`): Rule 1 inspection found most of this phase's own scenario
 > list already built in earlier phases to a high standard - idempotent/resumable order fulfilment with a stuck-order
@@ -743,6 +743,17 @@ RBAC review, **MFA (TOTP), optional for staff and customers alike**, secure sess
 > scheduled hosting usage sync (blocked on the WHM adapter's own unrelated pre-existing "needs live verification"
 > item), expiry of abandoned payments/unpaid orders, backup/hold-before-delete for automatic termination, and
 > attachment retention.
+>
+> **Slice 2 delivered** (same report, "Slice 2" section): closed three of the four items slice 1 deferred - expiry of
+> abandoned payment attempts and unpaid orders (`sweep_abandoned_orders`, daily, gateway-backed payment methods
+> only; a manual method never auto-expires, by design), backup/hold-before-delete before automatic termination
+> (`HostingAdapter.backup_account`, a `backup_before_terminate` setting on by default, terminating waits for a later
+> day's run once a backup has been requested), and ticket attachment retention/cleanup (`purge_stale_attachments`,
+> daily, wipes a closed ticket's old attachment files but keeps the row, mirroring how `purge_sensitive` already
+> treats old email bodies). Still deferred: scheduled hosting usage sync, on the same pre-existing WHM-verification
+> blocker as slice 1 - not a new gap. Live-tested backup request against the owner's own real, already-configured
+> WHM server; it answered with a genuine `403 Forbidden`, handled cleanly with no crash - a real data point for the
+> existing "WHM API adapter needs live verification before launch" item, not a bug in this slice.
 
 Scenarios: registrar unavailable, WHM unavailable, payment callback delayed, email failure, provisioning failure, duplicate webhook, network timeout, worker failure.
 
@@ -752,7 +763,7 @@ Request → Validation → Create Job → Execute
    Failure → Retry?  Temporary → Retry | Permanent → Manual Review
 ```
 
-Also: scheduled hosting usage sync, expiry of abandoned payment attempts and unpaid orders, backup/hold-before-delete for automatic termination, attachment retention, job-queue status page (linked from Utilities).
+Also: scheduled hosting usage sync (still deferred, slice 2), expiry of abandoned payment attempts and unpaid orders (closed, slice 2), backup/hold-before-delete for automatic termination (closed, slice 2), attachment retention (closed, slice 2), job-queue status page (linked from Utilities, closed, slice 1).
 
 ------------------------------------------------------------------------
 
@@ -889,7 +900,7 @@ Before marking any phase 🟢:
 | 14 Reports | 🟢 | 1197 ✅ | ✅ | D2 crawl: 0 broken | f1246ba | — |
 | 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4) | 1661 ✅ | ✅ | crawler green | 7e5f35b | — |
 | 16 Security | 🟢 (slice 1: MFA/lockout/headers; slice 2: RBAC review, mandatory-MFA and step-up re-auth tried then reverted per owner feedback) | 2046 ✅ | ✅ | crawler green | 3737541, e05ae9d | — |
-| 17 Reliability | 🟡 (slice 1: found most of the phase's scenarios already built in earlier phases; added automation status and WHOIS lookup) | 2066 ✅ | ✅ | crawler green | — | — |
+| 17 Reliability | 🟢 (slice 1: found most of the phase's scenarios already built in earlier phases; added automation status and WHOIS lookup. slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention; usage sync still deferred on WHM verification) | 2167 ✅ | ✅ | crawler green; real WHM 403 handled cleanly | — | — |
 | 18 Testing & Readiness | ⬜ | — | — | — | — | — |
 | 19 Production Launch | ⬜ | — | — | — | — | — |
 
@@ -918,7 +929,7 @@ Before marking any phase 🟢:
 
 ## Recommended order
 
-D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → **17 Reliability (next)** → D5 → 18 → 19
+D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → 17 Reliability ✅ (local) → **D5 (next)** → 18 → 19
 
 ------------------------------------------------------------------------
 
@@ -954,12 +965,12 @@ Use this section whenever something is discovered but intentionally postponed.
 | WHM API adapter needs live verification before launch | Open | Written to WHM's public docs, never run against a real server | Before launch |
 | No customer self-service for suspend/terminate/change-package | Deferred ⚠️ Re-triage | No billing/cancellation workflow to hang these off at the time (08/12 now 🟢); decision log limits self-service to view + request | Re-triage |
 | No automatic multi-server capacity-based selection | Deferred | Staff pick manually when a product maps to >1 server | Post-MVP |
-| Hosting usage sync is manual, not scheduled | Deferred | Needs Celery beat + a verified live WHM adapter first | Phase 17/18 |
+| Hosting usage sync is manual, not scheduled | Deferred ⚠️ Re-triage | Needs a verified live WHM adapter first (Phase 17 slice 2 live-tested the new backup call against the owner's real WHM server and got a 403 - that item is still open) | Before launch |
 | Guest (anonymous) carts | Deferred | Cart requires a signed-in user | Post-MVP |
 | Antivirus scanning of ticket attachments | Open | Uploads are type/content checked, stored privately, only downloaded, but not scanned (e.g. ClamAV) | Before launch |
 | Reply-by-email / email-to-ticket | Deferred | Customers reply in the portal; team alerts for unassigned tickets delivered in Phase 11 | Post-MVP |
 | SLA timers, escalation, ticket merge, satisfaction rating | Deferred | Not in the roadmap's Phase 10 list | Post-MVP |
-| Attachment retention / cleanup | Deferred | Files are kept with their ticket; a retention job fits Phase 17 (background jobs), not Phase 16's actual scope | Phase 17 |
+| Attachment retention / cleanup | Closed (Phase 17 slice 2) | `purge_stale_attachments`, daily: wipes a closed ticket's old attachment file, keeps the row | — |
 | Add-on provisioning; add-ons and custom cycles in staff Add Order | Deferred | Add-ons are recorded against the plan, not provisioned separately | Post-MVP |
 | Order suspend/terminate act on hosting only; refunds do not cancel fulfilled services | Deferred | Domains are registrations and are left alone; a refund does not undo what was fulfilled | Post-MVP |
 | No real payment gateway adapter (Stripe unavailable in Pakistan) | Decided | 2026-09-25: payments are manual (COD / bank / wallet); each method = an account with instructions; staff record amount, account, transaction ID and date received. Test gateway stays dev-only (`ALLOW_TEST_PAYMENT_GATEWAY`). A real gateway = one adapter class | Until a gateway is chosen |
@@ -968,12 +979,12 @@ Use this section whenever something is discovered but intentionally postponed.
 | Credit balances (carrying forfeited upgrade credit forward); refunds do not reverse a renewal/upgrade | Deferred | Credit beyond the new price is forfeited and shown as such; a refund never undoes a service change | Post-MVP |
 | Downgrades / billing-cycle changes online; renewal of EXPIRED domains | Deferred | Only upgrades are offered online; staff handle the rest (unsuspend-on-payment closed in Phase 12) | Post-MVP |
 | PDF text limited to Western European characters | Deferred | Built-in PDF fonts; other scripts print as "?" | Post-MVP |
-| Abandoned online payment attempts never expire | Deferred | Stay pending until the gateway answers or the invoice is cancelled | Phase 17 |
+| Abandoned online payment attempts never expire | Closed (Phase 17 slice 2) | `sweep_abandoned_orders`, daily: cancels a gateway-backed Pending Payment order after 3 days, which cancels its invoice and fails the stale transaction; a manual payment method never auto-expires, by design | — |
 | Coupons apply to first payment only | Deferred ⚠️ Re-triage | No per-product limits or recurring discounts yet (Phase 08 is 🟢) | Re-triage → Post-MVP |
 | Tax: one rule per country, order-level, exclusive | Deferred | Tax-exempt clients done in Phase 07; no tax-inclusive pricing, state rules or per-invoice rate override | Post-MVP |
-| Unpaid orders hold domain names until cancelled | Deferred | No automatic order expiry yet | Phase 17 |
+| Unpaid orders hold domain names until cancelled | Closed (Phase 17 slice 2) | A gateway-backed order's domain-name hold now releases automatically when `sweep_abandoned_orders` cancels it; a manual-payment order still holds (by design, no timeout on manual payments) | — |
 | Domains are not suspended, terminated or marked expired by the lifecycle job | Deferred | The registrar owns what follows expiry; only cancellation acts on domains | Post-MVP |
-| Automatic termination has no backup / hold-before-delete step | Deferred | Off by default; deletes data when on | Phase 17 |
+| Automatic termination has no backup / hold-before-delete step | Closed (Phase 17 slice 2) | `backup_before_terminate` (on by default): a backup is requested first, termination itself waits for a later day's run; no backup storage/restore of its own, only the adapter's own reference | — |
 | Lifecycle timings are global; refunds on cancellation are a staff decision | Deferred | Not per product or client; refund always a staff decision (suggested only) | Post-MVP |
 | Affiliates: no multi-tier or per-product rules, no coupon-code attribution, no payout batch export | Deferred | One level; a rule applies to the whole invoice; payouts recorded by staff | Post-MVP |
 | Affiliate fraud beyond hold period and rejection | Deferred | Portal keeps no address/device data by design; staff review and can reject; not part of Phase 16's actual scope | Post-MVP |
@@ -1111,23 +1122,25 @@ Use this section whenever something is discovered but intentionally postponed.
 | Old paths live in one `RETIRED` map (`apps/core/redirects.py`), 301 with the query string, named `retired_*`; a moved page keeps its URL name | Rule 5.7: emailed links work forever | Active |
 | Production uses `ManifestStaticFilesStorage`; `SITE_URL` must be https (deploy check `core.E002`); no address is typed by hand in a template or code | Fingerprinted assets; emailed links open for customers | Active |
 | Dropdown toggles are buttons, never `href="#..."`; the crawler reports empty, `#`, `javascript:` and missing-anchor links | Rule 5: no dead links | Active |
+| Abandoned-order expiry only ever cancels a gateway-backed Pending Payment order (`payment_method.provider` set); a manual payment method (bank transfer, JazzCash...) has no timeout | Payments are manual by design (2026-09-25 decision above); staff may legitimately take days to record one, and an automated chase/cancel would undermine that | Active (Phase 17 slice 2) |
+| Automatic termination requests a backup first (`backup_before_terminate`, on by default) and waits for a later day's run before actually terminating; the backup is only the adapter's own reference, not a restore flow this project owns | A procedural safety net and audit trail, not a full backup/restore system - disproportionate to build before the WHM adapter itself is live-verified | Active (Phase 17 slice 2) |
 
 ------------------------------------------------------------------------
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–16 and D0–D8 (including D3b) are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), `docs/e14-nine-owner-requests.md`
+Phases 01–17 and D0, D1, D2, D3, D3b, D4, D6, D7, D8 are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup; slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), `docs/e14-nine-owner-requests.md`
 (quote PDF, client/contact, staff permissions, orders, domains, Fraud gate, upgrade proration reversed),
 `docs/storefront-connection-guide.md` (screenshots: connecting a storefront, where the credential comes from, what
 calls the API today and what a future WordPress plugin would still need to do), and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
 
-## Start: Phase 17 — Reliability & Failure Handling
+## Start: D5 — Visual QA & Polish
 
-**Do not start coding before Rule 1 inspection.** Scope is the Phase 17 section above: registrar/WHM/payment-callback/email/provisioning failure handling with retry vs. manual-review, duplicate-webhook and network-timeout/worker-failure scenarios, scheduled hosting usage sync (Phase 05's WHM adapter still needs live verification before that sync means anything real), expiry of abandoned payment attempts and unpaid orders, backup/hold-before-delete for automatic termination, attachment retention/cleanup (carried over from Phase 10/16 triage), and the job-queue status page linked from Utilities (carried over from D4/15; WHOIS lookup and automation status belong here too).
+**Do not start coding before Rule 1 inspection.** Scope is Section 09's D5 row: responsive behaviour, accessibility, empty/error states, print/PDF output, and screenshots across the now-settled D7/D8 visual system - a review pass across the app, not new features. Phase 17's one remaining deferred item (scheduled hosting usage sync) stays blocked on live WHM verification (`docs/phase-17-gap-report.md`, slice 2) and is not part of D5's scope.
 
 Payments stay manual (no gateway). Everything stays local until the owner approves a deployment.
 
-Then D5 (Visual QA), 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
+Then 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
 
 ------------------------------------------------------------------------
 

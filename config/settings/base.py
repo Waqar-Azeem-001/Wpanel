@@ -305,6 +305,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.orders.tasks.sweep_stuck_orders_task",
         "schedule": crontab(minute="*/5"),
     },
+    "sweep-abandoned-orders": {
+        "task": "apps.orders.tasks.sweep_abandoned_orders_task",
+        "schedule": crontab(hour=4, minute=15),
+    },
+    "purge-stale-attachments": {
+        "task": "apps.support.tasks.purge_stale_attachments_task",
+        "schedule": crontab(hour=4, minute=50),
+    },
 }
 
 # --- Email -------------------------------------------------------------------

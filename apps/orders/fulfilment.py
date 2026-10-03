@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 STUCK_PAID_AFTER = timedelta(minutes=5)
 STUCK_IN_FLIGHT_AFTER = timedelta(minutes=30)
+ABANDONED_PENDING_PAYMENT_AFTER = timedelta(days=3)
 
 
 class _Waiting(Exception):
@@ -213,3 +214,30 @@ def sweep(now=None):
                                      reason="Fulfilment was interrupted. Retry it.")
                 result["reset"] += 1
     return result
+
+
+def sweep_abandoned_orders(now=None):
+    """
+    Daily: cancel an order that has sat awaiting payment for too long - but only one paid for through a gateway
+    (``payment_method.provider`` set). A manual method (bank transfer, JazzCash...) has no such timeout: staff may
+    legitimately take days to see and record a payment, and this project's payments stay manual by design - this
+    sweep must never chase or cancel one of those on its own.
+
+    Cancelling reuses ``services.cancel_order`` exactly as a customer/staff cancellation would: it also cancels any
+    open invoice and, with it, fails any stale pending gateway transaction and releases the coupon/domain-name hold
+    - nothing new to duplicate here (Rule 3).
+    """
+    from . import services
+
+    now = now or timezone.now()
+    cutoff = now - ABANDONED_PENDING_PAYMENT_AFTER
+    stale = Order.objects.filter(status=OrderStatus.PENDING_PAYMENT, created_at__lt=cutoff,
+                                 payment_method__provider__isnull=False)
+    cancelled = 0
+    for order in stale:
+        try:
+            services.cancel_order(SYSTEM, order, reason="Expired - payment was never completed.")
+            cancelled += 1
+        except ServiceError:
+            continue  # already moved on (paid/cancelled concurrently) - nothing to do
+    return cancelled

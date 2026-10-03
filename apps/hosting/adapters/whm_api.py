@@ -74,6 +74,13 @@ class WhmApiAdapter(HostingAdapter):
     def terminate_account(self, username, *, keep_dns=False):
         self._call("removeacct", {"user": username, "keepdns": 1 if keep_dns else 0})
 
+    def backup_account(self, username):
+        """Requests WHM's own full-account backup (generated asynchronously on the server; this call only starts
+        it - WHM's response carries no backup id to track). Like the rest of this adapter, untested against a
+        live server - see the module docstring."""
+        self._call("fullaccountbackup", {"user": username})
+        return {"backup_ref": f"whm-fullaccountbackup-{username}"}
+
     def change_package(self, username, package):
         self._call("changepackage", {"user": username, "pkg": package})
 

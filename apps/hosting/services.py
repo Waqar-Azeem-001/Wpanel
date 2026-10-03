@@ -230,6 +230,27 @@ def unsuspend_account(actor, account, *, request=None):
     return account
 
 
+def backup_account(actor, account, *, request=None):
+    """Request a backup/snapshot of the account's data from the server - a safety net, not a restore mechanism:
+    this project has no backup storage or restore flow of its own, only the server's own reference. Staff may
+    request one at any time; the lifecycle job also requests one automatically before an auto-termination goes
+    ahead (``LifecycleSettings.backup_before_terminate``)."""
+    _require(actor, "manage_hosting")
+    if not account.server:
+        raise ServiceError("This account has no server assigned.", code="no_server_assigned")
+    adapter = get_adapter(account.server)
+    try:
+        result = adapter.backup_account(account.username)
+    except HostingError as exc:
+        raise ServiceError(f"Could not request a backup: {exc}", code="adapter_error") from exc
+    account.backup_requested_at = timezone.now()
+    account.backup_ref = result.get("backup_ref", "")
+    account.save(update_fields=["backup_requested_at", "backup_ref", "updated_at"])
+    audit.record("hosting.backup_requested", actor=actor, target=account,
+                 metadata={"backup_ref": account.backup_ref}, request=request)
+    return account
+
+
 def terminate_account(actor, account, *, keep_dns=False, request=None):
     _require(actor, "manage_hosting")
     if account.status not in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED):

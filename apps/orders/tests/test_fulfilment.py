@@ -363,6 +363,44 @@ def test_the_sweeper_leaves_recent_and_healthy_orders_alone(manager, owner, clie
     assert fulfilment.sweep() == {"queued": 0, "reset": 0}
 
 
+# --- Abandoned orders (Phase 17) ---------------------------------------------------------------------------------
+
+def _gateway_order(manager, owner, client_obj, shop, name):
+    from apps.billing import services as billing_services
+    from apps.billing.models import PaymentProvider
+
+    provider = PaymentProvider.objects.create(name="Test gateway", kind="test", is_active=True)
+    billing_services.save_payment_method(manager, "card", name="Card", provider=provider)
+    services.add_hosting(owner, client_obj, shop["product"], name, "annual")
+    cart = services.get_open_cart(owner, client_obj)
+    return services.checkout(owner, cart, payment_method_code="card")
+
+
+def test_an_old_unpaid_gateway_order_is_cancelled(manager, owner, client_obj, shop):
+    order = _gateway_order(manager, owner, client_obj, shop, "abandoned.com")
+    Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(days=4))
+    assert fulfilment.sweep_abandoned_orders() == 1
+    order.refresh_from_db()
+    assert order.status == OrderStatus.CANCELLED and "never completed" in order.cancel_reason.lower()
+
+
+def test_a_recent_unpaid_gateway_order_is_left_alone(manager, owner, client_obj, shop):
+    order = _gateway_order(manager, owner, client_obj, shop, "fresh.com")
+    assert fulfilment.sweep_abandoned_orders() == 0
+    order.refresh_from_db()
+    assert order.status == OrderStatus.PENDING_PAYMENT
+
+
+def test_a_manual_payment_order_is_never_auto_cancelled_however_old(manager, owner, client_obj, shop):
+    """Bank transfer, JazzCash etc: staff may legitimately take days to record a payment - this project's
+    payments stay manual by design, and this sweep must never chase or cancel one of those on its own."""
+    order = place(owner, client_obj, shop)  # place() always uses bank-transfer
+    Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(days=30))
+    assert fulfilment.sweep_abandoned_orders() == 0
+    order.refresh_from_db()
+    assert order.status == OrderStatus.PENDING_PAYMENT
+
+
 # --- The system actor -----------------------------------------------------------------------------------------------
 
 def test_the_system_actor_is_recorded_as_no_user():

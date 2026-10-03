@@ -134,6 +134,35 @@ def test_valid_attachments_are_stored_privately_under_random_names(owner, client
         assert not str(path).startswith(str(settings.MEDIA_ROOT))  # never under the publicly served directory
 
 
+def test_attachments_on_a_long_closed_ticket_have_their_files_purged(owner, client_obj, technical, private_media):
+    ticket = open_ticket(owner, client_obj, technical, files=[upload("Screen Shot.png")])
+    attachment = TicketAttachment.objects.get(message__ticket=ticket)
+    path = private_media / attachment.file.name
+    assert path.exists()
+    services.set_status(owner, ticket, TicketStatus.CLOSED)
+    Ticket.objects.filter(pk=ticket.pk).update(closed_at=timezone.now() - timedelta(days=200))
+    assert services.purge_stale_attachments() == 1
+    reload(attachment)
+    assert attachment.file.name in ("", None) and not path.exists()
+    assert attachment.original_name == "Screen Shot.png"  # the row (and its name) stays - only the bytes go
+    assert services.purge_stale_attachments() == 0  # nothing left to purge
+
+
+def test_a_recently_closed_tickets_attachments_are_left_alone(owner, client_obj, technical, private_media):
+    ticket = open_ticket(owner, client_obj, technical, files=[upload("report.pdf", PDF)])
+    services.set_status(owner, ticket, TicketStatus.CLOSED)  # closed just now
+    assert services.purge_stale_attachments() == 0
+    attachment = TicketAttachment.objects.get(message__ticket=ticket)
+    assert attachment.file.name
+
+
+def test_an_open_tickets_attachments_are_never_purged_however_old(owner, client_obj, technical, agent, private_media):
+    ticket = open_ticket(owner, client_obj, technical, files=[upload("report.pdf", PDF)])
+    services.set_status(agent, ticket, TicketStatus.RESOLVED)
+    Ticket.objects.filter(pk=ticket.pk).update(resolved_at=timezone.now() - timedelta(days=400))
+    assert services.purge_stale_attachments() == 0  # resolved, not closed - not in scope
+
+
 @pytest.mark.parametrize("name,content,message", [
     ("evil.exe", b"MZ" + b"0" * 20, "not an allowed file type"),
     ("page.html", b"<script>alert(1)</script>", "not an allowed file type"),
@@ -509,3 +538,13 @@ def test_the_daily_celery_task_closes_stale_resolved_tickets(owner, client_obj, 
     Ticket.objects.filter(pk=ticket.pk).update(resolved_at=timezone.now() - timedelta(days=9))
     assert tasks.auto_close_resolved_tickets_task() == 1
     assert reload(ticket).status == TicketStatus.CLOSED
+
+
+def test_the_daily_celery_task_purges_stale_attachments(owner, client_obj, technical, private_media):
+    from apps.support import tasks
+
+    ticket = open_ticket(owner, client_obj, technical, files=[upload("Screen Shot.png")])
+    services.set_status(owner, ticket, TicketStatus.CLOSED)
+    Ticket.objects.filter(pk=ticket.pk).update(closed_at=timezone.now() - timedelta(days=200))
+    assert tasks.purge_stale_attachments_task() == 1
+    assert not TicketAttachment.objects.get(message__ticket=ticket).file

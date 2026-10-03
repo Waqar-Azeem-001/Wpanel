@@ -278,6 +278,19 @@ def test_sync_requires_manage_hosting(customer, manager, client_obj, product):
         services.sync_status(customer, account)
 
 
+# --- Backup (Phase 17) ----------------------------------------------------------------------
+
+def test_backup_account_records_the_adapters_reference(manager, customer, client_obj, product):
+    account = services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product,
+                                                                               "example.com"))
+    assert account.backup_requested_at is None and account.backup_ref == ""
+    backed_up = services.backup_account(manager, account)
+    assert backed_up.backup_requested_at is not None and backed_up.backup_ref.startswith("manual-backup-")
+    assert AuditEvent.objects.filter(action="hosting.backup_requested", target_id=str(account.pk)).exists()
+    with pytest.raises(ServiceError):
+        services.backup_account(customer, account)
+
+
 # --- Visibility ---------------------------------------------------------------------------
 
 def test_visible_hosting_accounts_for_user_scoping(manager, customer, client_obj, product, owner):

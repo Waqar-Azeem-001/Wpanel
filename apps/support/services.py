@@ -37,6 +37,7 @@ MAX_BODY = 20000
 TICKETS_PER_HOUR = 10
 CLOSED_REPLY_WINDOW = timedelta(days=7)
 AUTO_CLOSE_AFTER = timedelta(days=7)
+ATTACHMENT_RETENTION_AFTER = timedelta(days=180)
 CUSTOMER_PRIORITIES = (TicketPriority.LOW, TicketPriority.NORMAL, TicketPriority.HIGH)
 
 
@@ -387,6 +388,22 @@ def auto_close_resolved(*, now=None):
                                      reason="Resolved for a week with no reply")
                 closed += 1
     return closed
+
+
+def purge_stale_attachments(*, now=None):
+    """Remove the stored file of an attachment on a ticket that has been closed for a long time (run daily) - the
+    row (and its original_name, so the conversation still shows a file was once here) is kept; only its bytes are
+    deleted. Mirrors apps.notifications.services.purge_sensitive()'s shape (wipe content, keep the record)."""
+    cutoff = (now or timezone.now()) - ATTACHMENT_RETENTION_AFTER
+    stale = TicketAttachment.objects.filter(message__ticket__status=TicketStatus.CLOSED,
+                                            message__ticket__closed_at__lt=cutoff).exclude(file="")
+    count = 0
+    for attachment in stale:
+        attachment.file.delete(save=False)
+        attachment.file = ""
+        attachment.save(update_fields=["file", "updated_at"])
+        count += 1
+    return count
 
 
 # --- Search and the staff overview ------------------------------------------------------------------------

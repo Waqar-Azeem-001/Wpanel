@@ -17,4 +17,5 @@ urlpatterns = [
     path("<int:pk>/change-package/", views.staff_hosting_change_package, name="change_package"),
     path("<int:pk>/sync-status/", views.staff_hosting_sync_status, name="sync_status"),
     path("<int:pk>/sync-usage/", views.staff_hosting_sync_usage, name="sync_usage"),
+    path("<int:pk>/backup/", views.staff_hosting_backup, name="backup"),
 ]

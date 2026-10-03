@@ -495,8 +495,35 @@ def test_nothing_is_terminated_unless_that_is_switched_on(account, admin):
     assert reload(account).status == HostingStatus.SUSPENDED
     assert services.run_lifecycle()["terminated"] == 0 and reload(account).status == HostingStatus.SUSPENDED
     services.save_settings(admin, auto_terminate=True)
+    # backup_before_terminate defaults on: the first run requests a backup and waits; termination itself
+    # happens on a later run, once the account still qualifies and already has one (see the two tests below).
+    first = services.run_lifecycle()
+    assert first["backed_up"] == 1 and first["terminated"] == 0
+    assert reload(account).status == HostingStatus.SUSPENDED and account.backup_requested_at
     result = services.run_lifecycle()
     assert result["terminated"] == 1 and reload(account).status == HostingStatus.TERMINATED
+
+
+def test_backup_before_terminate_can_be_switched_off(account, admin):
+    """Off: no backup step at all - the original one-run behaviour."""
+    expire(account, 50)
+    services.run_lifecycle()
+    services.save_settings(admin, auto_terminate=True, backup_before_terminate=False)
+    result = services.run_lifecycle()
+    assert result["backed_up"] == 0 and result["terminated"] == 1
+    assert reload(account).status == HostingStatus.TERMINATED and not account.backup_requested_at
+
+
+def test_a_backup_already_on_record_does_not_block_a_later_termination_run(account, admin, manager):
+    """If a backup was already requested for some other reason (e.g. staff clicked it by hand), the lifecycle
+    job does not wait for a second one - it proceeds straight to terminating on its very next run."""
+    expire(account, 50)
+    services.run_lifecycle()
+    hosting_services.backup_account(manager, account)
+    services.save_settings(admin, auto_terminate=True)
+    result = services.run_lifecycle()
+    assert result["backed_up"] == 0 and result["terminated"] == 1
+    assert reload(account).status == HostingStatus.TERMINATED
 
 
 def test_only_a_suspension_for_non_payment_is_ever_terminated_automatically(account, manager, admin):

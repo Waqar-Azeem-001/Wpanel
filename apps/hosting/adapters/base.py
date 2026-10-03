@@ -41,6 +41,13 @@ class HostingAdapter(ABC):
         ...
 
     @abstractmethod
+    def backup_account(self, username: str) -> dict:
+        """Request a backup/snapshot of the account's data - a safety net before something destructive
+        (automatic termination) rather than a restore mechanism in itself. Returns {"backup_ref": str}: the
+        adapter's own reference for the backup, kept for audit/manual retrieval. Does not wait for the backup
+        to finish generating - a real server does this asynchronously."""
+
+    @abstractmethod
     def change_package(self, username: str, package: str) -> None:
         ...
 

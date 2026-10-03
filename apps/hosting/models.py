@@ -69,6 +69,10 @@ class HostingAccount(TimeStampedModel):
     bandwidth_limit_mb = models.PositiveIntegerField(null=True, blank=True,
                                                      help_text="Blank means unlimited/unknown.")
 
+    backup_requested_at = models.DateTimeField(null=True, blank=True,
+                                               help_text="Last time a backup was requested from the server.")
+    backup_ref = models.CharField(max_length=100, blank=True, help_text="The adapter's own reference for that backup.")
+
     class Meta:
         ordering = ["-created_at"]
         constraints = [

@@ -164,7 +164,7 @@ def save_settings(actor, *, request=None, **values):
         raise _denied()
     row = LifecycleSettings.objects.select_for_update().get_or_create(pk=1)[0]
     fields = ("grace_after_days", "suspend_after_days", "terminate_after_days", "auto_suspend", "auto_terminate",
-              "unsuspend_on_payment")
+              "backup_before_terminate", "unsuspend_on_payment")
     before = {f: getattr(row, f) for f in fields}
     for name in fields:
         if name in values:
@@ -583,7 +583,8 @@ def run_lifecycle(*, now=None, dry_run=False):
     """
     now = now or timezone.now()
     config = LifecycleSettings.load()
-    result = {"cancelled": 0, "notices": 0, "suspended": 0, "terminated": 0, "errors": [], "dry_run": dry_run}
+    result = {"cancelled": 0, "notices": 0, "suspended": 0, "terminated": 0, "backed_up": 0, "errors": [],
+              "dry_run": dry_run}
     if not dry_run:
         due = run_due_cancellations(now=now)
         result["cancelled"] += due["completed"]
@@ -619,6 +620,15 @@ def run_lifecycle(*, now=None, dry_run=False):
             expires_at__lte=now - timedelta(days=config.terminate_after_days))
         for account in stale:
             try:
+                # A backup is requested on the first run that finds this account overdue; termination itself
+                # waits for a later run (at least a day, since this job runs once daily - see the module
+                # docstring), giving a real server's backup time to actually finish generating before the
+                # irreversible call. Off (backup_before_terminate=False) skips straight to terminating, as before.
+                if config.backup_before_terminate and not account.backup_requested_at:
+                    if not dry_run:
+                        hosting_services.backup_account(SYSTEM, account)
+                    result["backed_up"] += 1
+                    continue
                 if not dry_run:
                     hosting_services.terminate_account(SYSTEM, account)
                 result["terminated"] += 1

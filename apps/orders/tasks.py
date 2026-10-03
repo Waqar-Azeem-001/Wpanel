@@ -21,3 +21,9 @@ def purge_guest_carts_task():
 def sweep_stuck_orders_task():
     """Every few minutes: pick up paid orders that were never fulfilled and reset ones stuck mid-way."""
     return fulfilment.sweep()
+
+
+@shared_task
+def sweep_abandoned_orders_task():
+    """Daily: cancel an order that has sat awaiting a gateway payment for days with nothing ever completed."""
+    return fulfilment.sweep_abandoned_orders()
