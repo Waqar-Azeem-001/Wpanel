@@ -213,19 +213,19 @@ def overdue(manager, client_obj, days):
     return reload(invoice)
 
 
-@pytest.mark.parametrize("days,kind", [(-4, None), (-3, "due_soon"), (-1, "due_soon"), (0, "due_soon"), (1, "overdue_1"),
-                                       (6, "overdue_1"), (7, "overdue_7"), (13, "overdue_7"), (14, "overdue_14"),
-                                       (90, "overdue_14")])
-def test_which_reminder_is_due(manager, client_obj, days, kind):
+@pytest.mark.parametrize("days,offset", [(-4, None), (-3, -3), (-1, -3), (0, -3), (1, 1),
+                                         (6, 1), (7, 7), (13, 7), (14, 14),
+                                         (90, 14)])
+def test_which_reminder_is_due(manager, client_obj, days, offset):
     invoice = overdue(manager, client_obj, days)
-    assert reminders.due_reminder(invoice, today=timezone.localdate())[0] == kind
+    assert reminders.due_reminder(invoice, today=timezone.localdate(), schedule=[-3, 1, 7, 14])[0] == offset
 
 
 def test_reminders_go_out_once_and_only_the_most_advanced(manager, owner, client_obj):
     invoice = overdue(manager, client_obj, 8)  # missed the day-1 reminder: only the day-7 one is sent
     mail.outbox.clear()
     assert reminders.send_invoice_reminders() == {"sent": 1, "skipped": 0}
-    assert [r.kind for r in InvoiceReminder.objects.filter(invoice=invoice)] == ["overdue_7"]
+    assert [r.kind for r in InvoiceReminder.objects.filter(invoice=invoice)] == ["7"]
     assert len(mail.outbox) == 1 and "8 days overdue" in mail.outbox[0].subject and "overdue" in mail.outbox[0].body
     assert reminders.send_invoice_reminders() == {"sent": 0, "skipped": 1}  # the daily job is safe to run again
     assert len(mail.outbox) == 1
@@ -258,6 +258,30 @@ def test_a_part_paid_invoice_is_reminded_of_the_balance(manager, client_obj):
     mail.outbox.clear()
     reminders.send_invoice_reminders()
     assert "USD 70.00" in mail.outbox[0].body
+
+
+def test_the_reminder_schedule_is_configurable(manager, owner, client_obj):
+    row = BillingSettings.load()
+    row.reminder_schedule_days = "-1,10"
+    row.save()
+    invoice = overdue(manager, client_obj, 10)
+    mail.outbox.clear()
+    assert reminders.send_invoice_reminders() == {"sent": 1, "skipped": 0}
+    assert [r.kind for r in InvoiceReminder.objects.filter(invoice=invoice)] == ["10"]
+    assert "10 days overdue" in mail.outbox[0].subject
+
+
+@pytest.mark.parametrize("bad,message", [("", "List at least one day"), ("x,y", "whole numbers"),
+                                         ("1,1", "only be listed once"), (",".join(str(n) for n in range(13)), "At most 12"),
+                                         ("-999", "within a year")])
+def test_the_reminder_schedule_is_validated(bad, message):
+    from django.core.exceptions import ValidationError
+
+    row = BillingSettings.load()
+    row.reminder_schedule_days = bad
+    with pytest.raises(ValidationError) as exc:
+        row.full_clean()
+    assert message in str(exc.value)
 
 
 def test_reminders_can_be_switched_off_and_run_from_the_task_and_command(manager, client_obj):

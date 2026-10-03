@@ -898,7 +898,7 @@ Before marking any phase 🟢:
 | 12 Cancellation | 🟢 | 1046 ✅ | ✅ | D2 crawl: 0 broken | d3f9b82 | — |
 | 13 Affiliates | 🟢 | 1134 ✅ | ✅ | D2 crawl: 0 broken | a2e8989 | — |
 | 14 Reports | 🟢 | 1197 ✅ | ✅ | D2 crawl: 0 broken | f1246ba | — |
-| 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4) | 1661 ✅ | ✅ | crawler green | 7e5f35b | — |
+| 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4. Follow-up 2026-10-03: maintenance mode, configurable reminder schedule, ToS acceptance at checkout, cart client chooser - found by a pre-Phase-18 documentation audit) | 2200 ✅ | ✅ | crawler green | 7e5f35b | — |
 | 16 Security | 🟢 (slice 1: MFA/lockout/headers; slice 2: RBAC review, mandatory-MFA and step-up re-auth tried then reverted per owner feedback) | 2046 ✅ | ✅ | crawler green | 3737541, e05ae9d | — |
 | 17 Reliability | 🟢 (slice 1: found most of the phase's scenarios already built in earlier phases; added automation status and WHOIS lookup. slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention; usage sync still deferred on WHM verification) | 2167 ✅ | ✅ | crawler green; real WHM 403 handled cleanly | — | — |
 | 18 Testing & Readiness | ⬜ | — | — | — | — | — |
@@ -955,7 +955,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Require verified email before purchase | Deferred ⚠️ Re-triage | Verification tracked; purchase gating belongs to checkout (Phase 06 is 🟢); not part of Phase 16's actual scope, which is now 🟢 too | Post-MVP |
 | Customer self-service sub-user invitations | Partly closed (E14) | An owner contact can invite someone else onto the account (`docs/e14-nine-owner-requests.md`); role changes and removal are still staff-only | Post-MVP |
 | Closing a client suspends users/services | Deferred ⚠️ Re-triage | Service lifecycle rules belong to cancellation phase (Phase 12 is 🟢) | Re-triage |
-| Server credentials / WHM adapter | Open ⚠️ Re-triage | Server model was minimal in Phase 03; Phase 05 extended it with WHM connection fields | Re-triage (likely closed by Phase 05) |
+| Server credentials / WHM adapter | Closed (Phase 05) | Stale - `Server` was extended with `kind`/`api_port`/`api_username`/encrypted `api_token` exactly as planned; this row was never updated when Phase 05 did it | — |
 | Multi-currency product pricing | Deferred | Single store currency for MVP | Post-MVP |
 | Addon-to-product-type compatibility restriction | Deferred ⚠️ Re-triage | Any addon attaches to any product for now | Re-triage |
 | Staff pricing table row-actions cramped at 375px width | Closed (D5) | Reused the existing `.table-stack` component (console/users.html); the table is a column of labelled rows below 575.98px | — |
@@ -975,7 +975,8 @@ Use this section whenever something is discovered but intentionally postponed.
 | Order suspend/terminate act on hosting only; refunds do not cancel fulfilled services | Deferred | Domains are registrations and are left alone; a refund does not undo what was fulfilled | Post-MVP |
 | No real payment gateway adapter (Stripe unavailable in Pakistan) | Decided | 2026-09-25: payments are manual (COD / bank / wallet); each method = an account with instructions; staff record amount, account, transaction ID and date received. Test gateway stays dev-only (`ALLOW_TEST_PAYMENT_GATEWAY`). A real gateway = one adapter class | Until a gateway is chosen |
 | Invoices/quotes visible to any contact of the client | Deferred | Restrict financial documents to owner/billing contacts; a permissions-design decision, not part of Phase 16's actual scope | Post-MVP |
-| Reminder schedule is fixed | Deferred | Only on/off is configurable | Phase 15 |
+| Reminder schedule is fixed | Closed (Phase 15 follow-up) | `BillingSettings.reminder_schedule_days` (comma-separated days from the due date, validated); default unchanged (-3,1,7,14) | — |
+| Maintenance mode toggle (Phase 15's own feature list named it; never built, never tracked here - found by the pre-Phase-18 documentation audit) | Closed (Phase 15 follow-up) | `BrandSettings.maintenance_mode` + `MaintenanceModeMiddleware` (staff/sign-in/API exempt); a flag-file layer for Nginx (`deploy/nginx/wpanel.conf`), config-only, same limitation as the Compose stack below | — |
 | Credit balances (carrying forfeited upgrade credit forward); refunds do not reverse a renewal/upgrade | Deferred | Credit beyond the new price is forfeited and shown as such; a refund never undoes a service change | Post-MVP |
 | Downgrades / billing-cycle changes online; renewal of EXPIRED domains | Deferred | Only upgrades are offered online; staff handle the rest (unsuspend-on-payment closed in Phase 12) | Post-MVP |
 | PDF text limited to Western European characters | Deferred | Built-in PDF fonts; other scripts print as "?" | Post-MVP |
@@ -988,16 +989,16 @@ Use this section whenever something is discovered but intentionally postponed.
 | Lifecycle timings are global; refunds on cancellation are a staff decision | Deferred | Not per product or client; refund always a staff decision (suggested only) | Post-MVP |
 | Affiliates: no multi-tier or per-product rules, no coupon-code attribution, no payout batch export | Deferred | One level; a rule applies to the whole invoice; payouts recorded by staff | Post-MVP |
 | Affiliate fraud beyond hold period and rejection | Deferred | Portal keeps no address/device data by design; staff review and can reject; not part of Phase 16's actual scope | Post-MVP |
-| Terms-of-service acceptance at checkout | Deferred | No ToS page/versioning yet | Phase 15 |
-| Web cart needs exactly one client; no client chooser | Deferred | API takes client_id; staff "Add Order" exists (Phase 09) | Phase 15 / D3 |
+| Terms-of-service acceptance at checkout | Closed (Phase 15 follow-up) | A required checkbox at checkout when policy pages are configured (E8); `Order.policies_agreed_at`/`policies_snapshot` record what was agreed to, snapshotted like the billing details | — |
+| Web cart needs exactly one client; no client chooser | Closed (Phase 15 follow-up) | `/cart/choose-client/`: a contact of several accounts picks one for the session; the API's existing `client_id` and staff "Add Order" (Phase 09) are unchanged | — |
 | Announcements, Network Status, Downloads pages | Deferred (new) | Not in MVP; menu entries hidden per Rule 5.2 | Post-MVP |
 | Add Funds / Mass Payment in client area | Deferred (new) | Depends on credit balances | Post-MVP |
 | RTL layout (Urdu/Arabic) and translated UI | Deferred (new) | Strings translation-ready from D1; RTL styles later | Post-MVP |
 | Local payment gateway adapters (e.g. JazzCash, Easypaisa, bank payment gateways) | Deferred (new) | Choose provider first; one adapter class each | When chosen |
 | Phase 14 follow-ups from v2: product-sales, tax-collected, coupon-usage, churn, response-time and affiliate reports; orders-by-status view; charts; heavy reports as Celery jobs with a durable download link | Deferred | The 14 delivered reports cover the MVP list; these need a chart approach (D1 design system) and the job/status pattern | Phase 15 / D4 |
 | Reports: no scheduled or emailed reports, saved views or currency conversion; no chargeback data; "cancelled services" covers portal cancellations only | Deferred | On-demand CSV/XLSX/PDF only; the portal has no dispute records | Post-MVP |
-| Error pages: branded 403/404/400, standalone 500 and maintenance page exist (D1); the crawler still has to prove every link on them, and Nginx must serve the maintenance page | Partly closed (D1) | Rule 5.8 | D2 / Phase 15 |
-| Customers have no menu link to their cancellation requests | Open (found in D0) | Reachable only from a service page and notification links | D3 |
+| Error pages: branded 403/404/400, standalone 500 and maintenance page exist (D1); each has its own direct test since the crawler cannot organically reach an error handler (`apps/core/test_ui.py`, all four pages including the 400 case added at D5) | Closed (D1, test gap closed D5) | Rule 5.8 | — |
+| Customers have no menu link to their cancellation requests | Closed (D1/D2) | Stale - `apps/core/navigation.py`'s `account.cancellations` entry has linked to `lifecycle_customer:list` from the account menu since D1/D2; this row was never updated when it was fixed | — |
 | Page templates are not yet wrapped for translation (shells and components are); `legacy.css` is deleted (D4e) | Open | Wrap strings as pages are touched (confirmed still the right policy at D5: 52% of templates already wrapped, customer-facing areas essentially done, staff-admin screens lag) | Post-MVP |
 | Vendored Bootstrap 5.3.3, Bootstrap Icons 1.11.3 and htmx 2.0.4 are updated by hand | Deferred | No package manager for front-end assets; versions recorded here | Post-MVP |
 | Dark mode follows the system setting only (no manual toggle); HTML emails are the text email in a branded frame | Deferred | Not required by v2 | Post-MVP |
@@ -1132,7 +1133,9 @@ Use this section whenever something is discovered but intentionally postponed.
 Phases 01–17 and D0–D8 (including D3b) are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/d8-header-layout.md`, `docs/d5-visual-qa.md` (Rule 1 found most of this phase already built in D7/D8/D1/E14; closed the pricing-table/375px, 400-page test, empty-state and print-stylesheet gaps), `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup; slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), `docs/e14-nine-owner-requests.md`
 (quote PDF, client/contact, staff permissions, orders, domains, Fraud gate, upgrade proration reversed),
 `docs/storefront-connection-guide.md` (screenshots: connecting a storefront, where the credential comes from, what
-calls the API today and what a future WordPress plugin would still need to do), and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
+calls the API today and what a future WordPress plugin would still need to do), `docs/phase-15-follow-up-gaps.md`
+(pre-Phase-18 audit: maintenance mode, configurable reminder schedule, ToS acceptance at checkout, cart client
+chooser - plus three stale Known-Work rows corrected), and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
 
 ## Start: Phase 18 — Testing & Production Readiness
 

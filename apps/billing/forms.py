@@ -197,6 +197,9 @@ class BillingSettingsForm(forms.Form):
     quote_validity_days = forms.IntegerField(min_value=1, max_value=365)
     send_payment_reminders = forms.BooleanField(required=False, label="Send payment reminders",
                                                 help_text="Email customers before an invoice is due and when it is overdue.")
+    reminder_schedule_days = forms.CharField(required=False, max_length=100, label="Reminder days",
+                                             help_text="Days from the due date to send a reminder, comma-separated; "
+                                                       "negative = before it is due, e.g. -3,1,7,14.")
     renewal_invoice_days = forms.IntegerField(min_value=0, max_value=90,
                                               help_text="Create renewal invoices this many days before expiry.")
     invoice_footer = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}),

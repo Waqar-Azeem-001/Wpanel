@@ -28,6 +28,9 @@ class BrandSerializer(serializers.Serializer):
     money_format = serializers.CharField()
     logo_url = serializers.CharField(allow_null=True)
     favicon_url = serializers.CharField(allow_null=True)
+    policy_links = serializers.ListField(child=serializers.DictField(), help_text="[{\"title\", \"url\"}, ...] - "
+                                         "show these and collect agreement before checkout (POST /cart/checkout/ "
+                                         "takes a policies_agreed flag).")
     version = serializers.IntegerField()
 
 
@@ -52,7 +55,8 @@ def _payload():
             "accent_color": b.accent, "support_email": b.support_email, "footer_text": b.footer_text,
             "date_format": b.date_format, "money_format": b.money_format,
             "logo_url": reverse("brand_logo") + version if b.has_logo else None,
-            "favicon_url": reverse("brand_favicon") + version if b.has_favicon else None, "version": b.version}
+            "favicon_url": reverse("brand_favicon") + version if b.has_favicon else None,
+            "policy_links": [{"title": t, "url": u} for t, u in b.policy_links], "version": b.version}
 
 
 class BrandView(APIView):

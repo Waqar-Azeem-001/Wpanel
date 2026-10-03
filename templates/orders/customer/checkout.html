@@ -61,9 +61,15 @@
     </div>
   </section>
 
+  {% if "agree_to_policies" in form.fields %}
+  <div class="field form-check mb-3">
+    {{ form.agree_to_policies|bs_field }}
+    <label class="form-check-label" for="{{ form.agree_to_policies.id_for_label }}">{% trans "I agree to our" %} {% include "components/policy_links.html" with inline=True %}</label>
+    {% for error in form.agree_to_policies.errors %}<p class="text-danger small mb-0">{{ error }}</p>{% endfor %}
+  </div>
+  {% endif %}
   <div>
     <button class="btn btn-primary btn-lg w-100 place-order" type="submit"{% if not methods %} disabled{% endif %}>{% if guest %}{% trans "Create my account and place the order" %}{% else %}{% trans "Place order" %}{% endif %}</button>
-    {% if brand.policy_links %}<p class="small text-secondary mt-2 mb-0">{% trans "By placing an order you agree to our policies:" %} {% include "components/policy_links.html" with inline=True %}</p>{% endif %}
     {% if guest %}<p class="small text-secondary mt-2 mb-0">{% trans "By placing the order you create an account and agree to our terms of service and privacy policy." %}</p>{% endif %}
   </div>
   </form>

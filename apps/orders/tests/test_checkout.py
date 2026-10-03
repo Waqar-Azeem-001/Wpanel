@@ -106,6 +106,57 @@ def test_checkout_creates_a_pending_order_with_snapshotted_figures(owner, client
     assert sum(i.line_total for i in items) == order.subtotal
 
 
+def _require_policy_agreement():
+    from django.core.cache import cache
+
+    from apps.branding.models import BrandSettings
+
+    BrandSettings.objects.update_or_create(
+        pk=1, defaults={"policy_links": [{"title": "Terms of Service", "url": "https://example.test/terms"}]})
+    cache.clear()  # a brand read during fixture setup (e.g. a welcome email) may have already cached the old value
+
+
+def test_checkout_is_refused_without_agreeing_to_configured_policies(owner, client_obj, shop):
+    _require_policy_agreement()
+    cart = _fill(owner, client_obj, shop)
+    with pytest.raises(ServiceError) as exc:
+        services.checkout(owner, cart, payment_method_code=shop["bank"].code)
+    assert exc.value.code == "policies_not_agreed"
+    assert not Order.objects.exists()
+
+
+def test_checkout_snapshots_the_policies_agreed_to(owner, client_obj, shop):
+    _require_policy_agreement()
+    cart = _fill(owner, client_obj, shop)
+    order = services.checkout(owner, cart, payment_method_code=shop["bank"].code, policies_agreed=True)
+    assert order.policies_agreed_at is not None
+    assert order.policies_snapshot == [{"title": "Terms of Service", "url": "https://example.test/terms"}]
+
+
+def test_no_policies_configured_means_nothing_to_agree_to(owner, client_obj, shop):
+    cart = _fill(owner, client_obj, shop)
+    order = services.checkout(owner, cart, payment_method_code=shop["bank"].code)  # no policies_agreed passed
+    assert order.policies_agreed_at is None and order.policies_snapshot == []
+
+
+def test_staff_placing_an_order_on_behalf_are_exempt_from_agreeing(owner, client_obj, shop, manager):
+    _require_policy_agreement()
+    cart = _fill(owner, client_obj, shop)
+    order = services.checkout(manager, cart, payment_method_code=shop["bank"].code)  # staff, no agreement, no error
+    assert order.status == OrderStatus.PENDING_PAYMENT and order.policies_agreed_at is None
+
+
+def test_a_later_change_to_the_policy_pages_never_rewrites_an_old_orders_snapshot(owner, client_obj, shop):
+    from apps.branding.models import BrandSettings
+
+    _require_policy_agreement()
+    cart = _fill(owner, client_obj, shop)
+    order = services.checkout(owner, cart, payment_method_code=shop["bank"].code, policies_agreed=True)
+    BrandSettings.objects.filter(pk=1).update(policy_links=[{"title": "New Terms", "url": "https://example.test/new"}])
+    order.refresh_from_db()
+    assert order.policies_snapshot == [{"title": "Terms of Service", "url": "https://example.test/terms"}]
+
+
 def test_checkout_closes_the_cart_and_records_the_coupon_redemption(owner, client_obj, shop, coupon):
     cart = _fill(owner, client_obj, shop)
     services.apply_coupon(owner, cart, "SAVE10")

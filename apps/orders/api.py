@@ -124,6 +124,9 @@ class CouponInSerializer(ClientScopedSerializer):
 class CheckoutInSerializer(ClientScopedSerializer):
     payment_method = serializers.CharField(help_text="Code of an active payment method.")
     notes = serializers.CharField(required=False, allow_blank=True, max_length=2000)
+    policies_agreed = serializers.BooleanField(required=False, default=False,
+                                               help_text="Confirms agreement to the configured policy pages "
+                                                         "(GET /api/v1/brand/), when any are configured.")
 
 
 def _visible_cart_items(user):
@@ -257,7 +260,8 @@ class CheckoutView(APIView):
         data = serializer.validated_data
         cart = _open_cart(request, data.get("client_id"))
         order = services.checkout(request.user, cart, payment_method_code=data["payment_method"],
-                                  notes=data.get("notes", ""), request=request)
+                                  notes=data.get("notes", ""), policies_agreed=data.get("policies_agreed", False),
+                                  request=request)
         return Response(OrderSerializer(order, context={"request": request}).data,
                         status=status.HTTP_201_CREATED)
 

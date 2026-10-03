@@ -190,6 +190,11 @@ class BillingSettings(models.Model):
                                                 "who you've worked with.")
     send_payment_reminders = models.BooleanField(
         default=True, help_text="Email customers before an invoice is due and when it becomes overdue.")
+    reminder_schedule_days = models.CharField(
+        max_length=100, default="-3,1,7,14",
+        help_text="When to remind a customer about an unpaid invoice, as whole days from its due date (negative = "
+                 "before it is due, positive = after), comma-separated, e.g. \"-3,1,7,14\". At most one reminder "
+                 "per invoice per listed day.")
     renewal_invoice_days = models.PositiveSmallIntegerField(
         default=14, validators=[MaxValueValidator(90)],
         help_text="Renewal invoices are created this many days before a service expires.")
@@ -204,6 +209,27 @@ class BillingSettings(models.Model):
     @classmethod
     def load(cls):
         return cls.objects.get_or_create(pk=1)[0]
+
+    def reminder_schedule(self):
+        """The configured reminder days, sorted, as a list of ints (negative = before the due date)."""
+        return sorted(int(x.strip()) for x in self.reminder_schedule_days.split(",") if x.strip())
+
+    def clean(self):
+        super().clean()
+        if not self.reminder_schedule_days or not self.reminder_schedule_days.strip():
+            raise ValidationError({"reminder_schedule_days": "List at least one day."})
+        try:
+            days = [int(x.strip()) for x in self.reminder_schedule_days.split(",") if x.strip()]
+        except ValueError:
+            raise ValidationError({"reminder_schedule_days": "Use whole numbers separated by commas, e.g. -3,1,7,14."})
+        if not days:
+            raise ValidationError({"reminder_schedule_days": "List at least one day."})
+        if len(set(days)) != len(days):
+            raise ValidationError({"reminder_schedule_days": "Each day can only be listed once."})
+        if len(days) > 12:
+            raise ValidationError({"reminder_schedule_days": "At most 12 reminder days."})
+        if any(abs(d) > 365 for d in days):
+            raise ValidationError({"reminder_schedule_days": "Each day must be within a year of the due date."})
 
 
 class PaymentProvider(TimeStampedModel):

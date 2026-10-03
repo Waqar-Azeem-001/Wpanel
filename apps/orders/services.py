@@ -8,6 +8,7 @@ import re
 from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from apps.accounts.roles import perm
@@ -365,7 +366,7 @@ def purge_guest_carts(*, days=30):
 
 # --- Checkout -------------------------------------------------------------------------------
 
-def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, request=None):
+def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, policies_agreed=False, request=None):
     """
     Turn a cart into an order awaiting payment.
 
@@ -379,6 +380,13 @@ def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, 
     only ever turned off by staff placing an order on a client's behalf (``orders_staff:new``) - the order and its
     invoice are still created and payable either way; this only controls whether the client is emailed about it
     right now, or staff share it with them separately later (the invoice's own "Email invoice" button).
+
+    ``policies_agreed`` is required (checked here, not only in the web form) whenever at least one policy page is
+    configured (Setup > Brand > Policy pages) and ``actor`` is a customer - a staff member placing an order on a
+    client's behalf (Add Order) can never tick this box *for* the client, so staff are exempt (the same distinction
+    ``notify_client`` already draws). When policies exist and are agreed to, the order snapshots which ones (title
+    and address) were in effect at that moment, the same way its billing details are snapshotted below - a later
+    edit to the policy pages must never rewrite what this customer actually saw and agreed to.
     """
     _require_own_cart(actor, cart)
     # Ask the database, not the (possibly stale) instance: a repeat submit must be told the
@@ -388,6 +396,12 @@ def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, 
     method = PaymentMethod.objects.filter(code=payment_method_code, is_active=True).first()
     if method is None:
         raise ServiceError("Choose a valid payment method.", code="payment_method_invalid")
+    from apps.branding import services as branding
+
+    policy_links = branding.get().policy_links
+    if policy_links and not actor.is_staff and not policies_agreed:
+        raise ServiceError("Please confirm you agree to our policies before placing the order.",
+                           code="policies_not_agreed")
 
     # First pass, outside the transaction: fail fast, and keep any slow registrar
     # availability lookups out of the row locks taken below.
@@ -411,6 +425,8 @@ def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, 
             tax_total=priced.tax_total, total=priced.total,
             coupon=priced.coupon, coupon_code=priced.coupon.code if priced.coupon else "",
             payment_method=method, payment_method_name=method.name, notes=notes.strip()[:2000],
+            policies_agreed_at=timezone.now() if (policy_links and policies_agreed) else None,
+            policies_snapshot=[{"title": t, "url": u} for t, u in policy_links] if (policy_links and policies_agreed) else [],
             **billing_snapshot(client),
         )
         created = {}

@@ -93,6 +93,31 @@ def test_only_people_who_manage_settings_may_change_it(manager, customer):
     assert services.get().name != "Hacked"
 
 
+def test_maintenance_mode_defaults_off_and_is_audited_when_turned_on(admin):
+    assert services.get().maintenance_mode is False
+    services.save_settings(admin, values={"maintenance_mode": True})
+    assert services.get().maintenance_mode is True
+    event = AuditEvent.objects.get(action="brand.updated")
+    assert "maintenance_mode" in event.metadata["changed"]
+    services.save_settings(admin, values={"maintenance_mode": True})  # unchanged: no second audit row
+    assert AuditEvent.objects.filter(action="brand.updated").count() == 1
+
+
+def test_turning_maintenance_mode_on_writes_a_flag_file_nginx_can_check(admin, settings, tmp_path):
+    flag = tmp_path / "maintenance.flag"
+    settings.MAINTENANCE_FLAG_PATH = str(flag)
+    services.save_settings(admin, values={"maintenance_mode": True})
+    assert flag.exists()
+    services.save_settings(admin, values={"maintenance_mode": False})
+    assert not flag.exists()
+
+
+def test_a_blank_maintenance_flag_path_is_a_silent_no_op(admin, settings):
+    settings.MAINTENANCE_FLAG_PATH = ""
+    services.save_settings(admin, values={"maintenance_mode": True})  # must not raise
+    assert services.get().maintenance_mode is True
+
+
 @pytest.mark.parametrize("bad", ["red", "#12345", "#gggggg", "123456", "#1234567", ""])
 def test_a_colour_must_be_a_hex_colour(admin, bad):
     with pytest.raises(ValidationError):

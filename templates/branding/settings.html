@@ -78,6 +78,13 @@
     </div>
   </section>
 
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-cone-striped"></i></span><div class="grow"><h2 class="shop-title">Maintenance</h2><p class="text-secondary mb-0">Show visitors and customers a "be right back" page while you work. Staff can still sign in and use the portal as usual; the API is not affected.</p></div></header>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.maintenance_mode %}
+    </div>
+  </section>
+
   {% if can_manage %}<div class="d-flex justify-content-end"><button class="btn btn-primary" type="submit">Save brand settings</button></div>
   {% else %}<p class="text-secondary">You can view these settings but not change them.</p>{% endif %}
 </form>

@@ -29,8 +29,56 @@ def _form_error(form, fallback="Please check what you entered."):
     return fallback
 
 
-def _client_or_error(request):
+CART_CLIENT_SESSION_KEY = "cart_client_id"
+
+
+def _cart_client(request):
+    """
+    The client a signed-in customer is shopping for. Exactly one contact relationship: that client, as before. More
+    than one (an agency contact managing several accounts): whichever one they most recently chose on the cart's
+    own client-chooser page for this session (``choose_cart_client_view``), or None if nothing has been chosen yet
+    - the caller then offers the chooser rather than guessing which account to act on. Zero: None, unchanged.
+    """
     client = single_contact_client(request.user)
+    if client is not None:
+        return client
+    clients = list(client_services.contact_clients(request.user))
+    if len(clients) <= 1:
+        return None
+    chosen_id = request.session.get(CART_CLIENT_SESSION_KEY)
+    return next((c for c in clients if c.pk == chosen_id), None) if chosen_id else None
+
+
+def _cart_unavailable_response(request):
+    """Zero accounts: the existing "not a customer account" page. More than one, none chosen: the chooser."""
+    clients = list(client_services.contact_clients(request.user)) if request.user.is_authenticated else []
+    if len(clients) > 1:
+        return render(request, "orders/customer/cart_choose_client.html",
+                      {"clients": clients, "next": request.get_full_path()})
+    return render(request, "orders/customer/cart_unavailable.html")
+
+
+@login_required
+def choose_cart_client_view(request):
+    """Sets which of the signed-in person's several accounts the cart acts on, for the rest of this session."""
+    clients = list(client_services.contact_clients(request.user))
+    next_url = request.POST.get("next") or request.GET.get("next") or reverse("orders_customer:cart")
+    if not (next_url.startswith("/") and not next_url.startswith("//")):  # same-host only, never an open redirect
+        next_url = reverse("orders_customer:cart")
+    if request.method == "POST":
+        chosen = next((c for c in clients if str(c.pk) == request.POST.get("client")), None)
+        if chosen is None:
+            messages.error(request, "Choose one of the accounts listed.")
+        else:
+            request.session[CART_CLIENT_SESSION_KEY] = chosen.pk
+            return redirect(next_url)
+    if len(clients) <= 1:  # nothing to choose (any more) - send them on, resolve_cart_client will sort it out
+        return redirect(next_url)
+    return render(request, "orders/customer/cart_choose_client.html", {"clients": clients, "next": next_url})
+
+
+def _client_or_error(request):
+    client = _cart_client(request)
     if client is None:
         raise ServiceError("Ordering is available to customer accounts.", code="client_required")
     return client
@@ -83,7 +131,7 @@ def _shopper(request, *, create=False):
 def _current_cart(request):
     """The cart being looked at, or None (an empty visitor). Raises nothing for a visitor; a customer with no account is sent away."""
     if request.user.is_authenticated:
-        client = single_contact_client(request.user)
+        client = _cart_client(request)
         return services.get_open_cart(request.user, client) if client is not None else False
     return guest.current(request)
 
@@ -91,7 +139,7 @@ def _current_cart(request):
 def cart_view(request):
     cart = _current_cart(request)
     if cart is False:
-        return render(request, "orders/customer/cart_unavailable.html")
+        return _cart_unavailable_response(request)
     country = request.GET.get("country", "").strip().upper()[:2]
     if cart is None:
         return render(request, "orders/customer/cart.html", {"rows": [], "guest": True})
@@ -275,9 +323,9 @@ def checkout_view(request):
     """A signed-in customer confirms and pays; a visitor gives their details and gets an account in the same step."""
     if not request.user.is_authenticated:
         return _guest_checkout(request)
-    client = single_contact_client(request.user)
+    client = _cart_client(request)
     if client is None:
-        return render(request, "orders/customer/cart_unavailable.html")
+        return _cart_unavailable_response(request)
     cart = services.get_open_cart(request.user, client)
     priced = pricing.price_cart(cart)
     if not priced.lines:
@@ -288,7 +336,8 @@ def checkout_view(request):
     if request.method == "POST" and form.is_valid():
         try:
             order = services.checkout(request.user, cart, payment_method_code=form.cleaned_data["payment_method"],
-                                      notes=form.cleaned_data["notes"], request=request)
+                                      notes=form.cleaned_data["notes"],
+                                      policies_agreed=form.cleaned_data.get("agree_to_policies", False), request=request)
         except ACTION_ERRORS as exc:
             apply_form_error(form, exc)
         else:
@@ -340,7 +389,8 @@ def _finish_guest_checkout(request, user, data):
     try:
         client_services.update_client(user, client, {"country": data["country"], "phone": data["phone"]}, request=request)
         cart = services.get_open_cart(user, client)
-        order = services.checkout(user, cart, payment_method_code=data["payment_method"], notes=data["notes"], request=request)
+        order = services.checkout(user, cart, payment_method_code=data["payment_method"], notes=data["notes"],
+                                  policies_agreed=data.get("agree_to_policies", False), request=request)
     except ACTION_ERRORS as exc:
         messages.error(request, f"Your account was created, but the order was not placed: {error_text(exc)} "
                                 "Your cart is kept; fix it and check out again.")

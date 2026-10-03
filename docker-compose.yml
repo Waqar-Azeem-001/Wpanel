@@ -32,12 +32,15 @@ services:
   web:
     build: .
     env_file: .env
+    environment:
+      MAINTENANCE_FLAG_PATH: /app/maintenance/maintenance.flag
     depends_on:
       migrate: { condition: service_completed_successfully }
     volumes:
       - static:/app/staticfiles
       - media:/app/media
       - private_media:/app/private_media
+      - maintenance:/app/maintenance
 
   worker:
     build: .
@@ -59,8 +62,10 @@ services:
       - "80:80"
     volumes:
       - ./deploy/nginx/wpanel.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/maintenance.html:/etc/nginx/maintenance.html:ro
       - static:/app/staticfiles:ro
       - media:/app/media:ro
+      - maintenance:/srv/maintenance:ro
     depends_on:
       - web
 
@@ -70,3 +75,4 @@ volumes:
   static:
   media:
   private_media:
+  maintenance:

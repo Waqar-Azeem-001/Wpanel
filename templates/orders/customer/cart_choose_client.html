@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Choose an account" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="card mx-auto narrow-card"><div class="card-body">
+  <h1 class="h4">{% trans "Which account are you shopping for?" %}</h1>
+  <p class="text-secondary">{% trans "You manage more than one account. Choose the one this order is for." %}</p>
+  <form method="post" action="{% url 'orders_customer:choose_client' %}">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="d-grid gap-2">
+      {% for client in clients %}
+      <button class="btn btn-outline-primary text-start" type="submit" name="client" value="{{ client.pk }}">
+        {{ client.display_name }}{% if client.email %} <small class="text-secondary">{{ client.email }}</small>{% endif %}
+      </button>
+      {% endfor %}
+    </div>
+  </form>
+</div></section>
+{% endblock %}

@@ -10,6 +10,7 @@ Brand settings: reading them cheaply on every request, and changing them safely.
   and never SVG (an SVG can carry script). They are stored in the database and served from named routes.
 """
 import logging
+import os
 from dataclasses import dataclass
 from io import BytesIO
 
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 CACHE_KEY = "branding.settings.v1"
 MENU_CACHE_KEY = "branding.menu.v1"
 TEXT_FIELDS = ("site_name", "primary_color", "accent_color", "support_email", "footer_text", "date_format",
-               "money_format", "theme", "custom_look")
+               "money_format", "theme", "custom_look", "maintenance_mode")
 # The ready-made looks: each has its own colours, type, corners and header (see static/css/looks.css). "custom" keeps the colours typed in
 # the settings and borrows the structure of one of these.
 LOOKS = {
@@ -106,6 +107,7 @@ class Brand:
     policy_links: tuple = ()
     theme: str = "signature"
     look: str = "signature"  # the structure in use: the ready-made look, or the one a custom brand borrows
+    maintenance_mode: bool = False
 
 
 def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=False):
@@ -122,11 +124,12 @@ def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=F
         accent=accent, accent_text=readable_text(accent), support_email=row["support_email"], footer_text=row["footer_text"],
         date_format=row["date_format"], money_format=row["money_format"], has_logo=has_logo,
         has_favicon=has_favicon, version=row["version"], has_logo_dark=has_logo_dark, has_mark_dark=has_mark_dark,
-        policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()), theme=theme, look=look)
+        policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()), theme=theme, look=look,
+        maintenance_mode=bool(row.get("maintenance_mode")))
 
 
 DEFAULTS = {"site_name": "", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "theme": "custom",
-            "custom_look": "signature",
+            "custom_look": "signature", "maintenance_mode": False,
             "footer_text": "", "date_format": "%d %b %Y", "money_format": "code_before", "version": 1}
 
 
@@ -215,6 +218,25 @@ def clean_policy_links(rows):
     return clean
 
 
+def _sync_maintenance_flag_file(on):
+    """
+    Best-effort: create or remove ``settings.MAINTENANCE_FLAG_PATH`` so Nginx can serve the maintenance page without
+    Django even being reachable (``deploy/nginx/wpanel.conf``). A no-op when the setting is blank (local dev, no
+    Nginx in front) or the path cannot be written - the in-app toggle and its middleware are the real mechanism;
+    this is only a second, infrastructure-level layer for when they are.
+    """
+    path = settings.MAINTENANCE_FLAG_PATH
+    if not path:
+        return
+    try:
+        if on:
+            open(path, "w").close()
+        else:
+            os.remove(path)
+    except OSError:
+        logger.exception("Could not %s the maintenance flag file at %s", "create" if on else "remove", path)
+
+
 DARK_TEXT = "#14213d"
 
 
@@ -272,6 +294,8 @@ def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=Fa
         row.version += 1
         row.save()
         cache.delete(CACHE_KEY)
+        if "maintenance_mode" in changed:
+            _sync_maintenance_flag_file(row.maintenance_mode)
         audit.record("brand.updated", actor=actor, target=row, metadata={"changed": changed}, request=request)
     return row
 

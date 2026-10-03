@@ -59,19 +59,31 @@ class CheckoutForm(forms.Form):
     payment_method = forms.ChoiceField(widget=forms.RadioSelect)
     notes = forms.CharField(required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 2}),
                             label="Notes for our team (optional)")
+    agree_to_policies = forms.BooleanField(required=False, label="I agree to the policies above")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["payment_method"].choices = [(m.code, m.name) for m in PaymentMethod.objects.filter(
             is_active=True)]
+        from apps.branding import services as branding
+
+        if branding.get().policy_links:
+            self.fields["agree_to_policies"].required = True
+        else:  # nothing configured to agree to - do not even ask
+            del self.fields["agree_to_policies"]
 
 
 class StaffCheckoutForm(CheckoutForm):
     """Add Order only - a customer checking out their own cart always hears about it; here staff may place an
     order quietly (e.g. a phone order, or payment collected in person) and email the invoice later themselves
-    (the "Email invoice" button on the invoice's own page)."""
+    (the "Email invoice" button on the invoice's own page). Nobody but the client can agree to the client's own
+    policies, so this form never asks - ``services.checkout`` exempts a staff actor from the check outright."""
 
     notify_client = forms.BooleanField(required=False, initial=True, label="Email the client now")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("agree_to_policies", None)
 
 
 class GuestCheckoutForm(CheckoutForm):

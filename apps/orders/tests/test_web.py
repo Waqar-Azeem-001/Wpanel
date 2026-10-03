@@ -216,6 +216,82 @@ def test_checkout_requires_choosing_a_payment_method(client, owner, shop):
     assert response.status_code == 200 and b"required" in response.content and not Order.objects.exists()
 
 
+def test_checkout_requires_agreeing_to_configured_policies(client, owner, shop):
+    from django.core.cache import cache
+
+    from apps.branding.models import BrandSettings
+
+    BrandSettings.objects.update_or_create(
+        pk=1, defaults={"policy_links": [{"title": "Terms of Service", "url": "https://example.test/terms"}]})
+    cache.clear()
+    client.force_login(owner)
+    _add_host(client, shop)
+    page = client.get("/checkout/")
+    assert b'name="agree_to_policies"' in page.content and b"Terms of Service" in page.content
+
+    refused = _place(client, shop)  # no agree_to_policies in the POST body
+    assert refused.status_code == 200 and not Order.objects.exists()
+
+    placed = _place(client, shop, agree_to_policies="on")
+    assert placed.status_code == 302
+    order = Order.objects.get()
+    assert order.policies_agreed_at is not None
+    assert order.policies_snapshot == [{"title": "Terms of Service", "url": "https://example.test/terms"}]
+
+
+# --- A customer who is a contact of more than one account ---------------------------------------------
+
+@pytest.fixture
+def second_client(manager, owner):
+    from apps.clients.models import ContactRole
+
+    second = client_services.create_client(manager, {"first_name": "Ada", "last_name": "Lovelace",
+                                                      "email": "ada2@acme.test", "company_name": "Beta LLC",
+                                                      "country": "US"})
+    client_services.add_contact(manager, second, email=owner.email, role=ContactRole.OWNER)
+    return second
+
+
+def test_an_agency_contact_is_offered_a_chooser_instead_of_the_unavailable_page(client, owner, second_client):
+    client.force_login(owner)
+    page = client.get("/cart/")
+    assert page.status_code == 200 and b"Which account are you shopping for?" in page.content
+    assert b"Acme Ltd" in page.content and b"Beta LLC" in page.content
+    assert b"contact support" not in page.content.lower()
+
+
+def test_a_customer_with_no_account_still_sees_the_unavailable_page(client, customer):
+    client.force_login(customer)
+    page = client.get("/cart/")
+    assert page.status_code == 200 and b"Which account are you shopping for?" not in page.content
+    assert b"Ordering is available to customer accounts" in page.content
+
+
+def test_choosing_an_account_is_remembered_for_the_session(client, owner, client_obj, second_client, shop):
+    client.force_login(owner)
+    chosen = client.post("/cart/choose-client/", {"client": second_client.pk, "next": "/cart/"})
+    assert chosen.status_code == 302 and chosen["Location"] == "/cart/"
+    _add_host(client, shop)
+    from apps.orders.models import Cart
+
+    cart = Cart.objects.get(status="open")
+    assert cart.client_id == second_client.pk  # not client_obj - the chosen one
+
+
+def test_an_invalid_choice_is_refused(client, owner, second_client):
+    client.force_login(owner)
+    response = client.post("/cart/choose-client/", {"client": 999999, "next": "/cart/"})
+    assert response.status_code == 200 and b"Choose one of the accounts listed" in response.content
+
+
+def test_adding_to_the_cart_before_choosing_sends_the_agency_contact_to_the_chooser(client, owner, second_client, shop):
+    client.force_login(owner)
+    response = _add_host(client, shop)
+    assert response.status_code == 302 and response["Location"] == "/cart/"
+    page = client.get(response["Location"])
+    assert b"Which account are you shopping for?" in page.content
+
+
 def test_checkout_surfaces_a_problem_that_appeared_since_adding(client, owner, shop, manager):
     from apps.products import services as product_services
 

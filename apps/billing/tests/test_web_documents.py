@@ -276,6 +276,26 @@ def test_settings_page(client, manager):
     assert (row.company_name, row.invoice_prefix, row.payment_terms_days, row.renewal_invoice_days) == ("Wpanel Ltd", "W-", 7, 21)
 
 
+def test_the_reminder_schedule_can_be_customised_from_the_page(client, manager):
+    from apps.billing.models import BillingSettings
+
+    client.force_login(manager)
+    data = {"company_name": "W", "address": "", "email": "", "phone": "", "tax_id": "", "invoice_prefix": "INV-",
+            "quote_prefix": "QUO-", "payment_terms_days": 14, "quote_validity_days": 30, "invoice_footer": "",
+            "quote_footer": "", "quote_highlight": "", "renewal_invoice_days": 14,
+            "reminder_schedule_days": "-7, 0, 3"}
+    assert client.post("/staff/billing/settings/", data).status_code == 302
+    assert BillingSettings.load().reminder_schedule() == [-7, 0, 3]
+
+    bad = client.post("/staff/billing/settings/", {**data, "reminder_schedule_days": "not, numbers"})
+    assert bad.status_code == 200 and b"whole numbers" in bad.content
+    assert BillingSettings.load().reminder_schedule() == [-7, 0, 3]  # unchanged
+
+    kept = client.post("/staff/billing/settings/", {**data, "reminder_schedule_days": ""})
+    assert kept.status_code == 302
+    assert BillingSettings.load().reminder_schedule() == [-7, 0, 3]  # a blank post leaves it as it was
+
+
 def test_payment_method_form_can_choose_a_gateway(client, manager, provider):
     client.force_login(manager)
     client.post("/staff/billing/payment-methods/save/", {"code": "card", "name": "Card", "sort_order": 0,

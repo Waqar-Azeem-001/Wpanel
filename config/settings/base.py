@@ -90,6 +90,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.core.middleware.MaintenanceModeMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -161,6 +162,11 @@ MEDIA_ROOT = BASE_DIR / "media"
 # through an authenticated view. Keep it out of any web-served path.
 PRIVATE_MEDIA_ROOT = env("PRIVATE_MEDIA_ROOT", default=str(BASE_DIR / "private_media"))
 SUPPORT_MAX_ATTACHMENT_MB = 5
+# A flag file Nginx can check directly (see deploy/nginx/wpanel.conf) so it can serve the maintenance page even if
+# Django/the database is not safely reachable - the in-app toggle (BrandSettings.maintenance_mode) writes and
+# removes this file on every save. Empty (the default) means no shared path is configured - local dev has no
+# Nginx in front, so only the Django-level middleware applies there.
+MAINTENANCE_FLAG_PATH = env("MAINTENANCE_FLAG_PATH", default="")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -159,6 +159,28 @@ def test_a_visitor_checks_out_and_gets_an_account_and_an_order(shop, manager):
     assert AuditEvent.objects.filter(action="account.registered").exists() and AuditEvent.objects.filter(action="order.placed").exists()
 
 
+def test_a_visitor_must_also_agree_to_configured_policies(shop):
+    from django.core.cache import cache
+
+    from apps.branding.models import BrandSettings
+
+    BrandSettings.objects.update_or_create(
+        pk=1, defaults={"policy_links": [{"title": "Terms of Service", "url": "https://example.test/terms"}]})
+    cache.clear()
+    browser = visitor()
+    add_host(browser, shop)
+    page = browser.get("/checkout/")
+    assert b'name="agree_to_policies"' in page.content
+
+    refused = browser.post("/checkout/", details(shop))  # agree_to_policies not ticked
+    assert refused.status_code == 200 and not Order.objects.exists() and not User.objects.filter(email="zed@visitor.test").exists()
+
+    placed = browser.post("/checkout/", details(shop, agree_to_policies="on"))
+    assert placed.status_code == 302
+    order = Order.objects.get()
+    assert order.policies_agreed_at is not None and order.policies_snapshot[0]["title"] == "Terms of Service"
+
+
 def test_the_country_changes_the_tax_shown_without_creating_anything(shop, manager):
     billing.save_tax_rule(manager, "PK", name="GST", rate=Decimal("10"))
     browser = visitor()

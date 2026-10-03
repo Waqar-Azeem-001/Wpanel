@@ -642,7 +642,9 @@ def save_billing_settings(actor, data, *, request=None):
     row = BillingSettings.load()
     fields = ("company_name", "address", "email", "phone", "tax_id", "invoice_prefix", "quote_prefix",
               "payment_terms_days", "quote_validity_days", "invoice_footer", "quote_footer", "quote_highlight",
-              "renewal_invoice_days", "send_payment_reminders")
+              "renewal_invoice_days", "send_payment_reminders", "reminder_schedule_days")
+    if not data.get("reminder_schedule_days"):  # blank/missing (e.g. an older form post) keeps the schedule as it was
+        data = {k: v for k, v in data.items() if k != "reminder_schedule_days"}
     changed = [f for f in fields if f in data and getattr(row, f) != data[f]]
     for field in changed:
         setattr(row, field, data[field])

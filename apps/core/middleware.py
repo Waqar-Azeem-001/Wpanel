@@ -1,6 +1,10 @@
 import re
 import uuid
 
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.urls import reverse
+
 from .request_context import request_id_var
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -84,3 +88,41 @@ class SecurityHeadersMiddleware:
         if not response.has_header("Permissions-Policy"):
             response["Permissions-Policy"] = self.PERMISSIONS_POLICY
         return response
+
+
+class MaintenanceModeMiddleware:
+    """
+    Shows the dependency-free maintenance page (Phase 15's "maintenance mode toggle") for a web page while
+    ``BrandSettings.maintenance_mode`` is on. Exempt, so the switch is never locked behind itself: a signed-in staff
+    member (the same view either way - no second staff-only site), the sign-in page and the few brand/static assets
+    it needs to render styled, and the whole API (``/api/...``) - this is a customer-facing "closed for maintenance"
+    notice for the web site (Admin Operations, Phase 15), not an infrastructure-level outage gate; a storefront
+    integration or a future mobile client has no reason to go down because staff flipped it on. A harder gate for
+    when the app itself cannot safely be reached at all (e.g. mid-deploy) is `deploy/nginx/wpanel.conf`'s own flag
+    file, a separate, lower-level mechanism this middleware does not depend on.
+
+    Placed last in ``MIDDLEWARE`` so every other cross-cutting concern (security headers, CSRF, sessions) still
+    applies normally to both the maintenance response and the ordinary one.
+    """
+
+    EXEMPT_PREFIXES = ("/api/", "/static/")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    @staticmethod
+    def _exempt_paths():
+        return {reverse("accounts:login"), reverse("brand_css"), reverse("brand_logo"), reverse("brand_favicon"),
+                reverse("brand_logo_dark"), reverse("brand_mark_dark")}
+
+    def __call__(self, request):
+        from apps.branding.services import get as get_brand
+
+        if not get_brand().maintenance_mode:
+            return self.get_response(request)
+        if request.path.startswith(self.EXEMPT_PREFIXES) or request.path in self._exempt_paths():
+            return self.get_response(request)
+        user = getattr(request, "user", None)
+        if user is not None and user.is_authenticated and user.is_staff:
+            return self.get_response(request)
+        return HttpResponse(render_to_string("maintenance.html"), status=503, content_type="text/html")

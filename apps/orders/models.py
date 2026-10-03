@@ -154,6 +154,13 @@ class Order(TimeStampedModel):
     billing_country = models.CharField(max_length=2, blank=True)
     billing_tax_id = models.CharField(max_length=50, blank=True)
 
+    # Policy acceptance at checkout (roadmap Phase 15): snapshotted, like the billing details above, so a later
+    # change to the policy pages never rewrites what this customer actually agreed to. Blank/null when nobody
+    # had to agree to anything (no policy pages were configured) or when staff placed the order on the client's
+    # behalf (Add Order) - nobody but the client can agree on the client's behalf.
+    policies_agreed_at = models.DateTimeField(null=True, blank=True)
+    policies_snapshot = models.JSONField(default=list, blank=True)
+
     class Meta:
         ordering = ["-created_at", "-id"]
 

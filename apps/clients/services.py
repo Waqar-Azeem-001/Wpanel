@@ -92,14 +92,21 @@ def contact_role(user, client):
     return contact.role if contact else None
 
 
+def contact_clients(user):
+    """Every client ``user`` is a contact of, ordered for display - the web cart's client chooser when there is more than one."""
+    return Client.objects.filter(contacts__user=user).order_by("company_name", "first_name", "last_name")
+
+
 def single_contact_client(user):
     """
     The one client ``user`` is a contact of, or None if they have zero or more
     than one. Used where a self-service action needs "the caller's account"
     without asking them to pick from a list (e.g. requesting a new domain or
-    hosting account) - see apps.domains.views and apps.hosting.views.
+    hosting account) - see apps.domains.views and apps.hosting.views. When there
+    is more than one, the web cart instead offers a chooser (``apps.orders.views``);
+    everything else still treats "more than one" the same as "none" on purpose.
     """
-    clients = list(Client.objects.filter(contacts__user=user)[:2])
+    clients = list(contact_clients(user)[:2])
     return clients[0] if len(clients) == 1 else None
 
 

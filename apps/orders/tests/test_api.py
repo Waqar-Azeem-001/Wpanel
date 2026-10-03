@@ -192,6 +192,26 @@ def test_checkout_errors(api, owner, shop):
     assert not Order.objects.exists()
 
 
+def test_the_api_also_requires_agreeing_to_configured_policies(api, owner, shop):
+    from django.core.cache import cache
+
+    from apps.branding.models import BrandSettings
+
+    BrandSettings.objects.update_or_create(
+        pk=1, defaults={"policy_links": [{"title": "Terms of Service", "url": "https://example.test/terms"}]})
+    cache.clear()
+    assert api.get("/api/v1/brand/").json()["policy_links"] == [{"title": "Terms of Service", "url": "https://example.test/terms"}]
+
+    api.force_authenticate(owner)
+    api.post("/api/v1/cart/items/", _hosting(shop))
+    refused = api.post("/api/v1/cart/checkout/", {"payment_method": shop["bank"].code})
+    assert refused.status_code == 400 and refused.json()["error"]["code"] == "policies_not_agreed"
+    assert not Order.objects.exists()
+
+    placed = api.post("/api/v1/cart/checkout/", {"payment_method": shop["bank"].code, "policies_agreed": True})
+    assert placed.status_code == 201 and placed.json()["id"]
+
+
 def _order(api, owner, shop):
     api.force_authenticate(owner)
     api.post("/api/v1/cart/items/", _hosting(shop))

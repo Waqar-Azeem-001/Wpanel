@@ -7,6 +7,7 @@ app_name = "orders_customer"
 
 urlpatterns = [
     path("cart/", views.cart_view, name="cart"),
+    path("cart/choose-client/", views.choose_cart_client_view, name="choose_client"),
     path("cart/add/hosting/", views.cart_add_hosting, name="cart_add_hosting"),
     path("cart/add/domain/", views.cart_add_domain, name="cart_add_domain"),
     path("cart/add/transfer/", views.cart_add_transfer, name="cart_add_transfer"),
