@@ -12,7 +12,7 @@
   &middot; <a href="{% url 'billing_customer:invoice_pdf' invoice.pk %}">{% trans "Download PDF" %}</a></p>
 
 {% if invoice.can_be_paid %}
-<section class="card mb-3"><div class="card-body">
+<section class="card mb-3 no-print"><div class="card-body">
   <h2 class="h5">{% trans "Pay this invoice" %}</h2>
   <p>{% trans "Amount due:" %} <strong>{{ invoice.balance_due|money:invoice.currency }}</strong></p>
   {% if pending_report %}<p class="text-secondary">{% trans "You have reported a payment. We will confirm it as soon as it arrives." %}</p>{% endif %}

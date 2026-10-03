@@ -284,6 +284,14 @@ def test_the_403_page_names_the_support_address_when_there_is_one(client, owner,
     assert b"help@acme.test" in client.get(reverse("clients_staff:list")).content
 
 
+def test_the_400_page_is_branded_and_offers_a_way_back(client, admin):
+    branding.save_settings(admin, values={"site_name": "Lost Hosting"})
+    response = client.get("/", SERVER_NAME="not-on-the-list.test")
+    page = response.content.decode()
+    assert response.status_code == 400 and "That request could not be understood" in page and "Lost Hosting" in page
+    assert f'href="{reverse("home")}">Go to the home page</a>' in page
+
+
 def test_a_broken_brand_never_breaks_the_error_pages(client, monkeypatch):
     from apps.branding.models import BrandSettings
 

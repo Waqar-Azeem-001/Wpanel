@@ -13,7 +13,7 @@
   {% for invoice in invoices %}&middot; <a href="{% url 'billing_customer:invoice_detail' invoice.pk %}">{% trans "Invoice" %} {{ invoice.number }}</a>{% endfor %}</p>
 
 {% if quote.can_be_accepted %}
-<section class="card mb-3"><div class="card-body">
+<section class="card mb-3 no-print"><div class="card-body">
   <h2 class="h5">{% trans "Your decision" %}</h2>
   <p>{% trans "Accepting this quote issues an invoice for" %} {{ quote.total|money:quote.currency }}.</p>
   <div class="d-flex flex-wrap gap-2">

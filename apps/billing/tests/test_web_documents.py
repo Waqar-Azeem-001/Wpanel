@@ -199,6 +199,28 @@ def test_pdf_download(client, manager, client_obj):
     assert response.content.startswith(b"%PDF") and "INV-000001.pdf" in response["Content-Disposition"]
 
 
+def test_interactive_controls_are_hidden_from_print(client, manager, owner, client_obj):
+    """D5 visual QA: action buttons/forms must not print along with the invoice/quote document."""
+    client.force_login(manager)
+    client.post(f"/staff/billing/invoices/create/?client={client_obj.pk}", form_data(("Hosting", 1, "50.00")))
+    draft = Invoice.objects.get()
+    assert "no-print" in client.get(f"/staff/billing/invoices/{draft.pk}/").content.decode()  # Edit/Issue/Delete
+
+    invoice = issued(manager, client_obj)
+    staff_page = client.get(f"/staff/billing/invoices/{invoice.pk}/").content.decode()
+    assert staff_page.count("no-print") >= 2  # Email invoice row + Record a payment card
+    client.force_login(owner)
+    assert "no-print" in client.get(f"/account/billing/invoices/{invoice.pk}/").content.decode()  # Pay this invoice
+
+    client.force_login(manager)
+    client.post(f"/staff/billing/quotes/create/?client={client_obj.pk}", form_data(("Custom build", 1, "200.00")))
+    draft_quote = Quote.objects.get()
+    assert "no-print" in client.get(f"/staff/billing/quotes/{draft_quote.pk}/").content.decode()  # Edit/Send/Delete
+    sent_quote = invoicing.send_quote(manager, draft_quote)
+    client.force_login(owner)
+    assert "no-print" in client.get(f"/account/billing/quotes/{sent_quote.pk}/").content.decode()  # Accept/Decline
+
+
 # --- Quotes, billable items, settings ---------------------------------------------------------------
 
 def test_quote_pages(client, manager, client_obj):

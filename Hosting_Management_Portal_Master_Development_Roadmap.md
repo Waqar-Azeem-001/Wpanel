@@ -925,11 +925,11 @@ Before marking any phase 🟢:
 | E4 Mail deliverability, client sign-in, editable email wording, store categories, sectioned forms, invoice lines, reports and dashboard numbers (owner requests 2026-09-26) | 🟢 local (not deployed) | 1869 ✅ (PostgreSQL 17) | ✅ 41 browser checks at 1440 and 390, no JS errors | crawler green | — |
 | E13 External / WordPress storefront integration (owner spec `WP_Requirement.md`; slice 1 2026-10-02, slice 2 2026-10-03): `ExternalStorefront`/`StorefrontProduct`, versioned read-only `/api/v1/storefront/...` API with its own credentialed auth, per-product global + per-storefront publishing with a per-storefront override screen, Setup → External storefronts staff UI, signed SSRF-safe webhook cache invalidation with retry | 🟢 local (not deployed) | 2137 ✅ | ✅ staff UI + live HTTP round-trip against a running scratch server + webhook UI, no JS errors | crawler green (new fixture storefront+product seeded) | — |
 | E14 Nine owner requests 2026-10-03 (quote PDF footer/highlight, client alternate email, self-service contact invites, per-staff extra permissions, optional invoice email at Add Order + manual "Email invoice", domain registration manual/auto switch, Fraud status gates client delete, Abuse support department, upgrade proration reversed to preserve the renewal date) | 🟢 local (not deployed) | 2157 ✅ | ✅ 5 staff/customer screens + a real rendered quote PDF, no JS errors | crawler green | — |
-| D5 Visual QA & Polish | ⬜ | — | — | — | — | — |
+| D5 Visual QA & Polish (Rule 1 found most already built in D7/D8/D1/E14; closed 4 remaining gaps: pricing table @375px, a 400-page test, three empty-state rows, print stylesheet for invoice/quote actions) | 🟢 local (not deployed) | 2169 ✅ | ✅ 375px screenshot + print-media screenshot, no JS errors | crawler green | — |
 
 ## Recommended order
 
-D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → 17 Reliability ✅ (local) → **D5 (next)** → 18 → 19
+D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → 17 Reliability ✅ (local) → D5 Visual QA ✅ (local) → **18 (next)** → 19
 
 ------------------------------------------------------------------------
 
@@ -958,7 +958,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Server credentials / WHM adapter | Open ⚠️ Re-triage | Server model was minimal in Phase 03; Phase 05 extended it with WHM connection fields | Re-triage (likely closed by Phase 05) |
 | Multi-currency product pricing | Deferred | Single store currency for MVP | Post-MVP |
 | Addon-to-product-type compatibility restriction | Deferred ⚠️ Re-triage | Any addon attaches to any product for now | Re-triage |
-| Staff pricing table row-actions cramped at 375px width | Deferred | Table scrolls in its own container; no page overflow | D5 / Phase 18 |
+| Staff pricing table row-actions cramped at 375px width | Closed (D5) | Reused the existing `.table-stack` component (console/users.html); the table is a column of labelled rows below 575.98px | — |
 | Real registrar adapter needed before launch | Open | Manual adapter is local-only simulation, no real network calls | Before launch |
 | Multi-part TLDs (.co.uk, .com.au) not supported | Deferred | Needs a public-suffix list | Post-MVP |
 | Outbound transfer auth-code retrieval not implemented | Deferred | Registrar-specific; not in the roadmap's explicit op list | Real registrar adapter |
@@ -998,7 +998,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | Reports: no scheduled or emailed reports, saved views or currency conversion; no chargeback data; "cancelled services" covers portal cancellations only | Deferred | On-demand CSV/XLSX/PDF only; the portal has no dispute records | Post-MVP |
 | Error pages: branded 403/404/400, standalone 500 and maintenance page exist (D1); the crawler still has to prove every link on them, and Nginx must serve the maintenance page | Partly closed (D1) | Rule 5.8 | D2 / Phase 15 |
 | Customers have no menu link to their cancellation requests | Open (found in D0) | Reachable only from a service page and notification links | D3 |
-| Page templates are not yet wrapped for translation (shells and components are); `legacy.css` is deleted (D4e) | Open | Wrap strings as pages are touched | D5 / Post-MVP |
+| Page templates are not yet wrapped for translation (shells and components are); `legacy.css` is deleted (D4e) | Open | Wrap strings as pages are touched (confirmed still the right policy at D5: 52% of templates already wrapped, customer-facing areas essentially done, staff-admin screens lag) | Post-MVP |
 | Vendored Bootstrap 5.3.3, Bootstrap Icons 1.11.3 and htmx 2.0.4 are updated by hand | Deferred | No package manager for front-end assets; versions recorded here | Post-MVP |
 | Dark mode follows the system setting only (no manual toggle); HTML emails are the text email in a branded frame | Deferred | Not required by v2 | Post-MVP |
 | Staff UI still missing for: payment providers (payments are manual; no gateway), webhook events, carts, coupon redemptions (Django admin only) | Open | Staff users, registrar, email provider, audit log, dashboard and global search were delivered in D4 and D6 | Phase 17 / gateway decision |
@@ -1129,18 +1129,18 @@ Use this section whenever something is discovered but intentionally postponed.
 
 # 28 — CURRENT STARTING TASK
 
-Phases 01–17 and D0, D1, D2, D3, D3b, D4, D6, D7, D8 are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup; slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), `docs/e14-nine-owner-requests.md`
+Phases 01–17 and D0–D8 (including D3b) are 🟢, all local (not deployed). See `docs/d0-ui-navigation-audit.md` (the audit and the Section 10/11 mapping), `docs/d1-design-system.md`, `docs/d2-link-integrity.md`, `docs/d3-client-area.md` (dashboard, sidebars, tabs, new customer pages), `docs/d3b-modern-look.md`, `docs/d4-staff-area.md`, `docs/d6-shell-and-users.md`, `docs/d7-visual-system.md`, `docs/d8-header-layout.md`, `docs/d5-visual-qa.md` (Rule 1 found most of this phase already built in D7/D8/D1/E14; closed the pricing-table/375px, 400-page test, empty-state and print-stylesheet gaps), `docs/phase-16-gap-report.md` (both slices, including what was tried and reverted), `docs/phase-17-gap-report.md` (slice 1: automation status, WHOIS lookup; slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention), `docs/e13-storefront-integration.md` (external/WordPress storefront API, slice 1), `docs/e14-nine-owner-requests.md`
 (quote PDF, client/contact, staff permissions, orders, domains, Fraud gate, upgrade proration reversed),
 `docs/storefront-connection-guide.md` (screenshots: connecting a storefront, where the credential comes from, what
 calls the API today and what a future WordPress plugin would still need to do), and `docs/route-inventory.md` (regenerate with `python manage.py route_inventory`). The E1–E12 owner-request track ran alongside the phases (`docs/e*.md`). The project stays **local** until the owner asks to deploy.
 
-## Start: D5 — Visual QA & Polish
+## Start: Phase 18 — Testing & Production Readiness
 
-**Do not start coding before Rule 1 inspection.** Scope is Section 09's D5 row: responsive behaviour, accessibility, empty/error states, print/PDF output, and screenshots across the now-settled D7/D8 visual system - a review pass across the app, not new features. Phase 17's one remaining deferred item (scheduled hosting usage sync) stays blocked on live WHM verification (`docs/phase-17-gap-report.md`, slice 2) and is not part of D5's scope.
+**Do not start coding before Rule 1 inspection.** Scope is the Phase 18 section above: a pass across the automated suite (unit, integration, authorization, API, billing, domain, provisioning, renewal, upgrade, webhook, notification, link crawler, template lint, email/PDF link tests), a browser pass (desktop/tablet/mobile, customer/staff/checkout/billing/support, overflow/navigation/JS-errors/forms/permissions/every-menu-item), and infrastructure readiness (migrations, HTTPS, DNS, email, payment method(s), registrar, WHM, Redis, Celery, scheduled jobs, monitoring, error tracking). Phase 17's one remaining deferred item (scheduled hosting usage sync) and the pre-existing "WHM API adapter needs live verification" item are both real launch blockers this phase should surface, not silently work around.
 
 Payments stay manual (no gateway). Everything stays local until the owner approves a deployment.
 
-Then 18 (Testing & Readiness), 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
+Then 19 (Production Launch) per Section 25. At the end of every session follow the AI Agent Session Protocol (Section 00).
 
 ------------------------------------------------------------------------
 

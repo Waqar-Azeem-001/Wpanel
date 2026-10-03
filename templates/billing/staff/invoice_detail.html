@@ -29,21 +29,21 @@
     {% if invoice.status == "cancelled" and invoice.cancel_reason %}<p class="text-secondary">Cancelled: {{ invoice.cancel_reason }}</p>{% endif %}
     {% if can_manage %}
       {% if invoice.status == "draft" %}
-      <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="d-flex flex-wrap gap-2 align-items-center no-print">
         <a class="btn btn-outline-primary" href="{% url 'billing_staff:invoice_edit' invoice.pk %}">Edit</a>
         <form method="post" action="{% url 'billing_staff:invoice_issue' invoice.pk %}" data-confirm="Issue this invoice? It can no longer be edited.">{% csrf_token %}<button class="btn btn-primary" type="submit">Issue invoice</button></form>
         <form method="post" action="{% url 'billing_staff:invoice_delete' invoice.pk %}" data-confirm="Delete this draft?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete draft</button></form>
       </div>
       {% elif invoice.status == "unpaid" %}
-      <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+      <div class="d-flex flex-wrap gap-2 align-items-center mb-2 no-print">
         <form method="post" action="{% url 'billing_staff:invoice_send' invoice.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Email invoice</button></form>
       </div>
-      <form method="post" action="{% url 'billing_staff:invoice_cancel' invoice.pk %}" data-confirm="Cancel this invoice?">{% csrf_token %}
+      <form method="post" action="{% url 'billing_staff:invoice_cancel' invoice.pk %}" class="no-print" data-confirm="Cancel this invoice?">{% csrf_token %}
         <div class="field"><label for="{{ cancel_form.reason.id_for_label }}">Reason (audited)</label>{{ cancel_form.reason }}</div>
         <button class="btn btn-sm btn-outline-danger" type="submit">Cancel invoice</button>
       </form>
       {% elif invoice.status != "cancelled" %}
-      <form method="post" action="{% url 'billing_staff:invoice_send' invoice.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Email invoice</button></form>
+      <form method="post" action="{% url 'billing_staff:invoice_send' invoice.pk %}" class="no-print">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Email invoice</button></form>
       {% endif %}
     {% endif %}</div>
 </section>
@@ -52,7 +52,7 @@
 {% include "renewals/_invoice_changes.html" with staff=True %}
 
 {% if payment_form %}
-<section class="card"><div class="card-body">
+<section class="card no-print"><div class="card-body">
   <h2>Record a payment</h2>
   <form method="post" action="{% url 'billing_staff:invoice_record_payment' invoice.pk %}" class="grid-form">{% csrf_token %}
     {% include "partials/form.html" with form=payment_form %}
@@ -76,7 +76,7 @@
         <td>{% status_badge tx.status tx.get_status_display %}</td>
         <td class="text-end">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
         {% if can_manage %}
-        <td>
+        <td class="no-print">
           {% if tx.status == "pending" and tx.type == "payment" and not tx.provider_id %}
             <div class="d-flex flex-wrap gap-2 justify-content-end">
             <form method="post" action="{% url 'billing_staff:transaction_confirm' tx.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="invoice"><button class="btn btn-primary btn-sm" type="submit">Confirm</button></form>

@@ -35,6 +35,8 @@
         </td>
         {% endif %}
       </tr>
+    {% empty %}
+      <tr><td colspan="{% if can_manage %}4{% else %}3{% endif %}" class="text-secondary">{% trans "No users on this account yet." %}</td></tr>
     {% endfor %}
     </tbody>
   </table></div>

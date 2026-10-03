@@ -51,17 +51,17 @@
 <section class="card"><div class="card-body">
   <h2>Pricing</h2>
   <div class="table-responsive">
-  <table class="table">
+  <table class="table table-stack">
     <thead><tr><th>Cycle</th><th>Price</th><th>Setup fee</th><th>Active</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
     <tbody>
     {% for entry in product.prices.all %}
       <tr>
         <td>{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %}</td>
-        <td>{{ entry.price }}</td>
-        <td>{{ entry.setup_fee }}</td>
-        <td>{{ entry.is_active|yesno:"Yes,No" }}</td>
+        <td data-label="Price">{{ entry.price }}</td>
+        <td data-label="Setup fee">{{ entry.setup_fee }}</td>
+        <td data-label="Active">{{ entry.is_active|yesno:"Yes,No" }}</td>
         {% if can_manage %}
-        <td class="d-flex flex-wrap gap-2">
+        <td data-label="Actions" class="d-flex flex-wrap gap-2">
           <form method="post" action="{% url 'catalog_staff:product_price_toggle' product.slug entry.pk %}">{% csrf_token %}
             <button class="btn btn-sm btn-outline-primary" type="submit">{{ entry.is_active|yesno:"Disable,Enable" }}</button>
           </form>

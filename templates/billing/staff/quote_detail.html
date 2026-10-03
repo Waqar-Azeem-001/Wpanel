@@ -24,14 +24,14 @@
     {% include "billing/_billto.html" with doc=quote %}
     {% if can_manage %}
       {% if quote.status == "draft" %}
-      <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="d-flex flex-wrap gap-2 align-items-center no-print">
         <a class="btn btn-outline-primary" href="{% url 'billing_staff:quote_edit' quote.pk %}">Edit</a>
         <form method="post" action="{% url 'billing_staff:quote_send' quote.pk %}" data-confirm="Send this quote to the client?">{% csrf_token %}<button class="btn btn-primary" type="submit">Send to client</button></form>
         <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Cancel quote</button></form>
         <form method="post" action="{% url 'billing_staff:quote_delete' quote.pk %}" data-confirm="Delete this draft quote? This cannot be undone.">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete draft</button></form>
       </div>
       {% elif quote.status == "sent" %}
-      <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Cancel quote</button></form>
+      <form method="post" action="{% url 'billing_staff:quote_cancel' quote.pk %}" class="no-print" data-confirm="Cancel this quote?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Cancel quote</button></form>
       {% endif %}
     {% endif %}</div>
 </section>
