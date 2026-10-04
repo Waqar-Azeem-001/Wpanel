@@ -902,7 +902,7 @@ Before marking any phase 🟢:
 | 15 Admin Operations | 🟢 (delivered with D4d: staff and roles, email provider, registrar, audit log viewer; see D4. Follow-up 2026-10-03: maintenance mode (redesigned the same day), configurable reminder schedule, ToS acceptance at checkout, cart client chooser - found by a pre-Phase-18 documentation audit) | 2201 ✅ | ✅ | crawler green | 7e5f35b | — |
 | 16 Security | 🟢 (slice 1: MFA/lockout/headers; slice 2: RBAC review, mandatory-MFA and step-up re-auth tried then reverted per owner feedback) | 2046 ✅ | ✅ | crawler green | 3737541, e05ae9d | — |
 | 17 Reliability | 🟢 (slice 1: found most of the phase's scenarios already built in earlier phases; added automation status and WHOIS lookup. slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention; usage sync still deferred on WHM verification) | 2167 ✅ | ✅ | crawler green; real WHM 403 handled cleanly | — | — |
-| 18 Testing & Readiness | ⬜ | — | — | — | — | — |
+| 18 Testing & Readiness | 🟢 local (2026-10-04: suite green, optional Sentry error tracking added, `docs/operations-runbook.md` for backup/restore/monitoring; `docs/phase-18-gap-report.md`. Open launch blockers carried to 19: WHM live verification, scheduled usage sync, staging checks of HTTPS/DNS/email/registrar) | green, 0 failures | — | — | — | — |
 | 19 Production Launch | ⬜ | — | — | — | — | — |
 
 "Links" column: phases 01–14 predate the crawler; D2 back-filled it for them: the crawl covers every page of every phase for eight roles on data with one object in every status. D0 ran a prototype crawler (8 roles, 3,000+ pages: no 404, 500 or 403-after-link) and a hostile-query sweep, now partly in CI (`apps/core/test_link_integrity.py`).
@@ -930,7 +930,7 @@ Before marking any phase 🟢:
 
 ## Recommended order
 
-D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → 17 Reliability ✅ (local) → D5 Visual QA ✅ (local) → **18 (next)** → 19
+D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → 17 Reliability ✅ (local) → D5 Visual QA ✅ (local) → 18 ✅ (local) → **19 (next)**
 
 ------------------------------------------------------------------------
 

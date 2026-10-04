@@ -138,6 +138,31 @@ def _celery():
     return pong == "pong", "a worker replied"
 
 
+def _public_address():
+    ok = settings.SITE_URL.startswith("https://")
+    return ok, settings.SITE_URL if ok else f"{settings.SITE_URL}: emailed links need the public https:// address"
+
+
+def _error_tracking():
+    try:
+        import sentry_sdk
+
+        active = sentry_sdk.get_client().is_active()
+    except ImportError:
+        active = False
+    return active, "reporting errors" if active else "off: set SENTRY_DSN so crashes are reported"
+
+
+def _scheduled_jobs():
+    count = len(settings.CELERY_BEAT_SCHEDULE)
+    return count > 0, f"{count} scheduled"
+
+
+def _usage_sync():
+    scheduled = any("usage" in str(entry.get("task", "")) for entry in settings.CELERY_BEAT_SCHEDULE.values())
+    return scheduled, "scheduled" if scheduled else "not scheduled: usage is refreshed by hand (launch item)"
+
+
 def health_widget(user):
     return {"checks": [
         _check("Database", _database),
@@ -149,6 +174,10 @@ def health_widget(user):
                                             p.name if p else "none is active")),
         _check("Servers", lambda: (Server.objects.filter(status="active").exists(),
                                    f"{Server.objects.filter(status='active').count()} active")),
+        _check("Public address", _public_address),
+        _check("Error tracking", _error_tracking),
+        _check("Scheduled jobs", _scheduled_jobs),
+        _check("Hosting usage sync", _usage_sync),
     ]}
 
 

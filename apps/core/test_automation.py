@@ -112,3 +112,12 @@ def test_an_on_demand_task_appears_in_the_other_recent_jobs_table_not_the_schedu
     assert _sample_ok_task.name in on_demand_names
     scheduled_names = [j["task"] for j in page.context["jobs"]]
     assert _sample_ok_task.name not in scheduled_names
+
+
+def test_the_health_widget_lists_the_launch_readiness_checks(staff):
+    from apps.console import widgets
+
+    checks = {c["name"]: c for c in widgets.health_widget(staff(Role.ADMIN))["checks"]}
+    assert {"Public address", "Error tracking", "Scheduled jobs", "Hosting usage sync"} <= set(checks)
+    assert checks["Scheduled jobs"]["ok"] is True
+    assert checks["Hosting usage sync"]["ok"] is False  # honest: it is a known open item until built

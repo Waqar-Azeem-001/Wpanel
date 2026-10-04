@@ -24,3 +24,12 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
 }
+
+# Error tracking: optional, off unless SENTRY_DSN is set (see docs/phase-18-gap-report.md).
+from config.error_tracking import init_error_tracking  # noqa: E402
+
+init_error_tracking(
+    env("SENTRY_DSN", default=""),
+    environment=env("SENTRY_ENVIRONMENT", default="production"),
+    traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.0),
+)
