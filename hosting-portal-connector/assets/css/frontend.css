@@ -1,0 +1,589 @@
+.hpc-plans-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    width: 100%;
+    margin: 32px 0;
+}
+
+.hpc-plan-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 32px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.hpc-plan-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.08);
+}
+
+.hpc-plan-card-featured {
+    border-width: 2px;
+    border-color: #2563eb;
+}
+
+.hpc-plan-badge {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.hpc-plan-header {
+    margin-bottom: 24px;
+}
+
+.hpc-plan-title {
+    margin: 0 0 10px;
+    padding: 0;
+    font-size: 24px;
+    line-height: 1.25;
+}
+
+.hpc-plan-description {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.hpc-plan-pricing {
+    margin-bottom: 24px;
+}
+
+.hpc-price-display {
+    margin-bottom: 18px;
+}
+
+/* .hpc-price-value {
+    display: none;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.hpc-price-value.is-active {
+    display: flex;
+} */
+
+.hpc-plan-card .hpc-price-value {
+    display: none;
+}
+
+.hpc-plan-card .hpc-price-value.is-active {
+    display: flex;
+}
+
+.hpc-price-currency {
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hpc-price-amount {
+    color: #111827;
+    font-size: 38px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.hpc-price-period {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.hpc-cycle-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.hpc-cycle-label {
+    color: #374151;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.hpc-cycle-select {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 14px;
+}
+
+.hpc-cycle-select:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.hpc-features-wrapper {
+    flex-grow: 1;
+}
+
+.hpc-plan-features {
+    list-style: none;
+    margin: 0 0 28px;
+    padding: 0;
+}
+
+.hpc-plan-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.hpc-feature-check {
+    flex: 0 0 auto;
+    color: #16a34a;
+    font-weight: 800;
+}
+
+.hpc-plan-action {
+    margin-top: auto;
+}
+
+.hpc-order-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 18px;
+    border: 2px solid #2563eb;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #2563eb;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: center;
+    text-decoration: none;
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.hpc-order-button:hover,
+.hpc-order-button:focus {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.hpc-plan-card-featured .hpc-order-button {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.hpc-plan-card-featured .hpc-order-button:hover,
+.hpc-plan-card-featured .hpc-order-button:focus {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.hpc-message {
+    margin: 20px 0;
+    padding: 14px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+}
+
+.hpc-message-error {
+    border-color: #dc2626;
+}
+
+@media (max-width: 1024px) {
+
+    .hpc-plans-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+
+    .hpc-plans-grid {
+        grid-template-columns: 1fr;
+        gap: 22px;
+    }
+
+    .hpc-plan-card {
+        padding: 26px 22px;
+    }
+
+    .hpc-price-amount {
+        font-size: 34px;
+    }
+}
+
+
+/* ==============================================================
+   Hosting Categories
+   ============================================================== */
+
+.hpc-categories-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin: 30px 0;
+}
+
+.hpc-category-card {
+    padding: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
+}
+
+.hpc-category-title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    line-height: 1.3;
+}
+
+.hpc-category-count {
+    margin: 0 0 16px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.hpc-category-shortcode code {
+    display: block;
+    overflow-wrap: anywhere;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    font-size: 12px;
+}
+
+@media (max-width: 1024px) {
+
+    .hpc-categories-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+
+    .hpc-categories-grid {
+        grid-template-columns: 1fr;
+    }
+}   
+
+
+
+
+
+/* ==============================================================
+   Domain Pricing
+   ============================================================== */
+
+.hpc-domain-pricing {
+    width: 100%;
+    margin: 30px 0;
+}
+
+.hpc-domain-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.hpc-domain-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+}
+
+.hpc-domain-table th,
+.hpc-domain-table td {
+    padding: 16px 18px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.hpc-domain-table th {
+    background: #f8fafc;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.hpc-domain-table td {
+    font-size: 14px;
+}
+
+.hpc-domain-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.hpc-domain-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.hpc-domain-tld {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+
+/* ==============================================================
+   Hosting Addons
+   ============================================================== */
+
+.hpc-addons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin: 30px 0;
+}
+
+.hpc-addon-card {
+    padding: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
+}
+
+.hpc-addon-title {
+    margin: 0 0 10px;
+    font-size: 19px;
+}
+
+.hpc-addon-description {
+    margin: 0 0 20px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.hpc-addon-pricing {
+    border-top: 1px solid #e5e7eb;
+}
+
+.hpc-addon-price-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 11px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+}
+
+.hpc-addon-price-row:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 900px) {
+
+    .hpc-addons-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+
+    .hpc-addons-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ==============================================================
+   Dynamic Plan Columns
+   ============================================================== */
+
+.hpc-plans-grid {
+    display: grid;
+    gap: 24px;
+    width: 100%;
+}
+
+.hpc-plans-grid.hpc-columns-1 {
+    grid-template-columns: 1fr;
+}
+
+.hpc-plans-grid.hpc-columns-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hpc-plans-grid.hpc-columns-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hpc-plans-grid.hpc-columns-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1024px) {
+
+    .hpc-plans-grid.hpc-columns-3,
+    .hpc-plans-grid.hpc-columns-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+
+    .hpc-plans-grid,
+    .hpc-plans-grid.hpc-columns-1,
+    .hpc-plans-grid.hpc-columns-2,
+    .hpc-plans-grid.hpc-columns-3,
+    .hpc-plans-grid.hpc-columns-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==============================================================
+   Dynamic Addon Columns
+   ============================================================== */
+
+.hpc-addons-grid.hpc-columns-1 {
+    grid-template-columns: 1fr;
+}
+
+.hpc-addons-grid.hpc-columns-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hpc-addons-grid.hpc-columns-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hpc-addons-grid.hpc-columns-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1024px) {
+
+    .hpc-addons-grid.hpc-columns-3,
+    .hpc-addons-grid.hpc-columns-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+
+    .hpc-addons-grid,
+    .hpc-addons-grid.hpc-columns-1,
+    .hpc-addons-grid.hpc-columns-2,
+    .hpc-addons-grid.hpc-columns-3,
+    .hpc-addons-grid.hpc-columns-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ---- Store menu and domain search ------------------------------------- */
+
+.hpc-store-menu ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+    margin: 0 0 24px;
+    padding: 0;
+}
+
+.hpc-store-menu a {
+    display: inline-block;
+    padding: 8px 16px;
+    border: 1px solid #d0d7de;
+    border-radius: 999px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.hpc-store-menu a.is-active,
+.hpc-store-menu a:hover,
+.hpc-store-menu a:focus-visible {
+    background: #0b2a4a;
+    border-color: #0b2a4a;
+    color: #fff;
+}
+
+.hpc-domain-search-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.hpc-domain-search-row {
+    display: flex;
+    gap: 8px;
+}
+
+.hpc-domain-search-input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.hpc-domain-search-button,
+.hpc-domain-search-order {
+    padding: 12px 20px;
+    border: 0;
+    border-radius: 6px;
+    background: #0b2a4a;
+    color: #fff;
+    font-size: 16px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.hpc-domain-search-button:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+.hpc-domain-search-result {
+    margin-top: 12px;
+}
+
+.hpc-domain-search-result p {
+    margin: 0 0 8px;
+}
+
+.hpc-domain-search-result.is-ok p { color: #1a7f37; font-weight: 600; }
+.hpc-domain-search-result.is-taken p { color: #9a6700; }
+.hpc-domain-search-result.is-error p { color: #cf222e; }
+
+.hpc-domain-search-order {
+    display: inline-block;
+}
+
+@media (max-width: 480px) {
+    .hpc-domain-search-row { flex-direction: column; }
+}

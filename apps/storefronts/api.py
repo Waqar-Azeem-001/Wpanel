@@ -9,7 +9,11 @@ from django.db.models import Q
 from django.http import Http404
 from django.urls import reverse
 from rest_framework import generics, mixins, serializers, viewsets
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from apps.core.exceptions import ServiceError
+from apps.domains import services as domain_services
 from apps.domains.models import TldPricing
 from apps.products.models import Addon, CatalogStatus, StoreCategory
 
@@ -194,3 +198,34 @@ class StorefrontTldPricingListView(_StorefrontView, generics.ListAPIView):
 
     def get_queryset(self):
         return TldPricing.objects.filter(is_active=True).order_by("tld")
+
+
+class StorefrontDomainSearchView(_StorefrontView, APIView):
+    """
+    Is this domain free to register, and at what price? Answered by the same availability check and the same
+    ``TldPricing`` row the portal's own public search uses (Rule 3) - the storefront only displays it, and links the
+    customer on to the portal's search page, where registration is actually ordered.
+
+        GET /api/v1/storefront/domains/search/?name=example.com
+    """
+
+    def get(self, request):
+        name = (request.query_params.get("name") or "").strip().lower()
+        if not name:
+            return Response({"detail": "Give a domain name, for example ?name=example.com"}, status=400)
+        try:
+            available, pricing = domain_services.check_availability(name)
+        except ServiceError as exc:
+            return Response({"detail": exc.message, "code": exc.code}, status=getattr(exc, "status_code", 400))
+        except Exception as exc:  # noqa: BLE001 - the domain validator raises django's ValidationError
+            messages = getattr(exc, "messages", None)
+            return Response({"detail": messages[0] if messages else "Not a valid domain name."}, status=400)
+        return Response({
+            "domain": name,
+            "available": bool(available),
+            "tld": pricing.tld,
+            "register_price": str(pricing.register_price),
+            "renew_price": str(pricing.renew_price),
+            "currency": settings.STORE_CURRENCY,
+            "order_url": _absolute(reverse("domains_public:search")) + f"?domain={name}&years=1",
+        })

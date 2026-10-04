@@ -74,6 +74,8 @@ urlpatterns = [
     path("domains/availability/", AvailabilityView.as_view(), name="domain-availability"),
     path("storefront/categories/", storefronts_api.StorefrontCategoryListView.as_view(), name="storefront-categories"),
     path("storefront/addons/", storefronts_api.StorefrontAddonListView.as_view(), name="storefront-addons"),
+    path("storefront/domains/search/", storefronts_api.StorefrontDomainSearchView.as_view(),
+        name="storefront-domain-search"),
     path("storefront/domains/pricing/", storefronts_api.StorefrontTldPricingListView.as_view(),
         name="storefront-domain-pricing"),
     path("hosting-accounts/<int:pk>/renew/", renewals_api.HostingRenewView.as_view(), name="hosting-renew"),

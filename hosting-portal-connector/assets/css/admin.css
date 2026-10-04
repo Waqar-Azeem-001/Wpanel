@@ -1,0 +1,60 @@
+.hpc-admin-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+    max-width: 1100px;
+}
+
+.hpc-admin-status-card {
+    padding: 18px;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.hpc-status-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #646970;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.hpc-status-value {
+    display: block;
+    color: #1d2327;
+    font-size: 20px;
+}
+
+.hpc-status-success {
+    color: #008a20;
+}
+
+.hpc-status-failed {
+    color: #d63638;
+}
+
+.hpc-connection-details {
+    max-width: 1100px;
+    margin: 24px 0;
+}
+
+.hpc-connection-details th {
+    width: 230px;
+}
+
+@media (max-width: 900px) {
+
+    .hpc-admin-status-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+
+    .hpc-admin-status-grid {
+        grid-template-columns: 1fr;
+    }
+}

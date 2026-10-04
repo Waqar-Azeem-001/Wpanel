@@ -241,3 +241,36 @@ def test_disabling_a_storefront_is_audited_and_the_log_never_carries_its_secret(
     services.set_storefront_status(admin, storefront, StorefrontStatus.DISABLED)
     for event in AuditEvent.objects.all():
         assert secret not in str(event.metadata)
+
+
+# --- Domain search for a storefront, and the cycle named in an order link ----------------------
+
+def test_domain_search_answers_with_price_and_a_portal_link(api, admin, storefront, secret):
+    from apps.domains.models import RegistrarProvider
+
+    RegistrarProvider.objects.create(name="Test", kind="manual", is_active=True)
+    TldPricing.objects.create(tld=".com", register_price="12.99", renew_price="14.99", transfer_price="11.99")
+    auth(api, storefront.public_id, secret)
+    response = api.get("/api/v1/storefront/domains/search/", {"name": "Example-Test.com"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["domain"] == "example-test.com" and body["tld"] == ".com"
+    assert body["register_price"] == "12.99" and body["order_url"].endswith("?domain=example-test.com&years=1")
+    assert isinstance(body["available"], bool)
+
+
+def test_domain_search_rejects_a_missing_name_an_unsupported_tld_and_no_credential(api, storefront, secret):
+    assert api.get("/api/v1/storefront/domains/search/", {"name": "a.com"}).status_code in (401, 403)
+    auth(api, storefront.public_id, secret)
+    assert api.get("/api/v1/storefront/domains/search/").status_code == 400
+    from apps.domains.models import RegistrarProvider
+
+    RegistrarProvider.objects.create(name="Test", kind="manual", is_active=True)
+    assert api.get("/api/v1/storefront/domains/search/", {"name": "a.nosuchtld"}).status_code == 400
+    assert api.get("/api/v1/storefront/domains/search/", {"name": "not a domain"}).status_code == 400
+
+
+def test_product_page_preselects_the_cycle_named_in_the_link(client, published_product):
+    page = client.get(f"/products/{published_product.slug}/", {"cycle": "monthly"})
+    assert page.status_code == 200
+    assert 'value="monthly" selected' in page.content.decode()

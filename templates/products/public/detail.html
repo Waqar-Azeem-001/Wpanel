@@ -35,7 +35,7 @@
     <div class="col-md-4">
       <label class="form-label" for="order-cycle">{% trans "Billing cycle" %}</label>
       <select class="form-select" name="cycle" id="order-cycle">
-        {% for entry in prices %}<option value="{{ entry.option_value }}">{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %} &ndash; {{ entry.price }}{% if entry.setup_fee != 0 %} (+{{ entry.setup_fee }} setup){% endif %}</option>{% endfor %}
+        {% for entry in prices %}<option value="{{ entry.option_value }}"{% if entry.option_value == selected_cycle %} selected{% endif %}>{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %} &ndash; {{ entry.price }}{% if entry.setup_fee != 0 %} (+{{ entry.setup_fee }} setup){% endif %}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md">

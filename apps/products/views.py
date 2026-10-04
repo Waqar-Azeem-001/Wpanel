@@ -90,8 +90,11 @@ def public_product_detail(request, slug):
     prices = product.prices.filter(is_active=True)
     upsell = product.upsell_product if product.upsell_product and product.upsell_product.status == CatalogStatus.ACTIVE else None
     recommended = product.recommended_addons.filter(status=CatalogStatus.ACTIVE)
+    # A link from an outside storefront can name the billing cycle ("annual", or "custom_4" / "custom:4").
+    selected_cycle = (request.GET.get("cycle") or request.GET.get("billing_cycle") or "").replace("custom_", "custom:")
     return render(request, "products/public/detail.html", {"product": product, "prices": prices, "upsell": upsell,
-                                                           "recommended_addons": recommended})
+                                                           "recommended_addons": recommended,
+                                                           "selected_cycle": selected_cycle})
 
 
 # --- Staff: products ---------------------------------------------------------------------

@@ -103,3 +103,23 @@ public address and a real credential).
 product page currently ignores a `billing_cycle` query parameter, so the cycle chosen in WordPress is not carried to
 checkout yet (a small Django change if wanted). Step 16 (store pages) works today with `[hosting_plans category=...]`.
 Step 25 (theme compatibility, accessibility) needs a real site to test.
+
+## 8. Update 2026-10-04 (later): remaining steps done, plugin now lives in this repo
+
+The working copy is `hosting-portal-connector/` in the repo root (a mirror was copied back to `WPanel_WP/`).
+
+| Step | Result |
+|---|---|
+| 16 Store pages | `[hosting_store]`: category menu (real `?hpc_category=` links, no JavaScript) then that category's plans in the portal's own order. |
+| 17 Order redirect | Done on both sides. The plugin sends `billing_cycle` and `cycle` (custom periods as `custom:4`); the portal's product page now preselects that cycle. |
+| 18 Domain search | Django: new `GET /api/v1/storefront/domains/search/?name=` (same availability check and `TldPricing` as the portal's public search; returns price and the portal link). Plugin: `[domain_search]` form, answered through this site's own `GET /wp-json/hpc/v1/domain-search` so the credential never reaches the browser; input validated, 20 searches a minute per visitor. |
+| 19 Domain order | The result links to the portal's domain page (`?domain=...&years=1`), where registration is ordered and paid. |
+| 20 Addon compatibility | Not possible yet: the portal has no addon-to-plan rule anywhere (known limitation). All active addons are shown. |
+| 21 Multi-site | Works by design: each WordPress site has its own storefront and credential in the portal; what is published per site is controlled there. |
+| 22 Currency | The plugin shows the currency the portal returns on every price. The portal has one store currency, so multi-market pricing needs portal work first. |
+| 25 Final UI | Mobile layout and `aria-live` result area for search done; theme compatibility and accessibility on a real site still to test. |
+
+**Verified:** PHP and JS lint clean; `hosting-portal-connector/tests/shim_test.php` (WordPress stubbed): all checks pass,
+including domain search and a webhook signature produced by Django's own `sign()`. Django: new tests for the search
+endpoint (price and link, bad input, no credential) and cycle preselect; storefront, products and crawler suites pass.
+**Still not verified:** inside a real WordPress site, and against a running portal.
