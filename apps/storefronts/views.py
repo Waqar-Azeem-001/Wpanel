@@ -46,7 +46,8 @@ def staff_storefront_create(request):
             apply_form_error(form, exc)
         else:
             messages.success(request, f"'{storefront.name}' connected. Its credential - shown once, copy it now: "
-                                      f"public id {storefront.public_id} / secret {raw_secret}")
+                                      f"public id {storefront.public_id} / secret {raw_secret}. For the WordPress plugin, paste this "
+                                      f"one value into its credential field: {storefront.public_id}:{raw_secret}")
             return redirect("storefronts_staff:detail", pk=storefront.pk)
     return render(request, "storefronts/staff/form.html", {"form": form, "title": "Connect a storefront"})
 
@@ -102,7 +103,8 @@ def staff_storefront_rotate(request, pk):
     except ACTION_ERRORS as exc:
         messages.error(request, error_text(exc))
     else:
-        messages.success(request, f"New secret for '{storefront.name}' - shown once, copy it now: {raw_secret}")
+        messages.success(request, f"New secret for '{storefront.name}' - shown once, copy it now. For the WordPress "
+                                  f"plugin paste: {storefront.public_id}:{raw_secret}")
     return redirect("storefronts_staff:detail", pk=pk)
 
 
