@@ -77,3 +77,29 @@ These need new Django work (an E-track slice) before the matching plugin steps c
 - Plugin before or after Phase 18? (Recommendation: Phase 18 first, plugin Step 11 and 14 as an E15 slice.)
 - Is a WordPress storefront a launch requirement? (Section 28 of the roadmap does not list it as a blocker.)
 - Are per-site addons, domain search and multi-currency needed for launch?
+
+## 7. Update 2026-10-04: plugin Steps 11-15 built
+
+Plugin source: `E:\Waqar\Clients\WHE\WPanel_WP\hosting-portal-connector` (outside this repo, not under git; a backup of the
+pre-change code was kept in the session scratchpad).
+
+| Step | Result |
+|---|---|
+| 11 Live connection | Done. Sends `Authorization: Storefront <public_id>:<secret>` server-side; list responses wrapped; domain rows mapped (`register_price` -> `register.amount`); 401/403 give a clear message; a credential without `:` is refused locally. The single "API Key" field now holds `public_id:secret`. |
+| 12 Publish controls | Nothing to build in the plugin: Django already filters to what is published to this storefront. |
+| 13 Caches | Done. Separate transients for products, domain pricing and addons (plus the request-level cache). |
+| 14 Webhook | Done. `POST /wp-json/hpc/v1/webhook` verifies `X-Storefront-Signature` (HMAC-SHA256 of `t.body`, 10 minute tolerance, constant-time compare), then clears the caches. New "Webhook Signing Secret" setting. |
+| 15 Single plan | Done. `[hosting_plan slug="..."]` (slug or numeric id); unavailable plan shows a quiet message. Also `orderby="sort_order"` for `[hosting_plans]`. |
+| 23 Diagnostics | Partly done: last request (endpoint, latency, result), last error and last webhook on the settings page. |
+| 24 Hardening | Partly: key never leaves PHP, signed and time-limited webhook, replay window. Output escaping already in the views. |
+
+**Verified:** all PHP files lint clean (PHP 8.2); `tests/shim_test.php` (WordPress functions stubbed) runs 20 checks
+against response shapes copied from the Django serializers, including a webhook signature produced by Django's own
+`sign()`: all pass. **Not verified:** inside a real WordPress site, and against a running portal (needs the portal's
+public address and a real credential).
+
+**Not built, because Django has no endpoint yet:** 18/19 domain search and order flow, 20 addon compatibility,
+21 multi-site rules beyond what E13 gives, 22 currency/market. Step 17 uses the portal's `order_url`; the portal's
+product page currently ignores a `billing_cycle` query parameter, so the cycle chosen in WordPress is not carried to
+checkout yet (a small Django change if wanted). Step 16 (store pages) works today with `[hosting_plans category=...]`.
+Step 25 (theme compatibility, accessibility) needs a real site to test.
