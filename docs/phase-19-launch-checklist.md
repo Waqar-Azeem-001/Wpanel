@@ -32,16 +32,22 @@ Legend: DONE = built and tested locally. NEEDS OWNER = cannot proceed without a 
 | Registrar API | NEEDS OWNER (6) | |
 | WHM API | NEEDS OWNER (4) | Launch blocker |
 | Workers (Celery worker + beat) | DONE | In compose; CI round trip passes; dashboard "Background jobs" check |
-| Scheduled jobs | DONE except usage sync | Hosting usage sync not scheduled (blocked on WHM) |
+| Scheduled jobs | DONE | Hosting usage sync is built (`sync-hosting-usage`, daily 03:30) but OFF: set `HOSTING_USAGE_SYNC_ENABLED=true` after the WHM adapter is verified on a real server |
 | Monitoring | Runbook written | Owner picks an uptime monitor for `/api/v1/health/` |
 | Error tracking | DONE (optional) | Set `SENTRY_DSN` |
 | Error pages | DONE | 403, 404, 500 templates; maintenance page |
 | Backups | Runbook written | Test restore on staging (NEEDS OWNER 8) |
-| Customer signup, test order, invoice, payment, provisioning, renewal | To run on staging | Needs WHM and email first |
+| Customer signup, test order, invoice, payment, provisioning, renewal | Script ready: `docs/staging-smoke-test.md` | Run on staging; needs WHM and email first |
 | Every email link opens the right page on the production domain | To run on staging | Link tests pass locally; re-run crawler against staging |
 | Dashboard "System health" panel all green | To check on staging | Shows public address, error tracking, jobs, usage sync |
 
-## C. What I can do now without the owner
+## C. Done without the owner (2026-10-04)
+
+- Staging smoke-test checklist: `docs/staging-smoke-test.md`.
+- Scheduled hosting usage sync, off by default (tests added).
+- Still pending until the owner decides TLS: the Nginx 443 config.
+
+## C0. Original plan (for reference)
 
 1. Prepare the Nginx TLS config for the Certbot route (port 443, redirect, HSTS stays in Django) once decision 3 is made.
 2. Write a staging smoke-test script/checklist (signup -> order -> invoice -> payment -> provisioning -> renewal).

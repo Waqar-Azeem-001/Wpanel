@@ -321,6 +321,14 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+# Hosting usage sync stays OFF until the WHM adapter has been verified against a real server (roadmap Known Work,
+# "WHM API adapter needs live verification"). Turn on with HOSTING_USAGE_SYNC_ENABLED=true once that is done.
+if env.bool("HOSTING_USAGE_SYNC_ENABLED", default=False):
+    CELERY_BEAT_SCHEDULE["sync-hosting-usage"] = {
+        "task": "apps.hosting.tasks.sync_hosting_usage_task",
+        "schedule": crontab(hour=3, minute=30),
+    }
+
 # --- Email -------------------------------------------------------------------
 # Phase 01 uses Django's email backend for delivery. The live, database-configured
 # email provider arrives in Phase 11 (see roadmap Known Work).

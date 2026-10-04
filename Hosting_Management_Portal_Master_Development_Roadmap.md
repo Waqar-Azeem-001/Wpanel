@@ -966,7 +966,7 @@ Use this section whenever something is discovered but intentionally postponed.
 | WHM API adapter needs live verification before launch | Open | Written to WHM's public docs, never run against a real server | Before launch |
 | No customer self-service for suspend/terminate/change-package | Deferred ⚠️ Re-triage | No billing/cancellation workflow to hang these off at the time (08/12 now 🟢); decision log limits self-service to view + request | Re-triage |
 | No automatic multi-server capacity-based selection | Deferred | Staff pick manually when a product maps to >1 server | Post-MVP |
-| Hosting usage sync is manual, not scheduled | Deferred ⚠️ Re-triage | Needs a verified live WHM adapter first (Phase 17 slice 2 live-tested the new backup call against the owner's real WHM server and got a 403 - that item is still open) | Before launch |
+| Hosting usage sync is manual, not scheduled | Built 2026-10-04 but OFF by default (`HOSTING_USAGE_SYNC_ENABLED`); turn on after WHM live verification ⚠️ | Needs a verified live WHM adapter first (Phase 17 slice 2 live-tested the new backup call against the owner's real WHM server and got a 403 - that item is still open) | Before launch |
 | Guest (anonymous) carts | Closed (E2) | Stale - a visitor can shop without an account (`Cart.guest_token`/`is_guest`, session-kept, merged into their own cart on sign-in); this row was never updated when E2 built it | — |
 | Antivirus scanning of ticket attachments | Open | Uploads are type/content checked, stored privately, only downloaded, but not scanned (e.g. ClamAV) | Before launch |
 | Reply-by-email / email-to-ticket | Deferred | Customers reply in the portal; team alerts for unassigned tickets delivered in Phase 11 | Post-MVP |

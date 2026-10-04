@@ -309,3 +309,36 @@ def test_search_hosting_accounts(manager, client_obj, product):
     assert services.search_hosting_accounts(HostingAccount.objects.all(), "acme").count() == 1
     assert services.search_hosting_accounts(HostingAccount.objects.all(), "beta").count() == 1
     assert services.search_hosting_accounts(HostingAccount.objects.all(), "").count() == 2
+
+
+# --- Scheduled usage sync -----------------------------------------------------------------
+
+def test_sync_all_usage_updates_every_active_account(manager, client_obj, product, monkeypatch):
+    account = services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product,
+                                                                               "example.com"))
+
+    class FakeAdapter:
+        def get_usage(self, username):
+            return {"disk_used_mb": 120, "disk_limit_mb": 1000, "bandwidth_used_mb": 5, "bandwidth_limit_mb": 2000}
+
+    monkeypatch.setattr(services, "get_adapter", lambda server: FakeAdapter())
+    assert services.sync_all_usage() == {"synced": 1, "failed": 0}
+    account.refresh_from_db()
+    assert account.disk_used_mb == 120 and account.bandwidth_limit_mb == 2000
+
+
+def test_sync_all_usage_skips_a_failing_account_and_counts_it(manager, client_obj, product, monkeypatch):
+    services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product, "example.com"))
+
+    class BrokenAdapter:
+        def get_usage(self, username):
+            raise services.HostingError("server unreachable")
+
+    monkeypatch.setattr(services, "get_adapter", lambda server: BrokenAdapter())
+    assert services.sync_all_usage() == {"synced": 0, "failed": 1}
+
+
+def test_usage_sync_job_is_off_by_default():
+    from django.conf import settings
+
+    assert "sync-hosting-usage" not in settings.CELERY_BEAT_SCHEDULE

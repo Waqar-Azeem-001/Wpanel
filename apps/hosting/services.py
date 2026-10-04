@@ -324,10 +324,8 @@ def sync_status(actor, account, *, request=None):
     return account
 
 
-def sync_usage(actor, account, *, request=None):
-    _require(actor, "manage_hosting")
-    if not account.server:
-        raise ServiceError("This account has no server assigned.", code="no_server_assigned")
+def _refresh_usage(account):
+    """Fetch and store one account's disk and bandwidth figures. No permission check: callers decide who may do this."""
     adapter = get_adapter(account.server)
     try:
         usage = adapter.get_usage(account.username)
@@ -341,3 +339,26 @@ def sync_usage(actor, account, *, request=None):
     account.save(update_fields=["disk_used_mb", "disk_limit_mb", "bandwidth_used_mb", "bandwidth_limit_mb",
                                 "last_synced_at", "updated_at"])
     return account
+
+
+def sync_usage(actor, account, *, request=None):
+    _require(actor, "manage_hosting")
+    if not account.server:
+        raise ServiceError("This account has no server assigned.", code="no_server_assigned")
+    return _refresh_usage(account)
+
+
+def sync_all_usage():
+    """
+    The scheduled job: refresh usage for every active account that has a server. One account failing (a server down,
+    a username WHM no longer knows) is counted and skipped, never allowed to stop the rest.
+    """
+    done = failed = 0
+    for account in HostingAccount.objects.filter(status=HostingStatus.ACTIVE, server__isnull=False
+                                                 ).exclude(username="").select_related("server"):
+        try:
+            _refresh_usage(account)
+            done += 1
+        except ServiceError:
+            failed += 1
+    return {"synced": done, "failed": failed}
