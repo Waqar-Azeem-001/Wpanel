@@ -85,6 +85,17 @@ def set_storefront_status(actor, storefront, new_status, *, request=None):
     return storefront
 
 
+def delete_storefront(actor, storefront, *, request=None):
+    """Disconnect a storefront for good: its credential stops working, and its publish links and webhook delivery
+    history go with it. The plans themselves are untouched. Audited with the name and public id, since the row is gone."""
+    _require(actor)
+    details = {"name": storefront.name, "public_id": storefront.public_id, "site_url": storefront.site_url,
+               "published_plans": storefront.published_products.count()}
+    with transaction.atomic():
+        storefront.delete()
+        audit.record("storefront.deleted", actor=actor, metadata=details, request=request)
+
+
 def rotate_secret(actor, storefront, *, request=None):
     """A fresh secret, immediately invalidating the old one. Returns the raw value - shown once, never stored."""
     _require(actor)

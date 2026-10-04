@@ -110,6 +110,20 @@ def staff_storefront_rotate(request, pk):
 
 @require_POST
 @portal_permission_required(MANAGE)
+def staff_storefront_delete(request, pk):
+    storefront = get_object_or_404(ExternalStorefront, pk=pk)
+    name = storefront.name
+    try:
+        services.delete_storefront(request.user, storefront, request=request)
+    except ACTION_ERRORS as exc:
+        messages.error(request, error_text(exc))
+        return redirect("storefronts_staff:detail", pk=pk)
+    messages.success(request, f"'{name}' was deleted. Its credential no longer works.")
+    return redirect("storefronts_staff:list")
+
+
+@require_POST
+@portal_permission_required(MANAGE)
 def staff_storefront_rotate_webhook_secret(request, pk):
     storefront = get_object_or_404(ExternalStorefront, pk=pk)
     try:

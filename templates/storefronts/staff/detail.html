@@ -29,6 +29,9 @@
         <form method="post" action="{% url 'storefronts_staff:rotate' storefront.pk %}" data-confirm="Rotate the secret? The current one stops working immediately - update the storefront's plugin with the new one shown next.">{% csrf_token %}
           <button class="btn btn-sm btn-outline-secondary" type="submit">Rotate secret</button>
         </form>
+        <form method="post" action="{% url 'storefronts_staff:delete' storefront.pk %}" data-confirm="Delete {{ storefront.name }} for good? Its credential stops working, its published-plan links and webhook history are removed. The plans themselves are not touched.">{% csrf_token %}
+          <button class="btn btn-sm btn-danger" type="submit">Delete storefront</button>
+        </form>
       </div>
       {% endif %}
     </div></section>

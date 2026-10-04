@@ -167,3 +167,30 @@ def test_publishing_needs_manage_products(client, manager, storefront, product):
     response = client.post(f"/staff/storefronts/products/{product.slug}/publish/", {"storefronts": [storefront.pk]})
     assert response.status_code in (200, 302)
     assert storefront.published_products.filter(product=product).exists()
+
+
+# --- Deleting a storefront --------------------------------------------------------------------------------------
+
+def test_deleting_a_storefront_removes_it_keeps_the_plan_and_is_audited(client, admin, storefront, product):
+    services.publish_product(admin, product, storefront)
+    pk, public_id = storefront.pk, storefront.public_id
+    client.force_login(admin)
+    response = client.post(f"/staff/storefronts/{pk}/delete/")
+    assert response.status_code == 302 and response["Location"].endswith("/staff/storefronts/")
+    assert not ExternalStorefront.objects.filter(pk=pk).exists()
+    product.refresh_from_db()  # the plan itself is untouched
+    event = AuditEvent.objects.get(action="storefront.deleted")
+    assert event.metadata["public_id"] == public_id and event.metadata["published_plans"] == 1
+
+
+def test_deleting_needs_manage_providers_and_a_post(client, manager, admin, storefront):
+    client.force_login(manager)
+    assert client.post(f"/staff/storefronts/{storefront.pk}/delete/").status_code == 403
+    client.force_login(admin)
+    assert client.get(f"/staff/storefronts/{storefront.pk}/delete/").status_code == 405
+    assert ExternalStorefront.objects.filter(pk=storefront.pk).exists()
+
+
+def test_the_delete_button_is_on_the_detail_page(client, admin, storefront):
+    client.force_login(admin)
+    assert "Delete storefront" in client.get(f"/staff/storefronts/{storefront.pk}/").content.decode()

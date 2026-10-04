@@ -11,6 +11,7 @@ urlpatterns = [
     path("<int:pk>/", views.staff_storefront_detail, name="detail"),
     path("<int:pk>/edit/", views.staff_storefront_edit, name="edit"),
     path("<int:pk>/status/", views.staff_storefront_status, name="status"),
+    path("<int:pk>/delete/", views.staff_storefront_delete, name="delete"),
     path("<int:pk>/rotate/", views.staff_storefront_rotate, name="rotate"),
     path("<int:pk>/webhook-secret/", views.staff_storefront_rotate_webhook_secret, name="rotate_webhook_secret"),
     path("products/<slug:slug>/publish/", views.staff_product_publish, name="product_publish"),
