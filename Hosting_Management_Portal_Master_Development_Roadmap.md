@@ -903,7 +903,7 @@ Before marking any phase 🟢:
 | 16 Security | 🟢 (slice 1: MFA/lockout/headers; slice 2: RBAC review, mandatory-MFA and step-up re-auth tried then reverted per owner feedback) | 2046 ✅ | ✅ | crawler green | 3737541, e05ae9d | — |
 | 17 Reliability | 🟢 (slice 1: found most of the phase's scenarios already built in earlier phases; added automation status and WHOIS lookup. slice 2: abandoned payment/order expiry, backup-before-terminate, attachment retention; usage sync still deferred on WHM verification) | 2167 ✅ | ✅ | crawler green; real WHM 403 handled cleanly | — | — |
 | 18 Testing & Readiness | 🟢 local (2026-10-04: suite green, optional Sentry error tracking added, `docs/operations-runbook.md` for backup/restore/monitoring; `docs/phase-18-gap-report.md`. Open launch blockers carried to 19: WHM live verification, scheduled usage sync, staging checks of HTTPS/DNS/email/registrar) | green, 0 failures | — | — | — | — |
-| 19 Production Launch | ⬜ | — | — | — | — | — |
+| 19 Production Launch | 🟡 started 2026-10-04: `docs/phase-19-launch-checklist.md` (owner inputs needed: domain, server, TLS, WHM access, email, registrar, backup destination) | — | — | — | — | — |
 
 "Links" column: phases 01–14 predate the crawler; D2 back-filled it for them: the crawl covers every page of every phase for eight roles on data with one object in every status. D0 ran a prototype crawler (8 roles, 3,000+ pages: no 404, 500 or 403-after-link) and a hostile-query sweep, now partly in CI (`apps/core/test_link_integrity.py`).
 
