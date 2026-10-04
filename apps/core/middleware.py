@@ -98,7 +98,7 @@ class MaintenanceModeMiddleware:
     it needs to render styled, and the whole API (``/api/...``) - this is a customer-facing "closed for maintenance"
     notice for the web site (Admin Operations, Phase 15), not an infrastructure-level outage gate; a storefront
     integration or a future mobile client has no reason to go down because staff flipped it on. A harder gate for
-    when the app itself cannot safely be reached at all (e.g. mid-deploy) is `deploy/nginx/wpanel.conf`'s own flag
+    when the app itself cannot safely be reached at all (e.g. mid-deploy) is `deploy/nginx/whpanel.conf`'s own flag
     file, a separate, lower-level mechanism this middleware does not depend on.
 
     Placed last in ``MIDDLEWARE`` so every other cross-cutting concern (security headers, CSRF, sessions) still

@@ -27,13 +27,13 @@ def issued(manager, client_obj, *specs, **kwargs):
 
 def test_invoice_pdf_shows_the_stored_figures(manager, client_obj, vat):
     row = BillingSettings.load()
-    row.company_name, row.invoice_footer = "Wpanel Ltd", "IBAN PK00 TEST"
+    row.company_name, row.invoice_footer = "WHpanel Ltd", "IBAN PK00 TEST"
     row.save()
     invoice = issued(manager, client_obj, ("Hosting", 2, "50.00"))
     payments.record_payment(manager, invoice, amount="40.00", reference="TT-5")
     content = pdf.render_invoice_pdf(Invoice.objects.get(pk=invoice.pk))
     assert content.startswith(b"%PDF")
-    for expected in (b"INVOICE", b"INV-000001", b"Wpanel Ltd", b"Acme Ltd", b"Hosting", b"USD 110.00",
+    for expected in (b"INVOICE", b"INV-000001", b"WHpanel Ltd", b"Acme Ltd", b"Hosting", b"USD 110.00",
                      b"Sales tax", b"10%", b"Amount due", b"USD 70.00", b"TT-5", b"IBAN PK00 TEST"):
         assert expected in content, expected
 

@@ -27,7 +27,7 @@ class EmailProvider(TimeStampedModel):
     use_tls = models.BooleanField(default=True, help_text="STARTTLS (usually port 587).")
     use_ssl = models.BooleanField(default=False, help_text="Implicit TLS (usually port 465).")
     timeout = models.PositiveIntegerField(default=20, help_text="Seconds.")
-    from_email = models.CharField(max_length=255, help_text='e.g. "Wpanel <billing@example.com>"')
+    from_email = models.CharField(max_length=255, help_text='e.g. "WHpanel <billing@example.com>"')
     envelope_from = models.CharField(
         max_length=255, blank=True,
         help_text="The sender the mail server sees (the Return-Path). Blank = the From address. Set it to your SMTP login "

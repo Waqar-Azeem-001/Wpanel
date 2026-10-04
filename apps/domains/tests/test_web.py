@@ -156,9 +156,9 @@ def test_staff_full_lifecycle_via_web(client, manager, client_obj, com_pricing):
     assert domain.status == "active"
 
     client.post(f"/staff/domains/{domain.pk}/renew/", {"years": 1})
-    client.post(f"/staff/domains/{domain.pk}/nameservers/", {"nameservers": "ns1.wpanel.io\nns2.wpanel.io"})
+    client.post(f"/staff/domains/{domain.pk}/nameservers/", {"nameservers": "ns1.whpanel.io\nns2.whpanel.io"})
     domain.refresh_from_db()
-    assert domain.nameservers == ["ns1.wpanel.io", "ns2.wpanel.io"]
+    assert domain.nameservers == ["ns1.whpanel.io", "ns2.whpanel.io"]
 
     client.post(f"/staff/domains/{domain.pk}/dns/", {"record_type": "TXT", "name": "", "content": "v=spf1 -all",
                                                       "ttl": 3600})

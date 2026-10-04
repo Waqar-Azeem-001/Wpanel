@@ -189,10 +189,10 @@ def test_billable_items_then_invoice(api, manager, client_obj, staff):
 
 def test_settings_read_and_write(api, manager, staff, owner):
     api.force_authenticate(manager)
-    saved = api.put("/api/v1/billing-settings/", {"company_name": "Wpanel Ltd", "payment_terms_days": 7,
+    saved = api.put("/api/v1/billing-settings/", {"company_name": "WHpanel Ltd", "payment_terms_days": 7,
                                                   "quote_validity_days": 14, "invoice_prefix": "W-",
                                                   "quote_prefix": "Q-"})
-    assert saved.status_code == 200 and saved.json()["company_name"] == "Wpanel Ltd"
+    assert saved.status_code == 200 and saved.json()["company_name"] == "WHpanel Ltd"
     assert api.get("/api/v1/billing-settings/").json()["payment_terms_days"] == 7
     api.force_authenticate(staff(Role.SUPPORT_AGENT))
     assert api.get("/api/v1/billing-settings/").status_code == 200

@@ -76,7 +76,7 @@ def test_rejecting_and_refunding_tell_the_customer(manager, owner, client_obj, b
     tx = payments.report_payment(owner, invoice, method=bank)
     mail.outbox.clear()
     payments.reject_payment(manager, tx, reason="Not received")
-    assert [m.subject for m in emails_to(client_obj.email)] == [f"We could not find your payment for invoice {invoice.number} - Wpanel"]
+    assert [m.subject for m in emails_to(client_obj.email)] == [f"We could not find your payment for invoice {invoice.number} - WHpanel"]
     assert "Not received" in mail.outbox[0].body
     paid = payments.record_payment(manager, invoice, amount="100.00")
     mail.outbox.clear()

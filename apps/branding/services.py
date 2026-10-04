@@ -221,7 +221,7 @@ def clean_policy_links(rows):
 def _sync_maintenance_flag_file(on):
     """
     Best-effort: create or remove ``settings.MAINTENANCE_FLAG_PATH`` so Nginx can serve the maintenance page without
-    Django even being reachable (``deploy/nginx/wpanel.conf``). A no-op when the setting is blank (local dev, no
+    Django even being reachable (``deploy/nginx/whpanel.conf``). A no-op when the setting is blank (local dev, no
     Nginx in front) or the path cannot be written - the in-app toggle and its middleware are the real mechanism;
     this is only a second, infrastructure-level layer for when they are.
     """

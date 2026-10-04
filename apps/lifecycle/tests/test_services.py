@@ -111,7 +111,7 @@ def test_the_owner_can_ask_and_the_team_and_customer_are_told(account, owner, ma
     cr = ask(owner, account, reason_code="too_expensive", reason_text="Found a cheaper plan")
     assert (cr.status, cr.timing, cr.client_id, cr.on_behalf) == (CancellationStatus.PENDING, END, account.client_id, False)
     assert cr.term_expires_at == account.expires_at and cr.code.startswith("C")
-    assert [m.subject for m in mail.outbox] == [f"We received your request to cancel {account.domain} - Wpanel"]
+    assert [m.subject for m in mail.outbox] == [f"We received your request to cancel {account.domain} - WHpanel"]
     assert Notification.objects.filter(user=owner, event="cancellation.requested").exists()
     team = {n.user for n in Notification.objects.filter(event="cancellation.requested_team")}
     assert manager in team and agent not in team  # only people who can act on hosting

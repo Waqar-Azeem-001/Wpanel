@@ -261,7 +261,7 @@ def test_settings_page(client, manager):
     client.force_login(manager)
     page = client.get("/staff/billing/settings/").content
     assert b'name="invoice_prefix"' in page and b'name="quote_footer"' in page and b'name="quote_highlight"' in page
-    data = {"company_name": "Wpanel Ltd", "address": "1 Road", "email": "b@w.test", "phone": "", "tax_id": "NTN1",
+    data = {"company_name": "WHpanel Ltd", "address": "1 Road", "email": "b@w.test", "phone": "", "tax_id": "NTN1",
             "invoice_prefix": "W-", "quote_prefix": "Q-", "payment_terms_days": 7, "quote_validity_days": 14,
             "invoice_footer": "IBAN PK00", "quote_footer": "Valid 30 days", "quote_highlight": "Trusted by many",
             "renewal_invoice_days": 21}
@@ -273,7 +273,7 @@ def test_settings_page(client, manager):
     from apps.billing.models import BillingSettings
 
     row = BillingSettings.load()
-    assert (row.company_name, row.invoice_prefix, row.payment_terms_days, row.renewal_invoice_days) == ("Wpanel Ltd", "W-", 7, 21)
+    assert (row.company_name, row.invoice_prefix, row.payment_terms_days, row.renewal_invoice_days) == ("WHpanel Ltd", "W-", 7, 21)
 
 
 def test_the_reminder_schedule_can_be_customised_from_the_page(client, manager):

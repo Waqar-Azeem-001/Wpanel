@@ -48,7 +48,7 @@ crawler row (each page already has its own direct test; D5 closed the one real g
   Django itself cannot safely be reached (mid-deploy): `MAINTENANCE_FLAG_PATH` (blank by default; local dev has no
   Nginx in front) - saving the setting creates or removes a flag file there (`apps.branding.services
   ._sync_maintenance_flag_file`, best-effort, never blocks the actual toggle on a filesystem error).
-  `deploy/nginx/wpanel.conf` checks for that file and serves a static copy of the same page
+  `deploy/nginx/whpanel.conf` checks for that file and serves a static copy of the same page
   (`deploy/nginx/maintenance.html`, generated from the Django template by a new command,
   `manage.py render_maintenance_page`, so the two never drift apart by hand) without proxying to Django at all.
   `docker-compose.yml` gained the shared `maintenance` volume. This half is config-only and cannot be

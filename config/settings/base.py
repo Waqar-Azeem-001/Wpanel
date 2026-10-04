@@ -22,7 +22,7 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 
-SITE_NAME = env("SITE_NAME", default="Wpanel")
+SITE_NAME = env("SITE_NAME", default="WHpanel")
 SITE_URL = env("SITE_URL", default="http://localhost:8000")
 # All catalog prices and orders are in this one currency (multi-currency is a deferred item).
 STORE_CURRENCY = env("STORE_CURRENCY", default="USD")
@@ -118,7 +118,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
-    "default": env.db("DATABASE_URL", default="postgres://wpanel:wpanel@localhost:5432/wpanel"),
+    "default": env.db("DATABASE_URL", default="postgres://whpanel:whpanel@localhost:5432/whpanel"),
 }
 DATABASES["default"]["ATOMIC_REQUESTS"] = False
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("DATABASE_CONN_MAX_AGE", default=60)
@@ -162,7 +162,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 # through an authenticated view. Keep it out of any web-served path.
 PRIVATE_MEDIA_ROOT = env("PRIVATE_MEDIA_ROOT", default=str(BASE_DIR / "private_media"))
 SUPPORT_MAX_ATTACHMENT_MB = 5
-# A flag file Nginx can check directly (see deploy/nginx/wpanel.conf) so it can serve the maintenance page even if
+# A flag file Nginx can check directly (see deploy/nginx/whpanel.conf) so it can serve the maintenance page even if
 # Django/the database is not safely reachable - the in-app toggle (BrandSettings.maintenance_mode) writes and
 # removes this file on every save. Empty (the default) means no shared path is configured - local dev has no
 # Nginx in front, so only the Django-level middleware applies there.
@@ -219,7 +219,7 @@ SIMPLE_JWT = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Wpanel API",
+    "TITLE": "WHpanel API",
     "DESCRIPTION": "Hosting management portal API. Shared by the web portal and future mobile clients.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -325,7 +325,7 @@ CELERY_BEAT_SCHEDULE = {
 # Phase 01 uses Django's email backend for delivery. The live, database-configured
 # email provider arrives in Phase 11 (see roadmap Known Work).
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Wpanel <no-reply@localhost>")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="WHpanel <no-reply@localhost>")
 
 # --- Logging -----------------------------------------------------------------
 LOG_LEVEL = env("LOG_LEVEL", default="INFO")

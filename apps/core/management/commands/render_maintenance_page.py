@@ -6,7 +6,7 @@ from django.template.loader import render_to_string
 
 class Command(BaseCommand):
     help = ("Render templates/maintenance.html to deploy/nginx/maintenance.html - a plain static copy Nginx can "
-           "serve on its own (deploy/nginx/wpanel.conf), without Django or the database being reachable at all. "
+           "serve on its own (deploy/nginx/whpanel.conf), without Django or the database being reachable at all. "
            "Re-run this whenever templates/maintenance.html changes, so the two never drift apart by hand.")
 
     def add_arguments(self, parser):

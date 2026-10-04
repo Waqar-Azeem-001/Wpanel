@@ -522,7 +522,7 @@ def test_private_files_are_never_under_a_publicly_served_path(settings):
     private = Path(real.PRIVATE_MEDIA_ROOT).resolve()
     assert not str(private).startswith(str(Path(real.MEDIA_ROOT).resolve()))
     assert not str(private).startswith(str(Path(real.STATIC_ROOT).resolve()))
-    nginx = (Path(real.BASE_DIR) / "deploy" / "nginx" / "wpanel.conf").read_text()
+    nginx = (Path(real.BASE_DIR) / "deploy" / "nginx" / "whpanel.conf").read_text()
     assert "private_media" not in nginx  # nginx has no route to the attachments
     compose = (Path(real.BASE_DIR) / "docker-compose.yml").read_text()
     web_and_worker = compose.split("nginx:")[0]

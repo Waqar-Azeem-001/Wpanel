@@ -1,4 +1,4 @@
-# Wpanel
+# WHpanel
 
 This is a hosting business management portal, similar to WHMCS. It is built with Django and Django REST Framework, uses PostgreSQL for data, and runs background jobs through Redis and Celery.
 

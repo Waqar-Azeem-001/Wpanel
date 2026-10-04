@@ -12,12 +12,12 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: wpanel
-          POSTGRES_USER: wpanel
-          POSTGRES_PASSWORD: wpanel
+          POSTGRES_DB: whpanel
+          POSTGRES_USER: whpanel
+          POSTGRES_PASSWORD: whpanel
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U wpanel -d wpanel"
+          --health-cmd "pg_isready -U whpanel -d whpanel"
           --health-interval 5s --health-timeout 5s --health-retries 10
       redis:
         image: redis:7
@@ -27,7 +27,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
 
     env:
-      DATABASE_URL: postgres://wpanel:wpanel@localhost:5432/wpanel
+      DATABASE_URL: postgres://whpanel:whpanel@localhost:5432/whpanel
       REDIS_URL: redis://localhost:6379/0
       DJANGO_SECRET_KEY: ci-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz
 
