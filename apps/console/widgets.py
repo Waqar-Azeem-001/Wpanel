@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 from typing import Callable
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.cache import cache
@@ -139,8 +140,8 @@ def _celery():
 
 
 def _public_address():
-    ok = settings.SITE_URL.startswith("https://")
-    return ok, settings.SITE_URL if ok else f"{settings.SITE_URL}: emailed links need the public https:// address"
+    ok = urlsplit(settings.SITE_URL).scheme == "https"
+    return ok, settings.SITE_URL if ok else f"{settings.SITE_URL}: emailed links need the public secure address"
 
 
 def _error_tracking():
