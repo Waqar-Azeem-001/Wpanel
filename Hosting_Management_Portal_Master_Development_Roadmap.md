@@ -928,6 +928,14 @@ Before marking any phase 🟢:
 | E14 Nine owner requests 2026-10-03 (quote PDF footer/highlight, client alternate email, self-service contact invites, per-staff extra permissions, optional invoice email at Add Order + manual "Email invoice", domain registration manual/auto switch, Fraud status gates client delete, Abuse support department, upgrade proration reversed to preserve the renewal date) | 🟢 local (not deployed) | 2157 ✅ | ✅ 5 staff/customer screens + a real rendered quote PDF, no JS errors | crawler green | — |
 | D5 Visual QA & Polish (Rule 1 found most already built in D7/D8/D1/E14; closed 4 remaining gaps: pricing table @375px, a 400-page test, three empty-state rows, print stylesheet for invoice/quote actions) | 🟢 local (not deployed) | 2169 ✅ | ✅ 375px screenshot + print-media screenshot, no JS errors | crawler green | — |
 
+## Next-generation track (`WHPANEL_NEXT_GENERATION_ROADMAP_FOR_CLAUDE.md`; local only, started 2026-10-05)
+
+| Slice | Status | Notes |
+|---|---|---|
+| H0 Hosting control architecture and provider abstraction | 🟢 local | `docs/h0-hosting-control-architecture.md`: capability contracts, one gateway (`apps/hosting/control.py`), `GET /api/v1/hosting-accounts/{id}/capabilities/`; 14 new tests |
+| H1 Websites and hosting dashboard | ⬜ next | Buildable with the manual adapter |
+| H2-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+
 ## Recommended order
 
 D0 ✅ → D1 ✅ → D2 ✅ → D3 ✅ → D3b ✅ → D4 + 15 Admin Operations ✅ → D6 Sign-in, shell and Users ✅ (local) → D7 Visual system and dashboards ✅ (local) → D8 Layout change ✅ (local) → 16 Security ✅ (local) → 17 Reliability ✅ (local) → D5 Visual QA ✅ (local) → 18 ✅ (local) → **19 (next)**

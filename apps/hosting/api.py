@@ -1,5 +1,5 @@
 from django_filters import rest_framework as filters
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +9,7 @@ from apps.clients.models import Client
 from apps.lifecycle.serializers import LifecycleStageMixin
 from apps.products.models import Product, Server
 
-from . import services
+from . import control, services
 from .models import HostingAccount
 
 
@@ -158,6 +158,13 @@ class HostingAccountViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, vi
     def sync_status(self, request, *args, **kwargs):
         account = services.sync_status(request.user, self.get_object(), request=request)
         return Response(HostingAccountSerializer(account).data)
+
+    @extend_schema(request=None, responses=inline_serializer("HostingCapabilities", {
+        "capabilities": serializers.ListField(child=serializers.CharField())}))
+    @action(detail=True, methods=["get"])
+    def capabilities(self, request, *args, **kwargs):
+        """What can be managed on this account, whichever kind of server it lives on (provider-neutral)."""
+        return Response({"capabilities": control.capabilities_for(self.get_object())})
 
     @extend_schema(request=None, responses=HostingAccountSerializer)
     @action(detail=True, methods=["post"], url_path="sync-usage")
