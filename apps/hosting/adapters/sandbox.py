@@ -13,17 +13,24 @@ The rules, all enforced here and not left to callers:
 
 Failures raise ``HostingError`` with a plain-language message, which the gateway turns into a normal error for the user.
 """
+import json
 import os
 import shutil
+import uuid
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 from .base import HostingError
-from .capabilities import FileEntry
+from .capabilities import FileEntry, TrashItem
 
 MAX_PATH_LENGTH = 1024
 MAX_NAME_LENGTH = 255
 MAX_SEARCH_RESULTS = 200
+MAX_ARCHIVE_ENTRIES = 5000
+MAX_ARCHIVE_BYTES = 200_000_000
+TRASH_DIR = ".trash"  # reserved: holds deleted items until they are restored or emptied
+TRASH_INDEX = ".index.json"
 MAX_SEARCH_VISITED = 5000  # stop walking a huge tree: a search is a convenience, not a crawl
 
 
@@ -65,6 +72,8 @@ class Sandbox:
 
     def resolve(self, rel, *, must_exist=True) -> Path:
         rel = clean_relative(rel)
+        if rel.split("/")[0] == TRASH_DIR:
+            raise HostingError("That folder is reserved for the trash.")
         current = self._real_root
         for part in [p for p in rel.split("/") if p]:
             current = current / part
@@ -94,7 +103,8 @@ class Sandbox:
         folder = self.resolve(rel)
         if not folder.is_dir():
             raise HostingError("That is a file, not a folder.")
-        entries = [self._entry(p) for p in folder.iterdir() if not p.is_symlink()]
+        entries = [self._entry(p) for p in folder.iterdir()
+                   if not p.is_symlink() and not (folder == self._real_root and p.name == TRASH_DIR)]
         return sorted(entries, key=lambda e: (not e.is_dir, e.name.lower()))
 
     def read_file(self, rel, *, max_bytes):
@@ -190,7 +200,7 @@ class Sandbox:
             raise HostingError("Search inside a folder.")
         found, visited = [], 0
         for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = [d for d in dirnames if not Path(dirpath, d).is_symlink()]
+            dirnames[:] = [d for d in dirnames if not Path(dirpath, d).is_symlink() and d != TRASH_DIR]
             for name in dirnames + filenames:
                 visited += 1
                 path = Path(dirpath, name)
@@ -199,3 +209,176 @@ class Sandbox:
                 if len(found) >= MAX_SEARCH_RESULTS or visited >= MAX_SEARCH_VISITED:
                     return sorted(found, key=lambda e: (not e.is_dir, e.path.lower()))
         return sorted(found, key=lambda e: (not e.is_dir, e.path.lower()))
+
+    # --- Archives ------------------------------------------------------------------------------------------------
+
+    def archive_paths(self, rels, archive_rel):
+        """Zip the given files and folders into one new ``.zip`` (never overwriting anything)."""
+        archive_rel = clean_relative(archive_rel)
+        if not archive_rel or not archive_rel.lower().endswith(".zip"):
+            raise HostingError("Name the archive with a .zip ending.")
+        clean_name(archive_rel.rsplit("/", 1)[-1])
+        target = self.resolve(archive_rel, must_exist=False)
+        if target.exists():
+            raise HostingError("Something with that name already exists.")
+        if not target.parent.is_dir():
+            raise HostingError("The destination folder does not exist.")
+        sources = []
+        for rel in rels:
+            source = self.resolve(rel)
+            if source == self._real_root:
+                raise HostingError("Your website's main folder cannot be archived as a whole; pick what is inside it.")
+            sources.append(source)
+        if not sources:
+            raise HostingError("Choose what to put in the archive.")
+        total, count = 0, 0
+        try:
+            with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
+                for source in sources:
+                    base = source.parent
+                    walk = [source]
+                    if source.is_dir():
+                        walk = [source] + [Path(d, n) for d, ds, fs in os.walk(source) for n in ds + fs]
+                    for path in walk:
+                        if path.is_symlink() or path.resolve() == target.resolve() or self._real_root / TRASH_DIR in path.parents:
+                            continue
+                        count += 1
+                        if count > MAX_ARCHIVE_ENTRIES:
+                            raise HostingError("That is too many files for one archive.")
+                        arcname = path.relative_to(base).as_posix()
+                        if path.is_dir():
+                            zf.writestr(arcname + "/", b"")
+                        else:
+                            total += path.stat().st_size
+                            if total > MAX_ARCHIVE_BYTES:
+                                raise HostingError("Those files are too large for one archive.")
+                            zf.write(path, arcname)
+        except Exception:
+            target.unlink(missing_ok=True)
+            raise
+        return count
+
+    def extract_archive(self, rel, dest_rel):
+        """Unpack a ``.zip`` into ``dest_rel`` (created if missing). Refuses anything unsafe or conflicting, all or nothing."""
+        source = self.resolve(rel)
+        if source.is_dir() or not source.name.lower().endswith(".zip") or not zipfile.is_zipfile(source):
+            raise HostingError("That is not a .zip archive.")
+        dest_rel = clean_relative(dest_rel)
+        destination = self.resolve(dest_rel, must_exist=False)
+        if destination.exists() and not destination.is_dir():
+            raise HostingError("Something with that name already exists.")
+        if not destination.parent.is_dir():
+            raise HostingError("The destination folder does not exist.")
+        with zipfile.ZipFile(source) as zf:
+            infos = zf.infolist()
+            if len(infos) > MAX_ARCHIVE_ENTRIES:
+                raise HostingError("That archive has too many files.")
+            if sum(i.file_size for i in infos) > MAX_ARCHIVE_BYTES:
+                raise HostingError("That archive is too large to unpack here.")
+            plan = []
+            for info in infos:
+                name = info.filename.replace("\\", "/")
+                is_dir = name.endswith("/")
+                try:
+                    member = clean_relative(name.rstrip("/"))
+                except HostingError:
+                    raise HostingError("That archive contains an unsafe path, so it was not unpacked.")
+                if not member:
+                    continue
+                if member.split("/")[0] == TRASH_DIR or (info.external_attr >> 16) & 0o170000 == 0o120000:
+                    raise HostingError("That archive contains something that is not allowed, so it was not unpacked.")
+                target_rel = f"{dest_rel}/{member}" if dest_rel else member
+                target = self.resolve(target_rel, must_exist=False)
+                if not is_dir and target.exists():
+                    raise HostingError(f"'{member}' already exists, so nothing was unpacked.")
+                plan.append((info, target, is_dir))
+            destination.mkdir(exist_ok=True)
+            for info, target, is_dir in plan:
+                if is_dir:
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(info) as src, open(target, "wb") as out:
+                    shutil.copyfileobj(src, out)
+        return len(plan)
+
+    # --- Trash ---------------------------------------------------------------------------------------------------
+
+    def _trash(self) -> Path:
+        return self._real_root / TRASH_DIR
+
+    def _read_index(self) -> dict:
+        index = self._trash() / TRASH_INDEX
+        try:
+            return json.loads(index.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+
+    def _write_index(self, data: dict):
+        self._trash().mkdir(exist_ok=True)
+        (self._trash() / TRASH_INDEX).write_text(json.dumps(data), encoding="utf-8")
+
+    def trash_path(self, rel):
+        """Move a file or folder to the trash (recoverable). Returns the trash id."""
+        source = self.resolve(rel)
+        if source == self._real_root:
+            raise HostingError("Your website's main folder cannot be deleted.")
+        item_id = uuid.uuid4().hex[:12]
+        original = self.relative(source)
+        self._trash().mkdir(exist_ok=True)
+        size = None if source.is_dir() else source.stat().st_size
+        shutil.move(str(source), str(self._trash() / item_id))
+        index = self._read_index()
+        index[item_id] = {"name": source.name, "original": original, "is_dir": source.is_dir(), "size": size,
+                          "deleted_at": datetime.now(timezone.utc).isoformat()}
+        self._write_index(index)
+        return item_id
+
+    def list_trash(self):
+        index = self._read_index()
+        items = []
+        for item_id, meta in index.items():
+            if (self._trash() / item_id).exists():
+                items.append(TrashItem(item_id=item_id, name=meta["name"], original_path=meta["original"],
+                                       is_dir=meta["is_dir"], deleted_at=meta["deleted_at"], size_bytes=meta.get("size")))
+        return sorted(items, key=lambda i: i.deleted_at, reverse=True)
+
+    def restore_trash(self, item_id):
+        index = self._read_index()
+        meta = index.get(item_id)
+        stored = self._trash() / item_id if item_id and "/" not in item_id and "\\" not in item_id else None
+        if meta is None or stored is None or not stored.exists():
+            raise HostingError("That item is no longer in the trash.")
+        original = clean_relative(meta["original"])
+        parent_rel = original.rsplit("/", 1)[0] if "/" in original else ""
+        try:
+            parent = self.resolve(parent_rel)
+            if not parent.is_dir():
+                raise HostingError("gone")
+        except HostingError:
+            parent_rel, parent = "", self._real_root  # the old folder is gone: put it back at the top
+        name, candidate, n = meta["name"], None, 0
+        while candidate is None or candidate.exists():
+            label = name if n == 0 else f"{name} (restored{'' if n == 1 else ' ' + str(n)})"
+            candidate = parent / label
+            n += 1
+        shutil.move(str(stored), str(candidate))
+        del index[item_id]
+        self._write_index(index)
+        return self.relative(candidate)
+
+    def purge_trash(self, item_id=None):
+        """Delete one trashed item for good, or (with no id) empty the whole trash."""
+        if item_id is None:
+            shutil.rmtree(self._trash(), ignore_errors=True)
+            return
+        index = self._read_index()
+        if item_id not in index or "/" in item_id or "\\" in item_id:
+            raise HostingError("That item is no longer in the trash.")
+        stored = self._trash() / item_id
+        if stored.is_dir():
+            shutil.rmtree(stored)
+        elif stored.exists():
+            stored.unlink()
+        del index[item_id]
+        self._write_index(index)

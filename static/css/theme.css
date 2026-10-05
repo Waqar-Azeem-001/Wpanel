@@ -461,3 +461,16 @@ pre.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; 
 @media (max-width: 575.98px) { .fm-inline { flex-wrap: wrap; width: 100%; } .fm-inline input[type="text"], .fm-inline input[type="file"] { width: 100%; flex: 1; } }
 .fm-inline .form-control, .fm-search .form-control { margin: 0; min-height: 2.1rem; padding: .3rem .65rem; font-size: .9rem; }
 .fm-inline, .fm-search { margin: 0; }
+
+/* File manager: visible row actions, selection bar, trash */
+.fm-head-right { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.fm-check { width: 2.2rem; }
+.fm-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: .15rem; flex-wrap: wrap; }
+.fm-icon { display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 8px; background: transparent;
+  color: var(--muted); text-decoration: none; cursor: pointer; font-size: 1rem; }
+.fm-icon:hover, .fm-icon:focus-visible { background: var(--surface-2); color: var(--accent-ink); }
+.fm-icon.is-danger:hover, .fm-icon.is-danger:focus-visible { background: var(--danger-bg); color: var(--danger); }
+.fm-selection { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .55rem .8rem; margin-bottom: .6rem; border-radius: 10px;
+  background: var(--accent-subtle); color: var(--accent-ink); }
+.fm-selection[hidden] { display: none; }
+.fm-zipname { width: 14rem; margin: 0; min-height: 2.1rem; }

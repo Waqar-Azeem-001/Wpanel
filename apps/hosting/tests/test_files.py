@@ -248,3 +248,172 @@ def test_uploads_over_the_limit_are_refused_and_changes_are_audited_without_cont
     events = AuditEvent.objects.filter(action="hosting.control")
     assert events.filter(metadata__operation="write_file", metadata__path="public_html/index.html").exists()
     assert "classified-text-123" not in str(list(events.values_list("metadata", flat=True)))
+
+
+# --- Trash, zip and extract (sandbox) ---------------------------------------------------------------------------
+
+def test_deleting_moves_to_the_trash_and_restore_puts_it_back(box):
+    box.write_file("public_html/a.txt", b"keep me")
+    item_id = box.trash_path("public_html/a.txt")
+    assert "a.txt" not in [e.name for e in box.list_files("public_html")]
+    [item] = box.list_trash()
+    assert item.item_id == item_id and item.name == "a.txt" and item.original_path == "public_html/a.txt"
+    assert box.restore_trash(item_id) == "public_html/a.txt"
+    assert box.read_file("public_html/a.txt", max_bytes=100) == b"keep me" and box.list_trash() == []
+
+
+def test_the_trash_folder_is_hidden_reserved_and_never_searched(box):
+    box.trash_path("public_html/index.html")
+    assert ".trash" not in [e.name for e in box.list_files("")]
+    for attempt in (lambda: box.list_files(".trash"), lambda: box.read_file(".trash/.index.json", max_bytes=999),
+                    lambda: box.delete_path(".trash"), lambda: box.rename_path(".trash", "x")):
+        with pytest.raises(HostingError):
+            attempt()
+    assert box.search_files("", "index") == []  # the trashed file is not found by name either
+
+
+def test_restoring_when_the_name_is_taken_or_the_folder_is_gone_never_overwrites(box):
+    box.write_file("public_html/a.txt", b"old")
+    first = box.trash_path("public_html/a.txt")
+    box.write_file("public_html/a.txt", b"new")
+    restored = box.restore_trash(first)
+    assert restored == "public_html/a.txt (restored)"
+    assert box.read_file("public_html/a.txt", max_bytes=10) == b"new"
+    box.make_directory("public_html/tmp")
+    box.write_file("public_html/tmp/b.txt", b"b")
+    second = box.trash_path("public_html/tmp/b.txt")
+    box.delete_path("public_html/tmp")
+    assert box.restore_trash(second) == "b.txt"  # its folder is gone: back at the top, not lost
+
+
+def test_purge_one_and_empty_the_trash(box):
+    one = box.trash_path("public_html/index.html")
+    box.purge_trash(one)
+    assert box.list_trash() == []
+    with pytest.raises(HostingError):
+        box.purge_trash(one)
+    box.write_file("x.txt", b"1")
+    box.trash_path("x.txt")
+    box.purge_trash(None)
+    assert box.list_trash() == []
+    with pytest.raises(HostingError):
+        box.restore_trash("../escape")
+
+
+def test_zip_then_extract_round_trips_files_and_folders(box):
+    box.make_directory("public_html/css")
+    box.write_file("public_html/css/a.css", b"body{}")
+    count = box.archive_paths(["public_html"], "site.zip")
+    assert count >= 3 and box.read_file("site.zip", max_bytes=10_000_000)[:2] == b"PK"
+    box.extract_archive("site.zip", "unpacked")
+    assert box.read_file("unpacked/public_html/css/a.css", max_bytes=100) == b"body{}"
+    with pytest.raises(HostingError):
+        box.archive_paths(["public_html"], "site.zip")  # never overwrites
+    with pytest.raises(HostingError):
+        box.archive_paths(["public_html"], "no-ending")
+    with pytest.raises(HostingError):
+        box.archive_paths([""], "root.zip")  # the main folder as a whole
+
+
+def test_an_archive_never_contains_itself(box):
+    import zipfile
+
+    box.archive_paths(["public_html"], "public_html/self.zip")
+    with zipfile.ZipFile(box.root / "public_html" / "self.zip") as archive:
+        assert not [n for n in archive.namelist() if n.endswith("self.zip")]
+
+
+def _evil_zip(path, name, data=b"x", symlink=False):
+    import zipfile
+
+    with zipfile.ZipFile(path, "w") as archive:
+        info = zipfile.ZipInfo(name)
+        if symlink:
+            info.external_attr = 0o120777 << 16
+        archive.writestr(info, data)
+
+
+@pytest.mark.parametrize("name", ["../evil.txt", "a/../../evil.txt", "/abs.txt", "C:/evil.txt", ".trash/x", "ok/../../e"])
+def test_extracting_refuses_an_archive_with_an_unsafe_member_before_writing_anything(box, tmp_path, name):
+    _evil_zip(box.root / "bad.zip", name)
+    with pytest.raises(HostingError):
+        box.extract_archive("bad.zip", "out")
+    assert not (tmp_path / "evil.txt").exists()
+    assert not (box.root / "out").exists()  # nothing at all was created
+
+
+def test_extracting_refuses_links_conflicts_and_non_archives(box):
+    import zipfile
+
+    _evil_zip(box.root / "link.zip", "l", b"/etc/passwd", symlink=True)
+    with pytest.raises(HostingError):
+        box.extract_archive("link.zip", "out")
+    with zipfile.ZipFile(box.root / "dup.zip", "w") as archive:
+        archive.writestr("index.html", "from zip")
+    box.make_directory("site")
+    box.write_file("site/index.html", b"mine")
+    with pytest.raises(HostingError):
+        box.extract_archive("dup.zip", "site")  # would overwrite
+    assert box.read_file("site/index.html", max_bytes=100) == b"mine"
+    box.write_file("fake.zip", b"not really a zip")
+    with pytest.raises(HostingError):
+        box.extract_archive("fake.zip", "out2")
+
+
+def test_zip_bombs_are_refused_by_size(box, monkeypatch):
+    import zipfile
+
+    from apps.hosting.adapters import sandbox
+
+    monkeypatch.setattr(sandbox, "MAX_ARCHIVE_BYTES", 100)
+    with zipfile.ZipFile(box.root / "big.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("zeros.bin", bytes(5000))
+    with pytest.raises(HostingError):
+        box.extract_archive("big.zip", "out")
+
+
+# --- Trash, zip and extract on the screens -----------------------------------------------------------------------
+
+def test_delete_goes_to_the_trash_page_where_it_can_be_restored_or_emptied(client, owner, account):
+    from apps.hosting import control
+
+    client.force_login(owner)
+    act = url(account, "do/")
+    client.post(act, {"action": "delete", "path": "public_html", "item": "public_html/robots.txt"})
+    assert "robots.txt" not in client.get(url(account), {"path": "public_html"}).content.decode()
+    trash = client.get(url(account, "trash/")).content.decode()
+    assert "robots.txt" in trash and "Restore" in trash and "Empty trash" in trash
+    [item] = control.perform(owner, account, "files", "list_trash")
+    client.post(act, {"action": "restore", "trash_id": item.item_id})
+    assert "robots.txt" in client.get(url(account), {"path": "public_html"}).content.decode()
+    client.post(act, {"action": "delete", "ids": ["public_html/robots.txt", "logs"], "path": ""})
+    assert len(control.perform(owner, account, "files", "list_trash")) == 2
+    client.post(act, {"action": "empty_trash"})
+    assert control.perform(owner, account, "files", "list_trash") == []
+
+
+def test_zip_selected_items_and_extract_them_again(client, owner, account):
+    client.force_login(owner)
+    act = url(account, "do/")
+    client.post(act, {"action": "zip", "ids": ["public_html"], "path": "", "archive_name": "backup"})
+    page = client.get(url(account)).content.decode()
+    assert "backup.zip" in page and "Extract backup.zip" in page
+    client.post(act, {"action": "extract", "path": "", "item": "backup.zip"})
+    inner = client.get(url(account), {"path": "backup/public_html"}).content.decode()
+    assert "index.html" in inner
+
+
+def test_the_file_manager_shows_visible_actions_not_a_hidden_menu(client, owner, account):
+    client.force_login(owner)
+    page = client.get(url(account), {"path": "public_html"}).content.decode()
+    for label in ("Edit index.html", "Download index.html", "Rename index.html", "Copy index.html", "Delete index.html"):
+        assert label in page, label
+    assert "dropdown-menu" not in page.split("fm-table")[1] and "data-fm-selection" in page and "Zip" in page
+
+
+def test_trash_and_zip_changes_are_audited(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "delete", "path": "", "item": "logs"})
+    client.post(url(account, "do/"), {"action": "zip", "ids": ["public_html"], "path": ""})
+    operations = set(AuditEvent.objects.filter(action="hosting.control").values_list("metadata__operation", flat=True))
+    assert {"trash_path", "archive_paths"} <= operations

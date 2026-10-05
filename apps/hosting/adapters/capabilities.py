@@ -60,6 +60,16 @@ class FileEntry:
 
 
 @dataclass(frozen=True)
+class TrashItem:
+    item_id: str
+    name: str
+    original_path: str
+    is_dir: bool
+    deleted_at: str  # ISO 8601
+    size_bytes: Optional[int] = None
+
+
+@dataclass(frozen=True)
 class DatabaseInfo:
     name: str
     size_mb: Optional[float] = None
@@ -165,6 +175,30 @@ class FilesCapability(ABC):
 
     @abstractmethod
     def delete_path(self, username: str, path: str) -> None: ...
+
+    @abstractmethod
+    def archive_paths(self, username: str, paths: list, archive_path: str) -> int:
+        """Zip ``paths`` into a new archive at ``archive_path`` (never overwriting); returns the number of entries."""
+
+    @abstractmethod
+    def extract_archive(self, username: str, path: str, destination: str) -> int:
+        """Unpack the .zip at ``path`` into ``destination`` (all or nothing, nothing overwritten); returns the count."""
+
+    @abstractmethod
+    def trash_path(self, username: str, path: str) -> str:
+        """Move to the trash (recoverable); returns the trash id."""
+
+    @abstractmethod
+    def list_trash(self, username: str) -> list:
+        """``TrashItem`` rows, newest first."""
+
+    @abstractmethod
+    def restore_trash(self, username: str, item_id: str) -> str:
+        """Put a trashed item back; returns where it went."""
+
+    @abstractmethod
+    def purge_trash(self, username: str, item_id: Optional[str]) -> None:
+        """Delete one trashed item for good, or the whole trash when ``item_id`` is None."""
 
     @abstractmethod
     def search_files(self, username: str, path: str, query: str) -> list:
@@ -332,7 +366,8 @@ OPERATIONS = {
     Capability.ACCOUNT: frozenset({"get_status"}),
     Capability.USAGE: frozenset({"get_usage"}),
     Capability.FILES: frozenset({"list_files", "read_file", "write_file", "make_directory", "rename_path",
-                                 "copy_path", "delete_path", "search_files"}),
+                                 "copy_path", "delete_path", "search_files", "archive_paths", "extract_archive",
+                                 "trash_path", "list_trash", "restore_trash", "purge_trash"}),
     Capability.DATABASES: frozenset({"list_databases", "create_database", "delete_database", "list_database_users",
                                      "create_database_user", "set_database_user_password", "delete_database_user",
                                      "grant_database_access"}),
@@ -347,7 +382,7 @@ OPERATIONS = {
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
-READ_OPERATIONS = frozenset({"get_status", "get_usage", "list_files", "read_file", "search_files", "list_databases",
+READ_OPERATIONS = frozenset({"get_status", "get_usage", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})

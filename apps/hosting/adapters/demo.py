@@ -82,6 +82,24 @@ class DemoAdapter(FilesCapability, SslCapability, PhpCapability, ManualAdapter):
     def search_files(self, username, path, query):
         return sandbox_for(username).search_files(path, query)
 
+    def archive_paths(self, username, paths, archive_path):
+        return sandbox_for(username).archive_paths(paths, archive_path)
+
+    def extract_archive(self, username, path, destination):
+        return sandbox_for(username).extract_archive(path, destination)
+
+    def trash_path(self, username, path):
+        return sandbox_for(username).trash_path(path)
+
+    def list_trash(self, username):
+        return sandbox_for(username).list_trash()
+
+    def restore_trash(self, username, item_id):
+        return sandbox_for(username).restore_trash(item_id)
+
+    def purge_trash(self, username, item_id):
+        sandbox_for(username).purge_trash(item_id)
+
     # --- SSL ---------------------------------------------------------------------------------------------------
 
     def get_ssl_status(self, username, domain):

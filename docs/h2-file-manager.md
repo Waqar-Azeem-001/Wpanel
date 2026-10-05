@@ -30,7 +30,21 @@ every parameter never reach a file outside the website, a stranger gets 404, ove
 content). Hosting, client-area, crawler, link-integrity, design and navigation suites pass. Looked at in a real browser at
 1440 px (one layout bug found and fixed: the site's script wrapped the toolbar buttons in a form footer bar; opted out).
 
+## Update 2026-10-06: owner feedback and the second pass
+The first screen hid Download/Delete in a three-dot menu that was also cut off by the table's scroll area. Rebuilt:
+- **Visible row actions** (Edit, Download, Rename, Copy, Extract for .zip, Delete) as icon buttons with tooltips and
+  accessible names; Rename and Copy open a small dialog. No dropdown inside the table any more.
+- **Selection bar**: tick items (or the header box) and a bar appears with an optional archive name, **Zip** and **Delete**.
+- **Trash**: delete now moves to a hidden, reserved `.trash` folder; a Trash page lists items with Restore, Delete
+  forever and Empty trash. Restoring never overwrites (a taken name becomes "name (restored)"; a missing folder puts the
+  item back at the top). The trash is invisible to browsing, search and every other operation.
+- **Zip and extract** in the sandbox: archives never overwrite and never include themselves; extraction is all or nothing
+  and refuses unsafe member paths (`..`, absolute, drive letters, the trash), symbolic links, name conflicts, non-zips,
+  more than 5000 entries or 200 MB unpacked (zip bombs).
+- Contract v1 grew: `archive_paths`, `extract_archive`, `trash_path`, `list_trash`, `restore_trash`, `purge_trash`.
+- 54 file tests now (18 added), browser-checked with no console errors.
+
 ## Deferred inside H2 (listed in the roadmap but not built yet)
-Permissions editing, archive and extract, drag-and-drop upload, multi-select bulk actions, folder size, and
+Permissions editing, drag-and-drop upload, bulk copy and move, automatic emptying of old trash, folder size, and
 checking at 375 / 768 px. The cPanel provider cannot offer files until H14 and a verified WHM adapter; a native node
 needs the N track.

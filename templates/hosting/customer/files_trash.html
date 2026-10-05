@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Trash" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<section class="card fm">
+  <div class="card-body">
+    <div class="fm-head">
+      <h2 class="h5 mb-0"><i class="bi bi-trash3" aria-hidden="true"></i> {% trans "Trash" %}</h2>
+      <div class="fm-head-right">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to files" %}</a>
+        {% if items %}<form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="empty_trash"><button class="btn btn-sm btn-outline-danger" type="submit" data-confirm="{% trans 'Delete everything in the trash for good? This cannot be undone.' %}"><i class="bi bi-trash3-fill" aria-hidden="true"></i> {% trans "Empty trash" %}</button></form>{% endif %}
+      </div>
+    </div>
+    <p class="text-secondary small">{% trans "Deleted files wait here until you restore them or empty the trash. They still count towards your storage." %}</p>
+    <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+      <thead><tr><th scope="col">{% trans "Name" %}</th><th scope="col">{% trans "Was in" %}</th><th scope="col" class="text-end">{% trans "Size" %}</th><th scope="col">{% trans "Deleted" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+      <tbody>
+      {% for item in items %}
+        <tr>
+          <td class="fm-name">{% if item.is_dir %}<i class="bi bi-folder-fill fm-folder" aria-hidden="true"></i>{% else %}<i class="bi bi-file-earmark" aria-hidden="true"></i>{% endif %} {{ item.name }}</td>
+          <td class="text-secondary">{% if item.original_path %}{{ item.original_path }}{% else %}{% trans "Main folder" %}{% endif %}</td>
+          <td class="text-end text-secondary">{% if item.is_dir %}&mdash;{% else %}{{ item.size_bytes|filesizeformat }}{% endif %}</td>
+          <td class="text-secondary">{{ item.deleted_at|slice:":10" }}</td>
+          <td class="text-end"><div class="fm-actions">
+            <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="restore"><input type="hidden" name="trash_id" value="{{ item.item_id }}"><button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {% trans "Restore" %}</button></form>
+            <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="purge"><input type="hidden" name="trash_id" value="{{ item.item_id }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete' %} {{ item.name }} {% trans 'for good? This cannot be undone.' %}" title="{% trans 'Delete forever' %}" aria-label="{% trans 'Delete forever' %} {{ item.name }}"><i class="bi bi-x-octagon" aria-hidden="true"></i></button></form>
+          </div></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-secondary">{% trans "The trash is empty." %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</section>
+{% endblock %}
