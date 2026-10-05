@@ -20,17 +20,18 @@
       {% if card.show_usage %}
         {% include "hosting/customer/_meter.html" with label=_("Storage") meter=card.disk %}
         {% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}
-        {% if card.ssl or card.php_version %}
         <dl class="row small mb-2">
-          {% if card.ssl %}<dt class="col-5">{% trans "SSL" %}</dt><dd class="col-7 mb-0">{% if card.ssl.active %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</dd>{% endif %}
-          {% if card.php_version %}<dt class="col-5">{% trans "PHP" %}</dt><dd class="col-7 mb-0">{{ card.php_version }}</dd>{% endif %}
+          <dt class="col-5">{% trans "Primary domain" %}</dt><dd class="col-7 mb-0 text-break">{{ card.account.domain }}</dd>
+          <dt class="col-5">{% trans "SSL" %}</dt><dd class="col-7 mb-0">{% if card.ssl %}{% if card.ssl.active %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}{% else %}<span class="text-secondary">{% trans "Not reported yet" %}</span>{% endif %}</dd>
+          <dt class="col-5">{% trans "PHP" %}</dt><dd class="col-7 mb-0">{% if card.php_version %}{{ card.php_version }}{% else %}<span class="text-secondary">{% trans "Not reported yet" %}</span>{% endif %}</dd>
         </dl>
-        {% endif %}
       {% elif card.account.status == "pending" %}
         <p class="small text-secondary">{% trans "Being set up. We will email you when it is ready." %}</p>
+      {% elif card.account.status == "failed" %}
+        <p class="small text-danger">{% trans "Setup did not complete. Our team has been notified; open a ticket if you need it sooner." %}</p>
       {% endif %}
       <div class="mt-auto pt-2 d-flex flex-wrap gap-2">
-        <a class="btn btn-sm btn-primary" href="{{ card.manage_url }}">{% trans "Manage" %}</a>
+        <a class="btn btn-sm btn-primary" href="{{ card.manage_url }}">{% trans "Manage hosting" %}</a>
         {% if card.upgrade_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ card.upgrade_url }}">{% trans "Upgrade" %}</a>{% endif %}
         <a class="btn btn-sm btn-outline-secondary" href="{% url 'support_customer:new' %}">{% trans "Get help" %}</a>
       </div>

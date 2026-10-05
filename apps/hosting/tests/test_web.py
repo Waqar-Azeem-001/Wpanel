@@ -183,8 +183,9 @@ def test_the_websites_page_shows_a_card_per_account_with_plan_usage_and_actions(
     assert "<progress" in page and 'value="24"' in page
     assert "38 MB / unlimited" in page
     assert f'href="/account/hosting/{account.pk}/"' in page and "Upgrade" in page
-    # the provider reports neither SSL nor PHP yet, so the card shows neither (no placeholder dressed as data)
-    assert ">SSL<" not in page and ">PHP<" not in page
+    # the provider reports neither SSL nor PHP yet: the rows are there and say so, never invented values
+    assert ">SSL<" in page and ">PHP<" in page and page.count("Not reported yet") == 2
+    assert "Primary domain" in page and "Manage hosting" in page
 
 
 def test_a_pending_account_shows_a_setup_note_instead_of_usage(client, manager, owner, client_obj, product):
