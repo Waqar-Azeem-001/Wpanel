@@ -151,3 +151,75 @@ def test_nav_shows_hosting_links_by_role(client, manager, customer):
     client.force_login(customer)
     content = client.get("/account/profile/").content
     assert b"/staff/hosting/" not in content and b"/account/hosting/" in content
+
+
+# --- The Websites dashboard (H1) ---------------------------------------------------------------
+
+def test_the_usage_meter_handles_unknown_no_limit_and_thresholds():
+    from apps.hosting import dashboard
+
+    assert dashboard.format_mb(None) is None and dashboard.format_mb(120) == "120 MB"
+    assert dashboard.format_mb(4915) == "4.8 GB" and dashboard.format_mb(2048) == "2 GB"
+    unknown = dashboard.meter(None, 1000)
+    assert unknown["known"] is False and unknown["percent"] is None
+    unlimited = dashboard.meter(500, None)
+    assert unlimited["known"] is True and unlimited["percent"] is None and unlimited["limit"] is None
+    assert dashboard.meter(500, 1000)["state"] == "ok"
+    assert dashboard.meter(850, 1000)["state"] == "warning"
+    assert dashboard.meter(990, 1000)["state"] == "danger" and dashboard.meter(5000, 1000)["percent"] == 100
+
+
+def test_the_websites_page_shows_a_card_per_account_with_plan_usage_and_actions(client, manager, owner, client_obj, product):
+    account = services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product,
+                                                                              "shop.example.com"))
+    account.disk_used_mb, account.disk_limit_mb = 4915, 20480
+    account.bandwidth_used_mb, account.bandwidth_limit_mb = 38, None
+    account.save(update_fields=["disk_used_mb", "disk_limit_mb", "bandwidth_used_mb", "bandwidth_limit_mb"])
+    client.force_login(owner)
+    response = client.get("/account/hosting/")
+    page = response.content.decode()
+    assert response.status_code == 200 and len(response.context["cards"]) == 1
+    assert "shop.example.com" in page and "Starter" in page and "4.8 GB / 20 GB" in page
+    assert "<progress" in page and 'value="24"' in page
+    assert "38 MB / unlimited" in page
+    assert f'href="/account/hosting/{account.pk}/"' in page and "Upgrade" in page
+    # the provider reports neither SSL nor PHP yet, so the card shows neither (no placeholder dressed as data)
+    assert ">SSL<" not in page and ">PHP<" not in page
+
+
+def test_a_pending_account_shows_a_setup_note_instead_of_usage(client, manager, owner, client_obj, product):
+    services.request_hosting(manager, client_obj, product, "soon.example.com")
+    client.force_login(owner)
+    page = client.get("/account/hosting/").content.decode()
+    assert "soon.example.com" in page and "Being set up" in page and "<progress" not in page
+
+
+def test_a_customer_sees_only_their_own_websites(client, manager, owner, customer, client_obj, product):
+    services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product, "mine.example.com"))
+    client.force_login(customer)
+    assert "mine.example.com" not in client.get("/account/hosting/").content.decode()
+
+
+def test_ssl_and_php_appear_when_the_provider_reports_them(client, manager, owner, client_obj, product, monkeypatch):
+    from apps.hosting import control
+    from apps.hosting.adapters import capabilities as caps
+    from apps.hosting.adapters.manual import ManualAdapter
+
+    class RichProvider(caps.SslCapability, caps.PhpCapability, ManualAdapter):
+        def get_ssl_status(self, username, domain):
+            return caps.SslStatus(domain=domain, active=True)
+
+        def request_ssl(self, username, domain): ...
+
+        def set_https_redirect(self, username, domain, enabled): ...
+
+        def get_php_settings(self, username, domain):
+            return caps.PhpSettings(version="8.3")
+
+        def set_php_settings(self, username, domain, settings): ...
+
+    services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product, "rich.example.com"))
+    monkeypatch.setattr(control, "get_adapter", lambda server: RichProvider(host="h", port=1, credentials={}))
+    client.force_login(owner)
+    page = client.get("/account/hosting/").content.decode()
+    assert ">SSL<" in page and ">PHP<" in page and "8.3" in page

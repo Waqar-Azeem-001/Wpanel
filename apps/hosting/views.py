@@ -13,7 +13,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.orders.models import ItemKind, OrderItem
 
-from . import forms, services
+from . import dashboard, forms, services
 from .models import HostingAccount, HostingStatus
 
 
@@ -47,7 +47,8 @@ def my_hosting_list(request):
         "product", "server").distinct()
     accounts, view_panel = portal.status_filter(request, accounts, HostingStatus.choices,
                                                 url_name="hosting_customer:list", all_label="All services")
-    return render(request, "hosting/customer/list.html", {"accounts": accounts, "sidebar": [view_panel]})
+    return render(request, "hosting/customer/list.html", {
+        "accounts": accounts, "cards": dashboard.website_cards(request.user, accounts), "sidebar": [view_panel]})
 
 
 def _own_account(request, pk):

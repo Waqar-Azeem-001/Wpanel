@@ -933,7 +933,7 @@ Before marking any phase 🟢:
 | Slice | Status | Notes |
 |---|---|---|
 | H0 Hosting control architecture and provider abstraction | 🟢 local | `docs/h0-hosting-control-architecture.md`: capability contracts, one gateway (`apps/hosting/control.py`), `GET /api/v1/hosting-accounts/{id}/capabilities/`; 14 new tests |
-| H1 Websites and hosting dashboard | ⬜ next | Buildable with the manual adapter |
+| H1 Websites and hosting dashboard | 🟡 local (browser pass at 375/768/1280 pending) | `docs/h1-websites-dashboard.md`: card grid with plan, status, storage and bandwidth meters, SSL/PHP when a provider reports them |
 | H2-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order

@@ -1,0 +1,83 @@
+"""
+The customer's Websites dashboard (next-generation roadmap, H1): one card per hosting account with its plan, primary
+domain, status, disk and bandwidth meters, SSL and PHP where the provider can report them, and quick actions.
+
+Everything here is read-only and provider-neutral: usage comes from the account's own stored figures, and SSL/PHP are
+asked of the hosting-control gateway (``apps.hosting.control``) only when the account's provider declares those
+capabilities. A provider that does not (every provider today) simply leaves them off the card - never a placeholder
+that looks like data.
+"""
+from django.urls import reverse
+
+from apps.core.exceptions import ServiceError
+
+from . import control
+from .adapters.capabilities import Capability
+from .models import HostingStatus
+
+WARN_AT = 80
+DANGER_AT = 95
+
+
+def format_mb(value):
+    """``4915`` -> ``"4.8 GB"``; ``120`` -> ``"120 MB"``; ``None`` -> ``None`` (not reported, which is not zero)."""
+    if value is None:
+        return None
+    if value >= 1024:
+        text = f"{value / 1024:.1f}".rstrip("0").rstrip(".")
+        return f"{text} GB"
+    return f"{value} MB"
+
+
+def meter(used_mb, limit_mb):
+    """
+    One usage bar. ``percent`` is None when there is nothing to draw (usage unknown, or no limit to measure against);
+    ``state`` is "ok", "warning" or "danger" so the colour is never the only signal (the text always says the figures).
+    """
+    percent = None
+    if used_mb is not None and limit_mb:
+        percent = min(100, round(used_mb * 100 / limit_mb))
+    state = "ok"
+    if percent is not None and percent >= DANGER_AT:
+        state = "danger"
+    elif percent is not None and percent >= WARN_AT:
+        state = "warning"
+    return {"known": used_mb is not None, "used": format_mb(used_mb),
+            "limit": format_mb(limit_mb) if limit_mb else None, "percent": percent, "state": state}
+
+
+def _optional(user, account, capabilities, capability, operation, *args):
+    """What the provider reports for an optional capability, or None when it does not offer it or cannot answer."""
+    if capability.value not in capabilities:
+        return None
+    try:
+        return control.perform(user, account, capability, operation, *args)
+    except ServiceError:
+        return None
+
+
+def website_card(user, account):
+    try:
+        capabilities = control.capabilities_for(account)
+    except ServiceError:
+        capabilities = []
+    live = account.status in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED)
+    ssl = _optional(user, account, capabilities, Capability.SSL, "get_ssl_status", account.domain) if live else None
+    php = _optional(user, account, capabilities, Capability.PHP, "get_php_settings", account.domain) if live else None
+    return {
+        "account": account,
+        "plan": account.product.name,
+        "show_usage": live,
+        "disk": meter(account.disk_used_mb, account.disk_limit_mb),
+        "bandwidth": meter(account.bandwidth_used_mb, account.bandwidth_limit_mb),
+        "ssl": ssl,
+        "php_version": php.version if php is not None else None,
+        "capabilities": capabilities,
+        "manage_url": reverse("hosting_customer:detail", args=[account.pk]),
+        "upgrade_url": (reverse("renewals_customer:hosting_upgrade", args=[account.pk])
+                        if account.status == HostingStatus.ACTIVE else ""),
+    }
+
+
+def website_cards(user, accounts):
+    return [website_card(user, account) for account in accounts]

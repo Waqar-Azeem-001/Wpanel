@@ -4,24 +4,41 @@
 {% block content %}
 <div class="page-head">
   <h1>{% trans "My Services" %}</h1>
-  <p class="page-sub">Your hosting accounts and their status.</p>
+  <p class="page-sub">{% trans "Your websites and hosting accounts, their status and usage." %}</p>
   <a class="btn btn-primary" href="{% url 'catalog:product_list' %}">{% trans "Order new services" %}</a>
 </div>
-<div class="card">
-  <div class="table-responsive"><table class="table mb-0 align-middle">
-    <thead><tr><th>{% trans "Domain" %}</th><th>{% trans "Product" %}</th><th>{% trans "Next due" %}</th><th>{% trans "Status" %}</th></tr></thead>
-    <tbody>
-    {% for account in accounts %}
-      <tr>
-        <td><a href="{% url 'hosting_customer:detail' account.pk %}">{{ account.domain }}</a></td>
-        <td>{{ account.product.name }}</td>
-        <td>{{ account.expires_at|fdate|default:"—" }}</td>
-        <td>{% status_badge account.status account.get_status_display %}</td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="4" class="text-secondary">{% trans "No services match." %}</td></tr>
-    {% endfor %}
-    </tbody>
-  </table></div>
+{% if cards %}
+<div class="row g-3" data-websites>
+  {% for card in cards %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <section class="card h-100" aria-labelledby="site-{{ card.account.pk }}"><div class="card-body d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+        <h2 class="h5 mb-0 text-break" id="site-{{ card.account.pk }}"><a href="{{ card.manage_url }}">{{ card.account.domain }}</a></h2>
+        {% status_badge card.account.status card.account.get_status_display %}
+      </div>
+      <p class="text-secondary small mb-3">{{ card.plan }}{% if card.account.expires_at %} · {% trans "Next due" %} {{ card.account.expires_at|fdate }}{% endif %}</p>
+      {% if card.show_usage %}
+        {% include "hosting/customer/_meter.html" with label=_("Storage") meter=card.disk %}
+        {% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}
+        {% if card.ssl or card.php_version %}
+        <dl class="row small mb-2">
+          {% if card.ssl %}<dt class="col-5">{% trans "SSL" %}</dt><dd class="col-7 mb-0">{% if card.ssl.active %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</dd>{% endif %}
+          {% if card.php_version %}<dt class="col-5">{% trans "PHP" %}</dt><dd class="col-7 mb-0">{{ card.php_version }}</dd>{% endif %}
+        </dl>
+        {% endif %}
+      {% elif card.account.status == "pending" %}
+        <p class="small text-secondary">{% trans "Being set up. We will email you when it is ready." %}</p>
+      {% endif %}
+      <div class="mt-auto pt-2 d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-primary" href="{{ card.manage_url }}">{% trans "Manage" %}</a>
+        {% if card.upgrade_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ card.upgrade_url }}">{% trans "Upgrade" %}</a>{% endif %}
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'support_customer:new' %}">{% trans "Get help" %}</a>
+      </div>
+    </div></section>
+  </div>
+  {% endfor %}
 </div>
+{% else %}
+<div class="card"><div class="card-body text-secondary">{% trans "No services match." %}</div></div>
+{% endif %}
 {% endblock %}
