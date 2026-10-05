@@ -1,9 +1,11 @@
+from .demo import DemoAdapter
 from .manual import ManualAdapter
 from .whm_api import WhmApiAdapter
 
 ADAPTERS = {
     "manual": ManualAdapter,
     "whm_api": WhmApiAdapter,
+    "demo": DemoAdapter,
 }
 
 

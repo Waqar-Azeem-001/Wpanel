@@ -92,6 +92,7 @@ class ServerKind(models.TextChoices):
 
     MANUAL = "manual", "Manual (no real provisioning - development/testing only)"
     WHM_API = "whm_api", "WHM API"
+    DEMO = "demo", "Demo (sample data - design and testing only)"
 
 
 class Server(TimeStampedModel):
