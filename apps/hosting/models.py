@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlunsplit
 
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
@@ -79,6 +80,11 @@ class HostingAccount(TimeStampedModel):
             models.UniqueConstraint(fields=["username"], condition=models.Q(status__in=LIVE_STATUSES),
                                     name="unique_live_hosting_username")
         ]
+
+    @property
+    def site_url(self):
+        """The public address of the website itself (for a "Visit site" link)."""
+        return urlunsplit(("https", self.domain, "", "", ""))
 
     def __str__(self):
         return f"{self.username} ({self.domain})"

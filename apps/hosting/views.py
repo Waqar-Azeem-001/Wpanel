@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -62,7 +63,22 @@ def _service_page(request, pk, template, **extra):
 
 @login_required
 def my_hosting_detail(request, pk):
-    return _service_page(request, pk, "hosting/customer/detail.html")
+    account = _own_account(request, pk)
+    return render(request, "hosting/customer/detail.html", {
+        "account": account, "card": dashboard.website_card(request.user, account),
+        "sidebar": portal.service_sidebar(request, account)})
+
+
+@login_required
+def my_hosting_section(request, pk, section):
+    """One management section of a website (files, databases, email, ...). Each is built in its own slice; until then
+    the page says what it will do and whether the account's server supports it."""
+    account = _own_account(request, pk)
+    if section not in dashboard.SECTION_BY_KEY:
+        raise Http404
+    return render(request, "hosting/customer/section.html", {
+        "account": account, "section": dashboard.section_page(request.user, account, section),
+        "sidebar": portal.service_sidebar(request, account)})
 
 
 @login_required

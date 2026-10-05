@@ -3,6 +3,16 @@
 {% block title %}{{ account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 {% include "hosting/customer/_header.html" with tab="overview" %}
+{% if card.show_usage %}
+<div class="ws-stats">
+  <section class="ws-stat">{% include "hosting/customer/_meter.html" with label=_("Storage") meter=card.disk %}</section>
+  <section class="ws-stat">{% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}</section>
+  <section class="ws-stat"><span class="site-meter-label">{% trans "SSL" %}</span>
+    <p class="ws-stat-value">{% if card.ssl %}{% if card.ssl.active %}<i class="bi bi-shield-lock-fill text-success" aria-hidden="true"></i> {% trans "Active" %}{% else %}<i class="bi bi-shield-exclamation text-warning" aria-hidden="true"></i> {% trans "Not active" %}{% endif %}{% else %}<span class="text-secondary">{% trans "Not reported yet" %}</span>{% endif %}</p></section>
+  <section class="ws-stat"><span class="site-meter-label">{% trans "PHP" %}</span>
+    <p class="ws-stat-value">{% if card.php_version %}{{ card.php_version }}{% else %}<span class="text-secondary">{% trans "Not reported yet" %}</span>{% endif %}</p></section>
+</div>
+{% endif %}
 <section class="card mb-3"><div class="card-body">
   <h2 class="h5">{% trans "Details" %}</h2>
   <dl class="row mb-0">

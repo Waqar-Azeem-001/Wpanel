@@ -1,7 +1,13 @@
 {% load ui portal i18n %}
 <p class="mb-2"><a href="{% url 'hosting_customer:list' %}">&larr; {% trans "My Services" %}</a></p>
-<div class="page-head">
-  <h1>{{ account.domain }}</h1>
+<header class="ws-head">
+  <span class="site-avatar ws-avatar" aria-hidden="true">{{ account.domain|slice:":1"|upper }}</span>
+  <div class="ws-title">
+    <small class="site-kicker">{% trans "Primary domain" %}</small>
+    <h1>{{ account.domain }}</h1>
+    <p class="site-plan">{{ account.product.name }}{% if account.expires_at %} <span>&middot; {% trans "Next due" %} {{ account.expires_at|fdate }}</span>{% endif %}</p>
+  </div>
   {% status_badge account.status account.get_status_display %}
-</div>
+  <a class="btn btn-sm btn-outline-secondary ws-visit" href="{{ account.site_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Visit site" %}</a>
+</header>
 {% service_tabs account tab %}

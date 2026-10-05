@@ -9,4 +9,5 @@ urlpatterns = [
     path("<int:pk>/", views.my_hosting_detail, name="detail"),
     path("<int:pk>/information/", views.my_hosting_information, name="information"),
     path("<int:pk>/addons/", views.my_hosting_addons, name="addons"),
+    path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

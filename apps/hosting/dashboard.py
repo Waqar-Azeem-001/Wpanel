@@ -86,3 +86,62 @@ _ORDER = {HostingStatus.ACTIVE: 0, HostingStatus.SUSPENDED: 1, HostingStatus.PEN
 def website_cards(user, accounts):
     ordered = sorted(accounts, key=lambda a: (_ORDER.get(a.status, 9), a.domain.lower(), a.pk))
     return [website_card(user, account) for account in ordered]
+
+
+# --- The management workspace menu (the left side of every website page) -----------------------------------------
+
+# group, key, label, icon, capability that must be supported, what the screen will do
+SECTIONS = [
+    ("Files", "files", "File manager", "bi-folder2-open", Capability.FILES,
+     "Browse, upload, edit and organise your website files."),
+    ("Files", "backups", "Backups", "bi-cloud-arrow-up", Capability.BACKUPS,
+     "Create, download and restore backups of your website."),
+    ("Databases", "databases", "MySQL databases", "bi-database", Capability.DATABASES,
+     "Create databases and users, and set their passwords and access."),
+    ("Email", "email", "Email accounts", "bi-envelope", Capability.EMAIL,
+     "Create mailboxes, forwarders and set quotas for your domain."),
+    ("Domains", "domains", "Domains", "bi-globe2", Capability.DOMAINS,
+     "Attach domains and subdomains, and set redirects."),
+    ("Domains", "dns", "DNS records", "bi-diagram-3", Capability.DNS,
+     "Add and edit the DNS records of your domain."),
+    ("Domains", "ssl", "SSL certificate", "bi-shield-lock", Capability.SSL,
+     "See your certificate, renew it, and force HTTPS."),
+    ("Advanced", "php", "PHP settings", "bi-filetype-php", Capability.PHP,
+     "Choose the PHP version and tune memory and upload limits."),
+    ("Advanced", "cron", "Cron jobs", "bi-clock-history", Capability.CRON,
+     "Schedule tasks to run automatically."),
+    ("Advanced", "usage", "Usage", "bi-bar-chart-line", Capability.USAGE,
+     "Disk and bandwidth used against your plan."),
+]
+SECTION_BY_KEY = {key: (group, label, icon, capability, about) for group, key, label, icon, capability, about in SECTIONS}
+
+
+def workspace_links(request, account):
+    """The grouped menu for one website: a section is a real link when the account's provider supports it, otherwise
+    it is shown muted with a "Soon" tag (and no address, so there is never a dead link)."""
+    from apps.core.portal import Link
+
+    try:
+        supported = set(control.capabilities_for(account))
+    except ServiceError:
+        supported = set()
+    links = []
+    last_group = None
+    for group, key, label, icon, capability, _about in SECTIONS:
+        url = reverse("hosting_customer:section", args=[account.pk, key])
+        available = capability.value in supported
+        links.append(Link(label, url if available else "", active=available and request.path == url, icon=icon,
+                          group=group if group != last_group else "", disabled=not available))
+        last_group = group
+    return links
+
+
+def section_page(user, account, key):
+    """What a section page needs: its names, whether the provider supports it, and (for usage) the meters."""
+    group, label, icon, capability, about = SECTION_BY_KEY[key]
+    try:
+        supported = capability.value in control.capabilities_for(account)
+    except ServiceError:
+        supported = False
+    return {"key": key, "group": group, "label": label, "icon": icon, "about": about, "supported": supported,
+            "usage": website_card(user, account) if key == "usage" else None}

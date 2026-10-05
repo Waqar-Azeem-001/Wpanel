@@ -289,8 +289,8 @@ def test_the_cancel_and_upgrade_tabs_appear_only_where_they_can_be_used(world):
 def test_the_service_sidebar_offers_the_same_actions_as_the_tabs(world, owner):
     live = world.objects["accounts"]["active"]
     sidebar = browser(owner).get(reverse("hosting_customer:detail", args=[live.pk])).context["sidebar"]
-    assert [p.title for p in sidebar] == ["Overview", "Actions"]
-    assert [l.label for l in sidebar[1].links] == ["Upgrade / downgrade", "Request cancellation", "Open a ticket"]
+    assert [p.title for p in sidebar] == ["Overview", "Manage", "Actions"]
+    assert [l.label for l in sidebar[2].links] == ["Upgrade / downgrade", "Request cancellation", "Open a ticket"]
     assert live.domain in sidebar[0].lines
 
 

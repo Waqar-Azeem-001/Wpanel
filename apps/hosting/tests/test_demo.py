@@ -88,3 +88,40 @@ def test_the_websites_page_shows_every_state_with_the_sample_data(client, owner,
     assert "is-warning" in page and "is-danger" in page
     assert "not reported yet" not in page  # the demo provider reports SSL and PHP for every live account
     assert "SSL active" in page and "PHP 8" in page and "Manage hosting" in page
+
+
+# --- The website workspace (grouped Manage menu, section pages) ----------------------------------------------
+
+def test_the_manage_menu_links_only_the_sections_the_provider_supports(client, owner, plan):
+    call_command("demo_hosting_data")
+    account = HostingAccount.objects.get(domain="demo-shop.example.com")
+    client.force_login(owner)
+    page = client.get(f"/account/hosting/{account.pk}/").content.decode()
+    for group in ("Files", "Databases", "Email", "Domains", "Advanced"):
+        assert f'class="sidebar-group" aria-hidden="true">{group}<' in page
+    # the demo provider supports ssl, php and usage; everything else is shown muted and has no address
+    for label in ("SSL certificate", "PHP settings", "Usage"):
+        assert f'href="/account/hosting/{account.pk}/manage/' in page and label in page
+    assert page.count('class="sidebar-soon"') == 7
+    assert f"/account/hosting/{account.pk}/manage/files/" not in page
+
+
+def test_a_supported_section_page_says_what_it_will_do_and_usage_shows_the_meters(client, owner, plan):
+    call_command("demo_hosting_data")
+    account = HostingAccount.objects.get(domain="demo-shop.example.com")
+    client.force_login(owner)
+    ssl = client.get(f"/account/hosting/{account.pk}/manage/ssl/")
+    assert ssl.status_code == 200 and "The screen for it is being built" in ssl.content.decode()
+    usage = client.get(f"/account/hosting/{account.pk}/manage/usage/").content.decode()
+    assert "<progress" in usage and "Storage" in usage and "Bandwidth" in usage
+    files = client.get(f"/account/hosting/{account.pk}/manage/files/").content.decode()
+    assert "not available for your hosting server yet" in files
+
+
+def test_section_pages_belong_to_the_owner_only_and_unknown_sections_are_not_found(client, owner, customer, plan):
+    call_command("demo_hosting_data")
+    account = HostingAccount.objects.get(domain="demo-shop.example.com")
+    client.force_login(customer)
+    assert client.get(f"/account/hosting/{account.pk}/manage/ssl/").status_code == 404
+    client.force_login(owner)
+    assert client.get(f"/account/hosting/{account.pk}/manage/shell/").status_code == 404

@@ -18,6 +18,8 @@ class Link:
     count: int | None = None
     icon: str = ""
     post: bool = False  # rendered as a small POST form (sign out)
+    group: str = ""  # a heading shown above the first link of each group (hosting workspace menu)
+    disabled: bool = False  # shown muted with a "Soon" tag and no address: nothing to open yet
 
 
 @dataclass
@@ -117,7 +119,10 @@ def service_sidebar(request, account):
         actions.append(link(request, "Request cancellation", "lifecycle_customer:new", "hosting", account.pk,
                             icon="bi-x-circle", active=False))
     actions.append(link(request, "Open a ticket", "support_customer:new", icon="bi-life-preserver", active=False))
+    from apps.hosting import dashboard  # the hosting workspace menu lives with hosting; imported here to keep core light
+
     return [Panel("Overview", lines=[account.domain, account.product.name, account.get_status_display()]),
+            Panel("Manage", dashboard.workspace_links(request, account)),
             Panel("Actions", actions)]
 
 

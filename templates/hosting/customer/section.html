@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ section.label }} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<section class="card"><div class="card-body">
+  <p class="site-kicker mb-1">{{ section.group }}</p>
+  <h2 class="h5"><i class="bi {{ section.icon }}" aria-hidden="true"></i> {{ section.label }}</h2>
+  <p class="text-secondary">{{ section.about }}</p>
+  {% if section.usage %}
+    <div class="site-usage">
+      {% include "hosting/customer/_meter.html" with label=_("Storage") meter=section.usage.disk %}
+      {% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=section.usage.bandwidth %}
+    </div>
+  {% elif section.supported %}
+    <p class="site-note"><i class="bi bi-tools" aria-hidden="true"></i>{% trans "Your hosting server supports this. The screen for it is being built and will appear here." %}</p>
+  {% else %}
+    <p class="site-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{% trans "This is not available for your hosting server yet. It will appear here automatically when it is." %}</p>
+  {% endif %}
+</div></section>
+{% endblock %}
