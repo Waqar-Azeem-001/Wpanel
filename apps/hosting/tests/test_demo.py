@@ -86,8 +86,7 @@ def test_the_websites_page_shows_every_state_with_the_sample_data(client, owner,
     assert page.count("<progress") == 7
     assert "unlimited" in page and "Being set up" in page
     assert "is-warning" in page and "is-danger" in page
-    assert "not reported yet" not in page  # the demo provider reports SSL and PHP for every live account
-    assert "SSL active" in page and "PHP 8" in page and "Manage hosting" in page
+    assert "SSL active" in page and "PHP 8" in page and ">Manage<" in page  # the demo provider reports both for live accounts
 
 
 # --- The website workspace (grouped Manage menu, section pages) ----------------------------------------------

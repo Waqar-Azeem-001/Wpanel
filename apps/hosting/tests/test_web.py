@@ -183,9 +183,9 @@ def test_the_websites_page_shows_a_card_per_account_with_plan_usage_and_actions(
     assert "<progress" in page and 'value="24"' in page
     assert "<strong>38 MB</strong>" in page and "/ unlimited" in page
     assert f'href="/account/hosting/{account.pk}/"' in page and "Upgrade" in page
-    # the provider reports neither SSL nor PHP yet: the rows are there and say so, never invented values
-    assert "SSL not reported yet" in page and "PHP not reported yet" in page
-    assert "Primary domain" in page and "Manage hosting" in page
+    # the provider reports neither SSL nor PHP yet: nothing is shown for them (never invented values)
+    assert "SSL active" not in page and "SSL not active" not in page and "PHP 8" not in page
+    assert ">Manage<" in page and "Hosting information" in page
 
 
 def test_a_pending_account_shows_a_setup_note_instead_of_usage(client, manager, owner, client_obj, product):

@@ -73,6 +73,7 @@ def website_card(user, account):
         "ssl": ssl,
         "php_version": php.version if php is not None else None,
         "capabilities": capabilities,
+        "tone": sum(ord(c) for c in account.domain) % 6,  # which of the six preview-tile colours this website gets
         "manage_url": reverse("hosting_customer:detail", args=[account.pk]),
         "upgrade_url": (reverse("renewals_customer:hosting_upgrade", args=[account.pk])
                         if account.status == HostingStatus.ACTIVE else ""),
