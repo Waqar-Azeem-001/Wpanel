@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "File manager" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<section class="card fm">
+  <div class="card-body">
+    <div class="fm-head">
+      <h2 class="h5 mb-0"><i class="bi bi-folder2-open" aria-hidden="true"></i> {% trans "File manager" %}</h2>
+      <form class="fm-search" method="get" role="search" action="{% url 'hosting_customer:files' account.pk %}">
+        <input type="hidden" name="path" value="{{ path }}">
+        <label class="visually-hidden" for="fm-q">{% trans "Search file names" %}</label>
+        <input class="form-control form-control-sm" id="fm-q" type="search" name="q" value="{{ query }}" placeholder="{% trans 'Search names in this folder' %}" maxlength="100">
+        <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">{% trans "Search" %}</span></button>
+      </form>
+    </div>
+
+    <nav aria-label="{% trans 'Folder path' %}"><ol class="fm-crumbs">
+      {% for label, crumb_path in crumbs %}
+        {% if forloop.last and not query %}<li aria-current="page">{{ label }}</li>
+        {% else %}<li><a href="{% url 'hosting_customer:files' account.pk %}{% if crumb_path %}?path={{ crumb_path|urlencode }}{% endif %}">{{ label }}</a></li>{% endif %}
+      {% endfor %}
+      {% if query %}<li aria-current="page">{% trans "Search" %}: {{ query }}</li>{% endif %}
+    </ol></nav>
+
+    {% if not failed %}
+    <div class="fm-tools">
+      <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="fm-inline" data-plain>{% csrf_token %}
+        <input type="hidden" name="action" value="mkdir"><input type="hidden" name="path" value="{{ path }}">
+        <input class="form-control form-control-sm" type="text" name="name" placeholder="{% trans 'New folder name' %}" aria-label="{% trans 'New folder name' %}" maxlength="255" required>
+        <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-folder-plus" aria-hidden="true"></i> {% trans "New folder" %}</button>
+      </form>
+      <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="fm-inline" data-plain>{% csrf_token %}
+        <input type="hidden" name="action" value="new_file"><input type="hidden" name="path" value="{{ path }}">
+        <input class="form-control form-control-sm" type="text" name="name" placeholder="{% trans 'New file name' %}" aria-label="{% trans 'New file name' %}" maxlength="255" required>
+        <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> {% trans "New file" %}</button>
+      </form>
+      <form method="post" enctype="multipart/form-data" action="{% url 'hosting_customer:file_action' account.pk %}" class="fm-inline" data-plain>{% csrf_token %}
+        <input type="hidden" name="action" value="upload"><input type="hidden" name="path" value="{{ path }}">
+        <input class="form-control form-control-sm" type="file" name="file" aria-label="{% trans 'File to upload' %}" required>
+        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-upload" aria-hidden="true"></i> {% trans "Upload" %}</button>
+      </form>
+    </div>
+    <p class="small text-secondary mb-2">{% blocktrans %}Uploads are limited to {{ max_upload_mb }} MB each.{% endblocktrans %}</p>
+
+    <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+      <thead><tr><th scope="col">{% trans "Name" %}</th><th scope="col" class="text-end">{% trans "Size" %}</th><th scope="col">{% trans "Modified" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+      <tbody>
+      {% if path and not query %}
+        <tr><td colspan="4"><a href="{{ up_url }}"><i class="bi bi-arrow-up-short" aria-hidden="true"></i> {% trans "Up one folder" %}</a></td></tr>
+      {% endif %}
+      {% for row in rows %}{% with e=row.entry %}
+        <tr>
+          <td class="fm-name">
+            {% if e.is_dir %}<i class="bi bi-folder-fill fm-folder" aria-hidden="true"></i> <a href="{% url 'hosting_customer:files' account.pk %}?path={{ e.path|urlencode }}">{{ e.name }}</a>
+            {% elif row.editable %}<i class="bi bi-file-earmark-text" aria-hidden="true"></i> <a href="{% url 'hosting_customer:file_edit' account.pk %}?path={{ e.path|urlencode }}">{{ e.name }}</a>
+            {% else %}<i class="bi bi-file-earmark" aria-hidden="true"></i> <a href="{% url 'hosting_customer:file_download' account.pk %}?path={{ e.path|urlencode }}">{{ e.name }}</a>{% endif %}
+            {% if query and row.folder %}<small class="text-secondary d-block">{{ row.folder }}</small>{% endif %}
+          </td>
+          <td class="text-end text-secondary">{% if e.is_dir %}&mdash;{% else %}{{ e.size_bytes|filesizeformat }}{% endif %}</td>
+          <td class="text-secondary">{{ e.modified_at|slice:":10" }}</td>
+          <td class="text-end">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Actions for' %} {{ e.name }}"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button>
+              <ul class="dropdown-menu dropdown-menu-end fm-menu">
+                {% if row.editable %}<li><a class="dropdown-item" href="{% url 'hosting_customer:file_edit' account.pk %}?path={{ e.path|urlencode }}"><i class="bi bi-pencil-square" aria-hidden="true"></i> {% trans "Edit" %}</a></li>{% endif %}
+                {% if not e.is_dir %}<li><a class="dropdown-item" href="{% url 'hosting_customer:file_download' account.pk %}?path={{ e.path|urlencode }}"><i class="bi bi-download" aria-hidden="true"></i> {% trans "Download" %}</a></li>{% endif %}
+                <li><form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="fm-menu-form">{% csrf_token %}
+                  <input type="hidden" name="action" value="rename"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="{{ e.path }}">
+                  <label class="small text-secondary" for="rn-{{ forloop.counter }}">{% trans "Rename to" %}</label>
+                  <div class="d-flex gap-1"><input class="form-control form-control-sm" id="rn-{{ forloop.counter }}" type="text" name="new_name" value="{{ e.name }}" maxlength="255" required><button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Rename" %}</button></div></form></li>
+                <li><form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="fm-menu-form">{% csrf_token %}
+                  <input type="hidden" name="action" value="copy"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="{{ e.path }}">
+                  <label class="small text-secondary" for="cp-{{ forloop.counter }}">{% trans "Copy as" %}</label>
+                  <div class="d-flex gap-1"><input class="form-control form-control-sm" id="cp-{{ forloop.counter }}" type="text" name="new_name" value="copy-of-{{ e.name }}" maxlength="255" required><button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Copy" %}</button></div></form></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" data-confirm="{% trans 'Delete' %} {{ e.name }}? {% trans 'This cannot be undone.' %}">{% csrf_token %}
+                  <input type="hidden" name="action" value="delete"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="{{ e.path }}">
+                  <button class="dropdown-item text-danger" type="submit"><i class="bi bi-trash" aria-hidden="true"></i> {% trans "Delete" %}</button></form></li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+      {% endwith %}{% empty %}
+        <tr><td colspan="4" class="text-secondary">{% if query %}{% trans "Nothing matches that search." %}{% else %}{% trans "This folder is empty." %}{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+    <p><a class="btn btn-outline-secondary btn-sm" href="{% url 'hosting_customer:files' account.pk %}">{% trans "Back to the main folder" %}</a></p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -444,3 +444,20 @@ pre.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; 
 [data-bs-theme="dark"] .tone-2 { --thumb-bg: #17301f; --thumb-ink: #7fd8a4; } [data-bs-theme="dark"] .tone-3 { --thumb-bg: #382a14; --thumb-ink: #e6b453; }
 [data-bs-theme="dark"] .tone-4 { --thumb-bg: #3a1c20; --thumb-ink: #f28282; } [data-bs-theme="dark"] .tone-5 { --thumb-bg: #14303a; --thumb-ink: #7fcad8; }
 [data-bs-theme="dark"] .site-thumb-bar { background: rgba(0, 0, 0, .3); }
+
+/* File manager */
+.fm-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.fm-search { display: flex; gap: .35rem; min-width: 14rem; } .fm-search input { min-width: 0; }
+.fm-crumbs { list-style: none; display: flex; flex-wrap: wrap; gap: .25rem; padding: 0; margin: 0 0 .85rem; font-size: .9rem; color: var(--muted); }
+.fm-crumbs li + li::before { content: "/"; margin-right: .25rem; color: var(--border-strong); }
+.fm-crumbs li[aria-current] { color: var(--text); font-weight: 650; }
+.fm-tools { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .5rem; }
+.fm-inline { display: flex; gap: .35rem; align-items: center; } .fm-inline input[type="text"] { width: 10.5rem; } .fm-inline input[type="file"] { width: 14rem; }
+.fm-table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 650; }
+.fm-name a { text-decoration: none; font-weight: 550; overflow-wrap: anywhere; } .fm-name a:hover { text-decoration: underline; }
+.fm-name i { margin-right: .35rem; color: var(--muted); } .fm-name i.fm-folder { color: var(--warn); }
+.fm-menu { min-width: 15rem; padding: .35rem; } .fm-menu-form { padding: .35rem .5rem; }
+.fm-editor { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85rem; tab-size: 4; white-space: pre; }
+@media (max-width: 575.98px) { .fm-inline { flex-wrap: wrap; width: 100%; } .fm-inline input[type="text"], .fm-inline input[type="file"] { width: 100%; flex: 1; } }
+.fm-inline .form-control, .fm-search .form-control { margin: 0; min-height: 2.1rem; padding: .3rem .65rem; font-size: .9rem; }
+.fm-inline, .fm-search { margin: 0; }

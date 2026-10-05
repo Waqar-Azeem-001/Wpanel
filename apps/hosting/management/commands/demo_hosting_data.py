@@ -11,10 +11,13 @@ reports sample figures. Real accounts are never touched; demo accounts are recog
 """
 from datetime import timedelta
 
+import shutil
+
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from apps.clients.models import Client
+from apps.hosting.adapters.demo import files_root
 from apps.hosting.models import HostingAccount, HostingStatus
 from apps.products.models import Product, ProductType, Server, ServerKind
 
@@ -40,6 +43,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         server = Server.objects.filter(name=DEMO_SERVER_NAME).first()
         if options["remove"]:
+            if server:
+                for username in HostingAccount.objects.filter(server=server).values_list("username", flat=True):
+                    shutil.rmtree(files_root() / username, ignore_errors=True)  # the sample website files too
             removed = HostingAccount.objects.filter(server=server).delete()[0] if server else 0
             if server:
                 server.delete()

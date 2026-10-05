@@ -28,6 +28,10 @@ NOT_CLICKABLE_EXACT = {
     "console:staff_users": "the old Staff & Roles address, kept for bookmarks; it redirects to the Users screen",
     "accounts:mfa_verify": "reached mid sign-in, only with a pending two-factor challenge in the session (tested in test_owner_tools4)",
     "accounts:mfa_recovery_codes": "reached once, right after setting up or regenerating recovery codes (tested in test_owner_tools4)",
+    "hosting_customer:files": "linked only for an account whose provider supports files (the demo provider); the crawl "
+                              "world's server is a manual one (tested in apps/hosting/tests/test_files.py)",
+    "hosting_customer:file_edit": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
+    "hosting_customer:file_download": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "orders_customer:choose_client": "only reachable by a customer who is a contact of more than one account; the "
                                      "crawl world's owner has exactly one (tested in apps/orders/tests/test_web.py)",
 }

@@ -1,29 +1,86 @@
 """
 Demo adapter: a provider that answers every hosting capability it supports with fixed SAMPLE data, so the customer
-screens (Websites dashboard now, files/DNS/SSL/PHP... as they are built) can be seen working, designed and tested before
-any real server is connected. Like the manual adapter it makes no network calls; unlike it, it reports sample usage,
-SSL and PHP details. It is for development and demonstration only - never a production server kind - and everything it
-reports says so ("Sample data").
+screens (Websites dashboard, File Manager now; DNS, SSL, PHP... as they are built) can be seen working, designed and
+tested before any real server is connected. It makes no network calls. It is for development and demonstration only -
+never a production server kind - and what it reports says so ("Sample data").
 
-Sample values are derived from the account's username, so they are stable between page loads and differ between accounts.
+Usage, SSL and PHP are sample values derived from the account's username, so they are stable between page loads and
+differ between accounts. Files are REAL files on this machine, inside one folder per account (``DEMO_FILES_ROOT``),
+worked on through the same sandbox a native provider's agent will use, so the File Manager is exercised for real.
 """
-from .capabilities import PhpCapability, PhpSettings, SslCapability, SslStatus
+from pathlib import Path
+
+from django.conf import settings
+
+from .capabilities import FilesCapability, PhpCapability, PhpSettings, SslCapability, SslStatus
 from .manual import ManualAdapter
+from .sandbox import Sandbox
 
 PHP_VERSIONS = ["7.4", "8.0", "8.1", "8.2", "8.3"]
+
+SAMPLE_FILES = {
+    "public_html/index.html": "<!doctype html>\n<html>\n<head><title>Welcome</title><link rel=\"stylesheet\" href=\"css/style.css\"></head>\n"
+                              "<body><h1>Your website is ready</h1><p>Edit this file in the File Manager.</p></body>\n</html>\n",
+    "public_html/css/style.css": "body { font-family: sans-serif; margin: 2rem; }\nh1 { color: #5b2e8f; }\n",
+    "public_html/robots.txt": "User-agent: *\nAllow: /\n",
+    "logs/README.txt": "Access and error logs appear here on a real server.\n",
+}
+
+
+def files_root():
+    return Path(getattr(settings, "DEMO_FILES_ROOT", settings.BASE_DIR / "demo_hosting_files"))
 
 
 def _seed(username):
     return sum(ord(c) for c in username)
 
 
-class DemoAdapter(SslCapability, PhpCapability, ManualAdapter):
+def sandbox_for(username):
+    """The account's folder, created with a few sample files the first time it is used."""
+    root = files_root() / username
+    fresh = not root.exists()
+    box = Sandbox(root)
+    if fresh:
+        for rel, text in SAMPLE_FILES.items():
+            target = root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+    return box
+
+
+class DemoAdapter(FilesCapability, SslCapability, PhpCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
         bandwidth_limit = 102400
         return {"disk_used_mb": (seed * 37) % disk_limit, "disk_limit_mb": disk_limit,
                 "bandwidth_used_mb": (seed * 91) % bandwidth_limit, "bandwidth_limit_mb": bandwidth_limit}
+
+    # --- Files (real, sandboxed) ---------------------------------------------------------------------------------
+
+    def list_files(self, username, path):
+        return sandbox_for(username).list_files(path)
+
+    def read_file(self, username, path, *, max_bytes):
+        return sandbox_for(username).read_file(path, max_bytes=max_bytes)
+
+    def write_file(self, username, path, content, *, overwrite=False):
+        sandbox_for(username).write_file(path, content, overwrite=overwrite)
+
+    def make_directory(self, username, path):
+        sandbox_for(username).make_directory(path)
+
+    def rename_path(self, username, path, new_path):
+        sandbox_for(username).rename_path(path, new_path)
+
+    def copy_path(self, username, path, new_path):
+        sandbox_for(username).copy_path(path, new_path)
+
+    def delete_path(self, username, path):
+        sandbox_for(username).delete_path(path)
+
+    def search_files(self, username, path, query):
+        return sandbox_for(username).search_files(path, query)
 
     # --- SSL ---------------------------------------------------------------------------------------------------
 

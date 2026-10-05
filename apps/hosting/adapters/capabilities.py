@@ -161,7 +161,14 @@ class FilesCapability(ABC):
     def rename_path(self, username: str, path: str, new_path: str) -> None: ...
 
     @abstractmethod
+    def copy_path(self, username: str, path: str, new_path: str) -> None: ...
+
+    @abstractmethod
     def delete_path(self, username: str, path: str) -> None: ...
+
+    @abstractmethod
+    def search_files(self, username: str, path: str, query: str) -> list:
+        """``FileEntry`` rows whose NAME contains ``query``, anywhere under ``path`` (a capped, convenience search)."""
 
 
 class DatabasesCapability(ABC):
@@ -325,7 +332,7 @@ OPERATIONS = {
     Capability.ACCOUNT: frozenset({"get_status"}),
     Capability.USAGE: frozenset({"get_usage"}),
     Capability.FILES: frozenset({"list_files", "read_file", "write_file", "make_directory", "rename_path",
-                                 "delete_path"}),
+                                 "copy_path", "delete_path", "search_files"}),
     Capability.DATABASES: frozenset({"list_databases", "create_database", "delete_database", "list_database_users",
                                      "create_database_user", "set_database_user_password", "delete_database_user",
                                      "grant_database_access"}),
@@ -340,7 +347,7 @@ OPERATIONS = {
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
-READ_OPERATIONS = frozenset({"get_status", "get_usage", "list_files", "read_file", "list_databases",
+READ_OPERATIONS = frozenset({"get_status", "get_usage", "list_files", "read_file", "search_files", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})
