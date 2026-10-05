@@ -1,8 +1,10 @@
 {% load i18n %}
-<div class="mb-2">
-  <div class="d-flex justify-content-between small"><span>{{ label }}</span>
-    <span class="text-secondary">{% if meter.known %}{{ meter.used }}{% if meter.limit %} / {{ meter.limit }}{% else %} / {% trans "unlimited" %}{% endif %}{% else %}{% trans "Not available" %}{% endif %}</span></div>
+<div class="site-meter">
+  <div class="site-meter-row"><span class="site-meter-label">{{ label }}</span>
+    <span class="site-meter-figure">{% if meter.known %}<strong>{{ meter.used }}</strong>{% if meter.limit %} <span>/ {{ meter.limit }}</span>{% else %} <span>/ {% trans "unlimited" %}</span>{% endif %}{% else %}<span>{% trans "Not available" %}</span>{% endif %}</span></div>
   {% if meter.percent is not None %}
   <progress class="usage-meter{% if meter.state == 'danger' %} is-danger{% elif meter.state == 'warning' %} is-warning{% endif %}" max="100" value="{{ meter.percent }}" aria-label="{{ label }}">{{ meter.percent }}%</progress>
+  {% else %}
+  <div class="usage-meter-empty" aria-hidden="true"></div>
   {% endif %}
 </div>

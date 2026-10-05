@@ -179,12 +179,12 @@ def test_the_websites_page_shows_a_card_per_account_with_plan_usage_and_actions(
     response = client.get("/account/hosting/")
     page = response.content.decode()
     assert response.status_code == 200 and len(response.context["cards"]) == 1
-    assert "shop.example.com" in page and "Starter" in page and "4.8 GB / 20 GB" in page
+    assert "shop.example.com" in page and "Starter" in page and "<strong>4.8 GB</strong>" in page and "/ 20 GB" in page
     assert "<progress" in page and 'value="24"' in page
-    assert "38 MB / unlimited" in page
+    assert "<strong>38 MB</strong>" in page and "/ unlimited" in page
     assert f'href="/account/hosting/{account.pk}/"' in page and "Upgrade" in page
     # the provider reports neither SSL nor PHP yet: the rows are there and say so, never invented values
-    assert ">SSL<" in page and ">PHP<" in page and page.count("Not reported yet") == 2
+    assert "SSL not reported yet" in page and "PHP not reported yet" in page
     assert "Primary domain" in page and "Manage hosting" in page
 
 
@@ -223,4 +223,4 @@ def test_ssl_and_php_appear_when_the_provider_reports_them(client, manager, owne
     monkeypatch.setattr(control, "get_adapter", lambda server: RichProvider(host="h", port=1, credentials={}))
     client.force_login(owner)
     page = client.get("/account/hosting/").content.decode()
-    assert ">SSL<" in page and ">PHP<" in page and "8.3" in page
+    assert "SSL active" in page and "PHP 8.3" in page

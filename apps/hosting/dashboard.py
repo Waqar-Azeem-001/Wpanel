@@ -79,5 +79,10 @@ def website_card(user, account):
     }
 
 
+# Working accounts first, then the ones waiting or in trouble; each group alphabetical.
+_ORDER = {HostingStatus.ACTIVE: 0, HostingStatus.SUSPENDED: 1, HostingStatus.PENDING: 2, HostingStatus.FAILED: 3}
+
+
 def website_cards(user, accounts):
-    return [website_card(user, account) for account in accounts]
+    ordered = sorted(accounts, key=lambda a: (_ORDER.get(a.status, 9), a.domain.lower(), a.pk))
+    return [website_card(user, account) for account in ordered]
