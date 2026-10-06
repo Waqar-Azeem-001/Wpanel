@@ -73,6 +73,23 @@ Owner feedback: the look, the way Compose worked, plain-text-only writing and th
 - Contract: `send_message(..., html)`, `MessageInfo.snippet` and `.html`. Browser check: formatted a message in the editor, sent
   it between mailboxes, no console errors.
 
+## Update 2026-10-06 (fifth): reply in place, every folder, its own window, mail settings
+Owner feedback: Reply should not open a separate window; all the usual folders; the mail should open in its own window with a
+way to sign out; basic mail settings such as a signature. Done:
+- **Reply is inline**, under the message it answers (To, Subject, the signature, the quoted original already filled in); the
+  floating window is only for new messages and drafts.
+- **Seven folders:** Inbox, Starred (a view of starred mail), Drafts, Sent, Archive, Spam, Trash. Star, Archive, Spam and
+  Move to inbox actions; a draft or a message already in Trash is deleted for good.
+- **Drafts live on the server:** the compose window saves a draft quietly while you write (every 2 seconds after a change, and when
+  closed), shows "Draft saved", opens again from the Drafts folder, and the draft disappears when the message is sent.
+- **Own window:** the Webmail button opens a new tab. The account menu (top right) has **Mail settings**, **Close mail** (closes
+  the window, or goes back to Email accounts) and **Sign out of WHPanel** (full sign-out).
+- **Mail settings page:** profile (your name shown to recipients, reply-to address, storage), **signature** with the same rich
+  editor (added to new messages and/or replies), automatic reply, and change password.
+- Contract: `set_message_starred`, `save_draft`, `get_mail_profile`, `set_mail_profile`; `send_message(..., draft_id)`; folder
+  names `drafts` and `archive`, and the virtual `starred`. 71 tests for mail and the cleaner now; browser check: inline reply,
+  account menu, draft autosave, settings, no console errors.
+
 ## Deferred
 Sending and receiving real mail and a full webmail client (needs a real provider: H14, or the native mail platform N7),
 catch-all and per-domain routing, mail filters, mailbox import, additional domains (H5), DKIM/SPF/DMARC records (H5 DNS),

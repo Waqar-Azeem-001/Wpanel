@@ -1,0 +1,12 @@
+{% load i18n %}
+<div class="ml-fmt" role="toolbar" aria-label="{% trans 'Formatting' %}">
+  <button type="button" data-cmd="bold" title="{% trans 'Bold' %}" aria-label="{% trans 'Bold' %}"><i class="bi bi-type-bold" aria-hidden="true"></i></button>
+  <button type="button" data-cmd="italic" title="{% trans 'Italic' %}" aria-label="{% trans 'Italic' %}"><i class="bi bi-type-italic" aria-hidden="true"></i></button>
+  <button type="button" data-cmd="underline" title="{% trans 'Underline' %}" aria-label="{% trans 'Underline' %}"><i class="bi bi-type-underline" aria-hidden="true"></i></button>
+  <span class="ml-fmt-sep"></span>
+  <button type="button" data-cmd="insertUnorderedList" title="{% trans 'Bulleted list' %}" aria-label="{% trans 'Bulleted list' %}"><i class="bi bi-list-ul" aria-hidden="true"></i></button>
+  <button type="button" data-cmd="insertOrderedList" title="{% trans 'Numbered list' %}" aria-label="{% trans 'Numbered list' %}"><i class="bi bi-list-ol" aria-hidden="true"></i></button>
+  <button type="button" data-cmd="formatBlock" data-arg="blockquote" title="{% trans 'Quote' %}" aria-label="{% trans 'Quote' %}"><i class="bi bi-quote" aria-hidden="true"></i></button>
+  <button type="button" data-cmd="createLink" title="{% trans 'Add a link' %}" aria-label="{% trans 'Add a link' %}"><i class="bi bi-link-45deg" aria-hidden="true"></i></button>
+  <button type="button" data-cmd="removeFormat" title="{% trans 'Clear formatting' %}" aria-label="{% trans 'Clear formatting' %}"><i class="bi bi-eraser" aria-hidden="true"></i></button>
+</div>

@@ -188,7 +188,20 @@ class MessageInfo:
     to: str = ""
     folder: str = "inbox"
     snippet: str = ""  # the first words of the text, for the message list
+    starred: bool = False
     html: str = ""  # the formatted version, when the message has one (only filled in by ``read_message``)
+
+
+@dataclass(frozen=True)
+class MailProfile:
+    """A mailbox owner's own mail settings."""
+
+    display_name: str = ""  # how the sender is shown to people they write to
+    reply_to: str = ""  # replies go here instead, when set
+    signature_html: str = ""  # already reduced to safe HTML by the caller
+    signature_text: str = ""
+    signature_new: bool = True  # add the signature to new messages
+    signature_reply: bool = True  # and to replies
 
 
 @dataclass(frozen=True)
@@ -393,7 +406,8 @@ class DatabasesCapability(ABC):
 
 MAIL_ROUTING_MODES = ("local", "remote")  # local: this hosting server receives the mail; remote: another service does
 SPAM_LEVELS = ("low", "medium", "high")
-MAIL_FOLDERS = ("inbox", "sent", "spam", "trash")
+MAIL_FOLDERS = ("inbox", "drafts", "sent", "archive", "spam", "trash")
+MAIL_VIRTUAL_FOLDERS = ("starred",)  # not a place messages live in: every starred message, wherever it is
 
 
 class EmailCapability(ABC):
@@ -433,22 +447,37 @@ class EmailCapability(ABC):
 
     @abstractmethod
     def message_folders(self, username: str, address: str) -> dict:
-        """{folder: (total, unread)} for every one of ``MAIL_FOLDERS``."""
+        """{folder: (total, unread)} for every one of ``MAIL_FOLDERS`` and ``MAIL_VIRTUAL_FOLDERS``."""
 
     @abstractmethod
     def list_messages(self, username: str, address: str, folder: str = "inbox") -> list:
-        """``MessageInfo`` rows (newest first) of one folder, for the embedded mail viewer."""
+        """``MessageInfo`` rows (newest first) of one folder (or ``starred``), for the embedded mail viewer."""
 
     @abstractmethod
     def move_message(self, username: str, address: str, message_id: str, folder: str) -> None:
-        """Move to ``inbox``, ``spam`` or ``trash``."""
+        """Move to ``inbox``, ``archive``, ``spam`` or ``trash``."""
 
     @abstractmethod
     def delete_message(self, username: str, address: str, message_id: str) -> None:
-        """Move to the trash; a message already in the trash is deleted for good."""
+        """Move to the trash; a message already in the trash, or a draft, is deleted for good."""
 
     @abstractmethod
-    def send_message(self, username: str, address: str, to: str, subject: str, body: str, html: str = "") -> None:
+    def set_message_starred(self, username: str, address: str, message_id: str, starred: bool) -> None: ...
+
+    @abstractmethod
+    def save_draft(self, username: str, address: str, to: str, subject: str, body: str, html: str = "",
+                   draft_id: str = "") -> str:
+        """Keep an unsent message in Drafts (replacing ``draft_id`` when given); returns the draft's id."""
+
+    @abstractmethod
+    def get_mail_profile(self, username: str, address: str) -> MailProfile: ...
+
+    @abstractmethod
+    def set_mail_profile(self, username: str, address: str, profile: MailProfile) -> None: ...
+
+    @abstractmethod
+    def send_message(self, username: str, address: str, to: str, subject: str, body: str, html: str = "",
+                     draft_id: str = "") -> None:
         """Send from this mailbox (``to`` may list several addresses separated by commas). ``body`` is the plain text,
         ``html`` the optional formatted version (already reduced to safe HTML by the caller)."""
 
@@ -597,7 +626,8 @@ OPERATIONS = {
     Capability.EMAIL: frozenset({"email_limits", "list_autoresponders", "set_autoresponder", "delete_autoresponder",
                                  "get_mail_routing", "set_mail_routing", "get_spam_settings", "set_spam_settings",
                                  "webmail_access", "list_messages", "read_message", "message_folders",
-                                 "move_message", "delete_message", "send_message",
+                                 "move_message", "delete_message", "send_message", "set_message_starred",
+                                 "save_draft", "get_mail_profile", "set_mail_profile",
                                  "list_mailboxes", "create_mailbox", "delete_mailbox", "set_mailbox_password",
                                  "set_mailbox_quota", "list_forwarders", "create_forwarder", "delete_forwarder"}),
     Capability.DOMAINS: frozenset({"list_domains", "add_domain", "remove_domain", "set_redirect"}),
@@ -613,7 +643,7 @@ READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "data
                              "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
-                             "list_domains",
+                             "get_mail_profile", "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 

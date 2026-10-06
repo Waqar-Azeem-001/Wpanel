@@ -1,0 +1,63 @@
+{% extends "hosting/customer/mail_base.html" %}
+{% load i18n static %}
+{% block title %}{% trans "Mail settings" %} · {{ address }}{% endblock %}
+{% block ml_main %}
+<div class="ml-settings">
+  <nav class="ml-set-nav" aria-label="{% trans 'Settings' %}">
+    <a class="ml-compose-btn ml-set-back" href="{{ mail_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to mail" %}</a>
+    <ul>
+      <li><a href="#profile"><i class="bi bi-person" aria-hidden="true"></i> {% trans "Profile" %}</a></li>
+      <li><a href="#signature"><i class="bi bi-pen" aria-hidden="true"></i> {% trans "Signature" %}</a></li>
+      <li><a href="#autoreply"><i class="bi bi-reply" aria-hidden="true"></i> {% trans "Automatic reply" %}</a></li>
+      <li><a href="#security"><i class="bi bi-shield-lock" aria-hidden="true"></i> {% trans "Password" %}</a></li>
+    </ul>
+  </nav>
+
+  <div class="ml-set-main">
+    <h1 class="ml-set-title">{% trans "Mail settings" %}</h1>
+
+    <form method="post" action="{{ form_url }}" class="ml-set-card" id="profile" data-plain data-editor-form>{% csrf_token %}
+      <input type="hidden" name="action" value="profile"><input type="hidden" name="address" value="{{ address }}">
+      <input type="hidden" name="signature_html" data-html-field><input type="hidden" name="signature_text" data-text-field>
+      <h2>{% trans "Profile" %}</h2>
+      <p class="ml-set-help">{% trans "How you appear to the people you write to." %}</p>
+      <div class="ml-set-row"><label for="set-address">{% trans "Email address" %}</label><input id="set-address" class="form-control" value="{{ address }}" readonly></div>
+      <div class="ml-set-row"><label for="set-name">{% trans "Your name" %}</label><input id="set-name" class="form-control" name="display_name" value="{{ profile.display_name }}" maxlength="80" placeholder="{% trans 'Ayesha Khan' %}"><small>{% trans "Shown next to your address when you send mail." %}</small></div>
+      <div class="ml-set-row"><label for="set-reply">{% trans "Reply-to address" %}</label><input id="set-reply" class="form-control" type="email" name="reply_to" value="{{ profile.reply_to }}" maxlength="254" placeholder="{% trans 'optional' %}"><small>{% trans "When set, people's replies go here instead of to this mailbox." %}</small></div>
+      <div class="ml-set-row"><label>{% trans "Storage" %}</label><div class="ml-set-storage"><span>{{ box.used_mb }} MB {% trans "of" %} {{ box.quota_mb }} MB</span>{% if usage_percent is not None %}<progress class="usage-meter{% if usage_percent >= 95 %} is-danger{% elif usage_percent >= 80 %} is-warning{% endif %}" max="100" value="{{ usage_percent }}" aria-label="{% trans 'Mailbox storage' %}">{{ usage_percent }}%</progress>{% endif %}</div></div>
+
+      <h2 id="signature" class="ml-set-sub">{% trans "Signature" %}</h2>
+      <p class="ml-set-help">{% trans "Added to the end of your messages, so you do not have to type it every time." %}</p>
+      {% include "hosting/customer/_ml_toolbar.html" %}
+      {% include "hosting/customer/_ml_editor.html" with editor_id="set-signature" editor_html=profile.signature_html placeholder=_("Best regards, ...") min_class="is-signature" %}
+      <label class="em-choice mt-3"><input class="form-check-input" type="checkbox" name="signature_new" value="1"{% if profile.signature_new %} checked{% endif %}> <span><strong>{% trans "Add it to new messages" %}</strong></span></label>
+      <label class="em-choice"><input class="form-check-input" type="checkbox" name="signature_reply" value="1"{% if profile.signature_reply %} checked{% endif %}> <span><strong>{% trans "Add it to replies" %}</strong></span></label>
+      <div class="ml-set-actions"><button class="btn btn-primary" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> {% trans "Save" %}</button></div>
+    </form>
+
+    <form method="post" action="{{ form_url }}" class="ml-set-card" id="autoreply" data-plain>{% csrf_token %}
+      <input type="hidden" name="action" value="autoresponder"><input type="hidden" name="address" value="{{ address }}">
+      <h2>{% trans "Automatic reply" %}</h2>
+      <p class="ml-set-help">{% trans "Everyone who writes to you gets this message back, for example while you are away." %}</p>
+      <div class="ml-set-row"><label for="set-subject">{% trans "Subject" %}</label><input id="set-subject" class="form-control" name="subject" value="{{ responder.subject }}" maxlength="120" placeholder="{% trans 'Away until Monday' %}"></div>
+      <div class="ml-set-row"><label for="set-body">{% trans "Message" %}</label><textarea id="set-body" class="form-control" name="body" rows="5" maxlength="2000">{{ responder.body }}</textarea></div>
+      <label class="em-choice"><input class="form-check-input" type="checkbox" name="enabled" value="1"{% if responder.enabled or not responder %} checked{% endif %}> <span><strong>{% trans "Turn it on" %}</strong></span></label>
+      <div class="ml-set-actions"><button class="btn btn-primary" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> {% trans "Save" %}</button>
+        {% if responder %}<button class="btn btn-outline-danger" type="submit" name="remove" value="1" formnovalidate data-confirm="{% trans 'Remove the automatic reply?' %}">{% trans "Remove it" %}</button>{% endif %}</div>
+    </form>
+
+    <form method="post" action="{{ form_url }}" class="ml-set-card" id="security" data-plain>{% csrf_token %}
+      <input type="hidden" name="action" value="password"><input type="hidden" name="address" value="{{ address }}">
+      <h2>{% trans "Password" %}</h2>
+      <p class="ml-set-help">{% trans "The password you use in your phone and mail apps." %}</p>
+      <div class="ml-set-row"><label for="set-password">{% trans "New password" %}</label>
+        <div class="input-group"><input id="set-password" class="form-control" type="password" name="password" autocomplete="new-password" minlength="{{ limits.password_min_length }}" maxlength="128" required>
+          <button class="btn btn-outline-secondary" type="button" data-pw-toggle="set-password" aria-label="{% trans 'Show or hide the password' %}"><i class="bi bi-eye" aria-hidden="true"></i></button>
+          <button class="btn btn-outline-secondary" type="button" data-pw-generate="set-password"><i class="bi bi-magic" aria-hidden="true"></i> {% trans "Generate" %}</button></div>
+        <small>{% trans "At least 12 characters, with letters and numbers." %}</small></div>
+      <div class="ml-set-actions"><button class="btn btn-primary" type="submit"><i class="bi bi-key" aria-hidden="true"></i> {% trans "Change password" %}</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/passwords.js' %}" defer></script><script src="{% static 'js/mail.js' %}" defer></script>{% endblock %}

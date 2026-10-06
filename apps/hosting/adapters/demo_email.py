@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 from .base import HostingError
-from .capabilities import (MAIL_FOLDERS, MAIL_ROUTING_MODES, SPAM_LEVELS, AutoresponderInfo, EmailLimits, ForwarderInfo, MailboxInfo,
+from .capabilities import (MAIL_FOLDERS, MAIL_ROUTING_MODES, MAIL_VIRTUAL_FOLDERS, SPAM_LEVELS, MailProfile, AutoresponderInfo, EmailLimits, ForwarderInfo, MailboxInfo,
                            MessageInfo, SpamSettings)
 from .demo_databases import check_password
 
@@ -60,6 +60,7 @@ class DemoEmail:
         data.setdefault("routing", "local")
         data.setdefault("spam", {"enabled": True, "level": "medium", "delete_spam": False})
         data.setdefault("messages", {})
+        data.setdefault("profiles", {})
         return data
 
     def _save(self, data):
@@ -260,7 +261,7 @@ class DemoEmail:
     def _info(m, with_body=False):
         return MessageInfo(message_id=m["id"], sender=m["sender"], subject=m["subject"], received_at=m["received_at"],
                            unread=m["unread"], body=m["body"] if with_body else "", to=m.get("to", ""),
-                           folder=m.get("folder", "inbox"), snippet=" ".join(m["body"].split())[:100],
+                           folder=m.get("folder", "inbox"), snippet=" ".join(m["body"].split())[:100], starred=bool(m.get("starred")),
                            html=m.get("html", "") if with_body else "")
 
     @staticmethod
@@ -270,20 +271,25 @@ class DemoEmail:
     def folders(self, address):
         data = self._load()
         address = self._mailbox(data, address)
-        counts = {f: [0, 0] for f in MAIL_FOLDERS}
+        counts = {f: [0, 0] for f in MAIL_FOLDERS + MAIL_VIRTUAL_FOLDERS}
         for m in data["messages"].get(address, []):
-            box = counts.get(self._folder(m))
-            if box is not None:
-                box[0] += 1
-                box[1] += 1 if m["unread"] else 0
+            keys = [self._folder(m)] + (["starred"] if m.get("starred") else [])
+            for key in keys:
+                box = counts.get(key)
+                if box is not None:
+                    box[0] += 1
+                    box[1] += 1 if m["unread"] else 0
         return {f: (c[0], c[1]) for f, c in counts.items()}
 
     def messages(self, address, folder="inbox"):
         data = self._load()
         address = self._mailbox(data, address)
-        if folder not in MAIL_FOLDERS:
+        if folder not in MAIL_FOLDERS + MAIL_VIRTUAL_FOLDERS:
             raise HostingError("That folder does not exist.")
-        found = [m for m in data["messages"].get(address, []) if self._folder(m) == folder]
+        if folder == "starred":
+            found = [m for m in data["messages"].get(address, []) if m.get("starred") and self._folder(m) != "trash"]
+        else:
+            found = [m for m in data["messages"].get(address, []) if self._folder(m) == folder]
         return [self._info(m) for m in sorted(found, key=lambda m: m["received_at"], reverse=True)]
 
     def read_message(self, address, message_id):
@@ -297,8 +303,8 @@ class DemoEmail:
         raise HostingError("That message does not exist.")
 
     def move_message(self, address, message_id, folder):
-        if folder not in ("inbox", "spam", "trash"):
-            raise HostingError("A message can be moved to the inbox, spam or trash.")
+        if folder not in ("inbox", "archive", "spam", "trash"):
+            raise HostingError("A message can be moved to the inbox, archive, spam or trash.")
         data = self._load()
         address = self._mailbox(data, address)
         for m in data["messages"].get(address, []):
@@ -314,15 +320,15 @@ class DemoEmail:
         box = data["messages"].get(address, [])
         for m in box:
             if m["id"] == message_id:
-                if self._folder(m) == "trash":
-                    box.remove(m)  # already in the trash: gone for good
+                if self._folder(m) in ("trash", "drafts"):
+                    box.remove(m)  # already in the trash, or a draft: gone for good
                 else:
                     m["folder"] = "trash"
                 self._save(data)
                 return
         raise HostingError("That message does not exist.")
 
-    def send_message(self, address, to, subject, body, html=""):
+    def send_message(self, address, to, subject, body, html="", draft_id=""):
         data = self._load()
         address = self._mailbox(data, address)
         recipients = [r.strip().lower() for r in (to or "").replace(";", ",").split(",") if r.strip()]
@@ -352,7 +358,61 @@ class DemoEmail:
             del box[:-MAX_STORED_MESSAGES]  # keep the demo state small
 
         put(address, "sent", False, 0)
+        if draft_id:
+            data["messages"][address] = [m for m in data["messages"][address]
+                                         if not (m["id"] == draft_id and self._folder(m) == "drafts")]
         for n, r in enumerate(recipients, start=1):
             if r in data["mailboxes"] and r != address:
                 put(r, "inbox", True, n)  # mail between mailboxes of this account really arrives
+        self._save(data)
+
+    def save_draft(self, address, to, subject, body, html="", draft_id=""):
+        data = self._load()
+        address = self._mailbox(data, address)
+        to, subject, body = (to or "").strip(), (subject or "").strip(), (body or "").strip()
+        if not (to or subject or body or html):
+            raise HostingError("There is nothing to save yet.")
+        if len(to) > 500 or len(subject) > 200 or len(body) > 10000 or len(html or "") > MAX_HTML:
+            raise HostingError("That draft is too long.")
+        box = data["messages"].setdefault(address, [])
+        if draft_id:
+            box[:] = [m for m in box if not (m["id"] == draft_id and self._folder(m) == "drafts")]
+        draft_id = f"d{_now().strftime('%Y%m%d%H%M%S%f')}"
+        box.append({"id": draft_id, "folder": "drafts", "sender": address, "to": to, "subject": subject or "(no subject)",
+                    "body": body, "html": html or "", "unread": False, "received_at": _now().isoformat()})
+        del box[:-MAX_STORED_MESSAGES]
+        self._save(data)
+        return draft_id
+
+    def set_starred(self, address, message_id, starred):
+        data = self._load()
+        address = self._mailbox(data, address)
+        for m in data["messages"].get(address, []):
+            if m["id"] == message_id:
+                m["starred"] = bool(starred)
+                self._save(data)
+                return
+        raise HostingError("That message does not exist.")
+
+    def profile(self, address):
+        data = self._load()
+        address = self._mailbox(data, address)
+        return MailProfile(**{**MailProfile().__dict__, **data["profiles"].get(address, {})})
+
+    def set_profile(self, address, profile):
+        data = self._load()
+        address = self._mailbox(data, address)
+        name, reply_to = (profile.display_name or "").strip(), (profile.reply_to or "").strip().lower()
+        if len(name) > 80 or any(ord(c) < 32 for c in name):
+            raise HostingError("The name can be up to 80 characters, without line breaks.")
+        if reply_to:
+            try:
+                validate_email(reply_to)
+            except ValidationError:
+                raise HostingError("The reply-to address is not a valid email address.")
+        if len(profile.signature_html or "") > 5000 or len(profile.signature_text or "") > 2000:
+            raise HostingError("That signature is too long (about 2000 characters).")
+        data["profiles"][address] = {"display_name": name, "reply_to": reply_to, "signature_html": profile.signature_html or "",
+                                     "signature_text": profile.signature_text or "",
+                                     "signature_new": bool(profile.signature_new), "signature_reply": bool(profile.signature_reply)}
         self._save(data)

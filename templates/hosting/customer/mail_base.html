@@ -1,0 +1,31 @@
+{% extends "layouts/_root.html" %}
+{% load i18n static %}
+{% comment %}
+The shell of the mail app: a full-screen page with its own slim top bar and account menu (mail settings, close the mail window,
+sign out). The webmail and the mail settings pages both extend this; nothing of the website's own header or footer is shown.
+{% endcomment %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/mail.css' %}">{% endblock %}
+{% block body_class %}mail-app{% endblock %}
+{% block frame %}
+<div class="ml">
+  <header class="ml-top">
+    <a class="ml-back" href="{{ back_url }}" data-close-window title="{% trans 'Close mail and go back to email accounts' %}" aria-label="{% trans 'Close mail and go back to email accounts' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i></a>
+    <a class="ml-brand" href="{% firstof mail_url list_url %}"><i class="bi bi-envelope-paper-heart-fill" aria-hidden="true"></i> <span>{% trans "Mail" %}</span></a>
+    {% block ml_search %}<span class="ml-search-gap"></span>{% endblock %}
+    <div class="dropdown ml-account">
+      <button class="ml-me" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Account menu' %}: {{ address }}"><span class="ml-avatar tone-1">{{ address|slice:":1"|upper }}</span><span class="ml-me-text"><strong>{{ address }}</strong><small>{{ account.domain }}</small></span><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+      <ul class="dropdown-menu dropdown-menu-end ml-menu">
+        <li class="ml-menu-head"><span class="ml-avatar ml-avatar-lg tone-1">{{ address|slice:":1"|upper }}</span><div><strong>{{ address }}</strong><small>{{ account.domain }}</small></div></li>
+        <li><a class="dropdown-item" href="{{ settings_url }}"><i class="bi bi-gear" aria-hidden="true"></i> {% trans "Mail settings" %}</a></li>
+        <li><a class="dropdown-item" href="{{ back_url }}" data-close-window><i class="bi bi-x-square" aria-hidden="true"></i> {% trans "Close mail" %}</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><form method="post" action="{{ logout_url }}">{% csrf_token %}<button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> {% trans "Sign out of WHPanel" %}</button></form></li>
+      </ul>
+    </div>
+  </header>
+
+  {% include "components/messages.html" %}
+  {% block ml_main %}{% endblock %}
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/mail.js' %}" defer></script>{% endblock %}

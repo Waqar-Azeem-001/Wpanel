@@ -286,7 +286,8 @@ def test_an_account_without_email_gets_the_not_available_page(client, owner, acc
 
 def test_folders_count_messages_and_unread(mail):
     mail.create_mailbox("info", GOOD, None)
-    assert mail.folders("info") == {"inbox": (3, 1), "sent": (0, 0), "spam": (0, 0), "trash": (0, 0)}
+    assert mail.folders("info") == {"inbox": (3, 1), "drafts": (0, 0), "sent": (0, 0), "archive": (0, 0), "spam": (0, 0),
+                                    "trash": (0, 0), "starred": (0, 0)}
     with pytest.raises(HostingError):
         mail.messages("info", "outbox")
 
@@ -354,8 +355,8 @@ def test_the_mail_viewer_is_its_own_focused_page_with_a_way_back(client, owner, 
     client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
     address = "info@demo-shop.example.com"
     page = client.get(mail_url(account, address=address)).content.decode()
-    assert 'class="ml"' in page and f'href="{url(account)}"' in page and "Back to email accounts" in page
-    for label in ("Inbox", "Sent", "Spam", "Trash", "Compose", "Search in Inbox"):
+    assert 'class="ml"' in page and f'href="{url(account)}"' in page and "Close mail and go back to email accounts" in page
+    for label in ("Inbox", "Sent", "Drafts", "Archive", "Spam", "Trash", "Compose", "Search in Inbox"):
         assert label in page
     # no website menu, header or footer around the mail
     assert "sidebar-panel" not in page and "ws-head" not in page and "Need a hand with your services" not in page
@@ -382,7 +383,7 @@ def test_read_reply_spam_delete_and_restore_from_the_screen(client, owner, accou
     act = url(account, "webmail/do/")
     opened = client.get(mail_url(account, address=address, message="m1")).content.decode()
     assert "Your mailbox is ready" in opened and "Reply" in opened and 'name="to_folder" value="spam"' in opened
-    assert "compose=1" in opened and "reply=m1" in opened and "has-message" in opened
+    assert "reply=m1" in opened and "has-message" in opened
     client.post(act, {"action": "move", "address": address, "folder": "inbox", "message": "m2", "to_folder": "spam"})
     assert "Your invoice is ready" in client.get(mail_url(account, address=address, folder="spam")).content.decode()
     client.post(act, {"action": "delete", "address": address, "folder": "inbox", "message": "m3"})
@@ -393,18 +394,15 @@ def test_read_reply_spam_delete_and_restore_from_the_screen(client, owner, accou
     assert "Tip: set up your email" in client.get(mail_url(account, address=address, folder="trash")).content.decode()
 
 
-def test_the_compose_window_is_part_of_the_page_and_opens_for_a_reply(client, owner, account):
+def test_the_compose_window_is_part_of_the_page_and_opens_for_a_new_message(client, owner, account):
     client.force_login(owner)
     client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
     address = "info@demo-shop.example.com"
     page = client.get(mail_url(account, address=address)).content.decode()
     assert 'id="ml-compose"' in page and "data-editor" in page and "data-compose-count" in page and 'data-cmd="bold"' in page
     assert 'class="ml-cw"' in page  # closed until the Compose button opens it
-    reply = client.get(mail_url(account, address=address, compose=1, reply="m1")).content.decode()
-    assert 'class="ml-cw is-open"' in reply
-    assert 'value="support@example.com"' in reply and "Re: Welcome to your new mailbox" in reply
-    assert "<blockquote>" in reply and "wrote:" in reply and "Your mailbox is ready." in reply
-    assert client.get(mail_url(account, address=address, compose=1, reply="m99")).status_code == 200  # unknown: blank window
+    opened = client.get(mail_url(account, address=address, compose=1)).content.decode()
+    assert 'class="ml-cw is-open"' in opened
 
 
 def test_send_keeps_what_was_typed_on_an_error_and_delivers_between_mailboxes(client, owner, account):
@@ -462,3 +460,182 @@ def test_a_stranger_cannot_use_the_mail_actions(client, customer, account):
     for data in ({"action": "send", "address": "x@demo-shop.example.com", "to": "a@b.com", "subject": "s", "body": "b"},
                  {"action": "delete", "address": "x@demo-shop.example.com", "message": "m1"}):
         assert client.post(act, data).status_code == 404
+
+
+# --- All the folders, drafts, stars, the inline reply, mail settings and the account menu --------------------------
+
+def test_every_folder_exists_and_starred_is_a_view_not_a_place(mail):
+    mail.create_mailbox("info", GOOD, None)
+    assert set(mail.folders("info")) == {"inbox", "drafts", "sent", "archive", "spam", "trash", "starred"}
+    mail.set_starred("info", "m1", True)
+    assert mail.folders("info")["starred"] == (1, 1) and [m.message_id for m in mail.messages("info", "starred")] == ["m1"]
+    assert mail.messages("info", "starred")[0].starred
+    mail.delete_message("info", "m1")  # in the trash it is no longer part of Starred
+    assert mail.messages("info", "starred") == []
+    mail.set_starred("info", "m1", False)
+    with pytest.raises(HostingError):
+        mail.set_starred("info", "nope", True)
+
+
+def test_archive_moves_in_and_out_and_only_known_folders_are_targets(mail):
+    mail.create_mailbox("info", GOOD, None)
+    mail.move_message("info", "m2", "archive")
+    assert [m.message_id for m in mail.messages("info", "archive")] == ["m2"]
+    mail.move_message("info", "m2", "inbox")
+    for target in ("sent", "drafts", "starred", "nowhere"):
+        with pytest.raises(HostingError):
+            mail.move_message("info", "m2", target)
+
+
+def test_drafts_are_saved_replaced_deleted_and_removed_when_sent(mail):
+    mail.create_mailbox("info", GOOD, None)
+    first = mail.save_draft("info", "a@gmail.com", "Plan", "first words", "<p>first words</p>")
+    second = mail.save_draft("info", "a@gmail.com", "Plan", "more words", "<p>more words</p>", draft_id=first)
+    drafts = mail.messages("info", "drafts")
+    assert [d.message_id for d in drafts] == [second] and drafts[0].subject == "Plan" and mail.folders("info")["drafts"] == (1, 0)
+    assert mail.read_message("info", second).html == "<p>more words</p>"
+    mail.send_message("info", "friend@gmail.com", "Plan", "final words", "<p>final</p>", draft_id=second)
+    assert mail.messages("info", "drafts") == [] and [m.subject for m in mail.messages("info", "sent")] == ["Plan"]
+    third = mail.save_draft("info", "", "", "only a thought", "")
+    mail.delete_message("info", third)  # a draft is deleted for good, not moved to the trash
+    assert mail.messages("info", "drafts") == [] and mail.messages("info", "trash") == []
+    with pytest.raises(HostingError):
+        mail.save_draft("info", "", "", "", "")
+
+
+def test_the_mail_profile_is_validated_and_remembered(mail):
+    from apps.hosting.adapters.capabilities import MailProfile
+
+    mail.create_mailbox("info", GOOD, None)
+    assert mail.profile("info") == MailProfile()
+    mail.set_profile("info", MailProfile(display_name="Ayesha Khan", reply_to="Boss@Gmail.com", signature_html="<b>Ayesha</b>",
+                                         signature_text="Ayesha", signature_new=False, signature_reply=True))
+    saved = mail.profile("info")
+    assert saved.display_name == "Ayesha Khan" and saved.reply_to == "boss@gmail.com" and not saved.signature_new
+    for bad in (MailProfile(display_name="x" * 81), MailProfile(display_name="line" + chr(10) + "break"),
+                MailProfile(reply_to="nope"), MailProfile(signature_html="s" * 5001), MailProfile(signature_text="s" * 2001)):
+        with pytest.raises(HostingError):
+            mail.set_profile("info", bad)
+    with pytest.raises(HostingError):
+        mail.profile("ghost")
+
+
+def test_the_page_lists_all_seven_folders_and_the_account_menu(client, owner, account):
+    from django.urls import reverse
+
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    page = client.get(mail_url(account, address="info@demo-shop.example.com")).content.decode()
+    for label in ("Inbox", "Starred", "Drafts", "Sent", "Archive", "Spam", "Trash"):
+        assert f"</i> {label}</span>" in page, label
+    assert "Mail settings" in page and "Close mail" in page and "Sign out of WHPanel" in page
+    assert f'action="{reverse("accounts:logout")}"' in page and "data-close-window" in page
+    emails = client.get(url(account)).content.decode()
+    assert 'target="_blank"' in emails and "Opens in a new window" in emails  # Webmail opens in its own window
+
+
+def test_star_archive_and_the_move_actions_from_the_screen(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address, act = "info@demo-shop.example.com", url(account, "webmail/do/")
+    client.post(act, {"action": "star", "address": address, "folder": "inbox", "message": "m1", "starred": "1"})
+    starred = client.get(mail_url(account, address=address, folder="starred")).content.decode()
+    assert "Welcome to your new mailbox" in starred and "ml-star-on" in starred
+    opened = client.get(mail_url(account, address=address, folder="inbox", message="m1")).content.decode()
+    assert "Starred" in opened and "Archive" in opened
+    client.post(act, {"action": "move", "address": address, "folder": "inbox", "message": "m2", "to_folder": "archive"})
+    arch = client.get(mail_url(account, address=address, folder="archive", message="m2")).content.decode()
+    assert "Your invoice is ready" in arch and "Move to inbox" in arch
+    bad = client.post(act, {"action": "move", "address": address, "folder": "inbox", "message": "m3", "to_folder": "sent"}, follow=True)
+    assert "can be moved to" in bad.content.decode()
+
+
+def test_a_reply_opens_inline_under_the_message_not_in_a_separate_window(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address = "info@demo-shop.example.com"
+    plain = client.get(mail_url(account, address=address, message="m1")).content.decode()
+    assert 'id="ml-inline"' in plain and 'class="ml-inline"' in plain and "data-reply-open" in plain  # there, but closed
+    assert "Re: Welcome to your new mailbox" in plain and "<blockquote>" in plain  # and already filled in for the Reply button
+    reply = client.get(mail_url(account, address=address, reply="m1")).content.decode()
+    assert 'class="ml-inline is-open"' in reply and 'class="ml-cw"' in reply  # the floating window stays closed
+    assert 'value="support@example.com"' in reply and "Re: Welcome to your new mailbox" in reply and "<blockquote>" in reply
+    assert "Your mailbox is ready." in reply and 'name="reply_to_id" value="m1"' in reply
+    sent = client.post(url(account, "webmail/do/"), {"action": "reply", "address": address, "folder": "inbox", "reply_to_id": "m1",
+                                                     "to": "support@example.com", "subject": "Re: Welcome", "html": "<p>Thanks!</p>",
+                                                     "body": "Thanks!"}, follow=True).content.decode()
+    assert "Message sent." in sent
+    assert "Re: Welcome" in client.get(mail_url(account, address=address, folder="sent")).content.decode()
+    failed = client.post(url(account, "webmail/do/"), {"action": "reply", "address": address, "folder": "inbox", "reply_to_id": "m1",
+                                                       "to": "nope", "subject": "Re: x", "html": "<p>Keep this</p>", "body": "Keep this"}).content.decode()
+    assert "valid email address" in failed and "Keep this" in failed and 'class="ml-inline is-open"' in failed
+
+
+def test_drafts_from_the_screen_save_open_send_and_delete(client, owner, account):
+    client.force_login(owner)
+    for local in ("info", "sales"):
+        client.post(url(account, "do/"), {"action": "create_mailbox", "local": local, "password": GOOD})
+    address, act = "info@demo-shop.example.com", url(account, "webmail/do/")
+    saved = client.post(act, {"action": "save_draft", "address": address, "folder": "inbox", "to": "sales@demo-shop.example.com",
+                              "subject": "Half done", "html": "<p>Half <b>done</b></p>", "body": "Half done"}, follow=True).content.decode()
+    assert "Draft saved." in saved and "Half done" in saved
+    quiet = client.post(act, {"action": "save_draft", "address": address, "folder": "inbox", "to": "x@y.com", "subject": "Quiet",
+                              "html": "<p>q</p>", "body": "q"}, HTTP_X_REQUESTED_WITH="fetch")
+    assert quiet.status_code == 200 and quiet.json()["draft_id"].startswith("d")
+    nothing = client.post(act, {"action": "save_draft", "address": address, "folder": "inbox", "to": "", "subject": "", "html": "",
+                                "body": ""}, HTTP_X_REQUESTED_WITH="fetch")
+    assert nothing.status_code == 204
+    first = [c for c in client.get(mail_url(account, address=address, folder="drafts")).content.decode().split("draft=")[1:]
+             if "Half done" in c][0].split('"')[0].split("&")[0]
+    opened = client.get(mail_url(account, address=address, folder="drafts", draft=first)).content.decode()
+    assert 'class="ml-cw is-open"' in opened and 'value="Half done"' in opened and f'value="{first}"' in opened and "<b>done</b>" in opened
+    client.post(act, {"action": "send", "address": address, "folder": "drafts", "draft_id": first, "to": "sales@demo-shop.example.com",
+                      "subject": "Half done", "html": "<p>Done now</p>", "body": "Done now"})
+    drafts = client.get(mail_url(account, address=address, folder="drafts")).content.decode()
+    assert "Half done" not in drafts and "Quiet" in drafts  # the sent one left Drafts; the other is still there
+    assert "Half done" in client.get(mail_url(account, address="sales@demo-shop.example.com")).content.decode()
+    gone = client.post(act, {"action": "delete", "address": address, "folder": "drafts", "message": quiet.json()["draft_id"]},
+                       HTTP_X_REQUESTED_WITH="fetch")
+    assert gone.status_code == 204 and "Quiet" not in client.get(mail_url(account, address=address, folder="drafts")).content.decode()
+
+
+def test_mail_settings_profile_signature_autoreply_and_password(client, owner, account):
+    from django.urls import reverse
+
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address = "info@demo-shop.example.com"
+    here = reverse("hosting_customer:webmail_settings", args=[account.pk])
+    page = client.get(here, {"address": address}).content.decode()
+    for label in ("Mail settings", "Your name", "Reply-to address", "Signature", "Automatic reply", "Password", "data-editor"):
+        assert label in page, label
+    saved = client.post(here, {"action": "profile", "address": address, "display_name": "Ayesha Khan", "reply_to": "boss@gmail.com",
+                               "signature_html": "<p>Best,<br><b>Ayesha</b></p><script>alert(1)</script>", "signature_text": "",
+                               "signature_new": "1", "signature_reply": "1"}, follow=True).content.decode()
+    assert "Mail settings saved." in saved and 'value="Ayesha Khan"' in saved and "<b>Ayesha</b>" in saved and "<script>alert" not in saved
+    new = client.get(mail_url(account, address=address, compose=1)).content.decode()
+    assert "-- <br>" in new and "<b>Ayesha</b>" in new and "Ayesha Khan &lt;info@demo-shop.example.com&gt;" in new
+    reply = client.get(mail_url(account, address=address, reply="m1")).content.decode()
+    assert reply.index("<b>Ayesha</b>") < reply.index("<blockquote>")  # signature first, the quote underneath
+    client.post(here, {"action": "profile", "address": address, "display_name": "Ayesha Khan", "reply_to": "",
+                       "signature_html": "<p>Best</p>", "signature_text": "", "signature_reply": "1"})  # not for new messages
+    assert "<p>Best</p>" not in client.get(mail_url(account, address=address, compose=1)).content.decode()
+    bad = client.post(here, {"action": "profile", "address": address, "display_name": "A", "reply_to": "nope"}, follow=True)
+    assert "reply-to address is not a valid" in bad.content.decode()
+    client.post(here, {"action": "autoresponder", "address": address, "subject": "Away", "body": "Back Monday", "enabled": "1"})
+    assert 'value="Away"' in client.get(here, {"address": address}).content.decode()
+    client.post(here, {"action": "autoresponder", "address": address, "remove": "1"})
+    assert 'value="Away"' not in client.get(here, {"address": address}).content.decode()
+    weak = client.post(here, {"action": "password", "address": address, "password": "weak"}, follow=True)
+    assert "Use a password of 12 to 128 characters" in weak.content.decode()
+    client.post(here, {"action": "password", "address": address, "password": "Brand-new-Pass1"})
+    assert client.get(here, {"address": "ghost@demo-shop.example.com"}, follow=True).status_code == 200
+
+
+def test_a_stranger_cannot_open_or_change_mail_settings(client, customer, account):
+    from django.urls import reverse
+
+    client.force_login(customer)
+    here = reverse("hosting_customer:webmail_settings", args=[account.pk])
+    assert client.get(here, {"address": "x@demo-shop.example.com"}).status_code == 404
+    assert client.post(here, {"action": "profile", "address": "x@demo-shop.example.com", "display_name": "Evil"}).status_code == 404

@@ -240,8 +240,20 @@ class DemoAdapter(EmailCapability, DatabasesCapability, FilesCapability, SslCapa
     def delete_message(self, username, address, message_id):
         email_for(username).delete_message(address, message_id)
 
-    def send_message(self, username, address, to, subject, body, html=""):
-        email_for(username).send_message(address, to, subject, body, html)
+    def send_message(self, username, address, to, subject, body, html="", draft_id=""):
+        email_for(username).send_message(address, to, subject, body, html, draft_id)
+
+    def set_message_starred(self, username, address, message_id, starred):
+        email_for(username).set_starred(address, message_id, starred)
+
+    def save_draft(self, username, address, to, subject, body, html="", draft_id=""):
+        return email_for(username).save_draft(address, to, subject, body, html, draft_id)
+
+    def get_mail_profile(self, username, address):
+        return email_for(username).profile(address)
+
+    def set_mail_profile(self, username, address, profile):
+        email_for(username).set_profile(address, profile)
 
     def read_message(self, username, address, message_id):
         return email_for(username).read_message(address, message_id)

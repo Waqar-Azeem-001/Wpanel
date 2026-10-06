@@ -37,6 +37,7 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:database_row": "POST-only in practice; reached from the data grid of the database manager (test_databases.py)",
     "hosting_customer:email": "linked only for an account whose provider supports email (the demo provider); tested in apps/hosting/tests/test_email.py",
     "hosting_customer:email_action": "POST-only in practice; reached from the Email screen forms (test_email.py)",
+    "hosting_customer:webmail_settings": "opened from the mail app account menu, which needs an email-capable provider (test_email.py)",
     "hosting_customer:webmail_action": "POST-only in practice; reached from the webmail screen (test_email.py)",
     "hosting_customer:webmail": "opened from a mailbox row, which needs an email-capable provider (test_email.py)",
     "hosting_customer:file_edit": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",

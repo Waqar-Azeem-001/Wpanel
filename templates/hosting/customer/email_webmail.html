@@ -1,24 +1,15 @@
-{% extends "layouts/_root.html" %}
+{% extends "hosting/customer/mail_base.html" %}
 {% load i18n static %}
 {% block title %}{{ folder_label }} · {{ address }} · {% trans "Mail" %}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'css/mail.css' %}">{% endblock %}
-{% block body_class %}mail-app{% endblock %}
-{% block frame %}
-<div class="ml">
-  <header class="ml-top">
-    <a class="ml-back" href="{{ back_url }}" title="{% trans 'Back to email accounts' %}" aria-label="{% trans 'Back to email accounts' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i></a>
-    <a class="ml-brand" href="{{ list_url }}"><i class="bi bi-envelope-paper-heart-fill" aria-hidden="true"></i> <span>{% trans "Mail" %}</span></a>
-    <form class="ml-search" method="get" role="search" action="{% url 'hosting_customer:webmail' account.pk %}">
-      <input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}">
-      <i class="bi bi-search" aria-hidden="true"></i>
-      <label class="visually-hidden" for="ml-q">{% trans "Search mail" %}</label>
-      <input id="ml-q" type="search" name="q" value="{{ query }}" placeholder="{% blocktrans %}Search in {{ folder_label }}{% endblocktrans %}" maxlength="100" autocomplete="off">
-    </form>
-    <div class="ml-me" title="{{ address }}"><span class="ml-avatar tone-1">{{ address|slice:":1"|upper }}</span><span class="ml-me-text"><strong>{{ address }}</strong><small>{{ account.domain }}</small></span></div>
-  </header>
-
-  {% include "components/messages.html" %}
-
+{% block ml_search %}
+<form class="ml-search" method="get" role="search" action="{% url 'hosting_customer:webmail' account.pk %}">
+  <input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}">
+  <i class="bi bi-search" aria-hidden="true"></i>
+  <label class="visually-hidden" for="ml-q">{% trans "Search mail" %}</label>
+  <input id="ml-q" type="search" name="q" value="{{ query }}" placeholder="{% blocktrans %}Search in {{ folder_label }}{% endblocktrans %}" maxlength="100" autocomplete="off">
+</form>
+{% endblock %}
+{% block ml_main %}
   <div class="ml-body{% if message %} has-message{% endif %}">
     <aside class="ml-rail" aria-label="{% trans 'Folders' %}">
       <button type="button" class="ml-compose-btn" data-compose-open><i class="bi bi-pencil-fill" aria-hidden="true"></i> {% trans "Compose" %}</button>
@@ -39,7 +30,7 @@
           <span class="ml-avatar tone-{{ it.tone }}" aria-hidden="true">{{ it.initial }}</span>
           <span class="ml-row-main">
             <span class="ml-row-top"><strong>{{ it.who }}</strong><time>{{ it.when }}</time></span>
-            <span class="ml-row-subject">{{ it.m.subject }}</span>
+            <span class="ml-row-subject">{% if it.m.starred %}<i class="bi bi-star-fill ml-star-on" aria-label="{% trans 'starred' %}"></i> {% endif %}{{ it.m.subject }}</span>
             <span class="ml-row-snippet">{{ it.m.snippet }}</span>
           </span>
           {% if it.m.unread %}<i class="ml-dot" aria-label="{% trans 'unread' %}"></i>{% endif %}
@@ -53,9 +44,11 @@
       {% if message %}
         <div class="ml-tools">
           <a class="ml-tool ml-tool-back" href="{{ list_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back" %}</a>
-          <a class="ml-tool" href="{{ reply_url }}"><i class="bi bi-reply" aria-hidden="true"></i> {% trans "Reply" %}</a>
-          {% if folder != "spam" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="move"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="to_folder" value="spam"><button class="ml-tool" type="submit"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> {% trans "Spam" %}</button></form>{% endif %}
-          {% if folder == "spam" or folder == "trash" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="move"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="to_folder" value="inbox"><button class="ml-tool" type="submit"><i class="bi bi-inbox" aria-hidden="true"></i> {% trans "Move to inbox" %}</button></form>{% endif %}
+          <a class="ml-tool" href="{{ reply_url }}" data-reply-open><i class="bi bi-reply" aria-hidden="true"></i> {% trans "Reply" %}</a>
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="star"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="starred" value="{% if message.starred %}0{% else %}1{% endif %}"><button class="ml-tool{% if message.starred %} is-on{% endif %}" type="submit" aria-pressed="{% if message.starred %}true{% else %}false{% endif %}"><i class="bi {% if message.starred %}bi-star-fill{% else %}bi-star{% endif %}" aria-hidden="true"></i> {% if message.starred %}{% trans "Starred" %}{% else %}{% trans "Star" %}{% endif %}</button></form>
+          {% if folder != "archive" and folder != "drafts" and folder != "sent" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="move"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="to_folder" value="archive"><button class="ml-tool" type="submit"><i class="bi bi-archive" aria-hidden="true"></i> {% trans "Archive" %}</button></form>{% endif %}
+          {% if folder != "spam" and folder != "drafts" and folder != "sent" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="move"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="to_folder" value="spam"><button class="ml-tool" type="submit"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> {% trans "Spam" %}</button></form>{% endif %}
+          {% if folder == "spam" or folder == "trash" or folder == "archive" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="move"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="to_folder" value="inbox"><button class="ml-tool" type="submit"><i class="bi bi-inbox" aria-hidden="true"></i> {% trans "Move to inbox" %}</button></form>{% endif %}
           <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><button class="ml-tool is-danger" type="submit"{% if folder == "trash" %} data-confirm="{% trans 'Delete this message for good?' %}"{% endif %}><i class="bi bi-trash" aria-hidden="true"></i> {% if folder == "trash" %}{% trans "Delete for good" %}{% else %}{% trans "Delete" %}{% endif %}</button></form>
         </div>
         <h2 class="ml-subject">{{ message.subject }}</h2>
@@ -65,44 +58,45 @@
           <time>{{ message_when }}</time>
         </div>
         <div class="ml-text">{% if message_html %}{{ message_html|safe }}{% else %}{{ message.body|linebreaks }}{% endif %}</div>
-        <div class="ml-reply-bar"><a class="ml-reply-btn" href="{{ reply_url }}"><i class="bi bi-reply" aria-hidden="true"></i> {% trans "Reply" %}</a></div>
+
+        {# The reply opens right here, under the message it answers. #}
+        <div class="ml-reply-bar"{% if reply_open %} hidden{% endif %}><a class="ml-reply-btn" href="{{ reply_url }}" data-reply-open><i class="bi bi-reply" aria-hidden="true"></i> {% trans "Reply" %}</a></div>
+        <form id="ml-inline" class="ml-inline{% if reply_open %} is-open{% endif %}" method="post" action="{{ action_url }}" data-plain data-editor-form data-compose data-inline aria-label="{% trans 'Reply' %}">{% csrf_token %}
+          <input type="hidden" name="action" value="reply"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="reply_to_id" value="{{ message.message_id }}">
+          <input type="hidden" name="html" data-html-field><input type="hidden" name="body" data-text-field>
+          <div class="ml-inline-head"><i class="bi bi-reply" aria-hidden="true"></i> <span>{% trans "Reply to" %} <strong>{{ message.sender }}</strong></span>
+            <button type="button" class="ml-cw-btn" data-reply-close title="{% trans 'Cancel the reply' %}" aria-label="{% trans 'Cancel the reply' %}"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
+          <div class="ml-cw-field"><label for="ml-r-to">{% trans "To" %}</label><input id="ml-r-to" name="to" value="{{ reply_form.to|default:message.sender }}" maxlength="500" required autocomplete="off"></div>
+          <div class="ml-cw-field"><label for="ml-r-subject">{% trans "Subject" %}</label><input id="ml-r-subject" name="subject" value="{{ reply_form.subject }}" maxlength="200" required></div>
+          {% include "hosting/customer/_ml_editor.html" with editor_id="ml-r-editor" editor_html=reply_form.html placeholder=_("Write your reply...") min_class="is-inline" %}
+          <div class="ml-cw-foot"><button class="ml-send" type="submit"><i class="bi bi-send-fill" aria-hidden="true"></i> {% trans "Send" %}</button>{% include "hosting/customer/_ml_toolbar.html" %}<span class="ml-cw-count" data-compose-count aria-live="polite"></span></div>
+        </form>
       {% else %}
         <div class="ml-empty ml-pick"><i class="bi bi-envelope-open" aria-hidden="true"></i><p>{% trans "Select a message to read it" %}</p></div>
       {% endif %}
     </section>
   </div>
 
-  {# The compose window: a floating window at the bottom right, like a mail app. Open when the page was asked for one (a reply, or a message that failed to send), otherwise opened by the Compose button. #}
-  <form id="ml-compose" class="ml-cw{% if compose %} is-open{% endif %}" method="post" action="{{ action_url }}" data-plain data-compose data-draft-key="whp-draft:{{ address }}" aria-label="{% trans 'New message' %}">{% csrf_token %}
-    <input type="hidden" name="action" value="send"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}">
-    <input type="hidden" name="html" data-compose-html><input type="hidden" name="body" data-compose-text>
+  {# The compose window: a floating window at the bottom right, for new messages and drafts. Open when the page asked for one (a draft, or a message that failed to send), otherwise opened by the Compose button. #}
+  <form id="ml-compose" class="ml-cw{% if compose %} is-open{% endif %}" method="post" action="{{ action_url }}" data-plain data-editor-form data-compose data-window aria-label="{% trans 'New message' %}">{% csrf_token %}
+    <input type="hidden" name="action" value="send"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="draft_id" value="{{ compose.draft_id }}" data-draft-id>
+    <input type="hidden" name="html" data-html-field><input type="hidden" name="body" data-text-field>
     <div class="ml-cw-head">
       <strong>{% trans "New message" %}</strong>
-      <span><button type="button" class="ml-cw-btn" data-compose-min title="{% trans 'Minimise' %}" aria-label="{% trans 'Minimise' %}"><i class="bi bi-dash-lg" aria-hidden="true"></i></button><button type="button" class="ml-cw-btn" data-compose-close title="{% trans 'Close' %}" aria-label="{% trans 'Close' %}"><i class="bi bi-x-lg" aria-hidden="true"></i></button></span>
+      <span><button type="button" class="ml-cw-btn" data-compose-min title="{% trans 'Minimise' %}" aria-label="{% trans 'Minimise' %}"><i class="bi bi-dash-lg" aria-hidden="true"></i></button><button type="button" class="ml-cw-btn" data-compose-close title="{% trans 'Save as a draft and close' %}" aria-label="{% trans 'Save as a draft and close' %}"><i class="bi bi-x-lg" aria-hidden="true"></i></button></span>
     </div>
     <div class="ml-cw-body">
-      <p class="ml-cw-note" data-draft-note hidden><i class="bi bi-clock-history" aria-hidden="true"></i> {% trans "Your unsent draft was restored." %} <button type="button" class="btn btn-link btn-sm p-0" data-draft-discard>{% trans "Discard it" %}</button></p>
+      <div class="ml-cw-field"><label>{% trans "From" %}</label><span class="ml-from-label">{{ from_label }}</span></div>
       <div class="ml-cw-field"><label for="ml-to">{% trans "To" %}</label><input id="ml-to" name="to" value="{{ compose.to }}" placeholder="name@example.com, another@example.com" maxlength="500" required autocomplete="off"></div>
       <div class="ml-cw-field"><label for="ml-subject">{% trans "Subject" %}</label><input id="ml-subject" name="subject" value="{{ compose.subject }}" maxlength="200" required></div>
-      <div class="ml-editor" id="ml-editor" data-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="{% trans 'Message' %}" data-placeholder="{% trans 'Write your message here...' %}">{{ compose.html|default:""|safe }}</div>
+      {% include "hosting/customer/_ml_editor.html" with editor_id="ml-editor" editor_html=compose.html placeholder=_("Write your message here...") min_class="" %}
     </div>
     <div class="ml-cw-foot">
       <button class="ml-send" type="submit"><i class="bi bi-send-fill" aria-hidden="true"></i> {% trans "Send" %}</button>
-      <div class="ml-fmt" role="toolbar" aria-label="{% trans 'Formatting' %}">
-        <button type="button" data-cmd="bold" title="{% trans 'Bold' %}" aria-label="{% trans 'Bold' %}"><i class="bi bi-type-bold" aria-hidden="true"></i></button>
-        <button type="button" data-cmd="italic" title="{% trans 'Italic' %}" aria-label="{% trans 'Italic' %}"><i class="bi bi-type-italic" aria-hidden="true"></i></button>
-        <button type="button" data-cmd="underline" title="{% trans 'Underline' %}" aria-label="{% trans 'Underline' %}"><i class="bi bi-type-underline" aria-hidden="true"></i></button>
-        <span class="ml-fmt-sep"></span>
-        <button type="button" data-cmd="insertUnorderedList" title="{% trans 'Bulleted list' %}" aria-label="{% trans 'Bulleted list' %}"><i class="bi bi-list-ul" aria-hidden="true"></i></button>
-        <button type="button" data-cmd="insertOrderedList" title="{% trans 'Numbered list' %}" aria-label="{% trans 'Numbered list' %}"><i class="bi bi-list-ol" aria-hidden="true"></i></button>
-        <button type="button" data-cmd="formatBlock" data-arg="blockquote" title="{% trans 'Quote' %}" aria-label="{% trans 'Quote' %}"><i class="bi bi-quote" aria-hidden="true"></i></button>
-        <button type="button" data-cmd="createLink" title="{% trans 'Add a link' %}" aria-label="{% trans 'Add a link' %}"><i class="bi bi-link-45deg" aria-hidden="true"></i></button>
-        <button type="button" data-cmd="removeFormat" title="{% trans 'Clear formatting' %}" aria-label="{% trans 'Clear formatting' %}"><i class="bi bi-eraser" aria-hidden="true"></i></button>
-      </div>
+      {% include "hosting/customer/_ml_toolbar.html" %}
       <span class="ml-cw-count" data-compose-count aria-live="polite"></span>
-      <button type="button" class="ml-cw-btn ml-discard" data-compose-discard title="{% trans 'Discard the draft' %}" aria-label="{% trans 'Discard the draft' %}"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+      <span class="ml-saved" data-saved-note hidden><i class="bi bi-check2" aria-hidden="true"></i> {% trans "Draft saved" %}</span>
+      <button type="button" class="ml-cw-btn ml-discard" data-compose-discard title="{% trans 'Discard' %}" aria-label="{% trans 'Discard' %}"><i class="bi bi-trash3" aria-hidden="true"></i></button>
     </div>
   </form>
-</div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/mail.js' %}" defer></script>{% endblock %}
