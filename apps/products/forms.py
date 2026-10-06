@@ -218,7 +218,10 @@ class ServerForm(forms.Form):
         self.fields.update(_fields(Server, (
             "name", "hostname", "ip_address", "max_accounts", "notes",
             "kind", "api_port", "api_username", "use_ssl", "verify_ssl",
+            "infra_provider", "infra_client_id", "infra_api_user",
         )))
+        for name in ("infra_provider", "infra_client_id", "infra_api_user"):
+            self.fields[name].required = False
         self.fields["notes"].widget = forms.Textarea(attrs={"rows": 3})
         # Optional with a model-level default, so a minimal submission (just name/hostname,
         # as before Phase 05) still works instead of failing validation on a missing choice.
@@ -229,6 +232,25 @@ class ServerForm(forms.Form):
             required=False, widget=forms.PasswordInput(render_value=False),
             help_text="WHM API token. Leave blank to keep the stored value. Not used by the Manual kind.",
         )
+
+        self.fields["infra_client_secret"] = forms.CharField(
+            required=False, label="Client secret", widget=forms.PasswordInput(render_value=False),
+            help_text="From your provider (Contabo: Customer Control Panel > API). Leave blank to keep the stored value.",
+        )
+        self.fields["infra_api_password"] = forms.CharField(
+            required=False, label="API password", widget=forms.PasswordInput(render_value=False),
+            help_text="The API user's password. Leave blank to keep the stored value.",
+        )
+
+        # WHM details first, then the company that rents the machine; the labels say which is which
+        self.order_fields(["name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
+                           "api_token", "use_ssl", "verify_ssl", "infra_provider", "infra_client_id", "infra_client_secret",
+                           "infra_api_user", "infra_api_password"])
+        self.fields["infra_provider"].label = "Provider (who rents you this machine)"
+        self.fields["infra_client_id"].label = "Provider client ID"
+        self.fields["infra_client_secret"].label = "Provider client secret"
+        self.fields["infra_api_user"].label = "Provider API user"
+        self.fields["infra_api_password"].label = "Provider API password"
 
     def clean_kind(self):
         from .models import ServerKind

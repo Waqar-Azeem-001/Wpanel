@@ -95,6 +95,13 @@ class ServerKind(models.TextChoices):
     DEMO = "demo", "Demo (sample data - design and testing only)"
 
 
+class InfraProvider(models.TextChoices):
+    """Who rents us the machine (not what runs on it). Only used to look at the machine, never to create hosting accounts."""
+
+    NONE = "", "None"
+    CONTABO = "contabo", "Contabo"
+
+
 class Server(TimeStampedModel):
     """
     A hosting server a product can be provisioned on.
@@ -123,6 +130,15 @@ class Server(TimeStampedModel):
     use_ssl = models.BooleanField(default=True, help_text="Use HTTPS for the WHM API connection.")
     verify_ssl = models.BooleanField(default=True, help_text="Disable only for a self-signed certificate you trust.")
 
+    # --- the company that rents us the machine (for example Contabo): used to look at the machine, not to create accounts ---
+    infra_provider = models.CharField("Infrastructure provider", max_length=20, choices=InfraProvider.choices, blank=True,
+                                      default="", help_text="Who rents you this machine. Optional.")
+    infra_client_id = models.CharField("Client ID", max_length=200, blank=True)
+    infra_client_secret_encrypted = models.TextField(blank=True, editable=False)
+    infra_api_user = models.CharField("API user", max_length=254, blank=True,
+                                      help_text="Contabo: the e-mail address of your API user.")
+    infra_api_password_encrypted = models.TextField(blank=True, editable=False)
+
     class Meta:
         ordering = ["name"]
 
@@ -134,6 +150,23 @@ class Server(TimeStampedModel):
 
     def get_api_token(self):
         return crypto.decrypt(self.api_token_encrypted)
+
+    def set_infra_client_secret(self, raw):
+        self.infra_client_secret_encrypted = crypto.encrypt(raw) if raw else ""
+
+    def get_infra_client_secret(self):
+        return crypto.decrypt(self.infra_client_secret_encrypted)
+
+    def set_infra_api_password(self, raw):
+        self.infra_api_password_encrypted = crypto.encrypt(raw) if raw else ""
+
+    def get_infra_api_password(self):
+        return crypto.decrypt(self.infra_api_password_encrypted)
+
+    @property
+    def infra_configured(self):
+        return bool(self.infra_provider and self.infra_client_id and self.infra_client_secret_encrypted
+                    and self.infra_api_user and self.infra_api_password_encrypted)
 
 
 class CatalogItem(TimeStampedModel):

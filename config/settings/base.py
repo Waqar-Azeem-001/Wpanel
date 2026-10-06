@@ -321,6 +321,11 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+# Where the infrastructure provider's own API lives (apps.hosting.infra): Contabo signs you in at one address and serves its
+# machine list from another. Only change these if Contabo moves them.
+CONTABO_AUTH_URL = env("CONTABO_AUTH_URL", default="https://auth.contabo.com/auth/realms/contabo/protocol/openid-connect/token")
+CONTABO_API_URL = env("CONTABO_API_URL", default="https://api.contabo.com/v1")
+
 # Hosting usage sync stays OFF until the WHM adapter has been verified against a real server (roadmap Known Work,
 # "WHM API adapter needs live verification"). Turn on with HOSTING_USAGE_SYNC_ENABLED=true once that is done.
 if env.bool("HOSTING_USAGE_SYNC_ENABLED", default=False):

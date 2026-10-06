@@ -371,6 +371,29 @@ def check_server(actor, server, *, request=None):
     return {"version": result.get("version", ""), "packages": packages, "missing": missing}
 
 
+def check_infrastructure(actor, server, *, request=None):
+    """
+    Sign in to the company that rents us the machine (Contabo) with the server's saved provider login and list the machines
+    that login can see (read-only). Says which one has this server's IP address, or - when no IP is saved and there is only
+    one machine - what IP to enter. The provider's secrets are never in the result, a message or an audit record.
+    """
+    from . import infra
+
+    _require(actor, "manage_hosting")
+    try:
+        found = infra.instances_for(server)
+    except infra.InfraError as exc:
+        audit.record("server.infra_failed", actor=actor, target=server,
+                     metadata={"provider": server.infra_provider, "reason": str(exc)[:300]}, request=request)
+        raise ServiceError(str(exc), code="infra_failed") from exc
+    ip = str(server.ip_address or "")
+    match = next((i for i in found if ip and i["ip"] == ip), None)
+    suggested = found[0]["ip"] if (not ip and len(found) == 1) else ""
+    audit.record("server.infra_tested", actor=actor, target=server,
+                 metadata={"provider": server.infra_provider, "machines": len(found), "matched": bool(match)}, request=request)
+    return {"provider": server.get_infra_provider_display(), "instances": found, "match": match, "suggested_ip": suggested}
+
+
 def sync_all_usage():
     """
     The scheduled job: refresh usage for every active account that has a server. One account failing (a server down,

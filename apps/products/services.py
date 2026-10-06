@@ -23,7 +23,19 @@ PRODUCT_FIELDS = (
 ADDON_FIELDS = ("name", "description", "kind", "category")
 CATEGORY_FIELDS = ("name", "short_name", "blurb", "icon", "group", "kind", "sort_order", "is_active")
 SERVER_FIELDS = ("name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
-                 "use_ssl", "verify_ssl")
+                 "use_ssl", "verify_ssl", "infra_provider", "infra_client_id", "infra_api_user")
+
+
+def _set_infra_secrets(server, data):
+    """Store the provider's secrets when new ones are given (blank keeps what is stored). Returns what changed, by name only."""
+    changed = []
+    if data.get("infra_client_secret"):
+        server.set_infra_client_secret(data["infra_client_secret"])
+        changed.append("client_secret")
+    if data.get("infra_api_password"):
+        server.set_infra_api_password(data["infra_api_password"])
+        changed.append("api_password")
+    return changed
 
 
 def _denied(message="You do not have permission to perform this action."):
@@ -287,10 +299,12 @@ def create_server(actor, data, *, request=None):
     server = Server(**{k: v for k, v in data.items() if k in SERVER_FIELDS})
     if data.get("api_token"):
         server.set_api_token(data["api_token"])
+    infra_secrets = _set_infra_secrets(server, data)
     server.full_clean()
     server.save()
     audit.record("server.created", actor=actor, target=server,
-                 metadata={"kind": server.kind, "api_token_set": bool(data.get("api_token"))}, request=request)
+                 metadata={"kind": server.kind, "api_token_set": bool(data.get("api_token")),
+                           "infra_provider": server.infra_provider, "infra_secrets_set": infra_secrets}, request=request)
     return server
 
 
@@ -301,7 +315,8 @@ def update_server(actor, server, data, *, request=None):
     token_changed = bool(data.get("api_token"))
     if token_changed:
         server.set_api_token(data["api_token"])
-    if not changed and not token_changed:
+    infra_secrets = _set_infra_secrets(server, data)
+    if not changed and not token_changed and not infra_secrets:
         return server
     server.full_clean()
     server.save()

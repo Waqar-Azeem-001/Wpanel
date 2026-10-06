@@ -258,11 +258,16 @@ class AddonViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Crea
 class ServerSerializer(serializers.ModelSerializer):
     api_token = serializers.CharField(write_only=True, required=False, allow_blank=True,
                                       help_text="Leave blank to keep the stored value.")
+    infra_client_secret = serializers.CharField(write_only=True, required=False, allow_blank=True,
+                                                help_text="Leave blank to keep the stored value.")
+    infra_api_password = serializers.CharField(write_only=True, required=False, allow_blank=True,
+                                               help_text="Leave blank to keep the stored value.")
 
     class Meta:
         model = Server
         fields = ["id", "name", "hostname", "ip_address", "status", "max_accounts", "notes", "kind", "api_port",
-                  "api_username", "api_token", "use_ssl", "verify_ssl", "created_at", "updated_at"]
+                  "api_username", "api_token", "use_ssl", "verify_ssl", "infra_provider", "infra_client_id",
+                  "infra_client_secret", "infra_api_user", "infra_api_password", "created_at", "updated_at"]
         read_only_fields = ["id", "status", "created_at", "updated_at"]
 
 

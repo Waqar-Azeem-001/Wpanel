@@ -11,6 +11,15 @@
     </div>
   </form></div>
 </section>
+{% if server and perms.accounts.manage_hosting and server.infra_provider %}
+<section class="card"><div class="card-body">
+  <h2>Test the provider login</h2>
+  <p class="text-secondary">Signs in to {{ server.get_infra_provider_display }} with the saved client ID, client secret, API user and API password, and lists the machines that login can see (read-only). If this server's IP address is saved it tells you whether it is one of them.{% if not server.infra_configured %} <strong>Some of the four details are still missing; save them first.</strong>{% endif %}</p>
+  <form method="post" action="{% url 'catalog_staff:server_infra_test' server.pk %}">{% csrf_token %}
+    <button class="btn btn-outline-primary" type="submit"><i class="bi bi-hdd-network" aria-hidden="true"></i> Test the provider login</button>
+  </form></div>
+</section>
+{% endif %}
 {% if server and perms.accounts.manage_hosting %}
 <section class="card"><div class="card-body">
   <h2>Test connection</h2>

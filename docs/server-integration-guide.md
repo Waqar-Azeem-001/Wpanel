@@ -8,7 +8,8 @@ WHPanel creates, suspends, unsuspends, changes the plan of, backs up and termina
 anyone else is not enough until cPanel is installed on it).
 
 Contabo's own **client id / client secret / API user / API password** are for Contabo's API (restart, reinstall or snapshot the
-VPS). WHPanel does not use them to create hosting accounts, and there is no field for them yet.
+VPS). WHPanel does not use them to create hosting accounts; they are stored on the server only so staff can check that the
+machine, its IP address and its status are what they think (see "The provider login" below).
 
 ## One-time steps on the server (WHM)
 1. Install cPanel & WHM on the VPS and open `https://<server>:2087` (use the hostname, e.g. `northhillstudios.com`).
@@ -29,6 +30,22 @@ VPS). WHPanel does not use them to create hosting accounts, and there is no fiel
    then try Suspend, Unsuspend and Terminate on it.
 5. Only after that, turn on the scheduled usage sync (`HOSTING_USAGE_SYNC_ENABLED=true`).
 
+## The provider login (Contabo client ID and secret)
+In Contabo's Customer Control Panel open **API** and create (or copy) the four details. In WHPanel open **Servers > Edit**:
+
+| Contabo calls it | WHPanel field |
+|---|---|
+| Client ID | Provider client ID |
+| Client Secret | Provider client secret |
+| API User (the e-mail address) | Provider API user |
+| API Password (the one you set under API) | Provider API password |
+
+Choose **Provider (who rents you this machine) = Contabo**, save, then press **Test the provider login**. It signs in to
+Contabo, lists the machines that login owns (name, IP address, status, region) and tells you whether one has this server's IP
+address; if no IP is saved and there is only one machine it tells you which IP to enter. It is read-only: nothing is created,
+restarted or changed. The two secrets are stored encrypted and are never shown again; leave them blank when editing to keep them.
+The two Contabo web addresses live in settings (`CONTABO_AUTH_URL`, `CONTABO_API_URL`), not in the code.
+
 ## If Test connection fails
 | Message | Usually means |
 |---|---|
@@ -38,4 +55,5 @@ VPS). WHPanel does not use them to create hosting accounts, and there is no fiel
 | "Token denied" and similar WHM text | the WHM user may not use that function |
 
 ## Not built yet
-Storing and using **Contabo** credentials (infrastructure dashboard, H13), and creating the WHM token automatically.
+Acting on the machine from WHPanel (restart, reinstall, snapshots: the infrastructure dashboard, H13), and creating the WHM
+token automatically.

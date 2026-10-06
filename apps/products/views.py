@@ -443,6 +443,8 @@ def staff_server_edit(request, pk):
         "max_accounts": server.max_accounts, "notes": server.notes,
         "kind": server.kind, "api_port": server.api_port, "api_username": server.api_username,
         "use_ssl": server.use_ssl, "verify_ssl": server.verify_ssl,
+        "infra_provider": server.infra_provider, "infra_client_id": server.infra_client_id,
+        "infra_api_user": server.infra_api_user,
     })
     if request.method == "POST" and form.is_valid():
         try:
@@ -480,6 +482,32 @@ def staff_server_test(request, pk):
     target = request.POST.get("next", "")
     if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
         return redirect(target)  # back to the list the button was on
+    return redirect("catalog_staff:server_edit", pk=server.pk)
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def staff_server_infra_test(request, pk):
+    """Ask the company that rents us the machine (for example Contabo) which machines this login can see."""
+    from apps.hosting import services as hosting_services
+
+    server = get_object_or_404(Server, pk=pk)
+    try:
+        result = hosting_services.check_infrastructure(request.user, server, request=request)
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+    else:
+        found = result["instances"]
+        names = "; ".join(f"{i['name'] or i['id']} ({i['ip'] or 'no IP'}, {i['status']})" for i in found[:8])
+        messages.success(request, f"Connected to {result['provider']}. {len(found)} machine(s) on this login: {names or 'none'}.")
+        if result["match"]:
+            messages.success(request, f"This server's IP address matches '{result['match']['name'] or result['match']['id']}'"
+                                      f" ({result['match']['status']}, {result['match']['region'] or 'region unknown'}).")
+        elif server.ip_address:
+            messages.warning(request, f"None of those machines has the IP address {server.ip_address} saved on this server.")
+        elif result["suggested_ip"]:
+            messages.info(request, f"This server has no IP address saved. The only machine here has {result['suggested_ip']}: "
+                                   "enter it in the IP address field.")
     return redirect("catalog_staff:server_edit", pk=server.pk)
 
 
