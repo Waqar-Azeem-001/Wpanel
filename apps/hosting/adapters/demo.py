@@ -13,9 +13,10 @@ from pathlib import Path
 from django.conf import settings
 
 from .base import HostingError
-from .capabilities import (DatabaseAdminAccess, DatabasesCapability, EmailCapability, FilesCapability, PhpCapability,
-                           PhpSettings, SslCapability, SslStatus, WebmailAccess)
+from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
+                           FilesCapability, PhpCapability, PhpSettings, SslCapability, SslStatus, WebmailAccess)
 from .demo_databases import DemoDatabases
+from .demo_domains import DemoDomains
 from .demo_email import DemoEmail
 from .manual import ManualAdapter
 from .sandbox import Sandbox
@@ -52,6 +53,29 @@ def email_for(username):
     return DemoEmail(files_root() / f"{username}.state", account.domain if account else "")
 
 
+def domains_for(username):
+    """The account's demo domain and DNS service. A new domain gets a website folder (and a placeholder page) in the file manager."""
+    from apps.hosting.models import HostingAccount
+
+    account = HostingAccount.objects.filter(username=username, server__kind="demo").first()
+
+    def make_folder(path):
+        box = sandbox_for(username)
+        walked = ""
+        for part in [p for p in path.split("/") if p]:
+            walked = f"{walked}/{part}" if walked else part
+            try:
+                box.make_directory(walked)
+            except HostingError:
+                pass  # it already exists
+        try:
+            box.write_file(f"{path}/index.html", b"<!doctype html><title>Coming soon</title><h1>Coming soon</h1>")
+        except HostingError:
+            pass  # a page is already there: leave it alone
+
+    return DemoDomains(files_root() / f"{username}.state", account.domain if account else "", make_folder)
+
+
 def sandbox_for(username):
     """The account's folder, created with a few sample files the first time it is used."""
     root = files_root() / username
@@ -65,7 +89,8 @@ def sandbox_for(username):
     return box
 
 
-class DemoAdapter(EmailCapability, DatabasesCapability, FilesCapability, SslCapability, PhpCapability, ManualAdapter):
+class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
+                  PhpCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -257,6 +282,35 @@ class DemoAdapter(EmailCapability, DatabasesCapability, FilesCapability, SslCapa
 
     def read_message(self, username, address, message_id):
         return email_for(username).read_message(address, message_id)
+
+    # --- Domains and DNS (simulated service with real rules) -------------------------------------------------------
+
+    def domain_limits(self, username):
+        return domains_for(username).limits()
+
+    def list_domains(self, username):
+        return domains_for(username).domains()
+
+    def add_domain(self, username, name, kind, document_root=""):
+        domains_for(username).add_domain(name, kind, document_root)
+
+    def remove_domain(self, username, name):
+        domains_for(username).remove_domain(name)
+
+    def set_redirect(self, username, name, redirect_to, permanent=True):
+        domains_for(username).set_redirect(name, redirect_to, permanent)
+
+    def list_dns_records(self, username, domain):
+        return domains_for(username).records(domain)
+
+    def add_dns_record(self, username, domain, record):
+        return domains_for(username).add_record(domain, record)
+
+    def update_dns_record(self, username, domain, record):
+        domains_for(username).update_record(domain, record)
+
+    def delete_dns_record(self, username, domain, record_id):
+        domains_for(username).delete_record(domain, record_id)
 
     # --- SSL ---------------------------------------------------------------------------------------------------
 

@@ -225,6 +225,16 @@ class DomainInfo:
     kind: str  # "primary", "addon", "subdomain" or "alias"
     document_root: str = ""
     redirect_to: str = ""
+    redirect_permanent: bool = True  # 301 when True, 302 when False
+
+
+@dataclass(frozen=True)
+class DomainLimits:
+    """What the plan allows for extra domains, and the nameservers a customer points a domain at. ``None``: no fixed limit."""
+
+    max_addon_domains: Optional[int] = None
+    max_subdomains: Optional[int] = None
+    nameservers: list = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -511,7 +521,21 @@ class EmailCapability(ABC):
     def delete_forwarder(self, username: str, source: str, destination: str) -> None: ...
 
 
+DOMAIN_KINDS = ("addon", "subdomain", "alias")  # what a customer can add; "primary" is the account's own domain
+DNS_RECORD_TYPES = ("A", "AAAA", "CNAME", "MX", "TXT", "SRV", "CAA")
+DNS_MIN_TTL = 300
+DNS_MAX_TTL = 86400
+
+
 class DomainsCapability(ABC):
+    """
+    ``name`` is always the full domain (``blog.example.com``). ``document_root`` is relative to the account's website folder.
+    The provider enforces plan limits, valid names, and that a subdomain sits under one of the account's own domains.
+    """
+
+    @abstractmethod
+    def domain_limits(self, username: str) -> DomainLimits: ...
+
     @abstractmethod
     def list_domains(self, username: str) -> list:
         """``DomainInfo`` rows: the primary domain and everything attached to the account."""
@@ -523,11 +547,17 @@ class DomainsCapability(ABC):
     def remove_domain(self, username: str, name: str) -> None: ...
 
     @abstractmethod
-    def set_redirect(self, username: str, name: str, redirect_to: str) -> None:
-        """Redirect ``name`` to ``redirect_to``; an empty string removes the redirect."""
+    def set_redirect(self, username: str, name: str, redirect_to: str, permanent: bool = True) -> None:
+        """Redirect ``name`` to the address ``redirect_to`` (301 when ``permanent``, else 302); an empty string removes it."""
 
 
 class DnsCapability(ABC):
+    """
+    Records are relative to the zone: the name is ``@`` for the domain itself, or a label such as ``www`` or ``_dmarc``. The
+    provider validates every record by its type (an A record needs an IPv4 address, a CNAME cannot sit at ``@``, ...), keeps
+    the TTL in range and refuses duplicates. Changing DNS can take a site or its mail offline, so callers confirm first.
+    """
+
     @abstractmethod
     def list_dns_records(self, username: str, domain: str) -> list:
         """``DnsRecord`` rows for ``domain``'s zone."""
@@ -630,7 +660,7 @@ OPERATIONS = {
                                  "save_draft", "get_mail_profile", "set_mail_profile",
                                  "list_mailboxes", "create_mailbox", "delete_mailbox", "set_mailbox_password",
                                  "set_mailbox_quota", "list_forwarders", "create_forwarder", "delete_forwarder"}),
-    Capability.DOMAINS: frozenset({"list_domains", "add_domain", "remove_domain", "set_redirect"}),
+    Capability.DOMAINS: frozenset({"domain_limits", "list_domains", "add_domain", "remove_domain", "set_redirect"}),
     Capability.DNS: frozenset({"list_dns_records", "add_dns_record", "update_dns_record", "delete_dns_record"}),
     Capability.SSL: frozenset({"get_ssl_status", "request_ssl", "set_https_redirect"}),
     Capability.PHP: frozenset({"get_php_settings", "set_php_settings"}),
@@ -641,7 +671,7 @@ OPERATIONS = {
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
 READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
                              "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
-                             "list_database_users", "list_mailboxes", "list_forwarders", "email_limits", "list_autoresponders",
+                             "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "get_mail_profile", "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load ui i18n static %}
+{% block title %}{% trans "DNS records" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-diagram-3" aria-hidden="true"></i> {% trans "DNS records" %}</h2>
+  {% if domains_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ domains_url }}"><i class="bi bi-globe2" aria-hidden="true"></i> {% trans "Domains" %}</a>{% endif %}
+</div>
+
+{% if not zones %}
+<section class="card"><div class="card-body text-secondary">{% trans "There is no domain with DNS records to show." %}</div></section>
+{% else %}
+<section class="card mb-3"><div class="card-body">
+  <div class="dns-zone-tabs" role="tablist" aria-label="{% trans 'Domain' %}">
+    {% for z, link in dns_urls %}<a class="dns-zone{% if z == domain %} is-active{% endif %}" href="{{ link }}"{% if z == domain %} aria-current="page"{% endif %}><i class="bi bi-globe2" aria-hidden="true"></i> {{ z }}</a>{% endfor %}
+  </div>
+  <div class="alert alert-warning dns-warn mb-0" role="note"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "Changing DNS can take your website or your email offline. Be careful with the records for the domain itself (@): they make the website and the mail work." %}</div>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Add a record" %}</h3>
+  <form method="post" action="{{ action_url }}" class="dns-add" data-plain data-dns-form>{% csrf_token %}
+    <input type="hidden" name="action" value="add"><input type="hidden" name="domain" value="{{ domain }}">
+    <div class="row g-2">
+      <div class="col-lg-2 col-4"><label class="form-label small" for="dns-type">{% trans "Type" %}</label>
+        <select class="form-select" id="dns-type" name="type" data-dns-type>{% for t in record_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select></div>
+      <div class="col-lg-4 col-8"><label class="form-label small" for="dns-name">{% trans "Name" %}</label>
+        <div class="input-group"><input class="form-control" id="dns-name" name="name" placeholder="@" maxlength="200" autocomplete="off" data-dns-name><span class="input-group-text dns-suffix">.{{ domain }}</span></div></div>
+      <div class="col-lg-3 col-12"><label class="form-label small" for="dns-value">{% trans "Value" %}</label>
+        <input class="form-control" id="dns-value" name="value" maxlength="2000" required autocomplete="off" data-dns-value></div>
+      <div class="col-lg-1 col-4" data-dns-priority-box hidden><label class="form-label small" for="dns-priority">{% trans "Priority" %}</label>
+        <input class="form-control" id="dns-priority" name="priority" type="number" min="0" max="65535" value="10"></div>
+      <div class="col-lg-2 col-8"><label class="form-label small" for="dns-ttl">TTL</label>
+        <select class="form-select" id="dns-ttl" name="ttl">{% for s, label in ttl_choices %}<option value="{{ s }}"{% if s == 14400 %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    </div>
+    <p class="small text-secondary mt-2 mb-2" data-dns-hint></p>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add record" %}</button>
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center"><h3 class="h6 mb-0">{% trans "Records for" %} {{ domain }}</h3><small class="text-secondary">{{ records|length }}</small></div>
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Type" %}</th><th scope="col">{% trans "Name" %}</th><th scope="col">{% trans "Value" %}</th><th scope="col">TTL</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>
+    {% for r in records %}
+      <tr>
+        <td><span class="dns-type dns-type-{{ r.type|lower }}">{{ r.type }}</span></td>
+        <td class="fm-name">{{ r.name }}</td>
+        <td class="dns-value text-break">{% if r.priority is not None %}<span class="site-pill">{{ r.priority }}</span> {% endif %}{{ r.value }}</td>
+        <td class="text-secondary">{{ r.ttl }}</td>
+        <td class="text-end"><div class="fm-actions">
+          <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#dns-edit" data-id="{{ r.record_id }}" data-type="{{ r.type }}" data-name="{{ r.name }}" data-value="{{ r.value }}" data-ttl="{{ r.ttl }}" data-priority="{{ r.priority|default_if_none:'' }}" title="{% trans 'Edit' %}" aria-label="{% trans 'Edit the' %} {{ r.type }} {% trans 'record' %} {{ r.name }}"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="domain" value="{{ domain }}"><input type="hidden" name="record_id" value="{{ r.record_id }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete the' %} {{ r.type }} {% trans 'record' %} {{ r.name }}?{% if r.name == '@' and r.type == 'A' %} {% trans 'This record points your domain at your website; without it your website will not open.' %}{% elif r.name == '@' and r.type == 'MX' %} {% trans 'This record delivers your email; without it your email stops arriving.' %}{% endif %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete the' %} {{ r.type }} {% trans 'record' %} {{ r.name }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
+        </div></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="text-secondary">{% trans "This domain has no DNS records yet." %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-7"><section class="card h-100"><div class="card-body">
+    <h3 class="h6">{% trans "Email records" %}</h3>
+    <p class="small text-secondary">{% trans "These records help your email reach inboxes instead of spam folders." %}</p>
+    <ul class="dns-mail">
+      <li><span><strong>SPF</strong> <small>{% trans "says which servers may send mail for your domain" %}</small></span>
+        {% if has_spf %}<span class="site-pill is-ok"><i class="bi bi-check2" aria-hidden="true"></i> {% trans "In place" %}</span>{% else %}<form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="mail_spf"><input type="hidden" name="domain" value="{{ domain }}"><button class="btn btn-sm btn-outline-primary" type="submit">{% trans "Add it" %}</button></form>{% endif %}</li>
+      <li><span><strong>DMARC</strong> <small>{% trans "tells receivers what to do with mail that fails the checks, and sends you reports" %}</small></span>
+        {% if has_dmarc %}<span class="site-pill is-ok"><i class="bi bi-check2" aria-hidden="true"></i> {% trans "In place" %}</span>{% else %}<form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="mail_dmarc"><input type="hidden" name="domain" value="{{ domain }}"><button class="btn btn-sm btn-outline-primary" type="submit">{% trans "Add it" %}</button></form>{% endif %}</li>
+      <li><span><strong>DKIM</strong> <small>{% trans "a signature your hosting server adds to your mail; it is switched on from the server" %}</small></span><span class="site-pill">{% trans "Not here yet" %}</span></li>
+    </ul>
+  </div></section></div>
+  <div class="col-lg-5"><section class="card h-100"><div class="card-body">
+    <h3 class="h6">{% trans "Nameservers" %}</h3>
+    <p class="small text-secondary">{% trans "These records only count when this domain uses these nameservers." %}</p>
+    <ul class="dm-ns">{% for ns in nameservers %}<li><code>{{ ns }}</code></li>{% endfor %}</ul>
+  </div></section></div>
+</div>
+
+<div class="modal fade" id="dns-edit" tabindex="-1" aria-labelledby="dns-edit-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <form method="post" action="{{ action_url }}" data-plain data-dns-form>{% csrf_token %}
+    <input type="hidden" name="action" value="update"><input type="hidden" name="domain" value="{{ domain }}"><input type="hidden" name="record_id" value=""><input type="hidden" name="type" value="">
+    <div class="modal-header"><h2 class="modal-title h5" id="dns-edit-title">{% trans "Edit" %} <span data-dns-edit-type></span> {% trans "record" %}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button></div>
+    <div class="modal-body">
+      <label class="form-label" for="dns-e-name">{% trans "Name" %}</label>
+      <div class="input-group mb-3"><input class="form-control" id="dns-e-name" name="name" maxlength="200" autocomplete="off"><span class="input-group-text dns-suffix">.{{ domain }}</span></div>
+      <label class="form-label" for="dns-e-value">{% trans "Value" %}</label>
+      <input class="form-control mb-1" id="dns-e-value" name="value" maxlength="2000" required autocomplete="off">
+      <p class="small text-secondary" data-dns-hint></p>
+      <div class="row g-2"><div class="col-6" data-dns-priority-box hidden><label class="form-label" for="dns-e-priority">{% trans "Priority" %}</label><input class="form-control" id="dns-e-priority" name="priority" type="number" min="0" max="65535"></div>
+        <div class="col-6"><label class="form-label" for="dns-e-ttl">TTL</label><select class="form-select" id="dns-e-ttl" name="ttl">{% for s, label in ttl_choices %}<option value="{{ s }}">{{ label }}</option>{% endfor %}</select></div></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button><button type="submit" class="btn btn-primary">{% trans "Save" %}</button></div>
+  </form></div></div></div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/dns.js' %}" defer></script>{% endblock %}

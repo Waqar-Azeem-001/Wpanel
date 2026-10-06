@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load ui i18n static %}
+{% block title %}{% trans "Domains" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if not limits %}
+<section class="card"><div class="card-body text-secondary">{% trans "Domains could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-globe2" aria-hidden="true"></i> {% trans "Domains" %}</h2>
+  <p class="db-counts">
+    <span class="site-pill {% if extra_full %}is-warn{% endif %}"><i class="bi bi-globe2" aria-hidden="true"></i> {{ extra_count }}{% if limits.max_addon_domains %} / {{ limits.max_addon_domains }}{% endif %} {% trans "extra domains" %}</span>
+    <span class="site-pill {% if sub_full %}is-warn{% endif %}"><i class="bi bi-diagram-2" aria-hidden="true"></i> {{ sub_count }}{% if limits.max_subdomains %} / {{ limits.max_subdomains }}{% endif %} {% trans "subdomains" %}</span>
+  </p>
+</div>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Add a domain" %}</h3>
+  <form method="post" action="{% url 'hosting_customer:domain_action' account.pk %}" class="dm-add" data-plain data-dm-add>{% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <div class="dm-kinds" role="radiogroup" aria-label="{% trans 'What do you want to add?' %}">
+      <label class="em-choice"><input class="form-check-input" type="radio" name="kind" value="addon" checked> <span><strong>{% trans "Another domain" %}</strong><small>{% trans "A separate website on its own domain, such as myshop.com." %}</small></span></label>
+      <label class="em-choice"><input class="form-check-input" type="radio" name="kind" value="subdomain"> <span><strong>{% trans "A subdomain" %}</strong><small>{% trans "A part of a domain you have, such as blog.example.com." %}</small></span></label>
+      <label class="em-choice"><input class="form-check-input" type="radio" name="kind" value="alias"> <span><strong>{% trans "An alias" %}</strong><small>{% trans "A second name that shows your main website." %}</small></span></label>
+    </div>
+    <div class="row g-2 mt-1">
+      <div class="col-lg-6"><div class="input-group">
+        <input class="form-control" type="text" name="name" data-dm-name placeholder="myshop.com" aria-label="{% trans 'Domain name' %}" maxlength="253" required autocomplete="off">
+        <select class="form-select dm-parent" name="parent" data-dm-parent aria-label="{% trans 'Under which domain' %}" hidden>{% for z in zone_domains %}<option value="{{ z }}">.{{ z }}</option>{% endfor %}</select>
+      </div></div>
+      <div class="col-lg-4"><input class="form-control" type="text" name="document_root" data-dm-root placeholder="public_html/myshop.com" aria-label="{% trans 'Website folder' %}" maxlength="200" autocomplete="off"></div>
+      <div class="col-lg-2"><button class="btn btn-primary w-100" type="submit" {% if extra_full and sub_full %}disabled{% endif %}><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add" %}</button></div>
+    </div>
+    <p class="small text-secondary mt-2 mb-0" data-dm-hint>{% trans "Leave the folder empty to use the suggested one. It is created for you in the file manager." %}</p>
+    {% if extra_full %}<p class="small text-warning mb-0 mt-1">{% trans "You have reached your plan's limit of extra domains." %}</p>{% endif %}
+    {% if sub_full %}<p class="small text-warning mb-0 mt-1">{% trans "You have reached your plan's limit of subdomains." %}</p>{% endif %}
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Your domains" %}</h3></div>
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Domain" %}</th><th scope="col">{% trans "Website folder" %}</th><th scope="col">{% trans "Redirect" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% with d=r.d %}
+      <tr>
+        <td class="fm-name"><i class="bi {% if d.kind == 'primary' %}bi-house-door-fill{% elif d.kind == 'subdomain' %}bi-diagram-2{% else %}bi-globe2{% endif %}" aria-hidden="true"></i> {{ d.name }}
+          <span class="site-pill {% if d.kind == 'primary' %}is-ok{% endif %} ms-1">{% if d.kind == "primary" %}{% trans "Main" %}{% elif d.kind == "addon" %}{% trans "Domain" %}{% elif d.kind == "subdomain" %}{% trans "Subdomain" %}{% else %}{% trans "Alias" %}{% endif %}</span></td>
+        <td>{% if r.files %}<a href="{{ r.files }}"><i class="bi bi-folder2-open" aria-hidden="true"></i> {{ d.document_root }}</a>{% else %}<span class="text-secondary">&mdash;</span>{% endif %}</td>
+        <td>{% if d.redirect_to %}<span class="text-break">{{ d.redirect_to }}</span> <span class="site-pill">{% if d.redirect_permanent %}301{% else %}302{% endif %}</span>{% else %}<span class="text-secondary">{% trans "None" %}</span>{% endif %}</td>
+        <td class="text-end"><div class="fm-actions">
+          {% if r.dns %}<a class="btn btn-sm btn-outline-secondary" href="{{ r.dns }}"><i class="bi bi-diagram-3" aria-hidden="true"></i> DNS</a>{% endif %}
+          <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#dm-redirect" data-name="{{ d.name }}" data-url="{{ d.redirect_to }}" data-permanent="{% if d.redirect_permanent %}1{% endif %}" title="{% trans 'Redirect' %}" aria-label="{% trans 'Set a redirect for' %} {{ d.name }}"><i class="bi bi-signpost-split" aria-hidden="true"></i></button>
+          {% if d.kind != "primary" %}<form method="post" action="{% url 'hosting_customer:domain_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="name" value="{{ d.name }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Remove' %} {{ d.name }}? {% trans 'Its DNS records are deleted and the domain stops working here. Its files stay in the file manager.' %}" title="{% trans 'Remove' %}" aria-label="{% trans 'Remove' %} {{ d.name }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>{% endif %}
+        </div></td>
+      </tr>
+    {% endwith %}{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+{% if limits.nameservers %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Nameservers" %}</h3>
+  <p class="small text-secondary">{% trans "A domain you bought elsewhere shows your website once you set these nameservers at the company where you bought it." %}</p>
+  <ul class="dm-ns">{% for ns in limits.nameservers %}<li><code>{{ ns }}</code></li>{% endfor %}</ul>
+</div></section>
+{% endif %}
+
+<div class="modal fade" id="dm-redirect" tabindex="-1" aria-labelledby="dm-redirect-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <form method="post" action="{% url 'hosting_customer:domain_action' account.pk %}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="redirect"><input type="hidden" name="name" value="">
+    <div class="modal-header"><h2 class="modal-title h5" id="dm-redirect-title">{% trans "Redirect" %} <span data-dm-name></span></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button></div>
+    <div class="modal-body">
+      <label class="form-label" for="dm-redirect-url">{% trans "Send visitors to" %}</label>
+      <input class="form-control mb-3" id="dm-redirect-url" name="redirect_to" type="url" placeholder="{% trans 'The full web address, for example www.example.com' %}" maxlength="500">
+      <label class="form-label" for="dm-redirect-kind">{% trans "Type" %}</label>
+      <select class="form-select" id="dm-redirect-kind" name="kind"><option value="301">{% trans "Permanent (301): moved for good" %}</option><option value="302">{% trans "Temporary (302): moved for now" %}</option></select>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary me-auto" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+      <button type="submit" class="btn btn-outline-danger" name="action" value="remove_redirect" formnovalidate data-dm-remove>{% trans "Remove redirect" %}</button>
+      <button type="submit" class="btn btn-primary">{% trans "Save" %}</button></div>
+  </form></div></div></div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/domains.js' %}" defer></script>{% endblock %}

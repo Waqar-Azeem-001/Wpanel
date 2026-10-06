@@ -68,7 +68,7 @@ def test_removing_never_touches_real_accounts(owner, plan, client_obj, manager):
 def test_the_demo_provider_reports_ssl_php_and_usage(owner, plan):
     call_command("demo_hosting_data")
     account = HostingAccount.objects.get(domain="demo-shop.example.com")
-    assert control.capabilities_for(account) == ["account", "files", "databases", "email", "ssl", "php", "usage"]
+    assert control.capabilities_for(account) == ["account", "files", "databases", "email", "domains", "dns", "ssl", "php", "usage"]
     assert control.perform(owner, account, "php", "get_php_settings", account.domain).version
     assert control.perform(owner, account, "ssl", "get_ssl_status", account.domain).domain == account.domain
     usage = control.perform(owner, account, "usage", "get_usage")
@@ -98,10 +98,10 @@ def test_the_manage_menu_links_only_the_sections_the_provider_supports(client, o
     page = client.get(f"/account/hosting/{account.pk}/").content.decode()
     for group in ("Files", "Databases", "Email", "Domains", "Advanced"):
         assert f'class="sidebar-group" aria-hidden="true">{group}<' in page
-    # the demo provider supports files, databases, email, ssl, php and usage; everything else is shown muted and has no address
-    for label in ("File manager", "MySQL databases", "Email accounts", "SSL certificate", "PHP settings", "Usage"):
+    # the demo provider supports files, databases, email, domains, dns, ssl, php and usage; everything else is shown muted and has no address
+    for label in ("File manager", "MySQL databases", "Email accounts", "Domains", "DNS records", "SSL certificate", "PHP settings", "Usage"):
         assert f'href="/account/hosting/{account.pk}/manage/' in page and label in page
-    assert page.count('class="sidebar-soon"') == 4
+    assert page.count('class="sidebar-soon"') == 2
     assert f"/account/hosting/{account.pk}/manage/backups/" not in page
 
 
@@ -113,8 +113,8 @@ def test_a_supported_section_page_says_what_it_will_do_and_usage_shows_the_meter
     assert ssl.status_code == 200 and "The screen for it is being built" in ssl.content.decode()
     usage = client.get(f"/account/hosting/{account.pk}/manage/usage/").content.decode()
     assert "<progress" in usage and "Storage" in usage and "Bandwidth" in usage
-    dns = client.get(f"/account/hosting/{account.pk}/manage/dns/").content.decode()
-    assert "not available for your hosting server yet" in dns
+    backups = client.get(f"/account/hosting/{account.pk}/manage/backups/").content.decode()
+    assert "not available for your hosting server yet" in backups
 
 
 def test_section_pages_belong_to_the_owner_only_and_unknown_sections_are_not_found(client, owner, customer, plan):
