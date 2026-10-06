@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load ui i18n %}
+{% load ui i18n static %}
 {% block title %}{{ address }} · {% trans "Webmail" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="mail" data-mail>
@@ -35,17 +35,24 @@
     <section class="mail-read" aria-label="{% trans 'Message' %}">
       {% if compose %}
         <a class="mail-close" href="{{ list_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to the list" %}</a>
-        <h2 class="h5">{% trans "New message" %}</h2>
-        <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+        <form class="mail-compose" method="post" action="{{ action_url }}" data-plain data-compose data-draft-key="whp-draft:{{ address }}">{% csrf_token %}
           <input type="hidden" name="action" value="send"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}">
-          <label class="form-label small" for="mail-to">{% trans "To" %}</label>
-          <input class="form-control mb-2" id="mail-to" name="to" value="{{ compose.to }}" placeholder="name@example.com, another@example.com" maxlength="500" required>
-          <label class="form-label small" for="mail-subject">{% trans "Subject" %}</label>
-          <input class="form-control mb-2" id="mail-subject" name="subject" value="{{ compose.subject }}" maxlength="200" required>
-          <label class="form-label small" for="mail-body">{% trans "Message" %}</label>
-          <textarea class="form-control mb-3" id="mail-body" name="body" rows="12" maxlength="10000">{{ compose.body }}</textarea>
-          <button class="btn btn-primary" type="submit"><i class="bi bi-send" aria-hidden="true"></i> {% trans "Send" %}</button>
-          <a class="btn btn-outline-secondary" href="{{ list_url }}">{% trans "Cancel" %}</a>
+          <div class="mail-compose-head">
+            <h2 class="h5 mb-0">{% trans "New message" %}</h2>
+            <a class="btn-close" href="{{ list_url }}" aria-label="{% trans 'Close without sending' %}"></a>
+          </div>
+          <p class="mail-draft" data-draft-note hidden><i class="bi bi-clock-history" aria-hidden="true"></i> {% trans "Your unsent draft was restored." %} <button type="button" class="btn btn-link btn-sm p-0" data-draft-discard>{% trans "Discard it" %}</button></p>
+          <div class="mail-field"><label for="mail-from">{% trans "From" %}</label><input class="form-control" id="mail-from" value="{{ address }}" readonly tabindex="-1"></div>
+          <div class="mail-field"><label for="mail-to">{% trans "To" %}</label><div><input class="form-control" id="mail-to" name="to" value="{{ compose.to }}" placeholder="name@example.com, another@example.com" maxlength="500" required autocomplete="off"><small class="text-secondary">{% trans "Separate several addresses with commas (up to 5)." %}</small></div></div>
+          <div class="mail-field"><label for="mail-subject">{% trans "Subject" %}</label><input class="form-control" id="mail-subject" name="subject" value="{{ compose.subject }}" maxlength="200" required></div>
+          <label class="visually-hidden" for="mail-body">{% trans "Message" %}</label>
+          <textarea class="form-control mail-body-input" id="mail-body" name="body" data-compose-body maxlength="10000" placeholder="{% trans 'Write your message here...' %}" spellcheck="true">{{ compose.body }}</textarea>
+          <div class="mail-compose-actions">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-send" aria-hidden="true"></i> {% trans "Send" %}</button>
+            <a class="btn btn-outline-secondary" href="{{ list_url }}">{% trans "Cancel" %}</a>
+            <span class="mail-hint">{% trans "Ctrl+Enter sends" %}</span>
+            <span class="mail-count-text ms-auto" data-compose-count aria-live="polite"></span>
+          </div>
         </form>
       {% elif message %}
         <a class="mail-close" href="{{ list_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to the list" %}</a>
@@ -65,3 +72,4 @@
   </div>
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/compose.js' %}" defer></script>{% endblock %}

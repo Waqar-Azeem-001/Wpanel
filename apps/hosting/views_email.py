@@ -143,6 +143,7 @@ def my_hosting_email_action(request, pk):
     return redirect(_back(account))
 
 
+NEWLINE = chr(10)
 FOLDER_LABELS = {"inbox": ("Inbox", "bi-inbox"), "sent": ("Sent", "bi-send"), "spam": ("Spam", "bi-shield-exclamation"),
                  "trash": ("Trash", "bi-trash3")}
 
@@ -181,9 +182,7 @@ def _webmail(request, account, address, *, folder="inbox", message_id="", compos
         "reply_url": "", "list_url": _webmail_url(account, address=address, folder=folder),
     }
     if message:
-        reply_subject = message.subject if message.subject.lower().startswith("re:") else f"Re: {message.subject}"
-        context["reply_url"] = _webmail_url(account, address=address, folder=folder, compose=1, to=message.sender,
-                                            subject=reply_subject)
+        context["reply_url"] = _webmail_url(account, address=address, folder=folder, compose=1, reply=message.message_id)
     return render(request, "hosting/customer/email_webmail.html", context)
 
 
@@ -194,6 +193,17 @@ def my_hosting_webmail(request, pk):
         return redirect(_back(account))
     get = request.GET
     compose = {"to": get.get("to", ""), "subject": get.get("subject", ""), "body": ""} if get.get("compose") else None
+    if compose and get.get("reply"):
+        try:  # a reply starts with the sender, "Re: subject" and the original message quoted underneath
+            original = _read(request, account, "read_message", get.get("address", ""), get["reply"])
+        except ServiceError:
+            original = None
+        if original:
+            when = f"{original.received_at[:10]} {original.received_at[11:16]}"
+            quoted = NEWLINE.join("> " + line for line in original.body.splitlines())
+            subject = original.subject if original.subject.lower().startswith("re:") else f"Re: {original.subject}"
+            compose = {"to": original.sender, "subject": subject,
+                       "body": f"{NEWLINE}{NEWLINE}On {when}, {original.sender} wrote:{NEWLINE}{quoted}"}
     try:
         return _webmail(request, account, get.get("address", ""), folder=get.get("folder", "inbox"),
                         message_id=get.get("message", ""), compose=compose)

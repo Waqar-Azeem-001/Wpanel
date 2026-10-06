@@ -43,6 +43,17 @@ back. Rebuilt as its own page (no website menu or site header around it):
 - Found and fixed while testing: a page variable named `messages` hid Django's flash messages; renamed (`mail_items`).
 - 12 more tests (40 for H4), a screenshot check at desktop and phone width, no console errors.
 
+## Update 2026-10-06 (third): a proper composer
+Owner feedback: the message box was too small to write a whole message. Now:
+- The message box **grows as you type** (up to 70% of the screen, then scrolls), is large and comfortable from the start, and has
+  a counter (`6,204 / 10,000`, turns amber past 90%).
+- **Reply** opens with the sender, "Re: subject" and the original quoted line by line, the cursor above the quote.
+- **Ctrl+Enter** sends; the Send bar stays in view at the bottom; From (read-only), To with a hint, Subject, a close button.
+- **Draft kept in this browser**: closing the tab or reloading restores To, Subject and the text with a "draft restored /
+  discard it" note; sending clears it; a reply or a failed send is never overwritten by an old draft.
+- Tests: a long message (9,500 characters) is sent and read back whole; the reply quote; the composer markup (30 for H4 email
+  screens). Browser check: the box grew from 280 to 630 px while typing, the draft came back after a reload, no console errors.
+
 ## Deferred
 Sending and receiving real mail and a full webmail client (needs a real provider: H14, or the native mail platform N7),
 catch-all and per-domain routing, mail filters, mailbox import, additional domains (H5), DKIM/SPF/DMARC records (H5 DNS),

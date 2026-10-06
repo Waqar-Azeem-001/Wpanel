@@ -367,7 +367,7 @@ def test_read_reply_spam_delete_and_restore_from_the_screen(client, owner, accou
     act = url(account, "webmail/do/")
     opened = client.get(mail_url(account, address=address, message="m1")).content.decode()
     assert "Your mailbox is ready" in opened and "Reply" in opened and "Mark as spam" in opened
-    assert "Re%3A+Welcome+to+your+new+mailbox" in opened and "to=support%40example.com" in opened
+    assert "compose=1" in opened and "reply=m1" in opened
     client.post(act, {"action": "move", "address": address, "folder": "inbox", "message": "m2", "to_folder": "spam"})
     assert "Your invoice is ready" in client.get(mail_url(account, address=address, folder="spam")).content.decode()
     client.post(act, {"action": "delete", "address": address, "folder": "inbox", "message": "m3"})
@@ -413,3 +413,23 @@ def test_a_stranger_cannot_use_the_mail_actions(client, customer, account):
     for data in ({"action": "send", "address": "x@demo-shop.example.com", "to": "a@b.com", "subject": "s", "body": "b"},
                  {"action": "delete", "address": "x@demo-shop.example.com", "message": "m1"}):
         assert client.post(act, data).status_code == 404
+
+
+def test_the_composer_is_a_proper_message_box_and_a_reply_quotes_the_original(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address = "info@demo-shop.example.com"
+    page = client.get(mail_url(account, address=address, compose=1)).content.decode()
+    assert "data-compose-body" in page and "data-compose-count" in page and "Ctrl+Enter sends" in page
+    assert 'maxlength="10000"' in page and "compose.js" in page and "Separate several addresses" in page
+    reply = client.get(mail_url(account, address=address, compose=1, reply="m1")).content.decode()
+    assert 'value="support@example.com"' in reply and "Re: Welcome to your new mailbox" in reply
+    assert "wrote:" in reply and "&gt; Your mailbox is ready." in reply  # quoted, escaped, line by line
+    assert client.get(mail_url(account, address=address, compose=1, reply="m99")).status_code == 200  # unknown: blank form
+    long_body = "word " * 1900  # a long message goes through whole
+    client.post(url(account, "webmail/do/"), {"action": "send", "address": address, "folder": "inbox",
+                                              "to": "friend@gmail.com", "subject": "Long", "body": long_body})
+    sent = client.get(mail_url(account, address=address, folder="sent")).content.decode()
+    first = [chunk for chunk in sent.split("message=")[1:] if "Long" in chunk][0].split('"')[0].split("&")[0]
+    opened = client.get(mail_url(account, address=address, folder="sent", message=first)).content.decode()
+    assert "word " * 1800 in opened.replace("<br>", "").replace("</p>", "")
