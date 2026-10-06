@@ -54,6 +54,25 @@ Owner feedback: the message box was too small to write a whole message. Now:
 - Tests: a long message (9,500 characters) is sent and read back whole; the reply quote; the composer markup (30 for H4 email
   screens). Browser check: the box grew from 280 to 630 px while typing, the draft came back after a reload, no console errors.
 
+## Update 2026-10-06 (fourth): the webmail redesigned as a full-screen mail app
+Owner feedback: the look, the way Compose worked, plain-text-only writing and the colours were all disliked. Rebuilt:
+- **Full screen, its own stylesheet** (`mail.css`) and page (it extends the bare root layout, so no website header, menu or
+  footer): a slim top bar with a back arrow to Email accounts, "Mail", a pill **search** box (searches the open folder's
+  senders, subjects and snippets), and the mailbox on the right.
+- **Gmail-style layout:** a left rail with a big **Compose** button, the four folders with unread counts and a
+  mailbox storage bar; a message list with an initial avatar, sender, time, subject and a **snippet**, unread in bold with a dot;
+  a roomy reading pane with a clear action bar (Reply, Spam, Delete) and a Reply button under the message. Phone: one pane at
+  a time, folders as a strip, a floating compose button, compose as a full-screen sheet.
+- **Compose is a floating window** at the bottom right (minimise, close, draft kept in the browser), not a pane.
+- **Rich-text editor**: bold, italic, underline, bulleted and numbered lists, quote, links, clear formatting; paste is always plain
+  text; Ctrl+Enter sends; a live counter against the 10,000 character limit; replies quote the original.
+- **Safe HTML** (`apps/hosting/mailhtml.py`): messages travel as HTML plus a text version. Everything sent or shown is reduced to
+  an allowlist (basic formatting tags; links only to http, https or mailto and always opening safely); script, style, images,
+  forms, iframes, event handlers, inline styles and comments are removed; text is escaped; it is cleaned on the way out and
+  again on display. 25 tests for the cleaner and the screens.
+- Contract: `send_message(..., html)`, `MessageInfo.snippet` and `.html`. Browser check: formatted a message in the editor, sent
+  it between mailboxes, no console errors.
+
 ## Deferred
 Sending and receiving real mail and a full webmail client (needs a real provider: H14, or the native mail platform N7),
 catch-all and per-domain routing, mail filters, mailbox import, additional domains (H5), DKIM/SPF/DMARC records (H5 DNS),

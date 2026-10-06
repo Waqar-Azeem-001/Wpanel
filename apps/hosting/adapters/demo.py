@@ -240,8 +240,8 @@ class DemoAdapter(EmailCapability, DatabasesCapability, FilesCapability, SslCapa
     def delete_message(self, username, address, message_id):
         email_for(username).delete_message(address, message_id)
 
-    def send_message(self, username, address, to, subject, body):
-        email_for(username).send_message(address, to, subject, body)
+    def send_message(self, username, address, to, subject, body, html=""):
+        email_for(username).send_message(address, to, subject, body, html)
 
     def read_message(self, username, address, message_id):
         return email_for(username).read_message(address, message_id)

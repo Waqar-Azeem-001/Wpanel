@@ -23,6 +23,7 @@ MAX_MAILBOXES = 10
 MAX_FORWARDERS = 20
 MAX_RECIPIENTS = 5
 MAX_STORED_MESSAGES = 300
+MAX_HTML = 60_000
 DEFAULT_QUOTA_MB = 1024
 MAX_QUOTA_MB = 5120
 LOCAL_RE = re.compile(r"^[a-z0-9]([a-z0-9._-]{0,38}[a-z0-9])?$")
@@ -259,7 +260,8 @@ class DemoEmail:
     def _info(m, with_body=False):
         return MessageInfo(message_id=m["id"], sender=m["sender"], subject=m["subject"], received_at=m["received_at"],
                            unread=m["unread"], body=m["body"] if with_body else "", to=m.get("to", ""),
-                           folder=m.get("folder", "inbox"))
+                           folder=m.get("folder", "inbox"), snippet=" ".join(m["body"].split())[:100],
+                           html=m.get("html", "") if with_body else "")
 
     @staticmethod
     def _folder(m):
@@ -320,7 +322,7 @@ class DemoEmail:
                 return
         raise HostingError("That message does not exist.")
 
-    def send_message(self, address, to, subject, body):
+    def send_message(self, address, to, subject, body, html=""):
         data = self._load()
         address = self._mailbox(data, address)
         recipients = [r.strip().lower() for r in (to or "").replace(";", ",").split(",") if r.strip()]
@@ -336,15 +338,17 @@ class DemoEmail:
         subject, body = (subject or "").strip(), (body or "").strip()
         if not subject:
             raise HostingError("Add a subject.")
-        if len(subject) > 200 or len(body) > 10000:
+        if len(subject) > 200 or len(body) > 10000 or len(html or "") > MAX_HTML:
             raise HostingError("That message is too long (subject up to 200 characters, text up to 10000).")
+        if not body and not html:
+            raise HostingError("Write a message first.")
         now = _now().isoformat()
         stamp = _now().strftime("%Y%m%d%H%M%S%f")
 
         def put(box_address, folder, unread, n):
             box = data["messages"].setdefault(box_address, [])
             box.append({"id": f"s{stamp}{n}", "folder": folder, "sender": address, "to": ", ".join(recipients),
-                        "subject": subject, "body": body, "unread": unread, "received_at": now})
+                        "subject": subject, "body": body, "html": html or "", "unread": unread, "received_at": now})
             del box[:-MAX_STORED_MESSAGES]  # keep the demo state small
 
         put(address, "sent", False, 0)

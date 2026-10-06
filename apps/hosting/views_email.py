@@ -4,12 +4,14 @@ other management screens, every operation goes through the hosting-control gatew
 live-account check and the audit trail are shared) and the provider enforces the plan limits, the address rules and
 the password rules. Passwords are handed straight to the provider: never stored, logged, shown or put in an audit record.
 """
+from datetime import datetime
 from urllib.parse import urlencode, urlsplit
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.html import escape
 from django.views.decorators.http import require_POST
 
 from apps.core import portal
@@ -17,6 +19,7 @@ from apps.core.exceptions import ServiceError
 
 from . import control, dashboard
 from .adapters.capabilities import MAIL_ROUTING_MODES, SPAM_LEVELS, SpamSettings
+from .mailhtml import html_to_text, sanitize_html
 from .views import _own_account
 
 
@@ -153,10 +156,34 @@ def _webmail_url(account, **query):
     return reverse("hosting_customer:webmail", args=[account.pk]) + ("?" + urlencode(query) if query else "")
 
 
-def _webmail(request, account, address, *, folder="inbox", message_id="", compose=None):
+def _moment(value):
+    """(short, long) ways to write a message time: a time of day for today, otherwise the date."""
+    try:
+        when = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return "", ""
+    now = datetime.now(when.tzinfo)
+    short = when.strftime("%H:%M") if when.date() == now.date() else when.strftime("%d %b")
+    return short, when.strftime("%d %b %Y, %H:%M")
+
+
+def _text_of(message):
+    return message.body or html_to_text(message.html)
+
+
+def _reply_draft(original):
+    """The start of a reply: to the sender, "Re: subject", and the original quoted underneath (escaped, line by line)."""
+    when = _moment(original.received_at)[1]
+    quoted = "<br>".join(escape(line) for line in _text_of(original).splitlines())
+    subject = original.subject if original.subject.lower().startswith("re:") else f"Re: {original.subject}"
+    return {"to": original.sender, "subject": subject, "body": "",
+            "html": f"<br><br><blockquote>On {escape(when)}, {escape(original.sender)} wrote:<br>{quoted}</blockquote>"}
+
+
+def _webmail(request, account, address, *, folder="inbox", message_id="", compose=None, query=""):
     """
-    The mail viewer, as its own focused page (no website menu around it): folders, the message list, and the reading or
-    writing pane. A provider with Roundcube sends the person there instead, with a one-time https address.
+    The mail app, as its own full-screen page (no website menu or footer): folders, the message list, the reading pane and a
+    compose window. A provider with Roundcube sends the person there instead, with a one-time https address.
     """
     access = _read(request, account, "webmail_access", address)
     if access.kind == "external":
@@ -166,23 +193,42 @@ def _webmail(request, account, address, *, folder="inbox", message_id="", compos
         return redirect(access.url)
     if folder not in FOLDER_LABELS:
         folder = "inbox"
-    message = _read(request, account, "read_message", address, message_id) if message_id and not compose else None
+    message = _read(request, account, "read_message", address, message_id) if message_id else None
     counts = _read(request, account, "message_folders", address)  # after reading: opening a message marks it read
-    inbox = _read(request, account, "list_messages", address, folder)
+    listed = _read(request, account, "list_messages", address, folder)
+    needle = query.strip().lower()
+    if needle:
+        listed = [m for m in listed if needle in " ".join([m.subject, m.sender, m.to, m.snippet]).lower()]
+    box = next((b for b in _read(request, account, "list_mailboxes") if b.address == address), None)
+    usage = None
+    if box and box.quota_mb:
+        percent = min(100, round((box.used_mb or 0) * 100 / box.quota_mb))
+        usage = {"used": box.used_mb, "quota": box.quota_mb, "percent": percent}
+    items = []
+    for m in listed:
+        short, _long = _moment(m.received_at)
+        who = m.to if folder == "sent" else m.sender
+        items.append({"m": m, "url": _webmail_url(account, address=address, folder=folder, message=m.message_id, q=query),
+                      "current": bool(message and message.message_id == m.message_id), "who": who or "-", "when": short,
+                      "initial": (who or "?")[:1].upper(), "tone": sum(map(ord, who or "?")) % 6})
     context = {
-        "account": account, "address": address, "folder": folder, "message": message, "compose": compose,
-        "back_url": _back(account),
+        "account": account, "address": address, "folder": folder, "folder_label": FOLDER_LABELS[folder][0],
+        "message": message, "compose": compose, "query": query, "usage": usage, "back_url": _back(account),
         "folders": [{"key": key, "label": label, "icon": icon, "total": counts[key][0], "unread": counts[key][1],
                      "url": _webmail_url(account, address=address, folder=key), "active": key == folder}
                     for key, (label, icon) in FOLDER_LABELS.items()],
-        "mail_items": [(m, _webmail_url(account, address=address, folder=folder, message=m.message_id),
-                      bool(message and message.message_id == m.message_id)) for m in inbox],
+        "items": items, "total_unread": counts["inbox"][1],
         "compose_url": _webmail_url(account, address=address, folder=folder, compose=1),
         "action_url": reverse("hosting_customer:webmail_action", args=[account.pk]),
-        "reply_url": "", "list_url": _webmail_url(account, address=address, folder=folder),
+        "list_url": _webmail_url(account, address=address, folder=folder, q=query),
+        "reply_url": "", "message_html": "", "sender_initial": "", "message_when": "",
     }
     if message:
         context["reply_url"] = _webmail_url(account, address=address, folder=folder, compose=1, reply=message.message_id)
+        context["message_html"] = sanitize_html(message.html) if message.html else ""
+        context["sender_initial"] = (message.sender or "?")[:1].upper()
+        context["sender_tone"] = sum(map(ord, message.sender or "?")) % 6
+        context["message_when"] = _moment(message.received_at)[1]
     return render(request, "hosting/customer/email_webmail.html", context)
 
 
@@ -192,21 +238,18 @@ def my_hosting_webmail(request, pk):
     if not _supports(account):
         return redirect(_back(account))
     get = request.GET
-    compose = {"to": get.get("to", ""), "subject": get.get("subject", ""), "body": ""} if get.get("compose") else None
-    if compose and get.get("reply"):
-        try:  # a reply starts with the sender, "Re: subject" and the original message quoted underneath
-            original = _read(request, account, "read_message", get.get("address", ""), get["reply"])
-        except ServiceError:
-            original = None
-        if original:
-            when = f"{original.received_at[:10]} {original.received_at[11:16]}"
-            quoted = NEWLINE.join("> " + line for line in original.body.splitlines())
-            subject = original.subject if original.subject.lower().startswith("re:") else f"Re: {original.subject}"
-            compose = {"to": original.sender, "subject": subject,
-                       "body": f"{NEWLINE}{NEWLINE}On {when}, {original.sender} wrote:{NEWLINE}{quoted}"}
+    address = get.get("address", "")
+    compose = None
+    if get.get("compose"):
+        compose = {"to": get.get("to", ""), "subject": get.get("subject", ""), "body": "", "html": ""}
+        if get.get("reply"):
+            try:
+                compose = _reply_draft(_read(request, account, "read_message", address, get["reply"]))
+            except ServiceError:
+                pass  # an unknown message: a blank new message
     try:
-        return _webmail(request, account, get.get("address", ""), folder=get.get("folder", "inbox"),
-                        message_id=get.get("message", ""), compose=compose)
+        return _webmail(request, account, address, folder=get.get("folder", "inbox"),
+                        message_id="" if compose else get.get("message", ""), compose=compose, query=get.get("q", ""))
     except ServiceError as exc:
         messages.error(request, exc.message)
         return redirect(_back(account))
@@ -221,13 +264,15 @@ def my_hosting_webmail_action(request, pk):
     address, folder, action = post.get("address", ""), post.get("folder", "inbox"), post.get("action", "")
     try:
         if action == "send":
+            clean = sanitize_html(post.get("html", ""))
+            text = post.get("body", "").strip() or html_to_text(clean)
             try:
-                _run(request, account, "send_message", address, post.get("to", ""), post.get("subject", ""),
-                     post.get("body", ""), metadata={"address": address, "recipients": len(post.get("to", "").split(","))})
+                _run(request, account, "send_message", address, post.get("to", ""), post.get("subject", ""), text, clean,
+                     metadata={"address": address, "recipients": len(post.get("to", "").split(","))})
             except ServiceError as exc:
                 messages.error(request, exc.message)  # keep what was typed so it can be fixed
                 return _webmail(request, account, address, folder=folder, compose={
-                    "to": post.get("to", ""), "subject": post.get("subject", ""), "body": post.get("body", "")})
+                    "to": post.get("to", ""), "subject": post.get("subject", ""), "body": "", "html": clean or escape(text)})
             messages.success(request, "Message sent.")
             folder = "sent"
         elif action == "delete":

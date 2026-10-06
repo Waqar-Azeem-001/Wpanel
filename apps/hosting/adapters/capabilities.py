@@ -187,6 +187,8 @@ class MessageInfo:
     body: str = ""  # only filled in by ``read_message``
     to: str = ""
     folder: str = "inbox"
+    snippet: str = ""  # the first words of the text, for the message list
+    html: str = ""  # the formatted version, when the message has one (only filled in by ``read_message``)
 
 
 @dataclass(frozen=True)
@@ -446,8 +448,9 @@ class EmailCapability(ABC):
         """Move to the trash; a message already in the trash is deleted for good."""
 
     @abstractmethod
-    def send_message(self, username: str, address: str, to: str, subject: str, body: str) -> None:
-        """Send from this mailbox (``to`` may list several addresses separated by commas)."""
+    def send_message(self, username: str, address: str, to: str, subject: str, body: str, html: str = "") -> None:
+        """Send from this mailbox (``to`` may list several addresses separated by commas). ``body`` is the plain text,
+        ``html`` the optional formatted version (already reduced to safe HTML by the caller)."""
 
     @abstractmethod
     def read_message(self, username: str, address: str, message_id: str) -> MessageInfo: ...

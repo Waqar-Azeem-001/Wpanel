@@ -238,12 +238,12 @@ def test_passwords_never_reach_the_audit_trail_or_the_page(client, owner, accoun
     assert secret not in client.get(url(account)).content.decode()
 
 
-def test_webmail_shows_the_sample_inbox_marks_read_and_escapes(client, owner, account):
+def test_webmail_shows_the_sample_inbox_marks_read_and_handles_unknowns(client, owner, account):
     client.force_login(owner)
     client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
     address = "info@demo-shop.example.com"
     inbox = client.get(url(account, "webmail/"), {"address": address}).content.decode()
-    assert "Welcome to your new mailbox" in inbox and "Choose a message to read it" in inbox and "new" in inbox
+    assert "Welcome to your new mailbox" in inbox and "Select a message to read it" in inbox and "ml-dot" in inbox
     opened = client.get(url(account, "webmail/"), {"address": address, "message": "m1"}).content.decode()
     assert "Your mailbox is ready" in opened
     assert client.get(url(account, "webmail/"), {"address": address, "message": "m99"}, follow=True).status_code == 200
@@ -354,10 +354,25 @@ def test_the_mail_viewer_is_its_own_focused_page_with_a_way_back(client, owner, 
     client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
     address = "info@demo-shop.example.com"
     page = client.get(mail_url(account, address=address)).content.decode()
-    assert 'class="mail"' in page and "Email accounts" in page and f'href="{url(account)}"' in page
-    for label in ("Inbox", "Sent", "Spam", "Trash", "Compose"):
+    assert 'class="ml"' in page and f'href="{url(account)}"' in page and "Back to email accounts" in page
+    for label in ("Inbox", "Sent", "Spam", "Trash", "Compose", "Search in Inbox"):
         assert label in page
-    assert "sidebar-panel" not in page and "ws-head" not in page  # no website menu or site header around the mail
+    # no website menu, header or footer around the mail
+    assert "sidebar-panel" not in page and "ws-head" not in page and "Need a hand with your services" not in page
+    assert "css/mail.css" in page and "js/mail.js" in page
+
+
+def test_the_list_shows_senders_subjects_and_snippets_and_search_filters_it(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address = "info@demo-shop.example.com"
+    page = client.get(mail_url(account, address=address)).content.decode()
+    assert "support@example.com" in page and "Welcome to your new mailbox" in page and "Your mailbox is ready." in page
+    assert "ml-dot" in page and "is-unread" in page and "Select a message to read it" in page
+    found = client.get(mail_url(account, address=address, q="invoice")).content.decode()
+    assert "Your invoice is ready" in found and "Welcome to your new mailbox" not in found
+    none = client.get(mail_url(account, address=address, q="zzzz")).content.decode()
+    assert "Nothing matches your search." in none
 
 
 def test_read_reply_spam_delete_and_restore_from_the_screen(client, owner, account):
@@ -366,8 +381,8 @@ def test_read_reply_spam_delete_and_restore_from_the_screen(client, owner, accou
     address = "info@demo-shop.example.com"
     act = url(account, "webmail/do/")
     opened = client.get(mail_url(account, address=address, message="m1")).content.decode()
-    assert "Your mailbox is ready" in opened and "Reply" in opened and "Mark as spam" in opened
-    assert "compose=1" in opened and "reply=m1" in opened
+    assert "Your mailbox is ready" in opened and "Reply" in opened and 'name="to_folder" value="spam"' in opened
+    assert "compose=1" in opened and "reply=m1" in opened and "has-message" in opened
     client.post(act, {"action": "move", "address": address, "folder": "inbox", "message": "m2", "to_folder": "spam"})
     assert "Your invoice is ready" in client.get(mail_url(account, address=address, folder="spam")).content.decode()
     client.post(act, {"action": "delete", "address": address, "folder": "inbox", "message": "m3"})
@@ -378,33 +393,67 @@ def test_read_reply_spam_delete_and_restore_from_the_screen(client, owner, accou
     assert "Tip: set up your email" in client.get(mail_url(account, address=address, folder="trash")).content.decode()
 
 
-def test_compose_sends_between_mailboxes_and_errors_keep_what_was_typed(client, owner, account):
+def test_the_compose_window_is_part_of_the_page_and_opens_for_a_reply(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address = "info@demo-shop.example.com"
+    page = client.get(mail_url(account, address=address)).content.decode()
+    assert 'id="ml-compose"' in page and "data-editor" in page and "data-compose-count" in page and 'data-cmd="bold"' in page
+    assert 'class="ml-cw"' in page  # closed until the Compose button opens it
+    reply = client.get(mail_url(account, address=address, compose=1, reply="m1")).content.decode()
+    assert 'class="ml-cw is-open"' in reply
+    assert 'value="support@example.com"' in reply and "Re: Welcome to your new mailbox" in reply
+    assert "<blockquote>" in reply and "wrote:" in reply and "Your mailbox is ready." in reply
+    assert client.get(mail_url(account, address=address, compose=1, reply="m99")).status_code == 200  # unknown: blank window
+
+
+def test_send_keeps_what_was_typed_on_an_error_and_delivers_between_mailboxes(client, owner, account):
     client.force_login(owner)
     for local in ("info", "sales"):
         client.post(url(account, "do/"), {"action": "create_mailbox", "local": local, "password": GOOD})
     act = url(account, "webmail/do/")
-    compose = client.get(mail_url(account, address="info@demo-shop.example.com", compose=1)).content.decode()
-    assert "New message" in compose and 'name="to"' in compose and "<textarea" in compose
-    bad = client.post(act, {"action": "send", "address": "info@demo-shop.example.com", "folder": "inbox", "to": "nope",
-                            "subject": "Keep me", "body": "My long text"}).content.decode()
-    assert "valid email address" in bad and "Keep me" in bad and "My long text" in bad
-    response = client.post(act, {"action": "send", "address": "info@demo-shop.example.com", "folder": "inbox",
-                                 "to": "sales@demo-shop.example.com", "subject": "Hi sales", "body": "Hello"}, follow=True)
-    assert "Message sent." in response.content.decode() and "Hi sales" in response.content.decode()
-    assert "Hi sales" in client.get(mail_url(account, address="sales@demo-shop.example.com")).content.decode()
+    base = {"action": "send", "address": "info@demo-shop.example.com", "folder": "inbox", "subject": "Keep me",
+            "html": "<p>My <b>long</b> text</p>", "body": "My long text"}
+    bad = client.post(act, {**base, "to": "nope"}).content.decode()
+    assert "valid email address" in bad and "Keep me" in bad and "My <b>long</b> text" in bad and "ml-cw is-open" in bad
+    ok = client.post(act, {**base, "to": "sales@demo-shop.example.com", "subject": "Hi sales"}, follow=True).content.decode()
+    assert "Message sent." in ok and "Hi sales" in ok
+    inbox = client.get(mail_url(account, address="sales@demo-shop.example.com")).content.decode()
+    assert "Hi sales" in inbox and "My long text" in inbox  # the snippet is the text version
+    empty = client.post(act, {**base, "to": "sales@demo-shop.example.com", "html": "", "body": ""}).content.decode()
+    assert "Write a message first." in empty
 
 
-def test_message_content_is_escaped_in_the_viewer(client, owner, account):
+def test_formatting_survives_and_dangerous_html_does_not(client, owner, account):
     client.force_login(owner)
     for local in ("info", "sales"):
         client.post(url(account, "do/"), {"action": "create_mailbox", "local": local, "password": GOOD})
+    evil = ('<p onclick="x()">Hi <b>bold</b> <i>it</i></p><script>alert(1)</script><img src=x onerror=alert(2)>'
+            '<a href="javascript:alert(3)">bad</a> <a href="https://good.example/p?a=1">good</a><style>p{}</style>')
     client.post(url(account, "webmail/do/"), {"action": "send", "address": "info@demo-shop.example.com", "folder": "inbox",
-                                              "to": "sales@demo-shop.example.com", "subject": "<b>bold</b>",
-                                              "body": "<script>alert(1)</script>"})
+                                              "to": "sales@demo-shop.example.com", "subject": "Format", "html": evil, "body": ""})
     page = client.get(mail_url(account, address="sales@demo-shop.example.com")).content.decode()
-    first_id = [line for line in page.split('message=') if "bold" in line][0].split('"')[0].split("&")[0]
-    opened = client.get(mail_url(account, address="sales@demo-shop.example.com", message=first_id)).content.decode()
-    assert "<script>alert(1)</script>" not in opened and "&lt;script&gt;" in opened and "&lt;b&gt;bold&lt;/b&gt;" in opened
+    first = [c for c in page.split("message=")[1:] if "Format" in c][0].split('"')[0].split("&")[0]
+    opened = client.get(mail_url(account, address="sales@demo-shop.example.com", message=first)).content.decode()
+    body = opened.split('class="ml-text"')[1].split("ml-reply-bar")[0]
+    assert "<b>bold</b>" in body and "<i>it</i>" in body and 'href="https://good.example/p?a=1"' in body
+    for forbidden in ("<script", "onclick", "onerror", "<img", "javascript:", "<style"):
+        assert forbidden not in body
+    assert "noopener" in body
+
+
+def test_plain_text_messages_are_escaped_and_long_ones_arrive_whole(client, owner, account):
+    client.force_login(owner)
+    address = "info@demo-shop.example.com"
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    client.post(url(account, "webmail/do/"), {"action": "send", "address": address, "folder": "inbox", "to": "friend@gmail.com",
+                                              "subject": "<b>Plain</b>", "html": "", "body": "<script>alert(1)</script> " + "word " * 1900})
+    sent = client.get(mail_url(account, address=address, folder="sent")).content.decode()
+    assert "&lt;b&gt;Plain&lt;/b&gt;" in sent
+    first = [c for c in sent.split("message=")[1:] if "Plain" in c][0].split('"')[0].split("&")[0]
+    opened = client.get(mail_url(account, address=address, folder="sent", message=first)).content.decode()
+    body = opened.split('class="ml-text"')[1].split("ml-reply-bar")[0]
+    assert "<script>" not in body and "&lt;script&gt;" in body and body.count("word ") >= 1800
 
 
 def test_a_stranger_cannot_use_the_mail_actions(client, customer, account):
@@ -413,23 +462,3 @@ def test_a_stranger_cannot_use_the_mail_actions(client, customer, account):
     for data in ({"action": "send", "address": "x@demo-shop.example.com", "to": "a@b.com", "subject": "s", "body": "b"},
                  {"action": "delete", "address": "x@demo-shop.example.com", "message": "m1"}):
         assert client.post(act, data).status_code == 404
-
-
-def test_the_composer_is_a_proper_message_box_and_a_reply_quotes_the_original(client, owner, account):
-    client.force_login(owner)
-    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
-    address = "info@demo-shop.example.com"
-    page = client.get(mail_url(account, address=address, compose=1)).content.decode()
-    assert "data-compose-body" in page and "data-compose-count" in page and "Ctrl+Enter sends" in page
-    assert 'maxlength="10000"' in page and "compose.js" in page and "Separate several addresses" in page
-    reply = client.get(mail_url(account, address=address, compose=1, reply="m1")).content.decode()
-    assert 'value="support@example.com"' in reply and "Re: Welcome to your new mailbox" in reply
-    assert "wrote:" in reply and "&gt; Your mailbox is ready." in reply  # quoted, escaped, line by line
-    assert client.get(mail_url(account, address=address, compose=1, reply="m99")).status_code == 200  # unknown: blank form
-    long_body = "word " * 1900  # a long message goes through whole
-    client.post(url(account, "webmail/do/"), {"action": "send", "address": address, "folder": "inbox",
-                                              "to": "friend@gmail.com", "subject": "Long", "body": long_body})
-    sent = client.get(mail_url(account, address=address, folder="sent")).content.decode()
-    first = [chunk for chunk in sent.split("message=")[1:] if "Long" in chunk][0].split('"')[0].split("&")[0]
-    opened = client.get(mail_url(account, address=address, folder="sent", message=first)).content.decode()
-    assert "word " * 1800 in opened.replace("<br>", "").replace("</p>", "")
