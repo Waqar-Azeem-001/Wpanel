@@ -12,7 +12,9 @@ from pathlib import Path
 
 from django.conf import settings
 
-from .capabilities import FilesCapability, PhpCapability, PhpSettings, SslCapability, SslStatus
+from .capabilities import (DatabasesCapability, FilesCapability, PhpCapability, PhpSettings, SslCapability,
+                           SslStatus)
+from .demo_databases import DemoDatabases
 from .manual import ManualAdapter
 from .sandbox import Sandbox
 
@@ -35,6 +37,11 @@ def _seed(username):
     return sum(ord(c) for c in username)
 
 
+def databases_for(username):
+    """The account's demo database service. Its state lives beside the website folder, never inside it."""
+    return DemoDatabases(files_root() / f"{username}.state", username)
+
+
 def sandbox_for(username):
     """The account's folder, created with a few sample files the first time it is used."""
     root = files_root() / username
@@ -48,7 +55,7 @@ def sandbox_for(username):
     return box
 
 
-class DemoAdapter(FilesCapability, SslCapability, PhpCapability, ManualAdapter):
+class DemoAdapter(DatabasesCapability, FilesCapability, SslCapability, PhpCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -99,6 +106,38 @@ class DemoAdapter(FilesCapability, SslCapability, PhpCapability, ManualAdapter):
 
     def purge_trash(self, username, item_id):
         sandbox_for(username).purge_trash(item_id)
+
+    # --- Databases (simulated service with real rules) -----------------------------------------------------------
+
+    def database_limits(self, username):
+        return databases_for(username).limits()
+
+    def list_database_grants(self, username):
+        return databases_for(username).grants()
+
+    def list_databases(self, username):
+        return databases_for(username).databases()
+
+    def create_database(self, username, name):
+        databases_for(username).create_database(name)
+
+    def delete_database(self, username, name):
+        databases_for(username).delete_database(name)
+
+    def list_database_users(self, username):
+        return databases_for(username).users()
+
+    def create_database_user(self, username, name, password):
+        databases_for(username).create_user(name, password)
+
+    def set_database_user_password(self, username, name, password):
+        databases_for(username).set_password(name, password)
+
+    def delete_database_user(self, username, name):
+        databases_for(username).delete_user(name)
+
+    def grant_database_access(self, username, database, user, privileges):
+        databases_for(username).grant(database, user, privileges)
 
     # --- SSL ---------------------------------------------------------------------------------------------------
 

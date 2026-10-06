@@ -77,6 +77,23 @@ class DatabaseInfo:
 
 
 @dataclass(frozen=True)
+class DatabaseGrant:
+    user: str
+    database: str
+    privileges: list = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class DatabaseLimits:
+    """What the plan allows and how the provider names things. ``None`` means no fixed limit."""
+
+    name_prefix: str = ""  # added in front of what the customer types (shared hosting keeps accounts apart this way)
+    max_databases: Optional[int] = None
+    max_users: Optional[int] = None
+    password_min_length: int = 12
+
+
+@dataclass(frozen=True)
 class DatabaseUserInfo:
     name: str
     databases: list = field(default_factory=list)
@@ -205,7 +222,23 @@ class FilesCapability(ABC):
         """``FileEntry`` rows whose NAME contains ``query``, anywhere under ``path`` (a capped, convenience search)."""
 
 
+# The only privileges a customer may grant; a provider maps them to its own and refuses anything else.
+DATABASE_PRIVILEGES = ("select", "insert", "update", "delete", "create", "alter", "drop", "index")
+
+
 class DatabasesCapability(ABC):
+    """
+    ``create_database`` and ``create_database_user`` take what the customer typed; the provider may put its own account
+    prefix in front (see ``database_limits().name_prefix``). Every other operation uses the full names that the list
+    methods return. Plan limits are the provider's truth: it refuses to create past them.
+    """
+
+    @abstractmethod
+    def database_limits(self, username: str) -> DatabaseLimits: ...
+
+    @abstractmethod
+    def list_database_grants(self, username: str) -> list:
+        """``DatabaseGrant`` rows: which user may do what on which database."""
     @abstractmethod
     def list_databases(self, username: str) -> list:
         """``DatabaseInfo`` rows."""
@@ -368,7 +401,8 @@ OPERATIONS = {
     Capability.FILES: frozenset({"list_files", "read_file", "write_file", "make_directory", "rename_path",
                                  "copy_path", "delete_path", "search_files", "archive_paths", "extract_archive",
                                  "trash_path", "list_trash", "restore_trash", "purge_trash"}),
-    Capability.DATABASES: frozenset({"list_databases", "create_database", "delete_database", "list_database_users",
+    Capability.DATABASES: frozenset({"database_limits", "list_database_grants", "list_databases", "create_database",
+                                     "delete_database", "list_database_users",
                                      "create_database_user", "set_database_user_password", "delete_database_user",
                                      "grant_database_access"}),
     Capability.EMAIL: frozenset({"list_mailboxes", "create_mailbox", "delete_mailbox", "set_mailbox_password",
@@ -382,7 +416,7 @@ OPERATIONS = {
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
-READ_OPERATIONS = frozenset({"get_status", "get_usage", "list_files", "read_file", "search_files", "list_trash", "list_databases",
+READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})

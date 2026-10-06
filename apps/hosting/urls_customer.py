@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_files
+from . import views, views_databases, views_files
 
 app_name = "hosting_customer"
 
@@ -14,5 +14,7 @@ urlpatterns = [
     path("<int:pk>/manage/files/trash/", views_files.my_hosting_files_trash, name="files_trash"),
     path("<int:pk>/manage/files/edit/", views_files.my_hosting_file_edit, name="file_edit"),
     path("<int:pk>/manage/files/download/", views_files.my_hosting_file_download, name="file_download"),
+    path("<int:pk>/manage/databases/", views_databases.my_hosting_databases, name="databases"),
+    path("<int:pk>/manage/databases/do/", views_databases.my_hosting_database_action, name="database_action"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

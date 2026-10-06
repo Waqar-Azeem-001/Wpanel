@@ -46,6 +46,7 @@ class Command(BaseCommand):
             if server:
                 for username in HostingAccount.objects.filter(server=server).values_list("username", flat=True):
                     shutil.rmtree(files_root() / username, ignore_errors=True)  # the sample website files too
+                    shutil.rmtree(files_root() / f"{username}.state", ignore_errors=True)  # and its sample databases
             removed = HostingAccount.objects.filter(server=server).delete()[0] if server else 0
             if server:
                 server.delete()

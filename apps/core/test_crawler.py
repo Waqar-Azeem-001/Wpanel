@@ -31,6 +31,7 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:files": "linked only for an account whose provider supports files (the demo provider); the crawl "
                               "world's server is a manual one (tested in apps/hosting/tests/test_files.py)",
     "hosting_customer:files_trash": "opened from the File Manager's Trash button, which needs a files-capable provider (test_files.py)",
+    "hosting_customer:databases": "linked only for an account whose provider supports databases (the demo provider); tested in apps/hosting/tests/test_databases.py",
     "hosting_customer:file_edit": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "hosting_customer:file_download": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "orders_customer:choose_client": "only reachable by a customer who is a contact of more than one account; the "
