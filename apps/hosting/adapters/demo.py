@@ -14,12 +14,13 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           CronCapability, FilesCapability, PhpCapability, SslCapability, WebmailAccess)
+                           AccessCapability, CronCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
 from .demo_cron import DemoCron
 from .demo_domains import SERVER_IP, DemoDomains
 from .demo_email import DemoEmail
 from .demo_php import DemoPhp
+from .demo_tools import DemoAccess, DemoFtp, DemoLogs
 from .demo_ssl import DemoSsl
 from .manual import ManualAdapter
 from .sandbox import Sandbox
@@ -108,6 +109,36 @@ def ssl_for(username):
     return DemoSsl(files_root() / f"{username}.state", lambda: _domain_names(username), lambda n: _points_here(username, n))
 
 
+def _account_domain(username):
+    from apps.hosting.models import HostingAccount
+
+    account = HostingAccount.objects.filter(username=username, server__kind="demo").first()
+    return account.domain if account else ""
+
+
+def logs_for(username):
+    """The account's demo logs: real files in its logs folder."""
+    return DemoLogs(sandbox_for(username), _account_domain(username))
+
+
+def ftp_for(username):
+    """The account's demo FTP accounts. A folder must exist in the website space."""
+    box = sandbox_for(username)
+
+    def folder_exists(rel):
+        try:
+            return box.resolve(rel).is_dir()
+        except HostingError:
+            return False
+
+    return DemoFtp(files_root() / f"{username}.state", _account_domain(username), folder_exists)
+
+
+def access_for(username):
+    """The account's demo IP block list."""
+    return DemoAccess(files_root() / f"{username}.state")
+
+
 def cron_for(username):
     """The account's demo scheduled jobs."""
     return DemoCron(files_root() / f"{username}.state")
@@ -132,7 +163,7 @@ def sandbox_for(username):
 
 
 class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
-                  PhpCapability, CronCapability, ManualAdapter):
+                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -410,3 +441,35 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
 
     def run_cron_job(self, username, job_id):
         return cron_for(username).run(job_id)
+
+    # --- Logs, FTP and IP blocking ---------------------------------------------------------------------------
+
+    def read_log(self, username, kind, lines, query):
+        return logs_for(username).read(kind, lines, query)
+
+    def clear_log(self, username, kind):
+        logs_for(username).clear(kind)
+
+    def ftp_options(self, username):
+        return ftp_for(username).options()
+
+    def list_ftp_accounts(self, username):
+        return ftp_for(username).accounts()
+
+    def create_ftp_account(self, username, name, password, directory):
+        return ftp_for(username).create(name, password, directory)
+
+    def set_ftp_password(self, username, login, password):
+        ftp_for(username).set_password(login, password)
+
+    def delete_ftp_account(self, username, login):
+        ftp_for(username).delete(login)
+
+    def list_ip_rules(self, username):
+        return access_for(username).rules()
+
+    def add_ip_rule(self, username, network, note):
+        return access_for(username).add(network, note)
+
+    def delete_ip_rule(self, username, rule_id):
+        access_for(username).delete(rule_id)

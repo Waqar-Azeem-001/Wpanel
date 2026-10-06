@@ -39,6 +39,9 @@ class Capability(str, Enum):
     SSL = "ssl"
     PHP = "php"
     CRON = "cron"
+    LOGS = "logs"
+    FTP = "ftp"
+    ACCESS = "access"
     BACKUPS = "backups"
     USAGE = "usage"
 
@@ -307,6 +310,43 @@ class CronOptions:
     max_jobs: int = 0
     min_interval_minutes: int = 5
     presets: list = field(default_factory=list)  # (label, five-field schedule)
+
+
+LOG_LINE_CHOICES = [50, 200, 500]  # how many lines a log view may show
+
+
+@dataclass(frozen=True)
+class LogView:
+    """The end of one log, newest line last. ``total`` counts the matching lines before the tail was taken."""
+
+    kind: str  # "error" or "access"
+    lines: list = field(default_factory=list)
+    total: int = 0
+    size_bytes: int = 0
+
+
+@dataclass(frozen=True)
+class FtpOptions:
+    host: str = ""
+    port: int = 21
+    secure_port: int = 22  # SFTP, when the provider offers it (0 when not)
+    max_accounts: int = 0
+    root: str = ""  # the account's own folder name shown as the top of every FTP login
+
+
+@dataclass(frozen=True)
+class FtpAccount:
+    login: str  # the full login, such as dev@example.com
+    directory: str  # relative to the account's hosting root; "" is the whole account
+    created_at: Optional[str] = None  # ISO 8601
+
+
+@dataclass(frozen=True)
+class IpRule:
+    rule_id: str
+    network: str  # an address or a CIDR range, tidied
+    note: str = ""
+    created_at: Optional[str] = None  # ISO 8601
 
 
 @dataclass(frozen=True)
@@ -688,6 +728,52 @@ class CronCapability(ABC):
     def delete_cron_job(self, username: str, job_id: str) -> None: ...
 
 
+class LogsCapability(ABC):
+    """Read-only views of the website's own logs. Never another account's, never a server log."""
+
+    @abstractmethod
+    def read_log(self, username: str, kind: str, lines: int, query: str) -> LogView: ...
+
+    @abstractmethod
+    def clear_log(self, username: str, kind: str) -> None: ...
+
+
+class FtpCapability(ABC):
+    """File-transfer logins limited to a folder of the account. Passwords are never readable once set."""
+
+    @abstractmethod
+    def ftp_options(self, username: str) -> FtpOptions: ...
+
+    @abstractmethod
+    def list_ftp_accounts(self, username: str) -> list:
+        """``FtpAccount`` rows."""
+
+    @abstractmethod
+    def create_ftp_account(self, username: str, name: str, password: str, directory: str) -> str:
+        """Returns the full login."""
+
+    @abstractmethod
+    def set_ftp_password(self, username: str, login: str, password: str) -> None: ...
+
+    @abstractmethod
+    def delete_ftp_account(self, username: str, login: str) -> None: ...
+
+
+class AccessCapability(ABC):
+    """Block visitors by IP address or range. The provider refuses ranges too broad to be a sensible block."""
+
+    @abstractmethod
+    def list_ip_rules(self, username: str) -> list:
+        """``IpRule`` rows."""
+
+    @abstractmethod
+    def add_ip_rule(self, username: str, network: str, note: str) -> str:
+        """Returns the new ``rule_id``."""
+
+    @abstractmethod
+    def delete_ip_rule(self, username: str, rule_id: str) -> None: ...
+
+
 class BackupsCapability(ABC):
     """Recoverability, not just a backup job: a provider that declares this must also be able to restore."""
 
@@ -713,6 +799,9 @@ CONTRACTS = {
     Capability.SSL: SslCapability,
     Capability.PHP: PhpCapability,
     Capability.CRON: CronCapability,
+    Capability.LOGS: LogsCapability,
+    Capability.FTP: FtpCapability,
+    Capability.ACCESS: AccessCapability,
     Capability.BACKUPS: BackupsCapability,
 }
 
@@ -745,6 +834,9 @@ OPERATIONS = {
                                "set_php_settings"}),
     Capability.CRON: frozenset({"cron_options", "run_cron_job", "list_cron_jobs", "create_cron_job", "update_cron_job",
                                 "delete_cron_job"}),
+    Capability.LOGS: frozenset({"read_log", "clear_log"}),
+    Capability.FTP: frozenset({"ftp_options", "list_ftp_accounts", "create_ftp_account", "set_ftp_password", "delete_ftp_account"}),
+    Capability.ACCESS: frozenset({"list_ip_rules", "add_ip_rule", "delete_ip_rule"}),
     Capability.BACKUPS: frozenset({"list_backups", "create_backup", "restore_backup"}),
 }
 
@@ -754,7 +846,7 @@ READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "data
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "get_mail_profile", "list_domains",
-                             "list_dns_records", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
+                             "list_dns_records", "read_log", "ftp_options", "list_ftp_accounts", "list_ip_rules", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
                              "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 

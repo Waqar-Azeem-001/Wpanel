@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "FTP accounts" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if not options %}
+<section class="card"><div class="card-body text-secondary">{% trans "FTP accounts could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-hdd-network" aria-hidden="true"></i> {% trans "FTP accounts" %}</h2>
+  <p class="db-counts"><span class="site-pill {% if full %}is-warn{% endif %}"><i class="bi bi-people" aria-hidden="true"></i> {{ count }} / {{ options.max_accounts }} {% trans "accounts" %}</span></p>
+</div>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Connection details" %}</h3>
+  <dl class="row mb-0 small">
+    <dt class="col-sm-3">{% trans "Server" %}</dt><dd class="col-sm-9"><code>{{ options.host }}</code></dd>
+    <dt class="col-sm-3">{% trans "FTP port" %}</dt><dd class="col-sm-9"><code>{{ options.port }}</code></dd>
+    {% if options.secure_port %}<dt class="col-sm-3">{% trans "SFTP port (secure)" %}</dt><dd class="col-sm-9"><code>{{ options.secure_port }}</code> <span class="text-secondary">{% trans "Prefer SFTP: FTP sends your password without protection." %}</span></dd>{% endif %}
+    <dt class="col-sm-3">{% trans "Username" %}</dt><dd class="col-sm-9">{% trans "The full login of an account below, such as" %} <code>name@{{ account.domain }}</code></dd>
+  </dl>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Add an FTP account" %}</h3>
+  <form method="post" action="{{ action_url }}" data-plain autocomplete="off">{% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <div class="row g-2">
+      <div class="col-lg-3"><label class="form-label small" for="ftp-name">{% trans "Login name" %}</label>
+        <div class="input-group"><input class="form-control" id="ftp-name" name="name" maxlength="32" required placeholder="developer"><span class="input-group-text">@{{ account.domain }}</span></div></div>
+      <div class="col-lg-3"><label class="form-label small" for="ftp-folder">{% trans "Folder it may use" %}</label>
+        <input class="form-control" id="ftp-folder" name="directory" maxlength="200" placeholder="public_html"><div class="form-text">{% trans "Empty means your whole hosting space." %}</div></div>
+      <div class="col-lg-4"><label class="form-label small" for="ftp-password">{% trans "Password" %}</label>
+        <input class="form-control" id="ftp-password" name="password" type="password" minlength="10" maxlength="128" required autocomplete="new-password"><div class="form-text">{% trans "At least 10 characters with upper and lower case letters and numbers." %}</div></div>
+      <div class="col-lg-2 d-flex align-items-start pt-4"><button class="btn btn-primary w-100" type="submit" {% if full %}disabled{% endif %}><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add" %}</button></div>
+    </div>
+    {% if full %}<p class="small text-warning mb-0 mt-1">{% trans "You have reached your plan's limit of FTP accounts." %}</p>{% endif %}
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Your FTP accounts" %}</h3></div>
+  {% if rows %}
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Login" %}</th><th scope="col">{% trans "Folder" %}</th><th scope="col">{% trans "Created" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="fm-name"><i class="bi bi-person-badge" aria-hidden="true"></i> {{ r.a.login }}</td>
+        <td>{% if files_url and r.a.directory %}<a href="{{ files_url }}?path={{ r.a.directory|urlencode }}"><i class="bi bi-folder2-open" aria-hidden="true"></i> {{ r.a.directory }}</a>{% elif r.a.directory %}{{ r.a.directory }}{% else %}<span class="text-secondary">{% trans "Whole hosting space" %}</span>{% endif %}</td>
+        <td>{% if r.created %}{{ r.created|date:"j M Y" }}{% endif %}</td>
+        <td class="text-end"><div class="fm-actions">
+          <button type="button" class="fm-icon" data-bs-toggle="collapse" data-bs-target="#ftp-pw-{{ forloop.counter }}" title="{% trans 'Change password' %}" aria-label="{% trans 'Change password of' %} {{ r.a.login }}"><i class="bi bi-key" aria-hidden="true"></i></button>
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="login" value="{{ r.a.login }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete' %} {{ r.a.login }}? {% trans 'It can no longer connect. Your files stay.' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete' %} {{ r.a.login }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
+        </div></td>
+      </tr>
+      <tr class="collapse" id="ftp-pw-{{ forloop.counter }}"><td colspan="4">
+        <form method="post" action="{{ action_url }}" class="row g-2 align-items-end" data-plain autocomplete="off">{% csrf_token %}<input type="hidden" name="action" value="password"><input type="hidden" name="login" value="{{ r.a.login }}">
+          <div class="col-md-6"><label class="form-label small" for="ftp-new-{{ forloop.counter }}">{% trans "New password for" %} {{ r.a.login }}</label><input class="form-control" id="ftp-new-{{ forloop.counter }}" name="password" type="password" minlength="10" maxlength="128" required autocomplete="new-password"></div>
+          <div class="col-md-auto"><button class="btn btn-primary" type="submit">{% trans "Change password" %}</button></div>
+        </form></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<div class="card-body text-secondary">{% trans "No FTP accounts yet. Add one above to upload files with an FTP program." %}</div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

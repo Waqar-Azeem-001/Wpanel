@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Logs" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if not log %}
+<section class="card"><div class="card-body text-secondary">{% trans "The log could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-journal-text" aria-hidden="true"></i> {% trans "Logs" %}</h2>
+  <p class="db-counts"><span class="site-pill">{{ log.total }} {% trans "matching lines" %}</span><span class="site-pill">{{ log.size_bytes|filesizeformat }}</span></p>
+</div>
+<div class="dns-zone-tabs mb-3" role="tablist" aria-label="{% trans 'Log' %}">
+  {% for k, label, link in kind_urls %}<a class="dns-zone{% if k == kind %} is-active{% endif %}" href="{{ link }}"{% if k == kind %} aria-current="page"{% endif %}><i class="bi {% if k == 'error' %}bi-exclamation-triangle{% else %}bi-globe2{% endif %}" aria-hidden="true"></i> {{ label }}</a>{% endfor %}
+</div>
+<section class="card mb-3"><div class="card-body">
+  <form method="get" class="row g-2 align-items-end" data-plain>
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <div class="col-md"><label class="form-label small" for="log-q">{% trans "Only lines containing" %}</label><input class="form-control" id="log-q" name="q" value="{{ query }}" maxlength="100" placeholder="404"></div>
+    <div class="col-md-3"><label class="form-label small" for="log-lines">{% trans "Show the last" %}</label><select class="form-select" id="log-lines" name="lines">{% for n in line_choices %}<option value="{{ n }}" {% if n == lines %}selected{% endif %}>{{ n }} {% trans "lines" %}</option>{% endfor %}</select></div>
+    <div class="col-md-auto"><button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Show" %}</button></div>
+  </form>
+</div></section>
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center"><h3 class="h6 mb-0">{% if kind == "error" %}{% trans "Error log" %}{% else %}{% trans "Access log" %}{% endif %}</h3>
+    <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="clear"><input type="hidden" name="kind" value="{{ kind }}"><button class="btn btn-sm btn-outline-danger" type="submit" data-confirm="{% trans 'Clear this log? Its lines are deleted for good.' %}"><i class="bi bi-eraser" aria-hidden="true"></i> {% trans "Clear" %}</button></form></div>
+  {% if log.lines %}<pre class="log-view mb-0" tabindex="0">{% for line in log.lines %}{{ line }}
+{% endfor %}</pre>
+  {% else %}<div class="card-body text-secondary">{% trans "No lines to show." %}</div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

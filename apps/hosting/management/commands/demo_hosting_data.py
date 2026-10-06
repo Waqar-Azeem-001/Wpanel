@@ -18,7 +18,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from apps.clients.models import Client
-from apps.hosting.adapters.demo import cron_for, files_root, php_for, ssl_for
+from apps.hosting.adapters.demo import access_for, cron_for, files_root, ftp_for, php_for, ssl_for
 from apps.hosting.models import HostingAccount, HostingStatus
 from apps.products.models import Product, ProductType, Server, ServerKind
 
@@ -52,6 +52,11 @@ def seed_certificates_and_php(username):
         cron = cron_for(username)
         cron.run(cron.create("0 2 * * *", "php public_html/cron/cleanup.php"))
         cron.update(cron.create("*/15 * * * *", "php public_html/cron/sync-stock.php"), enabled=False)
+    if username == "demoshop":
+        ftp_for(username).create("developer", "Demo-Pass-2026", "public_html")
+        access = access_for(username)
+        access.add("198.51.100.23", "Repeated login attempts")
+        access.add("192.0.2.0/24", "Scraper network")
     if username == "demoblog":
         domain = HostingAccount.objects.get(username=username).domain
         php_for(username).set_settings(domain, {"version": "8.0"})

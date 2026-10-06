@@ -95,6 +95,8 @@ def website_cards(user, accounts):
 SECTIONS = [
     ("Files", "files", "File manager", "bi-folder2-open", Capability.FILES,
      "Browse, upload, edit and organise your website files."),
+    ("Files", "ftp", "FTP accounts", "bi-hdd-network", Capability.FTP,
+     "Create logins for uploading files with an FTP program, limited to a folder."),
     ("Files", "backups", "Backups", "bi-cloud-arrow-up", Capability.BACKUPS,
      "Create, download and restore backups of your website."),
     ("Databases", "databases", "MySQL databases", "bi-database", Capability.DATABASES,
@@ -111,6 +113,10 @@ SECTIONS = [
      "Choose the PHP version and tune memory and upload limits."),
     ("Advanced", "cron", "Cron jobs", "bi-clock-history", Capability.CRON,
      "Schedule tasks to run automatically."),
+    ("Advanced", "logs", "Logs", "bi-journal-text", Capability.LOGS,
+     "Read your website's error and access logs."),
+    ("Advanced", "access", "IP blocking", "bi-slash-circle", Capability.ACCESS,
+     "Block visitors by IP address or range."),
     ("Advanced", "usage", "Usage", "bi-bar-chart-line", Capability.USAGE,
      "Disk and bandwidth used against your plan."),
 ]

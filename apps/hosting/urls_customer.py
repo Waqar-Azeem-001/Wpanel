@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_databases, views_domains, views_cron, views_email, views_files, views_php, views_ssl
+from . import views, views_databases, views_domains, views_cron, views_email, views_files, views_php, views_ssl, views_tools
 
 app_name = "hosting_customer"
 
@@ -34,5 +34,11 @@ urlpatterns = [
     path("<int:pk>/manage/php/do/", views_php.my_hosting_php_action, name="php_action"),
     path("<int:pk>/manage/cron/", views_cron.my_hosting_cron, name="cron"),
     path("<int:pk>/manage/cron/do/", views_cron.my_hosting_cron_action, name="cron_action"),
+    path("<int:pk>/manage/logs/", views_tools.my_hosting_logs, name="logs"),
+    path("<int:pk>/manage/logs/do/", views_tools.my_hosting_logs_action, name="logs_action"),
+    path("<int:pk>/manage/ftp/", views_tools.my_hosting_ftp, name="ftp"),
+    path("<int:pk>/manage/ftp/do/", views_tools.my_hosting_ftp_action, name="ftp_action"),
+    path("<int:pk>/manage/access/", views_tools.my_hosting_access, name="access"),
+    path("<int:pk>/manage/access/do/", views_tools.my_hosting_access_action, name="access_action"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

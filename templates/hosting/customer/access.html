@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "IP blocking" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if rows is None %}
+<section class="card"><div class="card-body text-secondary">{% trans "The blocked addresses could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-slash-circle" aria-hidden="true"></i> {% trans "IP blocking" %}</h2>
+  <p class="db-counts"><span class="site-pill"><i class="bi bi-shield-x" aria-hidden="true"></i> {{ rows|length }} {% trans "blocked" %}</span></p>
+</div>
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Block an address" %}</h3>
+  <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <div class="row g-2">
+      <div class="col-lg-4"><label class="form-label small" for="ip-network">{% trans "IP address or range" %}</label><input class="form-control" id="ip-network" name="network" maxlength="64" required placeholder="203.0.113.7 or 203.0.113.0/24" autocomplete="off"></div>
+      <div class="col-lg"><label class="form-label small" for="ip-note">{% trans "Note (optional)" %}</label><input class="form-control" id="ip-note" name="note" maxlength="100" placeholder="{% trans 'Why you block it' %}" autocomplete="off"></div>
+      <div class="col-lg-auto d-flex align-items-end"><button class="btn btn-danger w-100" type="submit"><i class="bi bi-slash-circle" aria-hidden="true"></i> {% trans "Block" %}</button></div>
+    </div>
+    <p class="small text-secondary mt-2 mb-0">{% trans "Blocked visitors cannot open your website. Your own address is" %} <code>{{ my_ip }}</code> {% trans "and cannot be blocked from here." %}</p>
+  </form>
+</div></section>
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Blocked addresses" %}</h3></div>
+  {% if rows %}
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Address or range" %}</th><th scope="col">{% trans "Note" %}</th><th scope="col">{% trans "Added" %}</th><th scope="col" class="text-end">{% trans "Action" %}</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td class="fm-name"><i class="bi bi-slash-circle" aria-hidden="true"></i> <code>{{ r.r.network }}</code></td><td>{{ r.r.note|default:"—" }}</td><td>{% if r.created %}{{ r.created|date:"j M Y" }}{% endif %}</td>
+        <td class="text-end"><form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="rule" value="{{ r.r.rule_id }}"><button class="btn btn-sm btn-outline-secondary" type="submit" data-confirm="{% trans 'Unblock' %} {{ r.r.network }}?"><i class="bi bi-unlock" aria-hidden="true"></i> {% trans "Unblock" %}</button></form></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<div class="card-body text-secondary">{% trans "Nothing is blocked. Add an address above if someone keeps attacking or copying your website." %}</div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

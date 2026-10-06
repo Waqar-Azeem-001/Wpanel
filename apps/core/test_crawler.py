@@ -50,6 +50,12 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:php_action": "POST-only in practice; reached from the PHP screen forms (test_ssl_php.py)",
     "hosting_customer:cron": "linked only for an account whose provider supports cron jobs (the demo provider); tested in apps/hosting/tests/test_cron.py",
     "hosting_customer:cron_action": "POST-only in practice; reached from the Cron jobs screen forms (test_cron.py)",
+    "hosting_customer:logs": "linked only for an account whose provider supports logs (the demo provider); tested in apps/hosting/tests/test_tools.py",
+    "hosting_customer:logs_action": "POST-only in practice; reached from the Logs screen (test_tools.py)",
+    "hosting_customer:ftp": "linked only for an account whose provider supports FTP accounts (the demo provider); tested in apps/hosting/tests/test_tools.py",
+    "hosting_customer:ftp_action": "POST-only in practice; reached from the FTP screen forms (test_tools.py)",
+    "hosting_customer:access": "linked only for an account whose provider supports IP blocking (the demo provider); tested in apps/hosting/tests/test_tools.py",
+    "hosting_customer:access_action": "POST-only in practice; reached from the IP blocking screen forms (test_tools.py)",
     "hosting_customer:file_edit": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "hosting_customer:file_download": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "orders_customer:choose_client": "only reachable by a customer who is a contact of more than one account; the "

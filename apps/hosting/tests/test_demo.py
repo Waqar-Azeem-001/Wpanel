@@ -68,7 +68,7 @@ def test_removing_never_touches_real_accounts(owner, plan, client_obj, manager):
 def test_the_demo_provider_reports_ssl_php_and_usage(owner, plan):
     call_command("demo_hosting_data")
     account = HostingAccount.objects.get(domain="demo-shop.example.com")
-    assert control.capabilities_for(account) == ["account", "files", "databases", "email", "domains", "dns", "ssl", "php", "cron", "usage"]
+    assert control.capabilities_for(account) == ["account", "files", "databases", "email", "domains", "dns", "ssl", "php", "cron", "logs", "ftp", "access", "usage"]
     assert control.perform(owner, account, "php", "get_php_settings", account.domain).version
     assert control.perform(owner, account, "ssl", "get_ssl_status", account.domain).domain == account.domain
     usage = control.perform(owner, account, "usage", "get_usage")
