@@ -3,4 +3,4 @@
 The rich-text editor and its formatting bar, shared by the compose window, the inline reply and the signature settings.
 Variables: editor_id, editor_html (already safe), placeholder, min_class.
 {% endcomment %}
-<div class="ml-editor {{ min_class }}" id="{{ editor_id }}" data-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="{{ placeholder }}" data-placeholder="{{ placeholder }}">{{ editor_html|default:""|safe }}</div>
+<div class="ml-editor {{ min_class }}" id="{{ editor_id }}" data-editor contenteditable="true" role="textbox" aria-multiline="true" aria-label="{{ placeholder }}" title="{% trans 'Message editor' %}" data-placeholder="{{ placeholder }}">{{ editor_html|default:""|safe }}</div>
