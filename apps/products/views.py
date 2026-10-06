@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.accounts.roles import perm
@@ -454,6 +455,32 @@ def staff_server_edit(request, pk):
     return render(request, "products/staff/server_form.html",
                   {"form": form, "server": server, "title": f"Edit {server.name}",
                    "status_form": forms.ServerStatusForm(initial={"status": server.status})})
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def staff_server_test(request, pk):
+    """Reach the server with its saved details (read-only) and say what it answered."""
+    from apps.hosting import services as hosting_services
+
+    server = get_object_or_404(Server, pk=pk)
+    try:
+        result = hosting_services.check_server(request.user, server, request=request)
+    except ServiceError as exc:
+        messages.error(request, f"Could not connect to {server.name}: {exc.message}")
+    else:
+        text = f"Connected to {server.name}."
+        if result["version"]:
+            text += f" Version {result['version']}."
+        if result["packages"]:
+            text += f" {len(result['packages'])} hosting package(s): {', '.join(result['packages'][:12])}."
+        messages.success(request, text)
+        for item in result["missing"]:
+            messages.warning(request, f"Product '{item['product']}' creates package '{item['package']}', which this server does not have.")
+    target = request.POST.get("next", "")
+    if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return redirect(target)  # back to the list the button was on
+    return redirect("catalog_staff:server_edit", pk=server.pk)
 
 
 @require_POST

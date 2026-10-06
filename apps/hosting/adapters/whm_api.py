@@ -47,6 +47,9 @@ class WhmApiAdapter(HostingAdapter):
             request = requests.post if sensitive else requests.get
             response = request(f"{self._base_url()}/{function}", headers=headers, params=query, data=body,
                                timeout=self.timeout, verify=self.verify_ssl)
+            if response.status_code in (401, 403):
+                raise HostingError("The server refused the login. Check the API username and the API token, and that the "
+                                   "token is allowed to do this (WHM > Manage API Tokens).")
             response.raise_for_status()
             payload = response.json()
         except requests.RequestException as exc:
@@ -58,6 +61,12 @@ class WhmApiAdapter(HostingAdapter):
         if metadata.get("result") != 1:
             raise HostingError(metadata.get("reason") or f"{function} failed.")
         return payload
+
+    def check_connection(self):
+        """Read-only: the WHM version and the hosting packages it offers (so a product's package name can be checked)."""
+        version = (self._call("version").get("data") or {}).get("version") or ""
+        packages = (self._call("listpkgs").get("data") or {}).get("pkg") or []
+        return {"version": str(version), "packages": sorted(p.get("name", "") for p in packages if p.get("name"))}
 
     def create_account(self, *, username, domain, package, contact_email, password):
         self._call("createacct", {"username": username, "domain": domain, "plan": package,

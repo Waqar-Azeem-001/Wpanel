@@ -23,6 +23,13 @@ class HostingAdapter(ABC):
         self.verify_ssl = verify_ssl
         self.timeout = timeout
 
+    def check_connection(self) -> dict:
+        """
+        Reach the server with its saved details and report what it says, WITHOUT changing anything: ``{"version": str,
+        "packages": [names]}``. A server kind with nothing to connect to (manual, demo) just says so.
+        """
+        return {"version": "", "packages": []}
+
     @abstractmethod
     def create_account(self, *, username: str, domain: str, package: str, contact_email: str,
                        password: str) -> dict:

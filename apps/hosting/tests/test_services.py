@@ -342,3 +342,35 @@ def test_usage_sync_job_is_off_by_default():
     from django.conf import settings
 
     assert "sync-hosting-usage" not in settings.CELERY_BEAT_SCHEDULE
+
+
+# --- Test connection on a server --------------------------------------------------------------------------------
+
+def test_check_server_reports_the_version_and_warns_about_a_package_the_server_lacks(manager, server, product, monkeypatch):
+    from apps.hosting.adapters.manual import ManualAdapter
+    from apps.audit.models import AuditEvent
+
+    monkeypatch.setattr(ManualAdapter, "check_connection", lambda self: {"version": "11.1", "packages": ["other_pkg"]})
+    result = services.check_server(manager, server)
+    assert result["version"] == "11.1" and result["packages"] == ["other_pkg"]
+    assert result["missing"] == [{"product": "Starter", "package": "starter_pkg"}]
+    event = AuditEvent.objects.get(action="server.connection_tested")
+    assert event.metadata == {"version": "11.1", "packages": 1, "missing": 1}
+
+
+def test_check_server_failure_is_audited_without_secrets_and_needs_permission(manager, server, customer, monkeypatch):
+    from apps.hosting.adapters.base import HostingError
+    from apps.hosting.adapters.manual import ManualAdapter
+    from apps.audit.models import AuditEvent
+
+    def boom(self):
+        raise HostingError("The server refused the login.")
+
+    monkeypatch.setattr(ManualAdapter, "check_connection", boom)
+    with pytest.raises(ServiceError) as exc:
+        services.check_server(manager, server)
+    assert exc.value.code == "connection_failed"
+    assert AuditEvent.objects.get(action="server.connection_failed").metadata == {"reason": "The server refused the login."}
+    with pytest.raises(ServiceError) as denied:
+        services.check_server(customer, server)
+    assert denied.value.status_code == 403

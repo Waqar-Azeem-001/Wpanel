@@ -224,3 +224,39 @@ def test_ssl_and_php_appear_when_the_provider_reports_them(client, manager, owne
     client.force_login(owner)
     page = client.get("/account/hosting/").content.decode()
     assert "SSL active" in page and "PHP 8.3" in page
+
+
+# --- Test connection from the staff server pages -----------------------------------------------------------------
+
+def test_the_server_pages_offer_test_connection_and_show_the_answer(client, manager, server, product, monkeypatch):
+    from apps.hosting.adapters.manual import ManualAdapter
+
+    client.force_login(manager)
+    assert "Test connection" in client.get("/staff/servers/").content.decode()
+    assert "Test connection" in client.get(f"/staff/servers/{server.pk}/edit/").content.decode()
+    monkeypatch.setattr(ManualAdapter, "check_connection", lambda self: {"version": "11.1", "packages": ["gold"]})
+    page = client.post(f"/staff/servers/{server.pk}/test/", follow=True).content.decode()
+    assert "Connected to srv1." in page and "Version 11.1." in page and "gold" in page
+    assert "creates package" in page and "starter_pkg" in page  # the product's package is not on the server
+
+
+def test_a_failed_test_shows_the_reason_and_never_the_token(client, manager, server, monkeypatch):
+    from apps.hosting.adapters.base import HostingError
+    from apps.hosting.adapters.manual import ManualAdapter
+
+    def boom(self):
+        raise HostingError("The server refused the login. Check the API username and the API token.")
+
+    client.force_login(manager)
+    monkeypatch.setattr(ManualAdapter, "check_connection", boom)
+    page = client.post(f"/staff/servers/{server.pk}/test/", {"next": "/staff/servers/"}, follow=True).content.decode()
+    assert "Could not connect to srv1" in page and "refused the login" in page and "Servers" in page
+
+
+def test_test_connection_needs_permission_a_post_and_never_redirects_off_site(client, manager, customer, server):
+    client.force_login(customer)
+    assert client.post(f"/staff/servers/{server.pk}/test/").status_code in (302, 403)
+    client.force_login(manager)
+    assert client.get(f"/staff/servers/{server.pk}/test/").status_code == 405
+    response = client.post(f"/staff/servers/{server.pk}/test/", {"next": "https://evil.example/x"})
+    assert response.status_code == 302 and "evil.example" not in response["Location"]

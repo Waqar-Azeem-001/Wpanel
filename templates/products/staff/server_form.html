@@ -11,6 +11,15 @@
     </div>
   </form></div>
 </section>
+{% if server and perms.accounts.manage_hosting %}
+<section class="card"><div class="card-body">
+  <h2>Test connection</h2>
+  <p class="text-secondary">Reaches this server with the saved details and reports what it answers: nothing is changed on it. For a WHM server it shows the WHM version and the hosting packages it has, and warns when a product creates a package the server does not have. Save any changes first.</p>
+  <form method="post" action="{% url 'catalog_staff:server_test' server.pk %}">{% csrf_token %}
+    <button class="btn btn-outline-primary" type="submit"><i class="bi bi-plug" aria-hidden="true"></i> Test connection</button>
+  </form></div>
+</section>
+{% endif %}
 {% if status_form %}
 <section class="card"><div class="card-body">
   <h2>Status</h2>

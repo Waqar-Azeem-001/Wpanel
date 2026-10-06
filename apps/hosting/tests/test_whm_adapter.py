@@ -160,3 +160,44 @@ def test_use_ssl_false_and_verify_ssl_false():
         adapter.unsuspend_account("example")
     assert mocked.call_args[0][0] == "http://10.0.0.5:2086/json-api/unsuspendacct"
     assert mocked.call_args[1]["verify"] is False
+
+
+# --- Test connection (read-only) -------------------------------------------------------------------------------
+
+def test_check_connection_reads_the_version_and_the_packages_without_changing_anything():
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url.rsplit("/", 1)[-1])
+        if url.endswith("/version"):
+            return _response({"metadata": {"result": 1}, "data": {"version": "11.118.0.5"}})
+        return _response({"metadata": {"result": 1}, "data": {"pkg": [{"name": "starter"}, {"name": "business"}]}})
+
+    with mock.patch("requests.get", side_effect=fake_get), mock.patch("requests.post") as post:
+        result = _adapter().check_connection()
+    assert result == {"version": "11.118.0.5", "packages": ["business", "starter"]}
+    assert calls == ["version", "listpkgs"] and not post.called  # two reads, no write
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_a_refused_login_gets_a_plain_explanation(status):
+    with mock.patch("requests.get", return_value=_response({}, status_code=status)):
+        with pytest.raises(HostingError, match="refused the login"):
+            _adapter().check_connection()
+
+
+def test_an_unreachable_server_and_a_whm_error_are_reported():
+    import requests
+
+    with mock.patch("requests.get", side_effect=requests.ConnectionError("no route to host")):
+        with pytest.raises(HostingError, match="Could not reach the server"):
+            _adapter().check_connection()
+    with mock.patch("requests.get", return_value=_response({"metadata": {"result": 0, "reason": "Token denied"}})):
+        with pytest.raises(HostingError, match="Token denied"):
+            _adapter().check_connection()
+
+
+def test_servers_without_a_real_connection_just_say_so():
+    from apps.hosting.adapters.manual import ManualAdapter
+
+    assert ManualAdapter(host="x", port=1, credentials={}).check_connection() == {"version": "", "packages": []}

@@ -348,6 +348,29 @@ def sync_usage(actor, account, *, request=None):
     return _refresh_usage(account)
 
 
+def check_server(actor, server, *, request=None):
+    """
+    "Test connection" for a server: reach it with the saved details (read-only), and compare the packages it has with the
+    package name each product mapped to it creates. Returns ``{"version", "packages", "missing"}``; ``missing`` lists the
+    products whose package name the server does not have (an order for one of those would fail).
+    """
+    _require(actor, "manage_hosting")
+    try:
+        result = build_adapter(server).check_connection()
+    except HostingError as exc:
+        audit.record("server.connection_failed", actor=actor, target=server, metadata={"reason": str(exc)[:300]}, request=request)
+        raise ServiceError(str(exc), code="connection_failed") from exc
+    packages = result.get("packages") or []
+    missing = []
+    if packages:
+        missing = [{"product": p.name, "package": p.whm_package_name} for p in server.products.all()
+                   if p.whm_package_name and p.whm_package_name not in packages]
+    audit.record("server.connection_tested", actor=actor, target=server,
+                 metadata={"version": result.get("version", ""), "packages": len(packages), "missing": len(missing)},
+                 request=request)
+    return {"version": result.get("version", ""), "packages": packages, "missing": missing}
+
+
 def sync_all_usage():
     """
     The scheduled job: refresh usage for every active account that has a server. One account failing (a server down,
