@@ -14,8 +14,9 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           FilesCapability, PhpCapability, SslCapability, WebmailAccess)
+                           CronCapability, FilesCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
+from .demo_cron import DemoCron
 from .demo_domains import SERVER_IP, DemoDomains
 from .demo_email import DemoEmail
 from .demo_php import DemoPhp
@@ -107,6 +108,11 @@ def ssl_for(username):
     return DemoSsl(files_root() / f"{username}.state", lambda: _domain_names(username), lambda n: _points_here(username, n))
 
 
+def cron_for(username):
+    """The account's demo scheduled jobs."""
+    return DemoCron(files_root() / f"{username}.state")
+
+
 def php_for(username):
     """The account's demo PHP settings service."""
     return DemoPhp(files_root() / f"{username}.state", lambda: _domain_names(username))
@@ -126,7 +132,7 @@ def sandbox_for(username):
 
 
 class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
-                  PhpCapability, ManualAdapter):
+                  PhpCapability, CronCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -384,3 +390,23 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
 
     def set_php_settings(self, username, domain, settings):
         php_for(username).set_settings(domain, settings)
+
+    # --- Cron --------------------------------------------------------------------------------------------------
+
+    def cron_options(self, username):
+        return cron_for(username).options()
+
+    def list_cron_jobs(self, username):
+        return cron_for(username).jobs()
+
+    def create_cron_job(self, username, schedule, command):
+        return cron_for(username).create(schedule, command)
+
+    def update_cron_job(self, username, job_id, *, schedule=None, command=None, enabled=None):
+        cron_for(username).update(job_id, schedule=schedule, command=command, enabled=enabled)
+
+    def delete_cron_job(self, username, job_id):
+        cron_for(username).delete(job_id)
+
+    def run_cron_job(self, username, job_id):
+        return cron_for(username).run(job_id)

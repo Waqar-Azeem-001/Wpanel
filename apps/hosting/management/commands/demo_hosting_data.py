@@ -18,7 +18,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from apps.clients.models import Client
-from apps.hosting.adapters.demo import files_root, php_for, ssl_for
+from apps.hosting.adapters.demo import cron_for, files_root, php_for, ssl_for
 from apps.hosting.models import HostingAccount, HostingStatus
 from apps.products.models import Product, ProductType, Server, ServerKind
 
@@ -48,6 +48,10 @@ def seed_certificates_and_php(username):
         cert = {"issuer": "Free SSL (sample data)", "issued_at": (now + timedelta(days=days - 90)).isoformat(),
                 "expires_at": (now + timedelta(days=days)).isoformat(), "auto_renew": auto, "https_redirect": redirect}
         (directory / "ssl.json").write_text(json.dumps({"certs": {domain: cert}}), encoding="utf-8")
+    if username == "demoshop":
+        cron = cron_for(username)
+        cron.run(cron.create("0 2 * * *", "php public_html/cron/cleanup.php"))
+        cron.update(cron.create("*/15 * * * *", "php public_html/cron/sync-stock.php"), enabled=False)
     if username == "demoblog":
         domain = HostingAccount.objects.get(username=username).domain
         php_for(username).set_settings(domain, {"version": "8.0"})

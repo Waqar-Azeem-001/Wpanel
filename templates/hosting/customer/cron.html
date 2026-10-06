@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load ui i18n static %}
+{% block title %}{% trans "Cron jobs" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if not options %}
+<section class="card"><div class="card-body text-secondary">{% trans "Scheduled jobs could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-clock-history" aria-hidden="true"></i> {% trans "Cron jobs" %}</h2>
+  <p class="db-counts"><span class="site-pill {% if full %}is-warn{% endif %}"><i class="bi bi-list-task" aria-hidden="true"></i> {{ count }} / {{ options.max_jobs }} {% trans "jobs" %}</span></p>
+</div>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Add a job" %}</h3>
+  <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <div class="row g-2">
+      <div class="col-lg-3"><label class="form-label small" for="cron-preset">{% trans "How often" %}</label>
+        <select class="form-select" id="cron-preset" name="preset" data-cron-preset>{% for label, schedule in options.presets %}<option value="{{ schedule }}">{{ label }}</option>{% endfor %}<option value="{{ custom }}">{% trans "Custom schedule…" %}</option></select></div>
+      <div class="col-lg-2" data-cron-custom hidden><label class="form-label small" for="cron-schedule">{% trans "Schedule" %}</label>
+        <input class="form-control" id="cron-schedule" name="schedule" placeholder="0 2 * * *" maxlength="100" autocomplete="off"></div>
+      <div class="col-lg"><label class="form-label small" for="cron-command">{% trans "PHP script to run" %}</label>
+        <input class="form-control" id="cron-command" name="command" placeholder="php public_html/cron.php" maxlength="300" required autocomplete="off"></div>
+      <div class="col-lg-auto d-flex align-items-end"><button class="btn btn-primary w-100" type="submit" {% if full %}disabled{% endif %}><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add" %}</button></div>
+    </div>
+    <p class="small text-secondary mt-2 mb-0">{% trans "Only PHP scripts inside your hosting folder can be scheduled, and a job cannot run more often than every" %} {{ options.min_interval_minutes }} {% trans "minutes." %}</p>
+    {% if full %}<p class="small text-warning mb-0 mt-1">{% trans "You have reached your plan's limit of jobs." %}</p>{% endif %}
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Your jobs" %}</h3></div>
+  {% if rows %}
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Schedule" %}</th><th scope="col">{% trans "Command" %}</th><th scope="col">{% trans "Last run" %}</th><th scope="col">{% trans "Status" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% with j=r.j %}
+      <tr>
+        <td>{% if r.when %}<strong>{{ r.when }}</strong><small class="d-block text-secondary"><code>{{ j.schedule }}</code></small>{% else %}<code>{{ j.schedule }}</code>{% endif %}</td>
+        <td class="text-break"><code>{{ j.command }}</code></td>
+        <td>{% if r.ran %}{{ r.ran|date:"j M Y, H:i" }}<small class="d-block {% if j.last_status == 'ok' %}text-secondary{% else %}text-danger{% endif %}">{{ j.last_output }}</small>{% else %}<span class="text-secondary">{% trans "Not run yet" %}</span>{% endif %}</td>
+        <td><form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="toggle"><input type="hidden" name="job" value="{{ j.job_id }}"><input type="hidden" name="enabled" value="{% if j.enabled %}0{% else %}1{% endif %}"><button class="btn btn-sm {% if j.enabled %}btn-success{% else %}btn-outline-secondary{% endif %}" type="submit" aria-pressed="{% if j.enabled %}true{% else %}false{% endif %}">{% if j.enabled %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</button></form></td>
+        <td class="text-end"><div class="fm-actions">
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="run"><input type="hidden" name="job" value="{{ j.job_id }}"><button class="fm-icon" type="submit" title="{% trans 'Run now' %}" aria-label="{% trans 'Run now' %}"><i class="bi bi-play-fill" aria-hidden="true"></i></button></form>
+          <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#cron-edit" data-job="{{ j.job_id }}" data-schedule="{{ j.schedule }}" data-command="{{ j.command }}" title="{% trans 'Edit' %}" aria-label="{% trans 'Edit' %}"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="job" value="{{ j.job_id }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete this job? It will stop running.' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete' %}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
+        </div></td>
+      </tr>
+    {% endwith %}{% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<div class="card-body text-secondary">{% trans "No scheduled jobs yet. Add one above, for example a script that sends your newsletter or clears a cache." %}</div>{% endif %}
+</section>
+
+<div class="modal fade" id="cron-edit" tabindex="-1" aria-labelledby="cron-edit-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="edit"><input type="hidden" name="job" value=""><input type="hidden" name="preset" value="{{ custom }}">
+    <div class="modal-header"><h2 class="modal-title h5" id="cron-edit-title">{% trans "Edit job" %}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button></div>
+    <div class="modal-body">
+      <label class="form-label" for="cron-edit-schedule">{% trans "Schedule" %}</label>
+      <input class="form-control mb-3" id="cron-edit-schedule" name="schedule" maxlength="100" required autocomplete="off">
+      <label class="form-label" for="cron-edit-command">{% trans "PHP script to run" %}</label>
+      <input class="form-control" id="cron-edit-command" name="command" maxlength="300" required autocomplete="off">
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button><button type="submit" class="btn btn-primary">{% trans "Save" %}</button></div>
+  </form></div></div></div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/cron.js' %}" defer></script>{% endblock %}

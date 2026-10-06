@@ -295,6 +295,18 @@ class CronJobInfo:
     schedule: str  # five-field cron expression
     command: str
     enabled: bool = True
+    last_run_at: Optional[str] = None  # ISO 8601
+    last_status: str = ""  # "ok", "failed" or "" when it has not run yet
+    last_output: str = ""  # the end of what the job printed, kept short
+
+
+@dataclass(frozen=True)
+class CronOptions:
+    """What a customer may schedule on this plan."""
+
+    max_jobs: int = 0
+    min_interval_minutes: int = 5
+    presets: list = field(default_factory=list)  # (label, five-field schedule)
 
 
 @dataclass(frozen=True)
@@ -648,6 +660,18 @@ class PhpCapability(ABC):
 
 
 class CronCapability(ABC):
+    """
+    Scheduled jobs are never a free shell: the provider accepts only a PHP script inside the account, with a schedule that is not
+    more frequent than the plan allows.
+    """
+
+    @abstractmethod
+    def cron_options(self, username: str) -> CronOptions: ...
+
+    @abstractmethod
+    def run_cron_job(self, username: str, job_id: str) -> CronJobInfo:
+        """Run the job once now and return it with its result."""
+
     @abstractmethod
     def list_cron_jobs(self, username: str) -> list:
         """``CronJobInfo`` rows."""
@@ -719,7 +743,8 @@ OPERATIONS = {
                                "set_https_redirect"}),
     Capability.PHP: frozenset({"php_options", "list_php_extensions", "set_php_extension", "get_php_settings",
                                "set_php_settings"}),
-    Capability.CRON: frozenset({"list_cron_jobs", "create_cron_job", "update_cron_job", "delete_cron_job"}),
+    Capability.CRON: frozenset({"cron_options", "run_cron_job", "list_cron_jobs", "create_cron_job", "update_cron_job",
+                                "delete_cron_job"}),
     Capability.BACKUPS: frozenset({"list_backups", "create_backup", "restore_backup"}),
 }
 
@@ -729,7 +754,7 @@ READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "data
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "get_mail_profile", "list_domains",
-                             "list_dns_records", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
+                             "list_dns_records", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
                              "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 
