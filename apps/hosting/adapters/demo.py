@@ -13,9 +13,10 @@ from pathlib import Path
 from django.conf import settings
 
 from .base import HostingError
-from .capabilities import (DatabaseAdminAccess, DatabasesCapability, FilesCapability, PhpCapability, PhpSettings, SslCapability,
-                           SslStatus)
+from .capabilities import (DatabaseAdminAccess, DatabasesCapability, EmailCapability, FilesCapability, PhpCapability,
+                           PhpSettings, SslCapability, SslStatus, WebmailAccess)
 from .demo_databases import DemoDatabases
+from .demo_email import DemoEmail
 from .manual import ManualAdapter
 from .sandbox import Sandbox
 
@@ -43,6 +44,14 @@ def databases_for(username):
     return DemoDatabases(files_root() / f"{username}.state", username)
 
 
+def email_for(username):
+    """The account's demo mail service, for the account's own domain. State lives beside the website folder."""
+    from apps.hosting.models import HostingAccount
+
+    account = HostingAccount.objects.filter(username=username, server__kind="demo").first()
+    return DemoEmail(files_root() / f"{username}.state", account.domain if account else "")
+
+
 def sandbox_for(username):
     """The account's folder, created with a few sample files the first time it is used."""
     root = files_root() / username
@@ -56,7 +65,7 @@ def sandbox_for(username):
     return box
 
 
-class DemoAdapter(DatabasesCapability, FilesCapability, SslCapability, PhpCapability, ManualAdapter):
+class DemoAdapter(EmailCapability, DatabasesCapability, FilesCapability, SslCapability, PhpCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -164,6 +173,66 @@ class DemoAdapter(DatabasesCapability, FilesCapability, SslCapability, PhpCapabi
 
     def grant_database_access(self, username, database, user, privileges):
         databases_for(username).grant(database, user, privileges)
+
+    # --- Email (simulated service with real rules) ----------------------------------------------------------------
+
+    def email_limits(self, username):
+        return email_for(username).limits()
+
+    def list_mailboxes(self, username):
+        return email_for(username).mailboxes()
+
+    def create_mailbox(self, username, address, password, *, quota_mb=None):
+        email_for(username).create_mailbox(address, password, quota_mb)
+
+    def delete_mailbox(self, username, address):
+        email_for(username).delete_mailbox(address)
+
+    def set_mailbox_password(self, username, address, password):
+        email_for(username).set_password(address, password)
+
+    def set_mailbox_quota(self, username, address, quota_mb):
+        email_for(username).set_quota(address, quota_mb)
+
+    def list_forwarders(self, username):
+        return email_for(username).forwarders()
+
+    def create_forwarder(self, username, source, destination):
+        email_for(username).create_forwarder(source, destination)
+
+    def delete_forwarder(self, username, source, destination):
+        email_for(username).delete_forwarder(source, destination)
+
+    def list_autoresponders(self, username):
+        return email_for(username).autoresponders()
+
+    def set_autoresponder(self, username, address, subject, body, enabled):
+        email_for(username).set_autoresponder(address, subject, body, enabled)
+
+    def delete_autoresponder(self, username, address):
+        email_for(username).delete_autoresponder(address)
+
+    def get_mail_routing(self, username):
+        return email_for(username).routing()
+
+    def set_mail_routing(self, username, mode):
+        email_for(username).set_routing(mode)
+
+    def get_spam_settings(self, username):
+        return email_for(username).spam()
+
+    def set_spam_settings(self, username, settings):
+        email_for(username).set_spam(settings)
+
+    def webmail_access(self, username, address):
+        email_for(username).messages(address)  # raises if the mailbox does not exist
+        return WebmailAccess(kind="embedded")  # no Roundcube behind a demo account: WHPanel's own inbox viewer serves it
+
+    def list_messages(self, username, address):
+        return email_for(username).messages(address)
+
+    def read_message(self, username, address, message_id):
+        return email_for(username).read_message(address, message_id)
 
     # --- SSL ---------------------------------------------------------------------------------------------------
 

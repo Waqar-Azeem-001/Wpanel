@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ address }} · {% trans "Webmail" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<section class="card fm">
+  <div class="card-body">
+    <div class="fm-head">
+      <h2 class="h5 mb-0"><i class="bi bi-envelope-open" aria-hidden="true"></i> {{ address }}</h2>
+      <div class="fm-head-right"><a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to email accounts" %}</a></div>
+    </div>
+    <p class="site-note"><i class="bi bi-info-circle" aria-hidden="true"></i>{% trans "A simple inbox viewer with sample messages. Full webmail (Roundcube) opens here when your hosting server offers it. Use your mail app to send and receive real mail." %}</p>
+    <div class="dbb">
+      <nav class="dbb-tables" aria-label="{% trans 'Inbox' %}">
+        <h3 class="dbb-title">{% trans "Inbox" %}{% if unread %} · {{ unread }} {% trans "unread" %}{% endif %}</h3>
+        <ul>
+        {% for m, link in inbox %}
+          <li><a href="{{ link }}"{% if message and message.message_id == m.message_id %} class="active" aria-current="page"{% endif %}>
+            <span class="em-msg"><strong{% if not m.unread %} class="fw-normal"{% endif %}>{{ m.subject }}</strong><small>{{ m.sender }} · {{ m.received_at|slice:":10" }}</small></span>{% if m.unread %}<span class="badge text-bg-primary rounded-pill">{% trans "new" %}</span>{% endif %}</a></li>
+        {% empty %}<li class="text-secondary px-2">{% trans "The inbox is empty." %}</li>
+        {% endfor %}
+        </ul>
+      </nav>
+      <div class="dbb-data">
+        {% if message %}
+        <h3 class="h5">{{ message.subject }}</h3>
+        <p class="small text-secondary">{% trans "From" %} {{ message.sender }} · {{ message.received_at|slice:":10" }} {{ message.received_at|slice:"11:16" }}</p>
+        <div class="em-body">{{ message.body|linebreaks }}</div>
+        {% else %}<p class="text-secondary mb-0">{% trans "Choose a message to read it." %}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

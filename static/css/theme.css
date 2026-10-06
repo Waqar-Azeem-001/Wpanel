@@ -492,3 +492,11 @@ pre.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; 
 .dbb-tabs { display: flex; gap: .25rem; padding: 0; margin: 0 0 1rem; list-style: none; border-bottom: 1px solid var(--border); }
 .dbb-tabs .nav-link { padding: .5rem .9rem; border-radius: 8px 8px 0 0; color: var(--muted); font-weight: 600; font-size: .9rem; }
 .dbb-tabs .nav-link.active { color: var(--accent-ink); background: var(--accent-subtle); }
+
+/* Email screen */
+.em-choice { display: flex; align-items: flex-start; gap: .6rem; padding: .55rem .7rem; margin-bottom: .45rem; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.em-choice small { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; }
+.em-choice:hover { border-color: var(--border-strong); }
+.em-usage-col { min-width: 14rem; }
+.em-msg { display: flex; flex-direction: column; min-width: 0; } .em-msg small { color: var(--muted); }
+.em-body { padding: 1rem 1.1rem; background: var(--surface-2); border-radius: 10px; }

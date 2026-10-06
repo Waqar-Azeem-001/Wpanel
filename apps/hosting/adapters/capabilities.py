@@ -151,6 +151,52 @@ class MailboxInfo:
 
 
 @dataclass(frozen=True)
+class EmailLimits:
+    """The mail domain, and what the plan allows. ``None`` means no fixed limit."""
+
+    domain: str = ""
+    max_mailboxes: Optional[int] = None
+    max_forwarders: Optional[int] = None
+    default_quota_mb: int = 1024
+    max_quota_mb: Optional[int] = None
+    password_min_length: int = 12
+
+
+@dataclass(frozen=True)
+class AutoresponderInfo:
+    address: str
+    subject: str = ""
+    body: str = ""
+    enabled: bool = True
+
+
+@dataclass(frozen=True)
+class SpamSettings:
+    enabled: bool = True
+    level: str = "medium"  # "low", "medium" or "high": how suspicious a message must be to count as spam
+    delete_spam: bool = False  # False: file it in the Spam folder; True: delete it straight away
+
+
+@dataclass(frozen=True)
+class MessageInfo:
+    message_id: str
+    sender: str
+    subject: str
+    received_at: str  # ISO 8601
+    unread: bool = False
+    body: str = ""  # only filled in by ``read_message``
+
+
+@dataclass(frozen=True)
+class WebmailAccess:
+    """How a customer reaches their mail in a browser: ``external`` is a one-time address on the provider (Roundcube),
+    ``embedded`` means WHPanel's own simple inbox viewer. Never carries a password."""
+
+    kind: str  # "external" or "embedded"
+    url: str = ""
+
+
+@dataclass(frozen=True)
 class ForwarderInfo:
     source: str
     destination: str
@@ -341,7 +387,52 @@ class DatabasesCapability(ABC):
         """Give ``user`` the (neutral, allowlisted) ``privileges`` on ``database``; an empty list revokes access."""
 
 
+MAIL_ROUTING_MODES = ("local", "remote")  # local: this hosting server receives the mail; remote: another service does
+SPAM_LEVELS = ("low", "medium", "high")
+
+
 class EmailCapability(ABC):
+    """
+    Addresses are full (``name@domain``); the provider only accepts the account's own mail domain. Plan limits and
+    password rules belong to the provider. Passwords are passed straight through and never kept in the clear.
+    """
+
+    @abstractmethod
+    def email_limits(self, username: str) -> EmailLimits: ...
+
+    @abstractmethod
+    def list_autoresponders(self, username: str) -> list:
+        """``AutoresponderInfo`` rows."""
+
+    @abstractmethod
+    def set_autoresponder(self, username: str, address: str, subject: str, body: str, enabled: bool) -> None: ...
+
+    @abstractmethod
+    def delete_autoresponder(self, username: str, address: str) -> None: ...
+
+    @abstractmethod
+    def get_mail_routing(self, username: str) -> str:
+        """One of ``MAIL_ROUTING_MODES``."""
+
+    @abstractmethod
+    def set_mail_routing(self, username: str, mode: str) -> None: ...
+
+    @abstractmethod
+    def get_spam_settings(self, username: str) -> SpamSettings: ...
+
+    @abstractmethod
+    def set_spam_settings(self, username: str, settings: SpamSettings) -> None: ...
+
+    @abstractmethod
+    def webmail_access(self, username: str, address: str) -> WebmailAccess: ...
+
+    @abstractmethod
+    def list_messages(self, username: str, address: str) -> list:
+        """``MessageInfo`` rows (newest first) for the embedded inbox viewer."""
+
+    @abstractmethod
+    def read_message(self, username: str, address: str, message_id: str) -> MessageInfo: ...
+
     @abstractmethod
     def list_mailboxes(self, username: str) -> list:
         """``MailboxInfo`` rows."""
@@ -481,7 +572,10 @@ OPERATIONS = {
                                      "delete_database", "list_database_users",
                                      "create_database_user", "set_database_user_password", "delete_database_user",
                                      "grant_database_access"}),
-    Capability.EMAIL: frozenset({"list_mailboxes", "create_mailbox", "delete_mailbox", "set_mailbox_password",
+    Capability.EMAIL: frozenset({"email_limits", "list_autoresponders", "set_autoresponder", "delete_autoresponder",
+                                 "get_mail_routing", "set_mail_routing", "get_spam_settings", "set_spam_settings",
+                                 "webmail_access", "list_messages", "read_message",
+                                 "list_mailboxes", "create_mailbox", "delete_mailbox", "set_mailbox_password",
                                  "set_mailbox_quota", "list_forwarders", "create_forwarder", "delete_forwarder"}),
     Capability.DOMAINS: frozenset({"list_domains", "add_domain", "remove_domain", "set_redirect"}),
     Capability.DNS: frozenset({"list_dns_records", "add_dns_record", "update_dns_record", "delete_dns_record"}),
@@ -494,7 +588,9 @@ OPERATIONS = {
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
 READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
                              "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
-                             "list_database_users", "list_mailboxes", "list_forwarders", "list_domains",
+                             "list_database_users", "list_mailboxes", "list_forwarders", "email_limits", "list_autoresponders",
+                             "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message",
+                             "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 

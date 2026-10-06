@@ -936,7 +936,8 @@ Before marking any phase 🟢:
 | H1 Websites and hosting dashboard | 🟡 local (browser pass at 375/768/1280 pending) | `docs/h1-websites-dashboard.md`: card grid with plan, status, storage and bandwidth meters, SSL/PHP when a provider reports them |
 | H2 File manager | 🟡 local | `docs/h2-file-manager.md`: sandboxed browse, upload, edit, rename, copy, delete, download, search on the demo provider; permissions, archive/extract, bulk actions deferred |
 | H3 Databases | 🟡 local | `docs/h3-databases.md`: databases, users, passwords, privileges, plan limits on the demo provider; phpMyAdmin deferred |
-| H4-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| H4 Email | 🟡 local | `docs/h4-email.md`: mailboxes, quotas, passwords, forwarders, automatic replies, routing, spam settings, simple webmail on the demo provider; real mail delivery deferred |
+| H5-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 

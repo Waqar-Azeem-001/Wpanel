@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_databases, views_files
+from . import views, views_databases, views_email, views_files
 
 app_name = "hosting_customer"
 
@@ -19,5 +19,8 @@ urlpatterns = [
     path("<int:pk>/manage/databases/sql/", views_databases.my_hosting_database_sql, name="database_sql"),
     path("<int:pk>/manage/databases/row/", views_databases.my_hosting_database_row, name="database_row"),
     path("<int:pk>/manage/databases/do/", views_databases.my_hosting_database_action, name="database_action"),
+    path("<int:pk>/manage/email/", views_email.my_hosting_email, name="email"),
+    path("<int:pk>/manage/email/do/", views_email.my_hosting_email_action, name="email_action"),
+    path("<int:pk>/manage/email/webmail/", views_email.my_hosting_webmail, name="webmail"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

@@ -68,7 +68,7 @@ def test_removing_never_touches_real_accounts(owner, plan, client_obj, manager):
 def test_the_demo_provider_reports_ssl_php_and_usage(owner, plan):
     call_command("demo_hosting_data")
     account = HostingAccount.objects.get(domain="demo-shop.example.com")
-    assert control.capabilities_for(account) == ["account", "files", "databases", "ssl", "php", "usage"]
+    assert control.capabilities_for(account) == ["account", "files", "databases", "email", "ssl", "php", "usage"]
     assert control.perform(owner, account, "php", "get_php_settings", account.domain).version
     assert control.perform(owner, account, "ssl", "get_ssl_status", account.domain).domain == account.domain
     usage = control.perform(owner, account, "usage", "get_usage")
@@ -98,10 +98,10 @@ def test_the_manage_menu_links_only_the_sections_the_provider_supports(client, o
     page = client.get(f"/account/hosting/{account.pk}/").content.decode()
     for group in ("Files", "Databases", "Email", "Domains", "Advanced"):
         assert f'class="sidebar-group" aria-hidden="true">{group}<' in page
-    # the demo provider supports files, databases, ssl, php and usage; everything else is shown muted and has no address
-    for label in ("File manager", "MySQL databases", "SSL certificate", "PHP settings", "Usage"):
+    # the demo provider supports files, databases, email, ssl, php and usage; everything else is shown muted and has no address
+    for label in ("File manager", "MySQL databases", "Email accounts", "SSL certificate", "PHP settings", "Usage"):
         assert f'href="/account/hosting/{account.pk}/manage/' in page and label in page
-    assert page.count('class="sidebar-soon"') == 5
+    assert page.count('class="sidebar-soon"') == 4
     assert f"/account/hosting/{account.pk}/manage/backups/" not in page
 
 
