@@ -40,6 +40,24 @@ Owner feedback: the page had no way into a database. Added:
 - 6 more tests (22 in total for H3): embedded browser, refusal of unknown databases/tables/bad pages, read-only grid,
   escaping, secure-address-only redirect, stranger gets 404.
 
+## Update 2026-10-06 (second): a real database manager, not a viewer
+Owner feedback: a read-only grid is not phpMyAdmin - rows could not be edited and there was no SQL. Rebuilt:
+- **Demo databases are now real SQLite files** (one per database, beside the account state, outside the website folder), seeded
+  with sample tables. SQLite is not MySQL (the screen says so), but every query, insert, edit and delete genuinely runs.
+- **Manager screen** with three tabs: **Browse** (paged grid; Insert row, Edit and Delete per row when the table has a
+  primary key; NULL shown distinctly from the text "NULL"), **Structure** (columns, types, keys, defaults) and **SQL**
+  (run one statement; rows or "N rows affected"; errors shown with the typed statement kept; SELECT and COUNT shortcuts;
+  the shared confirmation dialog appears for statements containing DROP, TRUNCATE, DELETE or ALTER).
+- **Contract:** `describe_table`, `run_query`, `insert_row`, `update_row`, `delete_row` (and `TableData.key_columns`).
+- **Safety of the SQL console:** an authorizer refuses ATTACH, DETACH, PRAGMA, virtual tables and file/extension functions, so
+  SQL can never reach another database or the engine's settings; one statement per run; a 3 second time limit; a 50 MB file
+  cap; results capped at 200 rows; binary values shown as a size. Row edits use validated column names and bound
+  parameters, never text glued into SQL. SQL text is never written to the audit trail (only the statement kind and length;
+  row edits record the table, key and column names, not values).
+- 46 tests for H3 now (24 more): the engine (select/create/insert/update/drop, caps, binary, dangerous SQL refused, runaway
+  query stopped, size cap, safe row editing with a quote-injection attempt, no-primary-key tables, NULL), the screens (tabs,
+  running SQL, audit without statement text, insert/edit/delete from the screen, errors as messages, escaping, strangers).
+
 ## Deferred
-Real phpMyAdmin (needs a verified cPanel adapter, H14, and the secure-session work of H15), editing data, per-database
-usage history, remote-access hosts, import/export, and the 375 / 768 px check.
+Real phpMyAdmin on an actual server (needs the verified cPanel adapter, H14, and the secure-session work of H15; the
+`external` path is built and tested), multi-statement SQL, import/export, per-database usage history, remote-access hosts, import/export, and the 375 / 768 px check.

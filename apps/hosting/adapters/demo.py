@@ -15,7 +15,7 @@ from django.conf import settings
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, FilesCapability, PhpCapability, PhpSettings, SslCapability,
                            SslStatus)
-from .demo_databases import DemoDatabases, browse as browse_demo_table, tables as demo_tables
+from .demo_databases import DemoDatabases
 from .manual import ManualAdapter
 from .sandbox import Sandbox
 
@@ -114,20 +114,29 @@ class DemoAdapter(DatabasesCapability, FilesCapability, SslCapability, PhpCapabi
         return databases_for(username).limits()
 
     def database_admin_access(self, username, database):
-        self._require_database(username, database)
+        databases_for(username).sql(database)  # raises if it does not exist
         return DatabaseAdminAccess(kind="embedded")  # no phpMyAdmin behind a demo account: WHPanel's own browser serves it
 
     def list_tables(self, username, database):
-        self._require_database(username, database)
-        return demo_tables(database)
+        return databases_for(username).sql(database).tables()
 
     def browse_table(self, username, database, table, offset, limit):
-        self._require_database(username, database)
-        return browse_demo_table(database, table, offset, limit)
+        return databases_for(username).sql(database).browse(table, offset, limit)
 
-    def _require_database(self, username, database):
-        if database not in [d.name for d in databases_for(username).databases()]:
-            raise HostingError("That database does not exist.")
+    def describe_table(self, username, database, table):
+        return databases_for(username).sql(database).describe(table)
+
+    def run_query(self, username, database, sql):
+        return databases_for(username).sql(database).run(sql)
+
+    def insert_row(self, username, database, table, values):
+        databases_for(username).sql(database).insert_row(table, values)
+
+    def update_row(self, username, database, table, key, values):
+        databases_for(username).sql(database).update_row(table, key, values)
+
+    def delete_row(self, username, database, table, key):
+        databases_for(username).sql(database).delete_row(table, key)
 
     def list_database_grants(self, username):
         return databases_for(username).grants()

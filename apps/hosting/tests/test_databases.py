@@ -222,8 +222,8 @@ def test_the_browse_screen_lists_tables_pages_rows_and_stays_read_only(client, o
     assert "Browse data" in page and "Storage used by your databases" in page and "MB used" in page
     browse = url(account, "browse/")
     html = client.get(browse, {"database": "demoshop_shop"}).content.decode()
-    assert "customers" in html and "orders" in html and "products" in html and "read-only" in html
-    assert "<form" not in html.split("dbb-data")[1].split("</section>")[0]  # nothing on the data grid can change data
+    assert "customers" in html and "orders" in html and "products" in html
+    assert "Insert row" in html and "SQL" in html
     second = client.get(browse, {"database": "demoshop_shop", "table": "customers", "page": 2}).content.decode()
     assert "Page 2" in second and "Previous" in second
     assert client.get(browse, {"database": "demoshop_shop", "table": "customers", "page": "abc"}).status_code == 200
@@ -231,13 +231,13 @@ def test_the_browse_screen_lists_tables_pages_rows_and_stays_read_only(client, o
 
 
 def test_cell_values_are_escaped_and_long_ones_are_cut(client, owner, account, monkeypatch):
-    from apps.hosting.adapters import demo
     from apps.hosting.adapters.capabilities import TableData
+    from apps.hosting.adapters.demo_sql import SqlDatabase
 
     client.force_login(owner)
     client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
-    monkeypatch.setattr(demo, "browse_demo_table",
-                        lambda *a: TableData(columns=["x"], rows=[["<script>alert(1)</script>"], ["y" * 400]], total=2))
+    monkeypatch.setattr(SqlDatabase, "browse",
+                        lambda self, *a: TableData(columns=["x"], rows=[["<script>alert(1)</script>"], ["y" * 400]], total=2))
     html = client.get(url(account, "browse/"), {"database": "demoshop_shop", "table": "customers"}).content.decode()
     assert "<script>alert(1)</script>" not in html and "&lt;script&gt;" in html
     assert "y" * 400 not in html and "y" * 120 + "..." in html
@@ -263,3 +263,205 @@ def test_an_external_manager_redirects_only_to_a_secure_address(client, owner, a
 def test_a_stranger_cannot_browse_anything(client, customer, account):
     client.force_login(customer)
     assert client.get(url(account, "browse/"), {"database": "demoshop_shop"}).status_code == 404
+
+
+# --- The SQL engine and the database manager (edit rows, structure, SQL) ------------------------------------------
+
+@pytest.fixture
+def sqldb(tmp_path):
+    from apps.hosting.adapters.demo_databases import sample_tables
+    from apps.hosting.adapters.demo_sql import SqlDatabase
+
+    db = SqlDatabase(tmp_path / "x.sqlite3")
+    db.seed(sample_tables("shop"))
+    return db
+
+
+def test_sql_select_returns_columns_rows_and_a_count(sqldb):
+    result = sqldb.run("SELECT id, name FROM customers ORDER BY id LIMIT 3;")
+    assert result.columns == ["id", "name"] and len(result.rows) == 3 and not result.truncated
+    assert sqldb.run("SELECT COUNT(*) AS n FROM orders").rows[0][0].isdigit()
+
+
+def test_sql_can_create_change_and_drop_things(sqldb):
+    assert "affected" in sqldb.run("CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)").message
+    assert sqldb.run("INSERT INTO notes (body) VALUES ('hello')").affected == 1
+    assert sqldb.run("UPDATE notes SET body = 'bye'").affected == 1
+    assert sqldb.run("SELECT body FROM notes").rows == [["bye"]]
+    sqldb.run("DROP TABLE notes")
+    assert "notes" not in [t.name for t in sqldb.tables()]
+
+
+def test_sql_results_are_capped_and_binary_is_not_dumped(sqldb):
+    from apps.hosting.adapters import demo_sql
+
+    sqldb.run("CREATE TABLE big (id INTEGER PRIMARY KEY, v TEXT)")
+    for start in range(0, 300, 100):
+        sqldb.run("INSERT INTO big (v) " + " UNION ALL ".join(f"SELECT {n}" for n in range(start, start + 100)))
+    capped = sqldb.run("SELECT * FROM big")
+    assert len(capped.rows) == demo_sql.MAX_RESULT_ROWS and capped.truncated
+    assert sqldb.run("SELECT x'00ff00' AS b").rows == [["[binary 3 bytes]"]]
+
+
+@pytest.mark.parametrize("sql", ["ATTACH DATABASE 'other.db' AS o", "PRAGMA writable_schema = 1", "PRAGMA table_info(customers)",
+                                 "DELETE FROM sqlite_master", "SELECT load_extension('x')", "SELECT readfile('/etc/passwd')",
+                                 "CREATE VIRTUAL TABLE v USING fts5(a)", "DETACH DATABASE main"])
+def test_dangerous_sql_is_refused(sqldb, sql):
+    with pytest.raises(HostingError):
+        sqldb.run(sql)
+    assert "customers" in [t.name for t in sqldb.tables()]  # nothing was harmed
+
+
+def test_one_statement_empty_and_oversized_sql_are_refused(sqldb):
+    for sql in ("SELECT 1; DROP TABLE customers", "", "   ;  ", "SELECT " + "1," * 20000 + "1"):
+        with pytest.raises(HostingError):
+            sqldb.run(sql)
+    assert "customers" in [t.name for t in sqldb.tables()]
+
+
+def test_a_runaway_query_is_stopped(sqldb, monkeypatch):
+    from apps.hosting.adapters import demo_sql
+
+    monkeypatch.setattr(demo_sql, "TIME_LIMIT_SECONDS", 0.05)
+    with pytest.raises(HostingError, match="too long"):
+        sqldb.run("WITH RECURSIVE r(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM r) SELECT COUNT(*) FROM r")
+
+
+def test_the_database_has_a_size_cap(tmp_path, monkeypatch):
+    from apps.hosting.adapters import demo_sql
+
+    monkeypatch.setattr(demo_sql, "MAX_DB_BYTES", 40_000)
+    db = demo_sql.SqlDatabase(tmp_path / "small.sqlite3")
+    db.seed({"t": (["id", "v"], [])})
+    with pytest.raises(HostingError, match="size limit"):
+        for _ in range(200):
+            db.run("INSERT INTO t (v) VALUES (hex(randomblob(2000)))")
+
+
+def test_row_editing_uses_names_and_values_safely(sqldb):
+    columns = [c.name for c in sqldb.describe("customers")]
+    assert columns == ["id", "name", "email", "city"] and sqldb.describe("customers")[0].primary_key
+    sqldb.insert_row("customers", {"name": "Zed'; DROP TABLE customers;--", "email": "z@example.com", "city": ""})
+    assert "customers" in [t.name for t in sqldb.tables()]
+    last = sqldb.browse("customers", 0, 100).rows[-1]
+    assert last[1] == "Zed'; DROP TABLE customers;--"
+    sqldb.update_row("customers", {"id": last[0]}, {"city": "Multan"})
+    assert sqldb.browse("customers", 0, 100).rows[-1][3] == "Multan"
+    sqldb.delete_row("customers", {"id": last[0]})
+    assert sqldb.browse("customers", 0, 100).rows[-1][0] != last[0]
+    for bad in (lambda: sqldb.insert_row("customers", {"nope": "x"}), lambda: sqldb.insert_row("nope", {"a": "b"}),
+                lambda: sqldb.update_row("customers", {"name": "x"}, {"city": "y"}),  # not the primary key
+                lambda: sqldb.update_row("customers", {"id": "999999"}, {"city": "y"}),
+                lambda: sqldb.delete_row("customers", {"id": "999999"}),
+                lambda: sqldb.insert_row("customers", {})):
+        with pytest.raises(HostingError):
+            bad()
+
+
+def test_a_table_without_a_primary_key_has_read_only_rows(sqldb):
+    sqldb.run("CREATE TABLE loose (a TEXT)")
+    sqldb.run("INSERT INTO loose VALUES ('x')")
+    assert sqldb.browse("loose", 0, 10).key_columns == []
+    with pytest.raises(HostingError, match="primary key"):
+        sqldb.delete_row("loose", {"a": "x"})
+
+
+def test_null_stays_distinct_from_the_text_null(sqldb):
+    sqldb.run("INSERT INTO customers (id, name) VALUES (500, 'NULL')")
+    row = [r for r in sqldb.browse("customers", 0, 100).rows if r[0] == "500"][0]
+    assert row[1] == "NULL" and row[2] is None
+
+
+def test_each_database_is_its_own_file_and_deleting_removes_it(svc):
+    svc.create_database("one")
+    svc.create_database("two")
+    svc.sql("acct_one").run("CREATE TABLE only_in_one (id INTEGER PRIMARY KEY)")
+    assert "only_in_one" not in [t.name for t in svc.sql("acct_two").tables()]
+    path = svc.sql("acct_one").path
+    assert path.exists()
+    svc.delete_database("acct_one")
+    assert not path.exists()
+
+
+# --- The manager screens -------------------------------------------------------------------------------------------
+
+def manager_url(account, **query):
+    from urllib.parse import urlencode
+
+    return url(account, "browse/") + "?" + urlencode(query)
+
+
+def test_the_manager_has_browse_structure_and_sql_tabs(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    browse = client.get(manager_url(account, database="demoshop_shop", table="customers")).content.decode()
+    assert "Browse" in browse and "Structure" in browse and "SQL" in browse and "Insert row" in browse
+    assert "data-db-edit" in browse and 'data-columns="' in browse
+    structure = client.get(manager_url(account, database="demoshop_shop", table="customers", tab="structure")).content.decode()
+    assert "Primary" in structure and "INTEGER" in structure and "email" in structure
+    sql = client.get(manager_url(account, database="demoshop_shop", table="customers", tab="sql")).content.decode()
+    assert "Run SQL" in sql and "<textarea" in sql
+
+
+def test_running_sql_shows_rows_or_a_message_and_errors_are_shown(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    act = url(account, "sql/")
+    base = {"database": "demoshop_shop", "table": "customers"}
+    page = client.post(act, {**base, "sql": "SELECT name FROM customers LIMIT 2"}).content.decode()
+    assert "2 row(s) returned" in page and "Ayesha Khan" in page
+    page = client.post(act, {**base, "sql": "UPDATE customers SET city = 'X' WHERE id = 1"}).content.decode()
+    assert "1 row(s) affected" in page
+    page = client.post(act, {**base, "sql": "SELEKT nonsense"}).content.decode()
+    assert "SQL error" in page and "SELEKT nonsense" in page  # the typed statement is kept for fixing
+    page = client.post(act, {**base, "sql": "ATTACH DATABASE 'x' AS y"}).content.decode()
+    assert "SQL error" in page or "not authorized" in page.lower()
+    assert client.post(act, {**base, "sql": "<script>alert(1)</script>"}).status_code == 200
+
+
+def test_sql_statements_are_audited_by_kind_and_never_by_text(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    secret = "INSERT INTO customers (id, name) VALUES (777, 'top-secret-value-xyz')"
+    client.post(url(account, "sql/"), {"database": "demoshop_shop", "table": "customers", "sql": secret})
+    events = list(AuditEvent.objects.filter(action="hosting.control", metadata__operation="run_query")
+                  .values_list("metadata", flat=True))
+    assert events and events[0]["kind"] == "INSERT" and "top-secret-value-xyz" not in str(events)
+
+
+def test_insert_edit_and_delete_a_row_from_the_screen(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    act = url(account, "row/")
+    base = {"database": "demoshop_shop", "table": "customers", "page": "1"}
+    client.post(act, {**base, "action": "insert", "val__id": "900", "val__name": "New Person", "val__email": "n@e.com"})
+    page = client.get(manager_url(account, database="demoshop_shop", table="customers", page=2)).content.decode()
+    assert "New Person" in page or "New Person" in client.get(manager_url(account, database="demoshop_shop", table="customers", page=1)).content.decode()
+    client.post(act, {**base, "action": "update", "key__id": "900", "val__name": "Changed Person"})
+    found = client.post(url(account, "sql/"), {"database": "demoshop_shop", "table": "customers",
+                                               "sql": "SELECT name FROM customers WHERE id = 900"}).content.decode()
+    assert "Changed Person" in found
+    client.post(act, {**base, "action": "delete", "key__id": "900"})
+    gone = client.post(url(account, "sql/"), {"database": "demoshop_shop", "table": "customers",
+                                              "sql": "SELECT name FROM customers WHERE id = 900"}).content.decode()
+    assert "0 row(s) returned" in gone
+
+
+def test_row_errors_are_messages_and_values_are_escaped(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    response = client.post(url(account, "row/"), {"database": "demoshop_shop", "table": "customers", "action": "delete",
+                                                  "key__id": "424242"}, follow=True)
+    assert "no longer exists" in response.content.decode()
+    client.post(url(account, "row/"), {"database": "demoshop_shop", "table": "customers", "action": "insert",
+                                       "val__id": "901", "val__name": "<script>alert(1)</script>"})
+    html = client.post(url(account, "sql/"), {"database": "demoshop_shop", "table": "customers",
+                                              "sql": "SELECT name FROM customers WHERE id = 901"}).content.decode()
+    assert "<script>alert(1)</script>" not in html and "&lt;script&gt;" in html
+
+
+def test_a_stranger_cannot_run_sql_or_edit_rows(client, customer, account):
+    client.force_login(customer)
+    assert client.post(url(account, "sql/"), {"database": "demoshop_shop", "sql": "SELECT 1"}).status_code == 404
+    assert client.post(url(account, "row/"), {"database": "demoshop_shop", "table": "customers", "action": "delete",
+                                              "key__id": "1"}).status_code == 404

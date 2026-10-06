@@ -12,8 +12,8 @@ from pathlib import Path
 from django.contrib.auth.hashers import make_password
 
 from .base import HostingError
-from .capabilities import (DATABASE_PRIVILEGES, DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabaseUserInfo, TableData,
-                           TableInfo)
+from .capabilities import DATABASE_PRIVILEGES, DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabaseUserInfo
+from .demo_sql import SqlDatabase
 
 MAX_DATABASES = 10
 MAX_USERS = 10
@@ -33,6 +33,7 @@ def check_password(password):
 class DemoDatabases:
     def __init__(self, directory, username):
         self.file = Path(directory) / "databases.json"
+        self.dir = Path(directory)
         self.prefix = f"{username}_"
 
     # --- storage ---------------------------------------------------------------------------------------------
@@ -56,6 +57,17 @@ class DemoDatabases:
                                f"(up to {40 if pattern is NAME_RE else 12} characters).")
         return self.prefix + typed
 
+    # --- the database itself (one SQLite file each, created with sample tables) ---------------------------------
+
+    def sql(self, name) -> SqlDatabase:
+        """The engine for an existing database; a missing file (an older demo record) is created with the sample tables."""
+        if name not in self._load()["databases"]:
+            raise HostingError("That database does not exist.")
+        db = SqlDatabase(self.dir / "data" / f"{name}.sqlite3")
+        if not db.exists():
+            db.seed(sample_tables(name))
+        return db
+
     # --- reading ---------------------------------------------------------------------------------------------
 
     def limits(self):
@@ -67,8 +79,8 @@ class DemoDatabases:
         users_of = {}
         for grant in data["grants"]:
             users_of.setdefault(grant["database"], []).append(grant["user"])
-        return [DatabaseInfo(name=name, size_mb=round((sum(map(ord, name)) * 0.37) % 90 + 0.5, 1),
-                             users=sorted(users_of.get(name, []))) for name in sorted(data["databases"])]
+        return [DatabaseInfo(name=name, size_mb=self.sql(name).size_mb(), users=sorted(users_of.get(name, [])))
+                for name in sorted(data["databases"])]
 
     def users(self):
         data = self._load()
@@ -92,11 +104,13 @@ class DemoDatabases:
             raise HostingError(f"Your plan allows {MAX_DATABASES} databases. Delete one or upgrade your plan.")
         data["databases"][name] = {"created": datetime.now(timezone.utc).isoformat()}
         self._save(data)
+        self.sql(name)  # make the file now, with its sample tables
 
     def delete_database(self, name):
         data = self._load()
         if name not in data["databases"]:
             raise HostingError("That database does not exist.")
+        SqlDatabase(self.dir / "data" / f"{name}.sqlite3").delete_file()
         del data["databases"][name]
         data["grants"] = [g for g in data["grants"] if g["database"] != name]
         self._save(data)
@@ -193,21 +207,6 @@ def schema_for(database):
     return {name: (maker, 12 + (seed + n * 13) % 40) for n, name in enumerate(names)}
 
 
-def tables(database):
-    return [TableInfo(name=name, rows=count, size_kb=16 + count * 2) for name, (_maker, count) in schema_for(database).items()]
-
-
-def browse(database, table, offset, limit):
-    schema = schema_for(database)
-    if table not in schema:
-        raise HostingError("That table does not exist.")
-    try:
-        offset, limit = int(offset), int(limit)
-    except (TypeError, ValueError):
-        raise HostingError("That page does not exist.")
-    if offset < 0 or limit < 1:
-        raise HostingError("That page does not exist.")
-    limit = min(limit, 100)
-    maker, count = schema[table]
-    columns, rows = maker(table, count)
-    return TableData(columns=columns, rows=[[str(v) for v in row] for row in rows[offset:offset + limit]], total=len(rows))
+def sample_tables(database):
+    """{table: (columns, rows)} for a new demo database: WordPress-style or shop-style sample data."""
+    return {name: maker(name, count) for name, (maker, count) in schema_for(database).items()}

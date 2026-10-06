@@ -16,6 +16,8 @@ urlpatterns = [
     path("<int:pk>/manage/files/download/", views_files.my_hosting_file_download, name="file_download"),
     path("<int:pk>/manage/databases/", views_databases.my_hosting_databases, name="databases"),
     path("<int:pk>/manage/databases/browse/", views_databases.my_hosting_database_browse, name="database_browse"),
+    path("<int:pk>/manage/databases/sql/", views_databases.my_hosting_database_sql, name="database_sql"),
+    path("<int:pk>/manage/databases/row/", views_databases.my_hosting_database_row, name="database_row"),
     path("<int:pk>/manage/databases/do/", views_databases.my_hosting_database_action, name="database_action"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% load ui i18n %}
-{% block title %}{{ database }} · {% trans "Database browser" %} · {{ SITE_NAME }}{% endblock %}
+{% load ui i18n static %}
+{% block title %}{{ database }} · {% trans "Database manager" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 {% include "hosting/customer/_header.html" with tab="" %}
 <section class="card fm">
@@ -9,32 +9,91 @@
       <h2 class="h5 mb-0"><i class="bi bi-database" aria-hidden="true"></i> {{ database }}</h2>
       <div class="fm-head-right"><a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to databases" %}</a></div>
     </div>
-    <p class="site-note"><i class="bi bi-eye" aria-hidden="true"></i>{% trans "A read-only look inside this database. You can see its tables and rows here; changing data is done by your website or by phpMyAdmin when your server offers it." %}</p>
     <div class="dbb">
       <nav class="dbb-tables" aria-label="{% trans 'Tables' %}">
         <h3 class="dbb-title">{% trans "Tables" %}</h3>
         <ul>
         {% for t, link in table_links %}
           <li><a href="{{ link }}"{% if t.name == table %} class="active" aria-current="page"{% endif %}><span><i class="bi bi-table" aria-hidden="true"></i> {{ t.name }}</span><small>{{ t.rows }}</small></a></li>
-        {% empty %}<li class="text-secondary px-2">{% trans "This database has no tables yet." %}</li>
+        {% empty %}<li class="text-secondary px-2">{% trans "This database has no tables yet. Create one with SQL." %}</li>
         {% endfor %}
         </ul>
       </nav>
       <div class="dbb-data">
-        {% if data %}
-        <div class="d-flex justify-content-between align-items-center mb-2"><h3 class="h6 mb-0">{{ table }}</h3><span class="small text-secondary">{{ data.total }} {% trans "rows" %}</span></div>
-        <div class="table-responsive"><table class="table table-sm fm-table align-middle mb-0">
-          <thead><tr>{% for c in data.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr></thead>
-          <tbody>{% for row in rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ data.columns|length }}" class="text-secondary">{% trans "No rows." %}</td></tr>{% endfor %}</tbody>
-        </table></div>
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          {% if prev_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ prev_url }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> {% trans "Previous" %}</a>{% else %}<span></span>{% endif %}
-          <span class="small text-secondary">{% trans "Page" %} {{ page }} / {{ pages }}</span>
-          {% if next_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ next_url }}">{% trans "Next" %} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% else %}<span></span>{% endif %}
-        </div>
-        {% else %}<p class="text-secondary mb-0">{% trans "Choose a table." %}</p>{% endif %}
+        <ul class="nav dbb-tabs" aria-label="{% trans 'Database manager sections' %}">
+          {% for name, link in tab_links %}<li class="nav-item"><a class="nav-link{% if name == tab %} active{% endif %}" href="{{ link }}"{% if name == tab %} aria-current="page"{% endif %}>
+            {% if name == "browse" %}<i class="bi bi-table" aria-hidden="true"></i> {% trans "Browse" %}{% elif name == "structure" %}<i class="bi bi-diagram-3" aria-hidden="true"></i> {% trans "Structure" %}{% else %}<i class="bi bi-terminal" aria-hidden="true"></i> SQL{% endif %}</a></li>{% endfor %}
+        </ul>
+
+        {% if tab == "browse" %}
+          {% if data %}
+          <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+            <h3 class="h6 mb-0">{{ table }} <span class="small text-secondary">&middot; {{ data.total }} {% trans "rows" %}</span></h3>
+            {% if editable %}<button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#dbm-row" data-db-insert><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Insert row" %}</button>{% endif %}
+          </div>
+          {% if not editable %}<p class="site-note"><i class="bi bi-info-circle" aria-hidden="true"></i>{% trans "This table has no primary key, so its rows cannot be edited one by one here. Use the SQL tab." %}</p>{% endif %}
+          <div class="table-responsive"><table class="table table-sm fm-table align-middle mb-0">
+            <thead><tr>{% for c in data.columns %}<th scope="col">{{ c }}{% if c in data.key_columns %} <i class="bi bi-key-fill text-warning" title="{% trans 'Primary key' %}" aria-label="{% trans 'Primary key' %}"></i>{% endif %}</th>{% endfor %}{% if editable %}<th scope="col" class="text-end">{% trans "Actions" %}</th>{% endif %}</tr></thead>
+            <tbody>{% for row in rows %}<tr>
+              {% for cell in row.cells %}<td>{% if cell is None %}<em class="text-secondary">NULL</em>{% else %}{{ cell }}{% endif %}</td>{% endfor %}
+              {% if editable %}<td class="text-end"><div class="fm-actions">
+                <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#dbm-row" data-db-edit data-values="{{ row.values_json }}" data-keys="{{ row.key_json }}" title="{% trans 'Edit' %}" aria-label="{% trans 'Edit this row' %}"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
+                <form method="post" action="{{ row_action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="database" value="{{ database }}"><input type="hidden" name="table" value="{{ table }}"><input type="hidden" name="page" value="{{ page }}">{% for col, val in row.keys %}<input type="hidden" name="key__{{ col }}" value="{{ val }}">{% endfor %}<button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete this row? This cannot be undone.' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete this row' %}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
+              </div></td>{% endif %}
+            </tr>{% empty %}<tr><td colspan="{{ data.columns|length|add:1 }}" class="text-secondary">{% trans "No rows." %}</td></tr>{% endfor %}</tbody>
+          </table></div>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            {% if prev_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ prev_url }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> {% trans "Previous" %}</a>{% else %}<span></span>{% endif %}
+            <span class="small text-secondary">{% trans "Page" %} {{ page }} / {{ pages }}</span>
+            {% if next_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ next_url }}">{% trans "Next" %} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% else %}<span></span>{% endif %}
+          </div>
+          {% else %}<p class="text-secondary mb-0">{% trans "Choose a table, or open the SQL tab to create one." %}</p>{% endif %}
+
+        {% elif tab == "structure" %}
+          {% if columns %}
+          <h3 class="h6">{{ table }}</h3>
+          <div class="table-responsive"><table class="table table-sm fm-table align-middle mb-0">
+            <thead><tr><th scope="col">{% trans "Column" %}</th><th scope="col">{% trans "Type" %}</th><th scope="col">{% trans "Null" %}</th><th scope="col">{% trans "Key" %}</th><th scope="col">{% trans "Default" %}</th></tr></thead>
+            <tbody>{% for c in columns %}<tr><td class="fm-name">{{ c.name }}</td><td>{{ c.type }}</td><td>{% if c.nullable %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</td><td>{% if c.primary_key %}<i class="bi bi-key-fill text-warning" aria-hidden="true"></i> {% trans "Primary" %}{% endif %}</td><td class="text-secondary">{{ c.default|default_if_none:"" }}</td></tr>{% endfor %}</tbody>
+          </table></div>
+          {% else %}<p class="text-secondary mb-0">{% trans "Choose a table." %}</p>{% endif %}
+
+        {% else %}
+          <h3 class="h6">{% trans "Run SQL" %}</h3>
+          <p class="small text-secondary">{% trans "Type one statement and press Run. SELECT shows rows; INSERT, UPDATE, DELETE, CREATE TABLE and the like change this database. Demo databases use the SQLite dialect (your real MySQL server uses MySQL's)." %}</p>
+          <form method="post" action="{{ sql_url }}" data-plain id="dbm-sql-form">{% csrf_token %}
+            <input type="hidden" name="database" value="{{ database }}"><input type="hidden" name="table" value="{{ table }}">
+            <label class="visually-hidden" for="dbm-sql">SQL</label>
+            <textarea class="form-control fm-editor" id="dbm-sql" name="sql" rows="7" spellcheck="false" placeholder="SELECT * FROM {{ table|default:'table_name' }} LIMIT 10;" maxlength="20000" required>{{ sql }}</textarea>
+            <div class="d-flex gap-2 mt-2 flex-wrap align-items-center">
+              <button class="btn btn-primary" type="submit"><i class="bi bi-play-fill" aria-hidden="true"></i> {% trans "Run" %}</button>
+              {% if table %}<button class="btn btn-sm btn-outline-secondary" type="button" data-sql-snippet="SELECT * FROM {{ table }} LIMIT 20;">SELECT</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-sql-snippet="SELECT COUNT(*) FROM {{ table }};">COUNT</button>{% endif %}
+            </div>
+          </form>
+          {% if result %}
+          <p class="site-note mt-3"><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ result.message }}{% if result.truncated %} {% trans "Only the first rows are shown." %}{% endif %}</p>
+          {% if result.columns %}
+          <div class="table-responsive"><table class="table table-sm fm-table align-middle mb-0">
+            <thead><tr>{% for c in result.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr></thead>
+            <tbody>{% for row in result.rows %}<tr>{% for cell in row %}<td>{% if cell is None %}<em class="text-secondary">NULL</em>{% else %}{{ cell }}{% endif %}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ result.columns|length }}" class="text-secondary">{% trans "No rows." %}</td></tr>{% endfor %}</tbody>
+          </table></div>
+          {% endif %}
+          {% endif %}
+        {% endif %}
       </div>
     </div>
   </div>
 </section>
+
+{% if tab == "browse" and editable %}
+<div class="modal fade" id="dbm-row" tabindex="-1" aria-labelledby="dbm-row-title" aria-hidden="true" data-columns="{{ columns_json }}"><div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <form method="post" action="{{ row_action_url }}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="insert" data-db-action><input type="hidden" name="database" value="{{ database }}"><input type="hidden" name="table" value="{{ table }}"><input type="hidden" name="page" value="{{ page }}">
+    <div class="modal-header"><h2 class="modal-title h5" id="dbm-row-title" data-db-title>{% trans "Row" %}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button></div>
+    <div class="modal-body" data-db-fields></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button><button type="submit" class="btn btn-primary">{% trans "Save" %}</button></div>
+  </form></div></div></div>
+{% endif %}
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/dbmanager.js' %}" defer></script>{% endblock %}

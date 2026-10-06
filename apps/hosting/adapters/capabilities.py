@@ -107,6 +107,25 @@ class TableData:
     columns: list = field(default_factory=list)
     rows: list = field(default_factory=list)
     total: int = 0
+    key_columns: list = field(default_factory=list)  # the primary key: rows can be edited one by one only if present
+
+
+@dataclass(frozen=True)
+class ColumnInfo:
+    name: str
+    type: str = "TEXT"
+    nullable: bool = True
+    primary_key: bool = False
+    default: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class QueryResult:
+    columns: list = field(default_factory=list)
+    rows: list = field(default_factory=list)
+    affected: int = 0
+    truncated: bool = False
+    message: str = ""
 
 
 @dataclass(frozen=True)
@@ -274,6 +293,24 @@ class DatabasesCapability(ABC):
         """A read-only page of rows (``limit`` is capped at 100 by the provider)."""
 
     @abstractmethod
+    def describe_table(self, username: str, database: str, table: str) -> list:
+        """``ColumnInfo`` rows."""
+
+    @abstractmethod
+    def run_query(self, username: str, database: str, sql: str) -> QueryResult:
+        """Run ONE SQL statement the customer typed, with the provider's time, size and result limits."""
+
+    @abstractmethod
+    def insert_row(self, username: str, database: str, table: str, values: dict) -> None: ...
+
+    @abstractmethod
+    def update_row(self, username: str, database: str, table: str, key: dict, values: dict) -> None:
+        """Change the row identified by its primary-key values ``key``."""
+
+    @abstractmethod
+    def delete_row(self, username: str, database: str, table: str, key: dict) -> None: ...
+
+    @abstractmethod
     def list_database_grants(self, username: str) -> list:
         """``DatabaseGrant`` rows: which user may do what on which database."""
     @abstractmethod
@@ -439,6 +476,7 @@ OPERATIONS = {
                                  "copy_path", "delete_path", "search_files", "archive_paths", "extract_archive",
                                  "trash_path", "list_trash", "restore_trash", "purge_trash"}),
     Capability.DATABASES: frozenset({"database_limits", "database_admin_access", "list_tables", "browse_table",
+                                     "describe_table", "run_query", "insert_row", "update_row", "delete_row",
                                      "list_database_grants", "list_databases", "create_database",
                                      "delete_database", "list_database_users",
                                      "create_database_user", "set_database_user_password", "delete_database_user",
@@ -454,7 +492,8 @@ OPERATIONS = {
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
-READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
+READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
+                             "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})
