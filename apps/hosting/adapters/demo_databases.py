@@ -12,7 +12,8 @@ from pathlib import Path
 from django.contrib.auth.hashers import make_password
 
 from .base import HostingError
-from .capabilities import (DATABASE_PRIVILEGES, DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabaseUserInfo)
+from .capabilities import (DATABASE_PRIVILEGES, DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabaseUserInfo, TableData,
+                           TableInfo)
 
 MAX_DATABASES = 10
 MAX_USERS = 10
@@ -148,3 +149,65 @@ class DemoDatabases:
 
         user = self._load()["users"].get(name)
         return bool(user) and _check(password, user["password_hash"])
+
+
+# --- Sample tables, so the browser has something to show --------------------------------------------------------
+
+FIRST = ["Ayesha", "Bilal", "Carla", "Daniyal", "Esha", "Farhan", "Gul", "Hamza", "Iram", "Junaid", "Kiran", "Laiba"]
+LAST = ["Khan", "Ahmed", "Malik", "Sheikh", "Raza", "Butt", "Qureshi", "Chaudhry"]
+ITEMS = ["Hosting plan", "Domain .com", "SSL certificate", "Email pack", "Backup add-on", "Dedicated IP"]
+
+
+def _rows_wp(table, count):
+    if table == "wp_users":
+        return ["ID", "user_login", "user_email", "user_registered"], [
+            [i + 1, f"member{i + 1}", f"member{i + 1}@example.com", f"2026-0{1 + i % 9}-1{i % 9}"] for i in range(count)]
+    if table == "wp_posts":
+        return ["ID", "post_title", "post_status", "post_date"], [
+            [i + 1, f"Sample post number {i + 1}", ("publish", "draft")[i % 4 == 3], f"2026-0{1 + i % 9}-2{i % 8}"]
+            for i in range(count)]
+    return ["option_id", "option_name", "option_value"], [
+        [i + 1, f"sample_option_{i + 1}", f"value-{i * 7 % 13}"] for i in range(count)]
+
+
+def _rows_shop(table, count):
+    if table == "customers":
+        return ["id", "name", "email", "city"], [
+            [i + 1, f"{FIRST[i % len(FIRST)]} {LAST[i % len(LAST)]}", f"customer{i + 1}@example.com",
+             ("Lahore", "Karachi", "Islamabad")[i % 3]] for i in range(count)]
+    if table == "orders":
+        return ["id", "customer_id", "total", "status", "created_at"], [
+            [i + 1, 1 + i % 17, f"{(i * 37) % 400 + 20}.00", ("paid", "pending", "paid", "refunded")[i % 4],
+             f"2026-0{1 + i % 9}-0{1 + i % 8}"] for i in range(count)]
+    return ["id", "name", "price", "stock"], [
+        [i + 1, ITEMS[i % len(ITEMS)] + f" #{i + 1}", f"{(i * 11) % 90 + 5}.00", (i * 5) % 40] for i in range(count)]
+
+
+def schema_for(database):
+    """The sample tables of a demo database: WordPress-style when the name says so, shop-style otherwise."""
+    seed = sum(map(ord, database))
+    if "wp" in database:
+        names, maker = ["wp_options", "wp_posts", "wp_users"], _rows_wp
+    else:
+        names, maker = ["customers", "orders", "products"], _rows_shop
+    return {name: (maker, 12 + (seed + n * 13) % 40) for n, name in enumerate(names)}
+
+
+def tables(database):
+    return [TableInfo(name=name, rows=count, size_kb=16 + count * 2) for name, (_maker, count) in schema_for(database).items()]
+
+
+def browse(database, table, offset, limit):
+    schema = schema_for(database)
+    if table not in schema:
+        raise HostingError("That table does not exist.")
+    try:
+        offset, limit = int(offset), int(limit)
+    except (TypeError, ValueError):
+        raise HostingError("That page does not exist.")
+    if offset < 0 or limit < 1:
+        raise HostingError("That page does not exist.")
+    limit = min(limit, 100)
+    maker, count = schema[table]
+    columns, rows = maker(table, count)
+    return TableData(columns=columns, rows=[[str(v) for v in row] for row in rows[offset:offset + limit]], total=len(rows))

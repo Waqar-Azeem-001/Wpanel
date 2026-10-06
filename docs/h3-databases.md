@@ -27,6 +27,19 @@ the demo provider.
 audit and pages; a stranger gets 404; a provider without databases shows the not-available page). Hosting, client-area,
 crawler, link-integrity, design and navigation suites pass. Browser check at 1440 px: no console errors.
 
+## Update 2026-10-06: phpMyAdmin access and usage
+Owner feedback: the page had no way into a database. Added:
+- **Contract:** `database_admin_access` (returns `external` = a one-time address on the provider such as phpMyAdmin, or
+  `embedded` = WHPanel's own browser; never a password or long-lived token), `list_tables`, `browse_table`.
+- **Browse data / phpMyAdmin button** on every database row. An external manager redirects the person there only if the
+  address is https (otherwise refused with a message); the demo provider answers `embedded`, which opens WHPanel's
+  **read-only database browser**: tables list with row counts, a paged data grid (20 rows a page), values escaped and
+  cut at 120 characters, no form or edit control anywhere on the grid. Sample WordPress-style and shop-style tables are
+  generated for demo databases. There is no SQL console on purpose.
+- **Usage:** total database size as a pill, and a "Storage used by your databases" card with a bar per database.
+- 6 more tests (22 in total for H3): embedded browser, refusal of unknown databases/tables/bad pages, read-only grid,
+  escaping, secure-address-only redirect, stranger gets 404.
+
 ## Deferred
-phpMyAdmin or an equivalent browser tool (needs a real provider; the screen says it will appear when offered), per-database
+Real phpMyAdmin (needs a verified cPanel adapter, H14, and the secure-session work of H15), editing data, per-database
 usage history, remote-access hosts, import/export, and the 375 / 768 px check.

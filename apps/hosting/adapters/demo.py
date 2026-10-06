@@ -12,9 +12,10 @@ from pathlib import Path
 
 from django.conf import settings
 
-from .capabilities import (DatabasesCapability, FilesCapability, PhpCapability, PhpSettings, SslCapability,
+from .base import HostingError
+from .capabilities import (DatabaseAdminAccess, DatabasesCapability, FilesCapability, PhpCapability, PhpSettings, SslCapability,
                            SslStatus)
-from .demo_databases import DemoDatabases
+from .demo_databases import DemoDatabases, browse as browse_demo_table, tables as demo_tables
 from .manual import ManualAdapter
 from .sandbox import Sandbox
 
@@ -111,6 +112,22 @@ class DemoAdapter(DatabasesCapability, FilesCapability, SslCapability, PhpCapabi
 
     def database_limits(self, username):
         return databases_for(username).limits()
+
+    def database_admin_access(self, username, database):
+        self._require_database(username, database)
+        return DatabaseAdminAccess(kind="embedded")  # no phpMyAdmin behind a demo account: WHPanel's own browser serves it
+
+    def list_tables(self, username, database):
+        self._require_database(username, database)
+        return demo_tables(database)
+
+    def browse_table(self, username, database, table, offset, limit):
+        self._require_database(username, database)
+        return browse_demo_table(database, table, offset, limit)
+
+    def _require_database(self, username, database):
+        if database not in [d.name for d in databases_for(username).databases()]:
+            raise HostingError("That database does not exist.")
 
     def list_database_grants(self, username):
         return databases_for(username).grants()

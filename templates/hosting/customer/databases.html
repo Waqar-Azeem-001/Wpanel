@@ -11,6 +11,7 @@
   <p class="db-counts">
     <span class="site-pill {% if db_room %}is-warn{% endif %}"><i class="bi bi-database" aria-hidden="true"></i> {{ databases|length }}{% if limits.max_databases %} / {{ limits.max_databases }}{% endif %} {% trans "databases" %}</span>
     <span class="site-pill {% if user_room %}is-warn{% endif %}"><i class="bi bi-person" aria-hidden="true"></i> {{ users|length }}{% if limits.max_users %} / {{ limits.max_users }}{% endif %} {% trans "users" %}</span>
+    <span class="site-pill"><i class="bi bi-hdd" aria-hidden="true"></i> {{ total_mb }} MB {% trans "used" %}</span>
   </p>
 </div>
 
@@ -37,7 +38,8 @@
         <td class="fm-name"><i class="bi bi-database-fill" aria-hidden="true"></i> {{ db.name }}</td>
         <td class="text-end text-secondary">{{ db.size_mb }} MB</td>
         <td>{% for u in db.users %}<span class="site-pill">{{ u }}</span> {% empty %}<span class="text-secondary">{% trans "No one yet" %}</span>{% endfor %}</td>
-        <td class="text-end"><form method="post" action="{% url 'hosting_customer:database_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete_database"><input type="hidden" name="database" value="{{ db.name }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete the database' %} {{ db.name }}? {% trans 'Its data is lost and this cannot be undone.' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete' %} {{ db.name }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form></td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ browse_url }}?database={{ db.name|urlencode }}"><i class="bi bi-table" aria-hidden="true"></i> {% if admin_kind == "external" %}phpMyAdmin{% else %}{% trans "Browse data" %}{% endif %}</a>
+          <form method="post" action="{% url 'hosting_customer:database_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete_database"><input type="hidden" name="database" value="{{ db.name }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete the database' %} {{ db.name }}? {% trans 'Its data is lost and this cannot be undone.' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete' %} {{ db.name }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form></td>
       </tr>
     {% empty %}
       <tr><td colspan="4" class="text-secondary">{% trans "You have no databases yet. Create one above." %}</td></tr>
@@ -45,6 +47,17 @@
     </tbody>
   </table></div>
 </section>
+
+{% if usage %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Storage used by your databases" %}</h3>
+  <p class="small text-secondary">{% trans "Together" %}: <strong>{{ total_mb }} MB</strong>. {% trans "This counts towards your plan's storage." %}</p>
+  {% for u in usage %}
+  <div class="site-meter mb-2"><div class="site-meter-row"><span class="site-meter-label">{{ u.name }}</span><span class="site-meter-figure"><strong>{{ u.size_mb }} MB</strong></span></div>
+    <progress class="usage-meter" max="100" value="{{ u.percent }}" aria-label="{{ u.name }}">{{ u.percent }}%</progress></div>
+  {% endfor %}
+</div></section>
+{% endif %}
 
 <section class="card mb-3"><div class="card-body">
   <h3 class="h6">{% trans "Database users" %}</h3>
@@ -114,7 +127,7 @@
   {% endif %}
 </section>
 
-<p class="small text-secondary">{% trans "A browser tool for looking inside your databases (phpMyAdmin) will appear here when your hosting server offers it." %}</p>
+<p class="small text-secondary">{% if admin_kind == "external" %}{% trans "phpMyAdmin opens a secure session on your hosting server; you never need the database password for it." %}{% else %}{% trans "Browse data shows a read-only view of a database's tables. A full phpMyAdmin appears here when your hosting server offers it." %}{% endif %}</p>
 
 <div class="modal fade" id="db-password" tabindex="-1" aria-labelledby="db-password-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
   <form method="post" action="{% url 'hosting_customer:database_action' account.pk %}" data-plain>{% csrf_token %}

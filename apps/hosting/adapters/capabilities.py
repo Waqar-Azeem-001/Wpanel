@@ -94,6 +94,31 @@ class DatabaseLimits:
 
 
 @dataclass(frozen=True)
+class TableInfo:
+    name: str
+    rows: int = 0
+    size_kb: int = 0
+
+
+@dataclass(frozen=True)
+class TableData:
+    """One page of a table, for read-only browsing: ``rows`` are lists in the order of ``columns``."""
+
+    columns: list = field(default_factory=list)
+    rows: list = field(default_factory=list)
+    total: int = 0
+
+
+@dataclass(frozen=True)
+class DatabaseAdminAccess:
+    """How a customer gets a database manager: ``external`` is a one-time address on the provider (phpMyAdmin) and
+    ``embedded`` means WHPanel's own read-only browser serves it. Never carries a password or a long-lived token."""
+
+    kind: str  # "external" or "embedded"
+    url: str = ""
+
+
+@dataclass(frozen=True)
 class DatabaseUserInfo:
     name: str
     databases: list = field(default_factory=list)
@@ -235,6 +260,18 @@ class DatabasesCapability(ABC):
 
     @abstractmethod
     def database_limits(self, username: str) -> DatabaseLimits: ...
+
+    @abstractmethod
+    def database_admin_access(self, username: str, database: str) -> DatabaseAdminAccess:
+        """phpMyAdmin or an equivalent: an external one-time address, or ``embedded`` for WHPanel's own browser."""
+
+    @abstractmethod
+    def list_tables(self, username: str, database: str) -> list:
+        """``TableInfo`` rows."""
+
+    @abstractmethod
+    def browse_table(self, username: str, database: str, table: str, offset: int, limit: int) -> TableData:
+        """A read-only page of rows (``limit`` is capped at 100 by the provider)."""
 
     @abstractmethod
     def list_database_grants(self, username: str) -> list:
@@ -401,7 +438,8 @@ OPERATIONS = {
     Capability.FILES: frozenset({"list_files", "read_file", "write_file", "make_directory", "rename_path",
                                  "copy_path", "delete_path", "search_files", "archive_paths", "extract_archive",
                                  "trash_path", "list_trash", "restore_trash", "purge_trash"}),
-    Capability.DATABASES: frozenset({"database_limits", "list_database_grants", "list_databases", "create_database",
+    Capability.DATABASES: frozenset({"database_limits", "database_admin_access", "list_tables", "browse_table",
+                                     "list_database_grants", "list_databases", "create_database",
                                      "delete_database", "list_database_users",
                                      "create_database_user", "set_database_user_password", "delete_database_user",
                                      "grant_database_access"}),
@@ -416,7 +454,7 @@ OPERATIONS = {
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
-READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
+READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})

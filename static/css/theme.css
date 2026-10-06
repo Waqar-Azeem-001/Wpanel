@@ -481,3 +481,11 @@ pre.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; 
 .db-create .input-group-text { font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
 .db-privs { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; } .db-privs legend { width: 100%; margin-bottom: .35rem; color: var(--muted); }
 .db-priv { display: inline-flex; align-items: center; gap: .4rem; font-size: .9rem; cursor: pointer; }
+
+.dbb { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 1.25rem; }
+.dbb-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 .4rem; }
+.dbb-tables ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .15rem; }
+.dbb-tables a { display: flex; justify-content: space-between; gap: .5rem; padding: .45rem .65rem; border-radius: 8px; color: var(--text); text-decoration: none; font-size: .9rem; }
+.dbb-tables a small { color: var(--muted); } .dbb-tables a:hover { background: var(--surface-2); }
+.dbb-tables a.active { background: var(--accent-subtle); color: var(--accent-ink); font-weight: 650; }
+@media (max-width: 767.98px) { .dbb { grid-template-columns: 1fr; } }

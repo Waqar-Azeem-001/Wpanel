@@ -186,3 +186,80 @@ def test_an_account_without_databases_gets_the_not_available_page(client, owner,
     assert "not available for your hosting server yet" in client.get(url(account)).content.decode()
     with pytest.raises(ServiceError):
         control.perform(owner, account, "databases", "list_databases")
+
+
+# --- Browsing data (phpMyAdmin or its equivalent) and usage ------------------------------------------------------
+
+def test_the_provider_offers_an_embedded_browser_with_sample_tables(owner, account):
+    control.perform(owner, account, "databases", "create_database", "shop")
+    control.perform(owner, account, "databases", "create_database", "blog_wp")
+    access = control.perform(owner, account, "databases", "database_admin_access", "demoshop_shop")
+    assert access.kind == "embedded" and access.url == ""
+    assert [t.name for t in control.perform(owner, account, "databases", "list_tables", "demoshop_shop")] == [
+        "customers", "orders", "products"]
+    assert [t.name for t in control.perform(owner, account, "databases", "list_tables", "demoshop_blog_wp")] == [
+        "wp_options", "wp_posts", "wp_users"]
+    data = control.perform(owner, account, "databases", "browse_table", "demoshop_shop", "customers", 0, 5)
+    assert data.columns == ["id", "name", "email", "city"] and len(data.rows) == 5 and data.total >= 12
+
+
+def test_browsing_refuses_unknown_databases_tables_and_bad_pages(owner, account):
+    control.perform(owner, account, "databases", "create_database", "shop")
+    for args in (("demoshop_missing", "customers", 0, 5), ("demoshop_shop", "nope", 0, 5),
+                 ("demoshop_shop", "customers", -1, 5), ("demoshop_shop", "customers", "x", 5),
+                 ("demoshop_shop", "customers; DROP TABLE x", 0, 5)):
+        with pytest.raises(ServiceError):
+            control.perform(owner, account, "databases", "browse_table", *args)
+    with pytest.raises(ServiceError):
+        control.perform(owner, account, "databases", "database_admin_access", "demoshop_missing")
+    assert len(control.perform(owner, account, "databases", "browse_table", "demoshop_shop", "orders", 0, 9999).rows) <= 100
+
+
+def test_the_browse_screen_lists_tables_pages_rows_and_stays_read_only(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    page = client.get(url(account)).content.decode()
+    assert "Browse data" in page and "Storage used by your databases" in page and "MB used" in page
+    browse = url(account, "browse/")
+    html = client.get(browse, {"database": "demoshop_shop"}).content.decode()
+    assert "customers" in html and "orders" in html and "products" in html and "read-only" in html
+    assert "<form" not in html.split("dbb-data")[1].split("</section>")[0]  # nothing on the data grid can change data
+    second = client.get(browse, {"database": "demoshop_shop", "table": "customers", "page": 2}).content.decode()
+    assert "Page 2" in second and "Previous" in second
+    assert client.get(browse, {"database": "demoshop_shop", "table": "customers", "page": "abc"}).status_code == 200
+    assert client.get(browse, {"database": "nope"}, follow=True).status_code == 200
+
+
+def test_cell_values_are_escaped_and_long_ones_are_cut(client, owner, account, monkeypatch):
+    from apps.hosting.adapters import demo
+    from apps.hosting.adapters.capabilities import TableData
+
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    monkeypatch.setattr(demo, "browse_demo_table",
+                        lambda *a: TableData(columns=["x"], rows=[["<script>alert(1)</script>"], ["y" * 400]], total=2))
+    html = client.get(url(account, "browse/"), {"database": "demoshop_shop", "table": "customers"}).content.decode()
+    assert "<script>alert(1)</script>" not in html and "&lt;script&gt;" in html
+    assert "y" * 400 not in html and "y" * 120 + "..." in html
+
+
+def test_an_external_manager_redirects_only_to_a_secure_address(client, owner, account, monkeypatch):
+    from apps.hosting.adapters.capabilities import DatabaseAdminAccess
+    from apps.hosting.adapters.demo import DemoAdapter
+
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_database", "name": "shop"})
+    monkeypatch.setattr(DemoAdapter, "database_admin_access",
+                        lambda self, u, d: DatabaseAdminAccess("external", "https://server.example/pma?once=1"))
+    response = client.get(url(account, "browse/"), {"database": "demoshop_shop"})
+    assert response.status_code == 302 and response["Location"] == "https://server.example/pma?once=1"
+    assert "phpMyAdmin" in client.get(url(account)).content.decode()
+    monkeypatch.setattr(DemoAdapter, "database_admin_access",
+                        lambda self, u, d: DatabaseAdminAccess("external", "http://plain.example/pma"))
+    refused = client.get(url(account, "browse/"), {"database": "demoshop_shop"})
+    assert refused.status_code == 302 and refused["Location"].endswith("/manage/databases/")  # never an insecure address
+
+
+def test_a_stranger_cannot_browse_anything(client, customer, account):
+    client.force_login(customer)
+    assert client.get(url(account, "browse/"), {"database": "demoshop_shop"}).status_code == 404

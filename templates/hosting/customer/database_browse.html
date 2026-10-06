@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ database }} · {% trans "Database browser" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<section class="card fm">
+  <div class="card-body">
+    <div class="fm-head">
+      <h2 class="h5 mb-0"><i class="bi bi-database" aria-hidden="true"></i> {{ database }}</h2>
+      <div class="fm-head-right"><a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to databases" %}</a></div>
+    </div>
+    <p class="site-note"><i class="bi bi-eye" aria-hidden="true"></i>{% trans "A read-only look inside this database. You can see its tables and rows here; changing data is done by your website or by phpMyAdmin when your server offers it." %}</p>
+    <div class="dbb">
+      <nav class="dbb-tables" aria-label="{% trans 'Tables' %}">
+        <h3 class="dbb-title">{% trans "Tables" %}</h3>
+        <ul>
+        {% for t, link in table_links %}
+          <li><a href="{{ link }}"{% if t.name == table %} class="active" aria-current="page"{% endif %}><span><i class="bi bi-table" aria-hidden="true"></i> {{ t.name }}</span><small>{{ t.rows }}</small></a></li>
+        {% empty %}<li class="text-secondary px-2">{% trans "This database has no tables yet." %}</li>
+        {% endfor %}
+        </ul>
+      </nav>
+      <div class="dbb-data">
+        {% if data %}
+        <div class="d-flex justify-content-between align-items-center mb-2"><h3 class="h6 mb-0">{{ table }}</h3><span class="small text-secondary">{{ data.total }} {% trans "rows" %}</span></div>
+        <div class="table-responsive"><table class="table table-sm fm-table align-middle mb-0">
+          <thead><tr>{% for c in data.columns %}<th scope="col">{{ c }}</th>{% endfor %}</tr></thead>
+          <tbody>{% for row in rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ data.columns|length }}" class="text-secondary">{% trans "No rows." %}</td></tr>{% endfor %}</tbody>
+        </table></div>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          {% if prev_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ prev_url }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> {% trans "Previous" %}</a>{% else %}<span></span>{% endif %}
+          <span class="small text-secondary">{% trans "Page" %} {{ page }} / {{ pages }}</span>
+          {% if next_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ next_url }}">{% trans "Next" %} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% else %}<span></span>{% endif %}
+        </div>
+        {% else %}<p class="text-secondary mb-0">{% trans "Choose a table." %}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
