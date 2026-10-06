@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_databases, views_domains, views_cron, views_email, views_files, views_php, views_ssl, views_tools
+from . import views, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_php, views_ssl, views_tools
 
 app_name = "hosting_customer"
 
@@ -40,5 +40,7 @@ urlpatterns = [
     path("<int:pk>/manage/ftp/do/", views_tools.my_hosting_ftp_action, name="ftp_action"),
     path("<int:pk>/manage/access/", views_tools.my_hosting_access, name="access"),
     path("<int:pk>/manage/access/do/", views_tools.my_hosting_access_action, name="access_action"),
+    path("<int:pk>/manage/backups/", views_backups.my_hosting_backups, name="backups"),
+    path("<int:pk>/manage/backups/do/", views_backups.my_hosting_backup_action, name="backup_action"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

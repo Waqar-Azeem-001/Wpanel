@@ -14,8 +14,9 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           AccessCapability, CronCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
+                           AccessCapability, BackupsCapability, CronCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
+from .demo_backups import DemoBackups
 from .demo_cron import DemoCron
 from .demo_domains import SERVER_IP, DemoDomains
 from .demo_email import DemoEmail
@@ -116,6 +117,12 @@ def _account_domain(username):
     return account.domain if account else ""
 
 
+def backups_for(username):
+    """The account's demo backups: zip archives kept beside the website folder."""
+    sandbox_for(username)  # the website folder exists (with its sample files) before the first backup
+    return DemoBackups(files_root() / f"{username}.state", files_root() / username)
+
+
 def logs_for(username):
     """The account's demo logs: real files in its logs folder."""
     return DemoLogs(sandbox_for(username), _account_domain(username))
@@ -163,7 +170,7 @@ def sandbox_for(username):
 
 
 class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
-                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, ManualAdapter):
+                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -473,3 +480,26 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
 
     def delete_ip_rule(self, username, rule_id):
         access_for(username).delete(rule_id)
+
+    # --- Backups -----------------------------------------------------------------------------------------------
+
+    def backup_options(self, username):
+        return backups_for(username).options()
+
+    def list_backups(self, username):
+        return backups_for(username).list()
+
+    def create_backup(self, username, kind):
+        return backups_for(username).create(kind)
+
+    def verify_backup(self, username, backup_id):
+        return backups_for(username).verify(backup_id)
+
+    def restore_backup(self, username, backup_id):
+        backups_for(username).restore(backup_id)
+
+    def delete_backup(self, username, backup_id):
+        backups_for(username).delete(backup_id)
+
+    def set_backup_schedule(self, username, schedule):
+        backups_for(username).set_schedule(schedule)

@@ -356,6 +356,18 @@ class BackupInfo:
     created_at: Optional[str] = None
     size_mb: Optional[float] = None
     status: str = "complete"
+    source: str = "manual"  # "manual", "scheduled" or "before restore"
+    verified: str = ""  # "" (not checked yet), "ok" or "failed"
+    verified_at: Optional[str] = None  # ISO 8601
+
+
+@dataclass(frozen=True)
+class BackupOptions:
+    kinds: list = field(default_factory=list)  # (kind, label, what it holds)
+    max_backups: int = 0  # the newest are kept; older ones are removed to make room
+    schedules: list = field(default_factory=list)  # (value, label); "off" is always first
+    schedule: str = "off"  # the account's current schedule
+    last_scheduled_at: Optional[str] = None  # ISO 8601
 
 
 # --- Capability contracts --------------------------------------------------------------------------------------
@@ -775,18 +787,34 @@ class AccessCapability(ABC):
 
 
 class BackupsCapability(ABC):
-    """Recoverability, not just a backup job: a provider that declares this must also be able to restore."""
+    """
+    Recoverability, not just a backup job: a provider that declares this must also be able to check a backup's integrity and
+    restore it. A restore is only offered for a backup that passes the check, and takes a safety copy of what it replaces.
+    """
+
+    @abstractmethod
+    def backup_options(self, username: str) -> BackupOptions: ...
 
     @abstractmethod
     def list_backups(self, username: str) -> list:
-        """``BackupInfo`` rows, newest first."""
+        """``BackupInfo`` rows, newest first (a scheduled backup that is due is taken when this is read)."""
 
     @abstractmethod
     def create_backup(self, username: str, kind: str) -> str:
-        """Start a backup of ``kind``; returns its ``backup_id``."""
+        """Take a backup of ``kind`` now; returns its ``backup_id``."""
+
+    @abstractmethod
+    def verify_backup(self, username: str, backup_id: str) -> BackupInfo:
+        """Check the stored backup is complete and unaltered; returns it with ``verified`` set."""
 
     @abstractmethod
     def restore_backup(self, username: str, backup_id: str) -> None: ...
+
+    @abstractmethod
+    def delete_backup(self, username: str, backup_id: str) -> None: ...
+
+    @abstractmethod
+    def set_backup_schedule(self, username: str, schedule: str) -> None: ...
 
 
 # Capability -> the mixin that defines its contract. ACCOUNT and USAGE live on HostingAdapter itself.
@@ -837,7 +865,8 @@ OPERATIONS = {
     Capability.LOGS: frozenset({"read_log", "clear_log"}),
     Capability.FTP: frozenset({"ftp_options", "list_ftp_accounts", "create_ftp_account", "set_ftp_password", "delete_ftp_account"}),
     Capability.ACCESS: frozenset({"list_ip_rules", "add_ip_rule", "delete_ip_rule"}),
-    Capability.BACKUPS: frozenset({"list_backups", "create_backup", "restore_backup"}),
+    Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
+                                   "delete_backup", "set_backup_schedule"}),
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
@@ -846,7 +875,7 @@ READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "data
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "get_mail_profile", "list_domains",
-                             "list_dns_records", "read_log", "ftp_options", "list_ftp_accounts", "list_ip_rules", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
+                             "list_dns_records", "backup_options", "read_log", "ftp_options", "list_ftp_accounts", "list_ip_rules", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
                              "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 

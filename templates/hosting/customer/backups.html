@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Backups" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if not options %}
+<section class="card"><div class="card-body text-secondary">{% trans "Backups could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Backups" %}</h2>
+  <p class="db-counts"><span class="site-pill"><i class="bi bi-archive" aria-hidden="true"></i> {{ count }} / {{ options.max_backups }} {% trans "kept" %}</span></p>
+</div>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Back up now" %}</h3>
+  <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="create">
+    <div class="dm-kinds bk-kinds" role="radiogroup" aria-label="{% trans 'What to back up' %}">
+      {% for kind, label, about in options.kinds %}<label class="em-choice"><input class="form-check-input" type="radio" name="kind" value="{{ kind }}" {% if kind == "full" %}checked{% endif %}> <span><strong>{{ label }}</strong><small>{{ about }}</small></span></label>{% endfor %}
+    </div>
+    <button class="btn btn-primary mt-2" type="submit"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Create backup" %}</button>
+    <span class="small text-secondary ms-2">{% trans "Only the newest" %} {{ options.max_backups }} {% trans "are kept: older ones are removed to make room." %}</span>
+  </form>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Automatic backups" %}</h3>
+  <form method="post" action="{{ action_url }}" class="row g-2 align-items-end" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="schedule">
+    <div class="col-md-4"><label class="form-label small" for="bk-schedule">{% trans "Take a full backup" %}</label>
+      <select class="form-select" id="bk-schedule" name="schedule">{% for value, label in options.schedules %}<option value="{{ value }}" {% if value == options.schedule %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-md-auto"><button class="btn btn-outline-primary" type="submit">{% trans "Save" %}</button></div>
+    {% if last_scheduled and options.schedule != "off" %}<div class="col-md-auto small text-secondary">{% trans "Last automatic backup" %}: {{ last_scheduled|date:"j M Y, H:i" }}</div>{% endif %}
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Your backups" %}</h3></div>
+  {% if rows %}
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Made" %}</th><th scope="col">{% trans "What" %}</th><th scope="col">{% trans "Size" %}</th><th scope="col">{% trans "Check" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% with b=r.b %}
+      <tr>
+        <td>{{ r.made|date:"j M Y, H:i" }}<small class="d-block text-secondary">{% if b.source == "scheduled" %}{% trans "Automatic" %}{% elif b.source == "before restore" %}{% trans "Saved before a restore" %}{% else %}{% trans "Manual" %}{% endif %}</small></td>
+        <td class="fm-name"><i class="bi bi-archive" aria-hidden="true"></i> {{ r.label }}</td>
+        <td>{{ b.size_mb }} MB</td>
+        <td>{% if b.verified == "ok" %}<span class="site-pill is-ok"><i class="bi bi-patch-check" aria-hidden="true"></i> {% trans "Checked" %}</span><small class="d-block text-secondary">{{ r.checked|date:"j M, H:i" }}</small>
+          {% elif b.verified == "failed" %}<span class="site-pill is-danger"><i class="bi bi-x-octagon" aria-hidden="true"></i> {% trans "Failed" %}</span>
+          {% else %}<span class="site-pill is-warn">{% trans "Not checked yet" %}</span>{% endif %}</td>
+        <td class="text-end"><div class="fm-actions">
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="verify"><input type="hidden" name="backup" value="{{ b.backup_id }}"><button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "Check" %}</button></form>
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="restore"><input type="hidden" name="backup" value="{{ b.backup_id }}"><button class="btn btn-sm btn-outline-primary" type="submit" data-confirm="{% trans 'Restore' %} {{ r.label }} {% trans 'from' %} {{ r.made|date:'j M Y, H:i' }}? {% trans 'What it covers is replaced by the backup. A copy of the current data is saved first, so you can go back.' %}"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {% trans "Restore" %}</button></form>
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="backup" value="{{ b.backup_id }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete this backup for good?' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete this backup' %}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
+        </div></td>
+      </tr>
+    {% endwith %}{% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<div class="card-body text-secondary">{% trans "No backups yet. Create one above before you change anything important." %}</div>{% endif %}
+</section>
+<p class="small text-secondary">{% trans "A backup is only useful if it can be restored. Use Check to confirm a backup is complete and unchanged. A restore is refused for a backup that fails its check." %}</p>
+{% endif %}
+{% endblock %}

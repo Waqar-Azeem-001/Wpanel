@@ -940,7 +940,8 @@ Before marking any phase 🟢:
 | H5 Domains and DNS | 🟡 local | `docs/h5-domains-dns.md`: extra domains, subdomains, aliases, redirects, DNS zones with per-type validation and mail record helpers on the demo provider |
 | H6 SSL and H7 PHP | 🟡 local | `docs/h6-h7-ssl-php.md`: certificate status, issuer, expiry, auto-renew, always-use-HTTPS, install/renew/remove; PHP version, memory, upload, run time, error display and extensions on the demo provider |
 | H8 Cron, logs, FTP, IP blocking | 🟡 local | `docs/h8-cron.md`: scheduled PHP scripts (never a free shell), error/access log viewer, FTP accounts limited to a folder, IP blocking with self-block protection; redirects are in H5 |
-| H9-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| H9 Backup and restore | 🟡 local | `docs/h9-backups.md`: real archives for files, databases, email and full account, integrity check, restore with safety copy, retention and schedule |
+| H10-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 

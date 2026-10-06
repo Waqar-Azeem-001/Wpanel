@@ -68,7 +68,7 @@ def test_removing_never_touches_real_accounts(owner, plan, client_obj, manager):
 def test_the_demo_provider_reports_ssl_php_and_usage(owner, plan):
     call_command("demo_hosting_data")
     account = HostingAccount.objects.get(domain="demo-shop.example.com")
-    assert control.capabilities_for(account) == ["account", "files", "databases", "email", "domains", "dns", "ssl", "php", "cron", "logs", "ftp", "access", "usage"]
+    assert control.capabilities_for(account) == ["account", "files", "databases", "email", "domains", "dns", "ssl", "php", "cron", "logs", "ftp", "access", "backups", "usage"]
     assert control.perform(owner, account, "php", "get_php_settings", account.domain).version
     assert control.perform(owner, account, "ssl", "get_ssl_status", account.domain).domain == account.domain
     usage = control.perform(owner, account, "usage", "get_usage")
@@ -101,8 +101,8 @@ def test_the_manage_menu_links_only_the_sections_the_provider_supports(client, o
     # the demo provider supports files, databases, email, domains, dns, ssl, php and usage; everything else is shown muted and has no address
     for label in ("File manager", "MySQL databases", "Email accounts", "Domains", "DNS records", "SSL certificate", "PHP settings", "Usage"):
         assert f'href="/account/hosting/{account.pk}/manage/' in page and label in page
-    assert page.count('class="sidebar-soon"') == 1
-    assert f"/account/hosting/{account.pk}/manage/backups/" not in page
+    assert page.count('class="sidebar-soon"') == 0  # every section of the menu now has a real screen
+    assert f"/account/hosting/{account.pk}/manage/backups/" in page
 
 
 def test_a_supported_section_page_says_what_it_will_do_and_usage_shows_the_meters(client, owner, plan):
@@ -113,6 +113,7 @@ def test_a_supported_section_page_says_what_it_will_do_and_usage_shows_the_meter
     assert ssl.status_code == 200 and "Always use HTTPS" in ssl.content.decode()
     usage = client.get(f"/account/hosting/{account.pk}/manage/usage/").content.decode()
     assert "<progress" in usage and "Storage" in usage and "Bandwidth" in usage
+    Server.objects.filter(kind="demo").update(kind="manual")  # a provider that supports nothing shows the not-available page
     backups = client.get(f"/account/hosting/{account.pk}/manage/backups/").content.decode()
     assert "not available for your hosting server yet" in backups
 
