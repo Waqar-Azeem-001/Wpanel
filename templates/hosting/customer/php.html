@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "PHP settings" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if not options or not current %}
+<section class="card"><div class="card-body text-secondary">{% trans "PHP settings could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-filetype-php" aria-hidden="true"></i> {% trans "PHP settings" %}</h2>
+  <p class="db-counts"><span class="site-pill {% if eol %}is-warn{% else %}is-ok{% endif %}">PHP {{ current.version }}</span></p>
+</div>
+{% if domain_urls|length > 1 %}
+<div class="dns-zone-tabs mb-3" role="tablist" aria-label="{% trans 'Domain' %}">
+  {% for z, link in domain_urls %}<a class="dns-zone{% if z == domain %} is-active{% endif %}" href="{{ link }}"{% if z == domain %} aria-current="page"{% endif %}><i class="bi bi-globe2" aria-hidden="true"></i> {{ z }}</a>{% endfor %}
+</div>
+{% endif %}
+{% if eol %}<div class="alert alert-warning" role="alert"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "This PHP version no longer gets security fixes. Choose" %} {{ options.recommended }} {% trans "when your website supports it." %}</div>{% endif %}
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Version and limits" %} <span class="text-secondary fw-normal">· {{ domain }}</span></h3>
+  <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="settings"><input type="hidden" name="domain" value="{{ domain }}">
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-3"><label class="form-label" for="php-version">{% trans "PHP version" %}</label>
+        <select class="form-select" id="php-version" name="version">{% for v in options.versions %}<option value="{{ v }}" {% if v == current.version %}selected{% endif %}>{{ v }}{% if v == options.recommended %} ({% trans "recommended" %}){% endif %}{% if v in options.end_of_life %} ({% trans "no longer supported" %}){% endif %}</option>{% endfor %}</select></div>
+      <div class="col-md-6 col-lg-3"><label class="form-label" for="php-memory">{% trans "Memory limit" %}</label>
+        <select class="form-select" id="php-memory" name="memory_limit">{% for v in options.memory_limits %}<option value="{{ v }}" {% if v == current.memory_limit %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+      <div class="col-md-6 col-lg-3"><label class="form-label" for="php-upload">{% trans "Largest upload" %}</label>
+        <select class="form-select" id="php-upload" name="upload_max_filesize">{% for v in options.upload_limits %}<option value="{{ v }}" {% if v == current.upload_max_filesize %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+      <div class="col-md-6 col-lg-3"><label class="form-label" for="php-time">{% trans "Longest run time" %}</label>
+        <select class="form-select" id="php-time" name="max_execution_time">{% for v in options.execution_times %}<option value="{{ v }}" {% if v == current.max_execution_time %}selected{% endif %}>{{ v }} {% trans "seconds" %}</option>{% endfor %}</select></div>
+    </div>
+    <div class="form-check form-switch mt-3">
+      <input class="form-check-input" type="checkbox" role="switch" id="php-errors" name="display_errors" value="1" {% if current.display_errors %}checked{% endif %}>
+      <label class="form-check-label" for="php-errors">{% trans "Show PHP errors on the website" %}</label>
+      <div class="form-text">{% trans "Useful while you fix a problem. Turn it off on a live website: errors can show visitors private details." %}</div>
+    </div>
+    <button class="btn btn-primary mt-3" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> {% trans "Save" %}</button>
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Extensions" %} <span class="text-secondary fw-normal">· {{ domain }}</span></h3></div>
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Extension" %}</th><th scope="col">{% trans "Status" %}</th><th scope="col" class="text-end">{% trans "Action" %}</th></tr></thead>
+    <tbody>
+    {% for e in extensions %}
+      <tr>
+        <td class="fm-name"><i class="bi bi-puzzle" aria-hidden="true"></i> {{ e.name }}{% if e.required %} <span class="site-pill ms-1">{% trans "Needed" %}</span>{% endif %}</td>
+        <td>{% if e.enabled %}<span class="site-pill is-ok">{% trans "On" %}</span>{% else %}<span class="site-pill">{% trans "Off" %}</span>{% endif %}</td>
+        <td class="text-end">{% if e.required %}<span class="text-secondary small">{% trans "Always on" %}</span>{% else %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="extension"><input type="hidden" name="domain" value="{{ domain }}"><input type="hidden" name="name" value="{{ e.name }}"><input type="hidden" name="enabled" value="{% if e.enabled %}0{% else %}1{% endif %}"><button class="btn btn-sm btn-outline-secondary" type="submit">{% if e.enabled %}{% trans "Turn off" %}{% else %}{% trans "Turn on" %}{% endif %}</button></form>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endif %}
+{% endblock %}

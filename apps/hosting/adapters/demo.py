@@ -14,14 +14,14 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           FilesCapability, PhpCapability, PhpSettings, SslCapability, SslStatus, WebmailAccess)
+                           FilesCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
-from .demo_domains import DemoDomains
+from .demo_domains import SERVER_IP, DemoDomains
 from .demo_email import DemoEmail
+from .demo_php import DemoPhp
+from .demo_ssl import DemoSsl
 from .manual import ManualAdapter
 from .sandbox import Sandbox
-
-PHP_VERSIONS = ["7.4", "8.0", "8.1", "8.2", "8.3"]
 
 SAMPLE_FILES = {
     "public_html/index.html": "<!doctype html>\n<html>\n<head><title>Welcome</title><link rel=\"stylesheet\" href=\"css/style.css\"></head>\n"
@@ -74,6 +74,42 @@ def domains_for(username):
             pass  # a page is already there: leave it alone
 
     return DemoDomains(files_root() / f"{username}.state", account.domain if account else "", make_folder)
+
+
+def _domain_names(username):
+    return [d.name for d in domains_for(username).domains()]
+
+
+def _points_here(username, name):
+    """Does this name's DNS lead to the demo server? An A record with the server's address, or a CNAME to a name that does."""
+    service = domains_for(username)
+    zones = sorted({d.name for d in service.domains() if d.kind != "subdomain"}, key=len, reverse=True)
+
+    def lookup(host, depth=0):
+        zone = next((z for z in zones if host == z or host.endswith("." + z)), None)
+        if zone is None or depth > 3:
+            return False
+        label = "@" if host == zone else host[: -len(zone) - 1]
+        try:
+            records = service.records(zone)
+        except HostingError:
+            return False
+        for r in records:
+            if r.name == label and r.type == "A" and r.value == SERVER_IP:
+                return True
+        return any(r.name == label and r.type == "CNAME" and lookup(r.value.rstrip(".").lower(), depth + 1) for r in records)
+
+    return lookup(name)
+
+
+def ssl_for(username):
+    """The account's demo certificate service. State lives beside the website folder."""
+    return DemoSsl(files_root() / f"{username}.state", lambda: _domain_names(username), lambda n: _points_here(username, n))
+
+
+def php_for(username):
+    """The account's demo PHP settings service."""
+    return DemoPhp(files_root() / f"{username}.state", lambda: _domain_names(username))
 
 
 def sandbox_for(username):
@@ -314,24 +350,37 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
 
     # --- SSL ---------------------------------------------------------------------------------------------------
 
+    def list_ssl_status(self, username):
+        return ssl_for(username).list_status()
+
     def get_ssl_status(self, username, domain):
-        active = _seed(username) % 5 != 0  # about one account in five shows "not active"
-        return SslStatus(domain=domain, active=active, issuer="Sample data" if active else "",
-                         expires_at="2027-01-15T00:00:00Z" if active else None, auto_renew=active,
-                         https_redirect=active)
+        return ssl_for(username).status(domain)
 
     def request_ssl(self, username, domain):
-        pass
+        ssl_for(username).request(domain)
+
+    def remove_ssl(self, username, domain):
+        ssl_for(username).remove(domain)
+
+    def set_ssl_auto_renew(self, username, domain, enabled):
+        ssl_for(username).set_auto_renew(domain, enabled)
 
     def set_https_redirect(self, username, domain, enabled):
-        pass
+        ssl_for(username).set_redirect(domain, enabled)
 
     # --- PHP ---------------------------------------------------------------------------------------------------
 
+    def php_options(self, username):
+        return php_for(username).options()
+
+    def list_php_extensions(self, username, domain):
+        return php_for(username).extensions(domain)
+
+    def set_php_extension(self, username, domain, name, enabled):
+        php_for(username).set_extension(domain, name, enabled)
+
     def get_php_settings(self, username, domain):
-        version = PHP_VERSIONS[_seed(username) % len(PHP_VERSIONS)]
-        return PhpSettings(version=version, memory_limit="256M", upload_max_filesize="64M", max_execution_time=60,
-                           display_errors=False, available_versions=PHP_VERSIONS)
+        return php_for(username).settings(domain)
 
     def set_php_settings(self, username, domain, settings):
-        pass
+        php_for(username).set_settings(domain, settings)

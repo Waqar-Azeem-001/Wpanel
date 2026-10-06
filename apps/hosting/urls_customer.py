@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_databases, views_domains, views_email, views_files
+from . import views, views_databases, views_domains, views_email, views_files, views_php, views_ssl
 
 app_name = "hosting_customer"
 
@@ -28,5 +28,9 @@ urlpatterns = [
     path("<int:pk>/manage/domains/do/", views_domains.my_hosting_domain_action, name="domain_action"),
     path("<int:pk>/manage/dns/", views_domains.my_hosting_dns, name="dns"),
     path("<int:pk>/manage/dns/do/", views_domains.my_hosting_dns_action, name="dns_action"),
+    path("<int:pk>/manage/ssl/", views_ssl.my_hosting_ssl, name="ssl"),
+    path("<int:pk>/manage/ssl/do/", views_ssl.my_hosting_ssl_action, name="ssl_action"),
+    path("<int:pk>/manage/php/", views_php.my_hosting_php, name="php"),
+    path("<int:pk>/manage/php/do/", views_php.my_hosting_php_action, name="php_action"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

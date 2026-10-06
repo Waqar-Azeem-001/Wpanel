@@ -9,7 +9,8 @@ with every state: normal, nearly full, full, unlimited bandwidth, no SSL, suspen
 Development only. The accounts live on a "Demo (sample data)" server of kind ``demo`` that makes no network calls and
 reports sample figures. Real accounts are never touched; demo accounts are recognised by that server.
 """
-from datetime import timedelta
+import json
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 import shutil
 
@@ -17,7 +18,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from apps.clients.models import Client
-from apps.hosting.adapters.demo import files_root
+from apps.hosting.adapters.demo import files_root, php_for, ssl_for
 from apps.hosting.models import HostingAccount, HostingStatus
 from apps.products.models import Product, ProductType, Server, ServerKind
 
@@ -31,6 +32,25 @@ SAMPLES = [
     ("demo-club.example.com", "democlub", HostingStatus.SUSPENDED, (800, 20480), (1500, 102400)),
     ("demo-new.example.com", "demonew", HostingStatus.PENDING, (None, None), (None, None)),
 ]
+
+# username: (days left on the certificate, auto-renew, always use HTTPS) - the states the SSL screen shows
+CERTIFICATES = {"demoshop": (80, True, True), "demoblog": (9, False, True), "demoagency": (-5, False, False)}
+
+
+def seed_certificates_and_php(username):
+    """Sample certificates in different states (active, expiring, expired) and a PHP version that has reached its end of life."""
+    if username in CERTIFICATES:
+        days, auto, redirect = CERTIFICATES[username]
+        domain = HostingAccount.objects.get(username=username).domain
+        now = datetime.now(dt_timezone.utc)
+        directory = files_root() / f"{username}.state"
+        directory.mkdir(parents=True, exist_ok=True)
+        cert = {"issuer": "Free SSL (sample data)", "issued_at": (now + timedelta(days=days - 90)).isoformat(),
+                "expires_at": (now + timedelta(days=days)).isoformat(), "auto_renew": auto, "https_redirect": redirect}
+        (directory / "ssl.json").write_text(json.dumps({"certs": {domain: cert}}), encoding="utf-8")
+    if username == "demoblog":
+        domain = HostingAccount.objects.get(username=username).domain
+        php_for(username).set_settings(domain, {"version": "8.0"})
 
 
 class Command(BaseCommand):
@@ -74,6 +94,8 @@ class Command(BaseCommand):
                           "expires_at": timezone.now() + timedelta(days=200),
                           "suspend_reason": "Sample suspension" if status == HostingStatus.SUSPENDED else ""})
             created += was_created
+            if was_created and status == HostingStatus.ACTIVE:
+                seed_certificates_and_php(username)
         user = client.contacts.filter(user__isnull=False).first().user
         self.stdout.write(self.style.SUCCESS(
             f"{created} sample account(s) added for client #{client.pk}. Sign in as {user.email} and open "

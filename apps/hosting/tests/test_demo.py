@@ -110,7 +110,7 @@ def test_a_supported_section_page_says_what_it_will_do_and_usage_shows_the_meter
     account = HostingAccount.objects.get(domain="demo-shop.example.com")
     client.force_login(owner)
     ssl = client.get(f"/account/hosting/{account.pk}/manage/ssl/")
-    assert ssl.status_code == 200 and "The screen for it is being built" in ssl.content.decode()
+    assert ssl.status_code == 200 and "Always use HTTPS" in ssl.content.decode()
     usage = client.get(f"/account/hosting/{account.pk}/manage/usage/").content.decode()
     assert "<progress" in usage and "Storage" in usage and "Bandwidth" in usage
     backups = client.get(f"/account/hosting/{account.pk}/manage/backups/").content.decode()

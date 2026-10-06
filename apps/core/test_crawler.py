@@ -44,6 +44,10 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:domain_action": "POST-only in practice; reached from the Domains screen forms (test_domains.py)",
     "hosting_customer:dns": "linked only for an account whose provider supports DNS (the demo provider); tested in apps/hosting/tests/test_domains.py",
     "hosting_customer:dns_action": "POST-only in practice; reached from the DNS screen forms (test_domains.py)",
+    "hosting_customer:ssl": "linked only for an account whose provider supports SSL (the demo provider); tested in apps/hosting/tests/test_ssl_php.py",
+    "hosting_customer:ssl_action": "POST-only in practice; reached from the SSL screen forms (test_ssl_php.py)",
+    "hosting_customer:php": "linked only for an account whose provider supports PHP settings (the demo provider); tested in apps/hosting/tests/test_ssl_php.py",
+    "hosting_customer:php_action": "POST-only in practice; reached from the PHP screen forms (test_ssl_php.py)",
     "hosting_customer:file_edit": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "hosting_customer:file_download": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "orders_customer:choose_client": "only reachable by a customer who is a contact of more than one account; the "

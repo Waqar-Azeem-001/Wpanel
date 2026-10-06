@@ -255,6 +255,9 @@ class SslStatus:
     expires_at: Optional[str] = None  # ISO 8601
     auto_renew: bool = False
     https_redirect: bool = False
+    status: str = ""  # "none", "active", "expiring" (14 days or less left) or "expired"
+    issued_at: Optional[str] = None  # ISO 8601
+    days_left: Optional[int] = None  # negative once expired
 
 
 @dataclass(frozen=True)
@@ -265,6 +268,25 @@ class PhpSettings:
     max_execution_time: Optional[int] = None
     display_errors: bool = False
     available_versions: list = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class PhpOptions:
+    """What a customer may choose on this plan. The provider refuses anything outside these lists."""
+
+    versions: list = field(default_factory=list)  # newest first
+    end_of_life: list = field(default_factory=list)  # versions that no longer get security fixes
+    recommended: str = ""
+    memory_limits: list = field(default_factory=list)  # for example ["128M", "256M", "512M"]
+    upload_limits: list = field(default_factory=list)
+    execution_times: list = field(default_factory=list)  # seconds
+
+
+@dataclass(frozen=True)
+class PhpExtension:
+    name: str
+    enabled: bool = False
+    required: bool = False  # cannot be switched off (the website or the panel needs it)
 
 
 @dataclass(frozen=True)
@@ -574,18 +596,49 @@ class DnsCapability(ABC):
 
 
 class SslCapability(ABC):
+    """
+    One certificate per domain. The provider decides how it is issued (free, automatic) and refuses what cannot work: a domain whose
+    DNS does not point at the server cannot be validated, and "always use HTTPS" needs a working certificate first.
+    """
+
+    @abstractmethod
+    def list_ssl_status(self, username: str) -> list:
+        """``SslStatus`` rows, one for every domain of the account."""
+
     @abstractmethod
     def get_ssl_status(self, username: str, domain: str) -> SslStatus: ...
 
     @abstractmethod
     def request_ssl(self, username: str, domain: str) -> None:
-        """Issue or renew the certificate where the provider supports it (it may complete asynchronously)."""
+        """Issue a certificate, or renew the one in place (it may complete asynchronously)."""
+
+    @abstractmethod
+    def remove_ssl(self, username: str, domain: str) -> None:
+        """Remove the certificate; the domain is served without HTTPS and "always use HTTPS" is switched off."""
+
+    @abstractmethod
+    def set_ssl_auto_renew(self, username: str, domain: str, enabled: bool) -> None: ...
 
     @abstractmethod
     def set_https_redirect(self, username: str, domain: str, enabled: bool) -> None: ...
 
 
 class PhpCapability(ABC):
+    """
+    PHP settings are per domain. Only the choices of ``php_options`` can be applied (never a raw configuration file), and an
+    extension the account depends on cannot be switched off.
+    """
+
+    @abstractmethod
+    def php_options(self, username: str) -> PhpOptions: ...
+
+    @abstractmethod
+    def list_php_extensions(self, username: str, domain: str) -> list:
+        """``PhpExtension`` rows."""
+
+    @abstractmethod
+    def set_php_extension(self, username: str, domain: str, name: str, enabled: bool) -> None: ...
+
     @abstractmethod
     def get_php_settings(self, username: str, domain: str) -> PhpSettings: ...
 
@@ -662,8 +715,10 @@ OPERATIONS = {
                                  "set_mailbox_quota", "list_forwarders", "create_forwarder", "delete_forwarder"}),
     Capability.DOMAINS: frozenset({"domain_limits", "list_domains", "add_domain", "remove_domain", "set_redirect"}),
     Capability.DNS: frozenset({"list_dns_records", "add_dns_record", "update_dns_record", "delete_dns_record"}),
-    Capability.SSL: frozenset({"get_ssl_status", "request_ssl", "set_https_redirect"}),
-    Capability.PHP: frozenset({"get_php_settings", "set_php_settings"}),
+    Capability.SSL: frozenset({"list_ssl_status", "get_ssl_status", "request_ssl", "remove_ssl", "set_ssl_auto_renew",
+                               "set_https_redirect"}),
+    Capability.PHP: frozenset({"php_options", "list_php_extensions", "set_php_extension", "get_php_settings",
+                               "set_php_settings"}),
     Capability.CRON: frozenset({"list_cron_jobs", "create_cron_job", "update_cron_job", "delete_cron_job"}),
     Capability.BACKUPS: frozenset({"list_backups", "create_backup", "restore_backup"}),
 }
@@ -674,7 +729,8 @@ READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "data
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "get_mail_profile", "list_domains",
-                             "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
+                             "list_dns_records", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
+                             "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 
 

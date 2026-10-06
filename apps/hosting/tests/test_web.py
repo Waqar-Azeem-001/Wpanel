@@ -210,9 +210,21 @@ def test_ssl_and_php_appear_when_the_provider_reports_them(client, manager, owne
         def get_ssl_status(self, username, domain):
             return caps.SslStatus(domain=domain, active=True)
 
+        def list_ssl_status(self, username): return []
+
         def request_ssl(self, username, domain): ...
 
+        def remove_ssl(self, username, domain): ...
+
+        def set_ssl_auto_renew(self, username, domain, enabled): ...
+
         def set_https_redirect(self, username, domain, enabled): ...
+
+        def php_options(self, username): return caps.PhpOptions()
+
+        def list_php_extensions(self, username, domain): return []
+
+        def set_php_extension(self, username, domain, name, enabled): ...
 
         def get_php_settings(self, username, domain):
             return caps.PhpSettings(version="8.3")

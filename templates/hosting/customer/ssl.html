@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "SSL certificate" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if rows is None %}
+<section class="card"><div class="card-body text-secondary">{% trans "Certificates could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-shield-lock" aria-hidden="true"></i> {% trans "SSL certificate" %}</h2>
+  <p class="db-counts">
+    <span class="site-pill is-ok"><i class="bi bi-shield-check" aria-hidden="true"></i> {{ counts.active }} {% trans "active" %}</span>
+    {% if counts.expiring %}<span class="site-pill is-warn"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ counts.expiring }} {% trans "expiring soon" %}</span>{% endif %}
+    {% if counts.expired %}<span class="site-pill is-danger"><i class="bi bi-shield-x" aria-hidden="true"></i> {{ counts.expired }} {% trans "expired" %}</span>{% endif %}
+    {% if counts.none %}<span class="site-pill"><i class="bi bi-shield-slash" aria-hidden="true"></i> {{ counts.none }} {% trans "without one" %}</span>{% endif %}
+  </p>
+</div>
+{% if counts.expired %}<div class="alert alert-danger" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i> {% trans "A certificate has expired: visitors now see a security warning. Renew it below." %}</div>
+{% elif counts.expiring %}<div class="alert alert-warning" role="alert"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "A certificate ends soon. Turn on automatic renewal or renew it below." %}</div>{% endif %}
+
+<section class="card mb-3">
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Domain" %}</th><th scope="col">{% trans "Status" %}</th><th scope="col">{% trans "Issued by" %}</th><th scope="col">{% trans "Valid until" %}</th><th scope="col">{% trans "Automatic renewal" %}</th><th scope="col">{% trans "Always use HTTPS" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% with s=r.s %}
+      <tr>
+        <td class="fm-name"><i class="bi bi-globe2" aria-hidden="true"></i> {{ s.domain }}</td>
+        <td>{% if s.status == "active" %}<span class="site-pill is-ok">{% trans "Active" %}</span>
+          {% elif s.status == "expiring" %}<span class="site-pill is-warn">{% trans "Ends soon" %}</span>
+          {% elif s.status == "expired" %}<span class="site-pill is-danger">{% trans "Expired" %}</span>
+          {% else %}<span class="site-pill">{% trans "No certificate" %}</span>{% endif %}</td>
+        <td>{% if s.issuer %}{{ s.issuer }}{% else %}<span class="text-secondary">&mdash;</span>{% endif %}</td>
+        <td>{% if r.expires %}{{ r.expires|date:"j M Y" }}<small class="d-block text-secondary">{% if s.days_left < 0 %}{% trans "ended" %} {% widthratio s.days_left 1 -1 %} {% trans "days ago" %}{% else %}{{ s.days_left }} {% trans "days left" %}{% endif %}</small>{% else %}<span class="text-secondary">&mdash;</span>{% endif %}</td>
+        <td>{% if s.status != "none" %}<form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="auto_renew"><input type="hidden" name="domain" value="{{ s.domain }}"><input type="hidden" name="enabled" value="{% if s.auto_renew %}0{% else %}1{% endif %}"><button class="btn btn-sm {% if s.auto_renew %}btn-success{% else %}btn-outline-secondary{% endif %}" type="submit" aria-pressed="{% if s.auto_renew %}true{% else %}false{% endif %}">{% if s.auto_renew %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</button></form>{% else %}<span class="text-secondary">&mdash;</span>{% endif %}</td>
+        <td>{% if s.status != "none" %}<form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="https"><input type="hidden" name="domain" value="{{ s.domain }}"><input type="hidden" name="enabled" value="{% if s.https_redirect %}0{% else %}1{% endif %}"><button class="btn btn-sm {% if s.https_redirect %}btn-success{% else %}btn-outline-secondary{% endif %}" type="submit" aria-pressed="{% if s.https_redirect %}true{% else %}false{% endif %}">{% if s.https_redirect %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</button></form>{% else %}<span class="text-secondary">&mdash;</span>{% endif %}</td>
+        <td class="text-end"><div class="fm-actions">
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="install"><input type="hidden" name="domain" value="{{ s.domain }}"><button class="btn btn-sm {% if s.status == 'none' or s.status == 'expired' %}btn-primary{% else %}btn-outline-secondary{% endif %}" type="submit"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> {% if s.status == "none" %}{% trans "Install" %}{% else %}{% trans "Renew" %}{% endif %}</button></form>
+          {% if s.status != "none" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="domain" value="{{ s.domain }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Remove the certificate for' %} {{ s.domain }}? {% trans 'Visitors will see a security warning on the secure address, and Always use HTTPS is switched off.' %}" title="{% trans 'Remove' %}" aria-label="{% trans 'Remove the certificate for' %} {{ s.domain }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>{% endif %}
+        </div></td>
+      </tr>
+    {% endwith %}{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "How it works" %}</h3>
+  <ul class="small text-secondary mb-0">
+    <li>{% trans "Certificates are free and last 90 days. With automatic renewal on, they renew themselves in the last 30 days." %}</li>
+    <li>{% trans "A certificate can only be installed once the domain points to this server." %}{% if dns_url %} <a href="{{ dns_url }}">{% trans "Check the DNS records" %}</a>.{% endif %}</li>
+    <li>{% trans "Always use HTTPS sends every visitor to the secure version of your website. It needs a working certificate." %}</li>
+  </ul>
+</div></section>
+{% endif %}
+{% endblock %}

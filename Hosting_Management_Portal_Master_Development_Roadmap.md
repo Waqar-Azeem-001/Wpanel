@@ -938,7 +938,8 @@ Before marking any phase 🟢:
 | H3 Databases | 🟡 local | `docs/h3-databases.md`: databases, users, passwords, privileges, plan limits on the demo provider; phpMyAdmin deferred |
 | H4 Email | 🟡 local | `docs/h4-email.md`: mailboxes, quotas, passwords, forwarders, automatic replies, routing, spam settings, simple webmail on the demo provider; real mail delivery deferred |
 | H5 Domains and DNS | 🟡 local | `docs/h5-domains-dns.md`: extra domains, subdomains, aliases, redirects, DNS zones with per-type validation and mail record helpers on the demo provider |
-| H6-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| H6 SSL and H7 PHP | 🟡 local | `docs/h6-h7-ssl-php.md`: certificate status, issuer, expiry, auto-renew, always-use-HTTPS, install/renew/remove; PHP version, memory, upload, run time, error display and extensions on the demo provider |
+| H8-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 
