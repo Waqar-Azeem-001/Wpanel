@@ -2,33 +2,66 @@
 {% load ui i18n %}
 {% block title %}{{ address }} · {% trans "Webmail" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-{% include "hosting/customer/_header.html" with tab="" %}
-<section class="card fm">
-  <div class="card-body">
-    <div class="fm-head">
-      <h2 class="h5 mb-0"><i class="bi bi-envelope-open" aria-hidden="true"></i> {{ address }}</h2>
-      <div class="fm-head-right"><a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to email accounts" %}</a></div>
-    </div>
-    <p class="site-note"><i class="bi bi-info-circle" aria-hidden="true"></i>{% trans "A simple inbox viewer with sample messages. Full webmail (Roundcube) opens here when your hosting server offers it. Use your mail app to send and receive real mail." %}</p>
-    <div class="dbb">
-      <nav class="dbb-tables" aria-label="{% trans 'Inbox' %}">
-        <h3 class="dbb-title">{% trans "Inbox" %}{% if unread %} · {{ unread }} {% trans "unread" %}{% endif %}</h3>
-        <ul>
-        {% for m, link in inbox %}
-          <li><a href="{{ link }}"{% if message and message.message_id == m.message_id %} class="active" aria-current="page"{% endif %}>
-            <span class="em-msg"><strong{% if not m.unread %} class="fw-normal"{% endif %}>{{ m.subject }}</strong><small>{{ m.sender }} · {{ m.received_at|slice:":10" }}</small></span>{% if m.unread %}<span class="badge text-bg-primary rounded-pill">{% trans "new" %}</span>{% endif %}</a></li>
-        {% empty %}<li class="text-secondary px-2">{% trans "The inbox is empty." %}</li>
-        {% endfor %}
-        </ul>
-      </nav>
-      <div class="dbb-data">
-        {% if message %}
-        <h3 class="h5">{{ message.subject }}</h3>
-        <p class="small text-secondary">{% trans "From" %} {{ message.sender }} · {{ message.received_at|slice:":10" }} {{ message.received_at|slice:"11:16" }}</p>
+<div class="mail" data-mail>
+  <header class="mail-bar">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Email accounts" %}</a>
+    <div class="mail-who"><i class="bi bi-envelope-open" aria-hidden="true"></i> <strong>{{ address }}</strong> <small>{{ account.domain }}</small></div>
+    <a class="btn btn-sm btn-primary ms-auto" href="{{ compose_url }}"><i class="bi bi-pencil-square" aria-hidden="true"></i> {% trans "Compose" %}</a>
+  </header>
+  <p class="mail-note"><i class="bi bi-info-circle" aria-hidden="true"></i> {% trans "A simple mail viewer for this demo. Mail you send to another mailbox on this account really arrives; mail to other addresses is only recorded. Your hosting server's own webmail opens here when it offers one." %}</p>
+
+  <div class="mail-grid{% if message or compose %} has-open{% endif %}">
+    <nav class="mail-folders" aria-label="{% trans 'Folders' %}">
+      <ul>
+      {% for f in folders %}
+        <li><a href="{{ f.url }}"{% if f.active %} class="active" aria-current="page"{% endif %}>
+          <span><i class="bi {{ f.icon }}" aria-hidden="true"></i> {{ f.label }}</span>
+          {% if f.unread %}<span class="mail-count is-new">{{ f.unread }}</span>{% elif f.total %}<span class="mail-count">{{ f.total }}</span>{% endif %}</a></li>
+      {% endfor %}
+      </ul>
+    </nav>
+
+    <section class="mail-list" aria-label="{% trans 'Messages' %}">
+      {% for m, link, current in mail_items %}
+        <a class="mail-item{% if m.unread %} is-unread{% endif %}{% if current %} is-open{% endif %}" href="{{ link }}"{% if current %} aria-current="page"{% endif %}>
+          <span class="mail-item-top"><strong>{% if folder == "sent" %}{{ m.to|default:"-" }}{% else %}{{ m.sender }}{% endif %}</strong><time>{{ m.received_at|slice:":10" }}</time></span>
+          <span class="mail-item-subject">{% if m.unread %}<i class="mail-dot" aria-label="{% trans 'unread' %}"></i>{% endif %}{{ m.subject }}</span>
+        </a>
+      {% empty %}
+        <p class="mail-empty">{% trans "No messages in this folder." %}</p>
+      {% endfor %}
+    </section>
+
+    <section class="mail-read" aria-label="{% trans 'Message' %}">
+      {% if compose %}
+        <a class="mail-close" href="{{ list_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to the list" %}</a>
+        <h2 class="h5">{% trans "New message" %}</h2>
+        <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+          <input type="hidden" name="action" value="send"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}">
+          <label class="form-label small" for="mail-to">{% trans "To" %}</label>
+          <input class="form-control mb-2" id="mail-to" name="to" value="{{ compose.to }}" placeholder="name@example.com, another@example.com" maxlength="500" required>
+          <label class="form-label small" for="mail-subject">{% trans "Subject" %}</label>
+          <input class="form-control mb-2" id="mail-subject" name="subject" value="{{ compose.subject }}" maxlength="200" required>
+          <label class="form-label small" for="mail-body">{% trans "Message" %}</label>
+          <textarea class="form-control mb-3" id="mail-body" name="body" rows="12" maxlength="10000">{{ compose.body }}</textarea>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-send" aria-hidden="true"></i> {% trans "Send" %}</button>
+          <a class="btn btn-outline-secondary" href="{{ list_url }}">{% trans "Cancel" %}</a>
+        </form>
+      {% elif message %}
+        <a class="mail-close" href="{{ list_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to the list" %}</a>
+        <div class="mail-tools">
+          <a class="btn btn-sm btn-outline-secondary" href="{{ reply_url }}"><i class="bi bi-reply" aria-hidden="true"></i> {% trans "Reply" %}</a>
+          {% if folder != "spam" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="move"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="to_folder" value="spam"><button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> {% trans "Mark as spam" %}</button></form>{% endif %}
+          {% if folder == "spam" or folder == "trash" %}<form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="move"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><input type="hidden" name="to_folder" value="inbox"><button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-inbox" aria-hidden="true"></i> {% trans "Move to inbox" %}</button></form>{% endif %}
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="address" value="{{ address }}"><input type="hidden" name="folder" value="{{ folder }}"><input type="hidden" name="message" value="{{ message.message_id }}"><button class="btn btn-sm btn-outline-danger" type="submit"{% if folder == "trash" %} data-confirm="{% trans 'Delete this message for good?' %}"{% endif %}><i class="bi bi-trash" aria-hidden="true"></i> {% if folder == "trash" %}{% trans "Delete for good" %}{% else %}{% trans "Delete" %}{% endif %}</button></form>
+        </div>
+        <h2 class="h5 mt-3">{{ message.subject }}</h2>
+        <p class="small text-secondary mb-2">{% trans "From" %} <strong>{{ message.sender }}</strong>{% if message.to %} &middot; {% trans "To" %} {{ message.to }}{% endif %} &middot; {{ message.received_at|slice:":10" }} {{ message.received_at|slice:"11:16" }}</p>
         <div class="em-body">{{ message.body|linebreaks }}</div>
-        {% else %}<p class="text-secondary mb-0">{% trans "Choose a message to read it." %}</p>{% endif %}
-      </div>
-    </div>
+      {% else %}
+        <div class="mail-placeholder"><i class="bi bi-envelope-paper" aria-hidden="true"></i><p>{% trans "Choose a message to read it, or write a new one." %}</p></div>
+      {% endif %}
+    </section>
   </div>
-</section>
+</div>
 {% endblock %}

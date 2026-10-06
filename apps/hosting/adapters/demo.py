@@ -228,8 +228,20 @@ class DemoAdapter(EmailCapability, DatabasesCapability, FilesCapability, SslCapa
         email_for(username).messages(address)  # raises if the mailbox does not exist
         return WebmailAccess(kind="embedded")  # no Roundcube behind a demo account: WHPanel's own inbox viewer serves it
 
-    def list_messages(self, username, address):
-        return email_for(username).messages(address)
+    def message_folders(self, username, address):
+        return email_for(username).folders(address)
+
+    def list_messages(self, username, address, folder="inbox"):
+        return email_for(username).messages(address, folder)
+
+    def move_message(self, username, address, message_id, folder):
+        email_for(username).move_message(address, message_id, folder)
+
+    def delete_message(self, username, address, message_id):
+        email_for(username).delete_message(address, message_id)
+
+    def send_message(self, username, address, to, subject, body):
+        email_for(username).send_message(address, to, subject, body)
 
     def read_message(self, username, address, message_id):
         return email_for(username).read_message(address, message_id)

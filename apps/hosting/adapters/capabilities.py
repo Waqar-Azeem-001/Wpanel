@@ -185,6 +185,8 @@ class MessageInfo:
     received_at: str  # ISO 8601
     unread: bool = False
     body: str = ""  # only filled in by ``read_message``
+    to: str = ""
+    folder: str = "inbox"
 
 
 @dataclass(frozen=True)
@@ -389,6 +391,7 @@ class DatabasesCapability(ABC):
 
 MAIL_ROUTING_MODES = ("local", "remote")  # local: this hosting server receives the mail; remote: another service does
 SPAM_LEVELS = ("low", "medium", "high")
+MAIL_FOLDERS = ("inbox", "sent", "spam", "trash")
 
 
 class EmailCapability(ABC):
@@ -427,8 +430,24 @@ class EmailCapability(ABC):
     def webmail_access(self, username: str, address: str) -> WebmailAccess: ...
 
     @abstractmethod
-    def list_messages(self, username: str, address: str) -> list:
-        """``MessageInfo`` rows (newest first) for the embedded inbox viewer."""
+    def message_folders(self, username: str, address: str) -> dict:
+        """{folder: (total, unread)} for every one of ``MAIL_FOLDERS``."""
+
+    @abstractmethod
+    def list_messages(self, username: str, address: str, folder: str = "inbox") -> list:
+        """``MessageInfo`` rows (newest first) of one folder, for the embedded mail viewer."""
+
+    @abstractmethod
+    def move_message(self, username: str, address: str, message_id: str, folder: str) -> None:
+        """Move to ``inbox``, ``spam`` or ``trash``."""
+
+    @abstractmethod
+    def delete_message(self, username: str, address: str, message_id: str) -> None:
+        """Move to the trash; a message already in the trash is deleted for good."""
+
+    @abstractmethod
+    def send_message(self, username: str, address: str, to: str, subject: str, body: str) -> None:
+        """Send from this mailbox (``to`` may list several addresses separated by commas)."""
 
     @abstractmethod
     def read_message(self, username: str, address: str, message_id: str) -> MessageInfo: ...
@@ -574,7 +593,8 @@ OPERATIONS = {
                                      "grant_database_access"}),
     Capability.EMAIL: frozenset({"email_limits", "list_autoresponders", "set_autoresponder", "delete_autoresponder",
                                  "get_mail_routing", "set_mail_routing", "get_spam_settings", "set_spam_settings",
-                                 "webmail_access", "list_messages", "read_message",
+                                 "webmail_access", "list_messages", "read_message", "message_folders",
+                                 "move_message", "delete_message", "send_message",
                                  "list_mailboxes", "create_mailbox", "delete_mailbox", "set_mailbox_password",
                                  "set_mailbox_quota", "list_forwarders", "create_forwarder", "delete_forwarder"}),
     Capability.DOMAINS: frozenset({"list_domains", "add_domain", "remove_domain", "set_redirect"}),
@@ -589,7 +609,7 @@ OPERATIONS = {
 READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
                              "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "email_limits", "list_autoresponders",
-                             "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message",
+                             "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "list_domains",
                              "list_dns_records", "get_ssl_status", "get_php_settings", "list_cron_jobs",
                              "list_backups"})

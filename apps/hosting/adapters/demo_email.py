@@ -15,12 +15,14 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 from .base import HostingError
-from .capabilities import (MAIL_ROUTING_MODES, SPAM_LEVELS, AutoresponderInfo, EmailLimits, ForwarderInfo, MailboxInfo,
+from .capabilities import (MAIL_FOLDERS, MAIL_ROUTING_MODES, SPAM_LEVELS, AutoresponderInfo, EmailLimits, ForwarderInfo, MailboxInfo,
                            MessageInfo, SpamSettings)
 from .demo_databases import check_password
 
 MAX_MAILBOXES = 10
 MAX_FORWARDERS = 20
+MAX_RECIPIENTS = 5
+MAX_STORED_MESSAGES = 300
 DEFAULT_QUOTA_MB = 1024
 MAX_QUOTA_MB = 5120
 LOCAL_RE = re.compile(r"^[a-z0-9]([a-z0-9._-]{0,38}[a-z0-9])?$")
@@ -124,8 +126,8 @@ class DemoEmail:
         data["mailboxes"][address] = {"password_hash": make_password(password), "quota_mb": quota,
                                       "created": _now().isoformat()}
         data["messages"][address] = [
-            {"id": f"m{i + 1}", "sender": sender, "subject": subject, "body": body, "unread": i == 0,
-             "received_at": (_now() - timedelta(days=i, hours=i * 3)).isoformat()}
+            {"id": f"m{i + 1}", "folder": "inbox", "sender": sender, "to": address, "subject": subject, "body": body,
+             "unread": i == 0, "received_at": (_now() - timedelta(days=i, hours=i * 3)).isoformat()}
             for i, (subject, sender, body) in enumerate(SAMPLE_MESSAGES)]
         self._save(data)
 
@@ -251,13 +253,36 @@ class DemoEmail:
         data["spam"] = {"enabled": bool(settings.enabled), "level": settings.level, "delete_spam": bool(settings.delete_spam)}
         self._save(data)
 
-    # --- the sample inbox -----------------------------------------------------------------------------------------
+    # --- the mail viewer: folders, reading, sending, moving ---------------------------------------------------------
 
-    def messages(self, address):
+    @staticmethod
+    def _info(m, with_body=False):
+        return MessageInfo(message_id=m["id"], sender=m["sender"], subject=m["subject"], received_at=m["received_at"],
+                           unread=m["unread"], body=m["body"] if with_body else "", to=m.get("to", ""),
+                           folder=m.get("folder", "inbox"))
+
+    @staticmethod
+    def _folder(m):
+        return m.get("folder", "inbox")  # messages saved before folders existed are in the inbox
+
+    def folders(self, address):
         data = self._load()
         address = self._mailbox(data, address)
-        return [MessageInfo(message_id=m["id"], sender=m["sender"], subject=m["subject"], received_at=m["received_at"],
-                            unread=m["unread"]) for m in data["messages"].get(address, [])]
+        counts = {f: [0, 0] for f in MAIL_FOLDERS}
+        for m in data["messages"].get(address, []):
+            box = counts.get(self._folder(m))
+            if box is not None:
+                box[0] += 1
+                box[1] += 1 if m["unread"] else 0
+        return {f: (c[0], c[1]) for f, c in counts.items()}
+
+    def messages(self, address, folder="inbox"):
+        data = self._load()
+        address = self._mailbox(data, address)
+        if folder not in MAIL_FOLDERS:
+            raise HostingError("That folder does not exist.")
+        found = [m for m in data["messages"].get(address, []) if self._folder(m) == folder]
+        return [self._info(m) for m in sorted(found, key=lambda m: m["received_at"], reverse=True)]
 
     def read_message(self, address, message_id):
         data = self._load()
@@ -266,6 +291,64 @@ class DemoEmail:
             if m["id"] == message_id:
                 m["unread"] = False
                 self._save(data)
-                return MessageInfo(message_id=m["id"], sender=m["sender"], subject=m["subject"],
-                                   received_at=m["received_at"], unread=False, body=m["body"])
+                return self._info(m, with_body=True)
         raise HostingError("That message does not exist.")
+
+    def move_message(self, address, message_id, folder):
+        if folder not in ("inbox", "spam", "trash"):
+            raise HostingError("A message can be moved to the inbox, spam or trash.")
+        data = self._load()
+        address = self._mailbox(data, address)
+        for m in data["messages"].get(address, []):
+            if m["id"] == message_id:
+                m["folder"] = folder
+                self._save(data)
+                return
+        raise HostingError("That message does not exist.")
+
+    def delete_message(self, address, message_id):
+        data = self._load()
+        address = self._mailbox(data, address)
+        box = data["messages"].get(address, [])
+        for m in box:
+            if m["id"] == message_id:
+                if self._folder(m) == "trash":
+                    box.remove(m)  # already in the trash: gone for good
+                else:
+                    m["folder"] = "trash"
+                self._save(data)
+                return
+        raise HostingError("That message does not exist.")
+
+    def send_message(self, address, to, subject, body):
+        data = self._load()
+        address = self._mailbox(data, address)
+        recipients = [r.strip().lower() for r in (to or "").replace(";", ",").split(",") if r.strip()]
+        if not recipients:
+            raise HostingError("Add at least one address to send to.")
+        if len(recipients) > MAX_RECIPIENTS:
+            raise HostingError(f"You can send to up to {MAX_RECIPIENTS} addresses at once.")
+        for r in recipients:
+            try:
+                validate_email(r)
+            except ValidationError:
+                raise HostingError(f"'{r}' is not a valid email address.")
+        subject, body = (subject or "").strip(), (body or "").strip()
+        if not subject:
+            raise HostingError("Add a subject.")
+        if len(subject) > 200 or len(body) > 10000:
+            raise HostingError("That message is too long (subject up to 200 characters, text up to 10000).")
+        now = _now().isoformat()
+        stamp = _now().strftime("%Y%m%d%H%M%S%f")
+
+        def put(box_address, folder, unread, n):
+            box = data["messages"].setdefault(box_address, [])
+            box.append({"id": f"s{stamp}{n}", "folder": folder, "sender": address, "to": ", ".join(recipients),
+                        "subject": subject, "body": body, "unread": unread, "received_at": now})
+            del box[:-MAX_STORED_MESSAGES]  # keep the demo state small
+
+        put(address, "sent", False, 0)
+        for n, r in enumerate(recipients, start=1):
+            if r in data["mailboxes"] and r != address:
+                put(r, "inbox", True, n)  # mail between mailboxes of this account really arrives
+        self._save(data)

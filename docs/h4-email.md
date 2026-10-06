@@ -29,6 +29,20 @@ gateway, the workspace menu, the shared password helpers (now `passwords.js`, us
 webmail with escaping, secure-address-only redirect, strangers get 404, a provider without email shows the not-available page).
 Hosting, client-area, crawler, link-integrity, design and navigation suites pass. Browser check: no console errors.
 
+## Update 2026-10-06: webmail as a proper mail client
+Owner feedback: the inbox sat inside the website menu with all its details; it should be a focused mail screen with a way
+back. Rebuilt as its own page (no website menu or site header around it):
+- Top bar with **Email accounts** (step back), the mailbox, and **Compose**.
+- Three panes: folders (**Inbox, Sent, Spam, Trash**, with unread counts), the message list (unread in bold with a dot), and the
+  reading pane (From, To, date, body; **Reply**, **Mark as spam** / **Move to inbox**, **Delete** and **Delete for good** from
+  the trash). On a phone the panes become one at a time with "Back to the list".
+- **Compose** (to up to 5 addresses, subject, text). Mail sent to another mailbox on the same account really arrives in its
+  inbox as unread; mail to other addresses is only recorded in Sent (no real delivery). Errors keep what was typed.
+- Contract: `message_folders`, folder-aware `list_messages`, `move_message`, `delete_message`, `send_message`. Messages saved
+  before folders existed are read as the inbox.
+- Found and fixed while testing: a page variable named `messages` hid Django's flash messages; renamed (`mail_items`).
+- 12 more tests (40 for H4), a screenshot check at desktop and phone width, no console errors.
+
 ## Deferred
 Sending and receiving real mail and a full webmail client (needs a real provider: H14, or the native mail platform N7),
 catch-all and per-domain routing, mail filters, mailbox import, additional domains (H5), DKIM/SPF/DMARC records (H5 DNS),

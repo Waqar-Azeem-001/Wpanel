@@ -280,3 +280,136 @@ def test_an_account_without_email_gets_the_not_available_page(client, owner, acc
     assert "not available for your hosting server yet" in client.get(url(account)).content.decode()
     with pytest.raises(ServiceError):
         control.perform(owner, account, "email", "list_mailboxes")
+
+
+# --- The mail viewer: folders, sending, moving, deleting -----------------------------------------------------------
+
+def test_folders_count_messages_and_unread(mail):
+    mail.create_mailbox("info", GOOD, None)
+    assert mail.folders("info") == {"inbox": (3, 1), "sent": (0, 0), "spam": (0, 0), "trash": (0, 0)}
+    with pytest.raises(HostingError):
+        mail.messages("info", "outbox")
+
+
+def test_sending_between_mailboxes_really_delivers_and_keeps_a_sent_copy(mail):
+    mail.create_mailbox("info", GOOD, None)
+    mail.create_mailbox("sales", GOOD, None)
+    mail.send_message("info", "sales@shop.example.com, friend@gmail.com", "Hello", "Are we meeting?")
+    sent = mail.messages("info", "sent")
+    assert [(m.subject, m.to) for m in sent] == [("Hello", "sales@shop.example.com, friend@gmail.com")]
+    assert not sent[0].unread
+    arrived = mail.messages("sales", "inbox")[0]
+    assert arrived.subject == "Hello" and arrived.sender == "info@shop.example.com" and arrived.unread
+    assert mail.folders("sales")["inbox"] == (4, 2)
+
+
+def test_sending_validates_recipients_subject_and_size(mail):
+    mail.create_mailbox("info", GOOD, None)
+    for to, subject, body in (("", "s", "b"), ("nope", "s", "b"), ("a@b.com", "", "b"), ("a@b.com", "s" * 201, "b"),
+                              ("a@b.com", "s", "b" * 10001), (",".join(f"u{i}@gmail.com" for i in range(6)), "s", "b")):
+        with pytest.raises(HostingError):
+            mail.send_message("info", to, subject, body)
+    with pytest.raises(HostingError):
+        mail.send_message("ghost", "a@b.com", "s", "b")
+    assert mail.messages("info", "sent") == []
+
+
+def test_delete_goes_to_the_trash_then_for_good_and_move_restores(mail):
+    mail.create_mailbox("info", GOOD, None)
+    mail.delete_message("info", "m2")
+    assert [m.message_id for m in mail.messages("info", "trash")] == ["m2"]
+    mail.move_message("info", "m2", "inbox")
+    assert "m2" in [m.message_id for m in mail.messages("info", "inbox")]
+    mail.move_message("info", "m3", "spam")
+    assert [m.message_id for m in mail.messages("info", "spam")] == ["m3"]
+    mail.delete_message("info", "m3")
+    mail.delete_message("info", "m3")  # already in the trash: now it is gone
+    assert mail.messages("info", "trash") == []
+    for bad in (lambda: mail.move_message("info", "m1", "sent"), lambda: mail.move_message("info", "nope", "spam"),
+                lambda: mail.delete_message("info", "nope")):
+        with pytest.raises(HostingError):
+            bad()
+
+
+def test_older_state_without_folders_is_read_as_the_inbox(mail):
+    mail.create_mailbox("info", GOOD, None)
+    import json
+
+    data = json.loads(mail.file.read_text(encoding="utf-8"))
+    for m in data["messages"]["info@shop.example.com"]:
+        m.pop("folder", None)
+        m.pop("to", None)
+    mail.file.write_text(json.dumps(data), encoding="utf-8")
+    assert len(mail.messages("info", "inbox")) == 3
+
+
+def mail_url(account, **query):
+    from urllib.parse import urlencode
+
+    return url(account, "webmail/") + ("?" + urlencode(query) if query else "")
+
+
+def test_the_mail_viewer_is_its_own_focused_page_with_a_way_back(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address = "info@demo-shop.example.com"
+    page = client.get(mail_url(account, address=address)).content.decode()
+    assert 'class="mail"' in page and "Email accounts" in page and f'href="{url(account)}"' in page
+    for label in ("Inbox", "Sent", "Spam", "Trash", "Compose"):
+        assert label in page
+    assert "sidebar-panel" not in page and "ws-head" not in page  # no website menu or site header around the mail
+
+
+def test_read_reply_spam_delete_and_restore_from_the_screen(client, owner, account):
+    client.force_login(owner)
+    client.post(url(account, "do/"), {"action": "create_mailbox", "local": "info", "password": GOOD})
+    address = "info@demo-shop.example.com"
+    act = url(account, "webmail/do/")
+    opened = client.get(mail_url(account, address=address, message="m1")).content.decode()
+    assert "Your mailbox is ready" in opened and "Reply" in opened and "Mark as spam" in opened
+    assert "Re%3A+Welcome+to+your+new+mailbox" in opened and "to=support%40example.com" in opened
+    client.post(act, {"action": "move", "address": address, "folder": "inbox", "message": "m2", "to_folder": "spam"})
+    assert "Your invoice is ready" in client.get(mail_url(account, address=address, folder="spam")).content.decode()
+    client.post(act, {"action": "delete", "address": address, "folder": "inbox", "message": "m3"})
+    trash = client.get(mail_url(account, address=address, folder="trash", message="m3")).content.decode()
+    assert "Delete for good" in trash and "Move to inbox" in trash
+    client.post(act, {"action": "move", "address": address, "folder": "trash", "message": "m3", "to_folder": "inbox"})
+    client.post(act, {"action": "delete", "address": address, "folder": "trash", "message": "m3"})  # inbox again: to trash
+    assert "Tip: set up your email" in client.get(mail_url(account, address=address, folder="trash")).content.decode()
+
+
+def test_compose_sends_between_mailboxes_and_errors_keep_what_was_typed(client, owner, account):
+    client.force_login(owner)
+    for local in ("info", "sales"):
+        client.post(url(account, "do/"), {"action": "create_mailbox", "local": local, "password": GOOD})
+    act = url(account, "webmail/do/")
+    compose = client.get(mail_url(account, address="info@demo-shop.example.com", compose=1)).content.decode()
+    assert "New message" in compose and 'name="to"' in compose and "<textarea" in compose
+    bad = client.post(act, {"action": "send", "address": "info@demo-shop.example.com", "folder": "inbox", "to": "nope",
+                            "subject": "Keep me", "body": "My long text"}).content.decode()
+    assert "valid email address" in bad and "Keep me" in bad and "My long text" in bad
+    response = client.post(act, {"action": "send", "address": "info@demo-shop.example.com", "folder": "inbox",
+                                 "to": "sales@demo-shop.example.com", "subject": "Hi sales", "body": "Hello"}, follow=True)
+    assert "Message sent." in response.content.decode() and "Hi sales" in response.content.decode()
+    assert "Hi sales" in client.get(mail_url(account, address="sales@demo-shop.example.com")).content.decode()
+
+
+def test_message_content_is_escaped_in_the_viewer(client, owner, account):
+    client.force_login(owner)
+    for local in ("info", "sales"):
+        client.post(url(account, "do/"), {"action": "create_mailbox", "local": local, "password": GOOD})
+    client.post(url(account, "webmail/do/"), {"action": "send", "address": "info@demo-shop.example.com", "folder": "inbox",
+                                              "to": "sales@demo-shop.example.com", "subject": "<b>bold</b>",
+                                              "body": "<script>alert(1)</script>"})
+    page = client.get(mail_url(account, address="sales@demo-shop.example.com")).content.decode()
+    first_id = [line for line in page.split('message=') if "bold" in line][0].split('"')[0].split("&")[0]
+    opened = client.get(mail_url(account, address="sales@demo-shop.example.com", message=first_id)).content.decode()
+    assert "<script>alert(1)</script>" not in opened and "&lt;script&gt;" in opened and "&lt;b&gt;bold&lt;/b&gt;" in opened
+
+
+def test_a_stranger_cannot_use_the_mail_actions(client, customer, account):
+    client.force_login(customer)
+    act = url(account, "webmail/do/")
+    for data in ({"action": "send", "address": "x@demo-shop.example.com", "to": "a@b.com", "subject": "s", "body": "b"},
+                 {"action": "delete", "address": "x@demo-shop.example.com", "message": "m1"}):
+        assert client.post(act, data).status_code == 404

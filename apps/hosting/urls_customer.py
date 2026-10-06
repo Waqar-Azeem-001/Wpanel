@@ -22,5 +22,6 @@ urlpatterns = [
     path("<int:pk>/manage/email/", views_email.my_hosting_email, name="email"),
     path("<int:pk>/manage/email/do/", views_email.my_hosting_email_action, name="email_action"),
     path("<int:pk>/manage/email/webmail/", views_email.my_hosting_webmail, name="webmail"),
+    path("<int:pk>/manage/email/webmail/do/", views_email.my_hosting_webmail_action, name="webmail_action"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

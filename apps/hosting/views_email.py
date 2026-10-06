@@ -143,32 +143,93 @@ def my_hosting_email_action(request, pk):
     return redirect(_back(account))
 
 
+FOLDER_LABELS = {"inbox": ("Inbox", "bi-inbox"), "sent": ("Sent", "bi-send"), "spam": ("Spam", "bi-shield-exclamation"),
+                 "trash": ("Trash", "bi-trash3")}
+
+
+def _webmail_url(account, **query):
+    query = {k: v for k, v in query.items() if v not in ("", None)}
+    return reverse("hosting_customer:webmail", args=[account.pk]) + ("?" + urlencode(query) if query else "")
+
+
+def _webmail(request, account, address, *, folder="inbox", message_id="", compose=None):
+    """
+    The mail viewer, as its own focused page (no website menu around it): folders, the message list, and the reading or
+    writing pane. A provider with Roundcube sends the person there instead, with a one-time https address.
+    """
+    access = _read(request, account, "webmail_access", address)
+    if access.kind == "external":
+        target = urlsplit(access.url)
+        if target.scheme != "https" or not target.netloc:
+            raise ServiceError("The webmail address was not valid.", code="bad_webmail_url")
+        return redirect(access.url)
+    if folder not in FOLDER_LABELS:
+        folder = "inbox"
+    message = _read(request, account, "read_message", address, message_id) if message_id and not compose else None
+    counts = _read(request, account, "message_folders", address)  # after reading: opening a message marks it read
+    inbox = _read(request, account, "list_messages", address, folder)
+    context = {
+        "account": account, "address": address, "folder": folder, "message": message, "compose": compose,
+        "back_url": _back(account),
+        "folders": [{"key": key, "label": label, "icon": icon, "total": counts[key][0], "unread": counts[key][1],
+                     "url": _webmail_url(account, address=address, folder=key), "active": key == folder}
+                    for key, (label, icon) in FOLDER_LABELS.items()],
+        "mail_items": [(m, _webmail_url(account, address=address, folder=folder, message=m.message_id),
+                      bool(message and message.message_id == m.message_id)) for m in inbox],
+        "compose_url": _webmail_url(account, address=address, folder=folder, compose=1),
+        "action_url": reverse("hosting_customer:webmail_action", args=[account.pk]),
+        "reply_url": "", "list_url": _webmail_url(account, address=address, folder=folder),
+    }
+    if message:
+        reply_subject = message.subject if message.subject.lower().startswith("re:") else f"Re: {message.subject}"
+        context["reply_url"] = _webmail_url(account, address=address, folder=folder, compose=1, to=message.sender,
+                                            subject=reply_subject)
+    return render(request, "hosting/customer/email_webmail.html", context)
+
+
 @login_required
 def my_hosting_webmail(request, pk):
-    """Webmail: a provider with Roundcube (or similar) sends the person there with a one-time https address; otherwise
-    WHPanel's own simple inbox viewer shows the mailbox."""
     account = _own_account(request, pk)
     if not _supports(account):
         return redirect(_back(account))
-    address = request.GET.get("address", "")
+    get = request.GET
+    compose = {"to": get.get("to", ""), "subject": get.get("subject", ""), "body": ""} if get.get("compose") else None
     try:
-        access = _read(request, account, "webmail_access", address)
-        if access.kind == "external":
-            target = urlsplit(access.url)
-            if target.scheme != "https" or not target.netloc:
-                raise ServiceError("The webmail address was not valid.", code="bad_webmail_url")
-            return redirect(access.url)
-        inbox = _read(request, account, "list_messages", address)
-        message = None
-        chosen = request.GET.get("message", "")
-        if chosen:
-            message = _read(request, account, "read_message", address, chosen)
-            inbox = _read(request, account, "list_messages", address)  # reading marks it as read
+        return _webmail(request, account, get.get("address", ""), folder=get.get("folder", "inbox"),
+                        message_id=get.get("message", ""), compose=compose)
     except ServiceError as exc:
         messages.error(request, exc.message)
         return redirect(_back(account))
-    base = reverse("hosting_customer:webmail", args=[account.pk])
-    return render(request, "hosting/customer/email_webmail.html", {
-        "account": account, "sidebar": portal.service_sidebar(request, account), "address": address, "inbox": [
-            (m, base + "?" + urlencode({"address": address, "message": m.message_id})) for m in inbox],
-        "message": message, "back_url": _back(account), "unread": sum(1 for m in inbox if m.unread)})
+
+
+@require_POST
+@login_required
+def my_hosting_webmail_action(request, pk):
+    """Send, delete or move one message, then return to the folder the person was in."""
+    account = _own_account(request, pk)
+    post = request.POST
+    address, folder, action = post.get("address", ""), post.get("folder", "inbox"), post.get("action", "")
+    try:
+        if action == "send":
+            try:
+                _run(request, account, "send_message", address, post.get("to", ""), post.get("subject", ""),
+                     post.get("body", ""), metadata={"address": address, "recipients": len(post.get("to", "").split(","))})
+            except ServiceError as exc:
+                messages.error(request, exc.message)  # keep what was typed so it can be fixed
+                return _webmail(request, account, address, folder=folder, compose={
+                    "to": post.get("to", ""), "subject": post.get("subject", ""), "body": post.get("body", "")})
+            messages.success(request, "Message sent.")
+            folder = "sent"
+        elif action == "delete":
+            _run(request, account, "delete_message", address, post.get("message", ""), metadata={"address": address})
+            messages.success(request, "Deleted." if folder == "trash" else "Moved to the trash.")
+        elif action == "move":
+            target = post.get("to_folder", "")
+            _run(request, account, "move_message", address, post.get("message", ""), target,
+                 metadata={"address": address, "folder": target})
+            messages.success(request, "Moved to " + target + ".")
+        else:
+            raise ServiceError("That action is not available.", code="unknown_action")
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+    return redirect(_webmail_url(account, address=address, folder=folder))
