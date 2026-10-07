@@ -118,7 +118,7 @@ def test_a_change_is_performed_and_audited(manager, account, dns_provider):
                     audit_metadata={"record": "A www"})
     assert [r.record_id for r in control.perform(manager, account, "dns", "list_dns_records", "example.com")] == ["r1"]
     event = AuditEvent.objects.get(action="hosting.control")
-    assert event.metadata == {"capability": "dns", "operation": "add_dns_record", "record": "A www"}
+    assert event.metadata == {"capability": "dns", "operation": "add_dns_record", "record": "A www", "admin_access": True}  # a manager is staff acting on a customer's account
 
 
 def test_a_provider_failure_becomes_a_service_error_and_a_failed_audit_entry(manager, account, dns_provider):

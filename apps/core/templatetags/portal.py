@@ -24,6 +24,20 @@ def service_tabs(context, account, active):
     return {"tabs": [(label, url, key == active) for key, label, url in tabs]}
 
 
+@register.inclusion_tag("hosting/customer/_admin_banner.html", takes_context=True)
+def admin_access_banner(context, account):
+    """The always-visible Admin Access strip: shown only when staff are looking at a customer's hosting with an active grant."""
+    from apps.accounts.roles import perm
+    from apps.hosting import admin_access
+
+    request = context["request"]
+    if not admin_access.is_admin_actor(request.user, account):
+        return {"show": False}
+    return {"show": True, "account": account, "client": account.client, "minutes": admin_access.minutes_left(request, account),
+            "can_change": request.user.has_perm(perm("manage_hosting")), "staff": request.user.get_full_name() or request.user.email,
+            "csrf_token": context.get("csrf_token")}
+
+
 @register.inclusion_tag("components/tabs.html", takes_context=True)
 def domain_tabs(context, domain, active):
     """Overview, Auto renew, Nameservers, DNS, Registrar lock, Renew, Cancel."""

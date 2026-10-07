@@ -403,6 +403,9 @@ a.use-item:hover { border-color: var(--border-strong); }
 .use-area { fill: var(--accent, currentColor); opacity: .12; }
 @media (max-width: 991.98px) { .use-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 575.98px) { .use-grid { grid-template-columns: 1fr; } }
+.aa-banner { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; padding: .6rem 1rem; margin-bottom: 1rem; border: 1px solid var(--warn); border-left-width: .4rem; border-radius: 10px; background: var(--warn-bg); color: var(--warn); }
+.aa-banner strong { font-weight: 700; } .aa-banner .aa-who { color: inherit; flex: 1 1 18rem; }
+.aa-banner .aa-links { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-left: auto; }
 .site-pill.is-danger { color: var(--danger); background: var(--danger-bg); border-color: transparent; }
 .site-pill.is-info { color: var(--info); background: var(--info-bg); border-color: transparent; }
 .site-note { display: flex; gap: .55rem; align-items: flex-start; margin: 0; padding: .7rem .85rem; border-radius: 10px; font-size: .88rem;

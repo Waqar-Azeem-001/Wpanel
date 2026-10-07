@@ -105,7 +105,7 @@
 <section class="card mb-3">
   <div class="card-header"><h3 class="h6 mb-0">{% trans "Recent security events" %}</h3></div>
   {% if events %}<ul class="list-group list-group-flush">
-    {% for e in events %}<li class="list-group-item d-flex justify-content-between gap-2 flex-wrap"><span>{% if e.failed %}<i class="bi bi-x-circle text-danger" aria-hidden="true"></i> {% else %}<i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% endif %}{{ e.text }}{% if e.failed %} ({% trans "refused" %}){% endif %}{% if e.detail %} <code class="text-break">{{ e.detail }}</code>{% endif %}</span><small class="text-secondary">{{ e.by }} · {{ e.when|date:"j M Y, H:i" }}</small></li>{% endfor %}
+    {% for e in events %}<li class="list-group-item d-flex justify-content-between gap-2 flex-wrap"><span>{% if e.failed %}<i class="bi bi-x-circle text-danger" aria-hidden="true"></i> {% else %}<i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% endif %}{{ e.text }}{% if e.support %} <span class="site-pill is-info">{% trans "Support" %}</span>{% endif %}{% if e.failed %} ({% trans "refused" %}){% endif %}{% if e.detail %} <code class="text-break">{{ e.detail }}</code>{% endif %}</span><small class="text-secondary">{{ e.by }} · {{ e.when|date:"j M Y, H:i" }}</small></li>{% endfor %}
   </ul>{% else %}<div class="card-body text-secondary">{% trans "Nothing yet. Scans, quarantine, SSH, blocks and similar changes appear here." %}</div>{% endif %}
 </section>
 {% endif %}

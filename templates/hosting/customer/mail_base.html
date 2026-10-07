@@ -7,6 +7,7 @@ sign out). The webmail and the mail settings pages both extend this; nothing of 
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/mail.css' %}">{% endblock %}
 {% block body_class %}mail-app{% endblock %}
 {% block frame %}
+{% load portal %}{% admin_access_banner account %}
 <div class="ml">
   <header class="ml-top">
     <a class="ml-back" href="{{ back_url }}" data-close-window title="{% trans 'Close mail and go back to email accounts' %}" aria-label="{% trans 'Close mail and go back to email accounts' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i></a>

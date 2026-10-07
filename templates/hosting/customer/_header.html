@@ -1,4 +1,5 @@
 {% load ui portal i18n %}
+{% admin_access_banner account %}
 <p class="mb-2"><a href="{% url 'hosting_customer:list' %}">&larr; {% trans "My Services" %}</a></p>
 <header class="ws-head">
   <span class="site-avatar ws-avatar" aria-hidden="true">{{ account.domain|slice:":1"|upper }}</span>

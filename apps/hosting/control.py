@@ -23,12 +23,14 @@ contract and UI, never its own authorization or audit code:
 """
 from rest_framework import status
 
+from apps.accounts.roles import perm
 from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
 from .adapters.base import HostingError
 from .adapters.capabilities import (OPERATIONS, READ_OPERATIONS, Capability, CapabilityNotSupported,
                                     supported_capabilities)
+from . import admin_access
 from .models import LIVE_STATUSES
 from .services import can_self_service, get_adapter, visible_hosting_accounts_for_user
 
@@ -52,9 +54,16 @@ def capabilities_for(account) -> list:
     return [c.value for c in Capability if c in found]
 
 
+# What staff may not read with a view-only role: the customer's private content. Reading these needs a role that can manage hosting
+# and is audited, whether or not anything changes.
+PRIVATE_READS = frozenset({"webmail_access", "message_folders", "list_messages", "read_message", "browse_table"})
+
+
 def _authorize(user, account, operation):
     if operation in READ_OPERATIONS:
         allowed = visible_hosting_accounts_for_user(user).filter(pk=account.pk).exists()
+        if allowed and operation in PRIVATE_READS and admin_access.is_admin_actor(user, account):
+            allowed = user.has_perm(perm("manage_hosting"))
     else:
         allowed = can_self_service(user, account)
     if not allowed:
@@ -79,7 +88,8 @@ def perform(user, account, capability, operation, *args, audit_metadata=None, re
         raise ServiceError("This hosting account does not support that feature yet.",
                            code="capability_not_supported", status_code=status.HTTP_501_NOT_IMPLEMENTED)
     changing = operation not in READ_OPERATIONS
-    metadata = {"capability": capability.value, "operation": operation, **(audit_metadata or {})}
+    admin = admin_access.is_admin_actor(user, account)
+    metadata = {"capability": capability.value, "operation": operation, **(audit_metadata or {}), **({"admin_access": True} if admin else {})}
     try:
         result = getattr(adapter, operation)(account.username, *args, **kwargs)
     except CapabilityNotSupported as exc:
@@ -91,4 +101,6 @@ def perform(user, account, capability, operation, *args, audit_metadata=None, re
         raise ServiceError(f"The hosting server could not complete that: {exc}", code="adapter_error") from exc
     if changing:
         audit.record("hosting.control", actor=user, target=account, metadata=metadata, request=request)
+    elif admin and operation in PRIVATE_READS:
+        audit.record("hosting.admin_read", actor=user, target=account, metadata=metadata, request=request)
     return result

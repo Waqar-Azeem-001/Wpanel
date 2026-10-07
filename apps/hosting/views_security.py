@@ -49,7 +49,7 @@ def _events(account):
         if not text:
             continue
         detail = meta.get("path") or meta.get("domain") or meta.get("login") or meta.get("network") or meta.get("backup") or ""
-        out.append({"when": event.created_at, "text": text, "detail": detail, "failed": event.action.endswith("failed"),
+        out.append({"when": event.created_at, "text": text, "detail": detail, "failed": event.action.endswith("failed"), "support": bool(meta.get("admin_access")),
                     "by": event.actor_repr or "system"})
         if len(out) == 15:
             break

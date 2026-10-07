@@ -13,6 +13,25 @@
 
 {% if account.last_error %}<div class="alert alert-danger"><p>{{ account.last_error }}</p></div>{% endif %}
 
+{% if can_admin %}
+<section class="card mb-3"><div class="card-body">
+  <h2 class="h5">Manage this customer's hosting</h2>
+  <p class="text-secondary mb-2">Opens the customer's own hosting screens (files, databases, email, DNS and the rest) with your sign-in, so the customer's password is never needed. It needs a reason, lasts {{ admin_minutes_total }} minutes and is recorded against you and the customer.{% if not can_manage %} Your role can look but not change anything, and cannot read the customer's mail or database rows.{% endif %}</p>
+  {% if admin_minutes %}
+  <p class="mb-2"><span class="badge text-bg-warning">Admin Access active</span> {{ admin_minutes }} minutes left.</p>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{% url 'hosting_customer:detail' account.pk %}">Continue to Manage Hosting</a>
+    <form method="post" action="{% url 'hosting_staff:admin_access_end' account.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">End Admin Access</button></form>
+  </div>
+  {% else %}
+  <form method="post" action="{% url 'hosting_staff:admin_access' account.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+    <div class="col-lg"><label class="form-label small" for="aa-reason">Reason (a ticket number or a short note)</label><input class="form-control" id="aa-reason" name="reason" minlength="5" maxlength="200" required autocomplete="off"></div>
+    <div class="col-lg-auto"><button class="btn btn-primary" type="submit">Manage hosting</button></div>
+  </form>
+  {% endif %}
+</div></section>
+{% endif %}
+
 <div class="split">
   <section class="card"><div class="card-body">
     <h2>Details</h2>

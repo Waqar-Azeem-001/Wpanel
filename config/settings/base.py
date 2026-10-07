@@ -89,6 +89,7 @@ MIDDLEWARE = [
     "apps.core.middleware.StripNullBytesMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "apps.hosting.middleware.AdminAccessMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middleware.MaintenanceModeMiddleware",
 ]

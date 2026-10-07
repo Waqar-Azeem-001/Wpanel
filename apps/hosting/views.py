@@ -14,7 +14,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.orders.models import ItemKind, OrderItem
 
-from . import dashboard, forms, services
+from . import admin_access, dashboard, forms, services
 from .models import HostingAccount, HostingStatus
 
 
@@ -53,7 +53,10 @@ def my_hosting_list(request):
 
 
 def _own_account(request, pk):
-    return get_object_or_404(services.visible_hosting_accounts_for_user(request.user), pk=pk)
+    """The account for a customer's screen. Staff (who can see every account) must have started Admin Access for this one."""
+    account = get_object_or_404(services.visible_hosting_accounts_for_user(request.user), pk=pk)
+    admin_access.require(request, account)
+    return account
 
 
 def _service_page(request, pk, template, **extra):
@@ -133,12 +136,39 @@ def staff_hosting_detail(request, pk):
     return render(request, "hosting/staff/detail.html", {
         "account": account,
         "can_manage": can_manage,
+        "can_admin": account.server is not None and account.status in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED),
+        "admin_minutes": admin_access.minutes_left(request, account),
+        "admin_minutes_total": admin_access.MINUTES,
         "assign_server_form": forms.AssignServerForm(product=account.product) if account.server is None else None,
         "cancel_form": forms.CancelHostingForm(),
         "suspend_form": forms.SuspendHostingForm(),
         "terminate_form": forms.TerminateHostingForm(),
         "change_package_form": forms.ChangePackageForm(),
     })
+
+
+@require_POST
+@portal_permission_required(perm("view_hosting"))
+def staff_hosting_admin_access_start(request, pk):
+    account = get_object_or_404(HostingAccount.objects.select_related("client", "server"), pk=pk)
+    if account.server is None or account.status not in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED):
+        messages.error(request, "This account has no live hosting to manage yet.")
+        return redirect("hosting_staff:detail", pk=account.pk)
+    try:
+        admin_access.start(request, account, request.POST.get("reason", ""))
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect("hosting_staff:detail", pk=account.pk)
+    return redirect("hosting_customer:detail", pk=account.pk)
+
+
+@require_POST
+@portal_permission_required(perm("view_hosting"))
+def staff_hosting_admin_access_end(request, pk):
+    account = get_object_or_404(HostingAccount.objects.select_related("client"), pk=pk)
+    admin_access.end(request, account)
+    messages.success(request, "Admin Access ended.")
+    return redirect("hosting_staff:detail", pk=account.pk)
 
 
 @require_POST
