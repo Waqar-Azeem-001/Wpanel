@@ -121,6 +121,7 @@ class Server(TimeStampedModel):
                               db_index=True)
     max_accounts = models.PositiveIntegerField(null=True, blank=True, help_text="Blank means no fixed limit.")
     notes = models.TextField(blank=True)
+    region = models.CharField(max_length=60, blank=True, help_text="Where the machine is, for example EU (Germany). Shown on the infrastructure dashboard.")
 
     # --- Phase 05: provisioning connection -------------------------------------------
     kind = models.CharField(max_length=20, choices=ServerKind.choices, default=ServerKind.MANUAL)

@@ -944,7 +944,8 @@ Before marking any phase 🟢:
 | H10 Security Center | 🟡 local | `docs/h10-security.md`: malware scan with quarantine, folder protection, SSH keys, file-integrity monitoring, security events, SSL and IP summary |
 | H11 Usage, logs and performance | 🟡 local | `docs/h11-usage.md`: allowance and resource counts, warnings, 7/30/90-day history, live CPU/memory/processes/disk activity, disk limit enforced by the provider |
 | H12 Admin Access | 🟡 local | `docs/h12-admin-access.md`: staff manage a customer's hosting through the same engine with a reason, banner, one-hour grant, role-based actions and full audit |
-| H13-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| H13 Infrastructure dashboard | 🟡 local | `docs/h13-infrastructure.md`: a card per node with health, region, provider, account count, CPU/memory/disk/load/network and web/database/mail/DNS/agent/backup services; cPanel nodes report only what WHM can |
+| H14-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 

@@ -265,7 +265,7 @@ class ServerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Server
-        fields = ["id", "name", "hostname", "ip_address", "status", "max_accounts", "notes", "kind", "api_port",
+        fields = ["id", "name", "hostname", "ip_address", "region", "status", "max_accounts", "notes", "kind", "api_port",
                   "api_username", "api_token", "use_ssl", "verify_ssl", "infra_provider", "infra_client_id",
                   "infra_client_secret", "infra_api_user", "infra_api_password", "created_at", "updated_at"]
         read_only_fields = ["id", "status", "created_at", "updated_at"]

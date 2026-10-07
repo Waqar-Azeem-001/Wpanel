@@ -130,6 +130,13 @@ def staff_hosting_bulk(request):
 
 
 @portal_permission_required(perm("view_hosting"))
+def staff_infrastructure(request):
+    from . import infra_dashboard
+
+    return render(request, "hosting/staff/infrastructure.html", infra_dashboard.dashboard())
+
+
+@portal_permission_required(perm("view_hosting"))
 def staff_hosting_detail(request, pk):
     account = get_object_or_404(HostingAccount.objects.select_related("client", "product", "server"), pk=pk)
     can_manage = request.user.has_perm(perm("manage_hosting"))

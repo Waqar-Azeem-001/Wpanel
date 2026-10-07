@@ -47,7 +47,7 @@ def test_the_command_adds_sample_accounts_once_and_removes_them(owner, plan, cli
     call_command("demo_hosting_data")
     call_command("demo_hosting_data")  # running it twice adds nothing more
     assert HostingAccount.objects.filter(client=client_obj).count() == 5
-    assert Server.objects.filter(kind="demo").count() == 1
+    assert Server.objects.filter(kind="demo").count() == 3  # the hosting server and two extra sample machines for the infrastructure dashboard
     call_command("demo_hosting_data", "--remove")
     assert not HostingAccount.objects.exists() and not Server.objects.filter(kind="demo").exists()
 

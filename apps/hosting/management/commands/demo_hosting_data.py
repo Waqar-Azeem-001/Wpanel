@@ -23,6 +23,9 @@ from apps.hosting.models import HostingAccount, HostingStatus
 from apps.products.models import Product, ProductType, Server, ServerKind
 
 DEMO_SERVER_NAME = "Demo (sample data)"
+# extra sample machines for the infrastructure dashboard: name, hostname, region, status
+EXTRA_NODES = [("Demo node 2 (sample data)", "node2.demo.invalid", "EU (Germany)", "active"),
+               ("Demo node 3 (sample data)", "node3.demo.invalid", "US (Missouri)", "maintenance")]
 
 # domain, username, status, disk used/limit MB, bandwidth used/limit MB
 SAMPLES = [
@@ -92,6 +95,7 @@ class Command(BaseCommand):
                     shutil.rmtree(files_root() / username, ignore_errors=True)  # the sample website files too
                     shutil.rmtree(files_root() / f"{username}.state", ignore_errors=True)  # and its sample databases
             removed = HostingAccount.objects.filter(server=server).delete()[0] if server else 0
+            Server.objects.filter(name__in=[n for n, *_ in EXTRA_NODES]).delete()
             if server:
                 server.delete()
             self.stdout.write(self.style.SUCCESS(f"Removed {removed} sample account(s) and the demo server."))
@@ -107,7 +111,11 @@ class Command(BaseCommand):
         if product is None:
             raise CommandError("No product exists yet. Create a hosting plan first.")
         server, _ = Server.objects.get_or_create(
-            name=DEMO_SERVER_NAME, defaults={"hostname": "demo.invalid", "kind": ServerKind.DEMO})
+            name=DEMO_SERVER_NAME, defaults={"hostname": "demo.invalid", "kind": ServerKind.DEMO, "region": "EU (Finland)",
+                                           "ip_address": "203.0.113.10", "infra_provider": "contabo", "max_accounts": 50})
+        for name, hostname, region, state in EXTRA_NODES:
+            Server.objects.get_or_create(name=name, defaults={"hostname": hostname, "kind": ServerKind.DEMO, "region": region, "status": state,
+                                                              "infra_provider": "contabo", "max_accounts": 100})
         created = 0
         for domain, username, status, disk, bandwidth in SAMPLES:
             _, was_created = HostingAccount.objects.get_or_create(

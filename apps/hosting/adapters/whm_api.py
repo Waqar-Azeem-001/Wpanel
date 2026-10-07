@@ -21,9 +21,14 @@ have varied across versions, so it is parsed defensively and falls back to
 import requests
 
 from .base import HostingAdapter, HostingError
+from .capabilities import NodeCapability, NodeService, NodeStatus
+
+# (key, label, WHM service names): the node is reported as running only when every named service is
+SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]), ("mail", "Mail", ["exim", "dovecot"]),
+            ("dns", "DNS", ["named"])]
 
 
-class WhmApiAdapter(HostingAdapter):
+class WhmApiAdapter(NodeCapability, HostingAdapter):
     def _base_url(self):
         scheme = "https" if self.use_ssl else "http"
         return f"{scheme}://{self.host}:{self.port}/json-api"
@@ -67,6 +72,42 @@ class WhmApiAdapter(HostingAdapter):
         version = (self._call("version").get("data") or {}).get("version") or ""
         packages = (self._call("listpkgs").get("data") or {}).get("pkg") or []
         return {"version": str(version), "packages": sorted(p.get("name", "") for p in packages if p.get("name"))}
+
+    def node_status(self):
+        """
+        What WHM can honestly report about the machine: its version, the load average and whether the web, database, mail and DNS
+        services run. CPU, memory, disk, network, a node agent and backups are not reported by WHM, so they stay ``None`` /
+        "unavailable" instead of being guessed. Parsed defensively, like ``get_usage``; not yet exercised against a live server.
+        """
+        version = str((self._call("version").get("data") or {}).get("version") or "")
+        load = None
+        try:
+            payload = self._call("loadavg")
+            data = payload.get("data") if isinstance(payload.get("data"), dict) and "one" in payload["data"] else payload
+            load = (float(data["one"]), float(data["five"]), float(data["fifteen"]))
+        except (HostingError, KeyError, TypeError, ValueError):
+            load = None
+        services = []
+        for key, label, names in SERVICES:
+            running = []
+            for name in names:
+                try:
+                    entries = (self._call("servicestatus", {"service": name}).get("data") or {}).get("service") or []
+                    running.append(bool(int(entries[0].get("running", 0))) if entries else None)
+                except (HostingError, TypeError, ValueError, IndexError, AttributeError):
+                    running.append(None)
+            if all(r is None for r in running):
+                state = "unavailable"
+            elif all(running):
+                state = "running"
+            elif not any(running):
+                state = "down"
+            else:
+                state = "degraded"
+            services.append(NodeService(key, label, state))
+        services.append(NodeService("agent", "Node agent", "unavailable", "cPanel servers have no WHPanel agent."))
+        services.append(NodeService("backups", "Backups", "unavailable", "cPanel's API does not report backup state here."))
+        return NodeStatus(version=version, load=load, services=services)
 
     def create_account(self, *, username, domain, package, contact_email, password):
         self._call("createacct", {"username": username, "domain": domain, "plan": package,

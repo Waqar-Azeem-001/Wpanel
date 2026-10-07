@@ -869,6 +869,45 @@ class AccessCapability(ABC):
     def delete_ip_rule(self, username: str, rule_id: str) -> None: ...
 
 
+@dataclass(frozen=True)
+class NodeService:
+    key: str  # "web", "database", "mail", "dns", "agent" or "backups"
+    label: str
+    state: str  # "running", "degraded", "down" or "unavailable" (this kind of server cannot report it)
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class NodeStatus:
+    """
+    How one machine is doing. A figure the server kind cannot report is ``None`` - never invented - and the dashboard says
+    "not reported by this server type". A cPanel/WHM server cannot report CPU, memory, disk, network, an agent or backups.
+    """
+
+    version: str = ""
+    cpu_percent: Optional[float] = None
+    memory_used_mb: Optional[int] = None
+    memory_total_mb: Optional[int] = None
+    disk_used_gb: Optional[float] = None
+    disk_total_gb: Optional[float] = None
+    load: Optional[tuple] = None  # (1 minute, 5 minutes, 15 minutes)
+    network_in_kbps: Optional[int] = None
+    network_out_kbps: Optional[int] = None
+    uptime_days: Optional[int] = None
+    services: list = field(default_factory=list)  # NodeService
+
+
+class NodeCapability(ABC):
+    """The machine itself, not one hosting account on it. Read-only; staff-facing only."""
+
+    @abstractmethod
+    def node_status(self) -> NodeStatus: ...
+
+
+def supports_node(adapter) -> bool:
+    return isinstance(adapter, NodeCapability)
+
+
 class InsightsCapability(ABC):
     """History and live resource use of one website, read-only. Limits are enforced by the provider, not by these screens."""
 

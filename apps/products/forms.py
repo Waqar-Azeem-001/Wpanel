@@ -216,11 +216,11 @@ class ServerForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields.update(_fields(Server, (
-            "name", "hostname", "ip_address", "max_accounts", "notes",
+            "name", "hostname", "ip_address", "region", "max_accounts", "notes",
             "kind", "api_port", "api_username", "use_ssl", "verify_ssl",
             "infra_provider", "infra_client_id", "infra_api_user",
         )))
-        for name in ("infra_provider", "infra_client_id", "infra_api_user"):
+        for name in ("infra_provider", "infra_client_id", "infra_api_user", "region"):
             self.fields[name].required = False
         self.fields["notes"].widget = forms.Textarea(attrs={"rows": 3})
         # Optional with a model-level default, so a minimal submission (just name/hostname,
@@ -243,7 +243,7 @@ class ServerForm(forms.Form):
         )
 
         # WHM details first, then the company that rents the machine; the labels say which is which
-        self.order_fields(["name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
+        self.order_fields(["name", "hostname", "ip_address", "region", "max_accounts", "notes", "kind", "api_port", "api_username",
                            "api_token", "use_ssl", "verify_ssl", "infra_provider", "infra_client_id", "infra_client_secret",
                            "infra_api_user", "infra_api_password"])
         self.fields["infra_provider"].label = "Provider (who rents you this machine)"

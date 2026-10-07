@@ -22,7 +22,7 @@ PRODUCT_FIELDS = (
 )
 ADDON_FIELDS = ("name", "description", "kind", "category")
 CATEGORY_FIELDS = ("name", "short_name", "blurb", "icon", "group", "kind", "sort_order", "is_active")
-SERVER_FIELDS = ("name", "hostname", "ip_address", "max_accounts", "notes", "kind", "api_port", "api_username",
+SERVER_FIELDS = ("name", "hostname", "ip_address", "region", "max_accounts", "notes", "kind", "api_port", "api_username",
                  "use_ssl", "verify_ssl", "infra_provider", "infra_client_id", "infra_api_user")
 
 

@@ -439,7 +439,7 @@ def staff_server_create(request):
 def staff_server_edit(request, pk):
     server = get_object_or_404(Server, pk=pk)
     form = forms.ServerForm(request.POST or None, initial={
-        "name": server.name, "hostname": server.hostname, "ip_address": server.ip_address,
+        "name": server.name, "hostname": server.hostname, "ip_address": server.ip_address, "region": server.region,
         "max_accounts": server.max_accounts, "notes": server.notes,
         "kind": server.kind, "api_port": server.api_port, "api_username": server.api_username,
         "use_ssl": server.use_ssl, "verify_ssl": server.verify_ssl,

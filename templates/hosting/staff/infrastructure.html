@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Infrastructure · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Infrastructure</h1>
+  <p class="page-sub">How each server is doing, as far as its type can report. A figure a server cannot report is shown as not reported, never guessed.</p>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <a href="{% url 'catalog_staff:server_list' %}">Servers</a>
+    <a href="{% url 'hosting_staff:list' %}">Hosting accounts</a>
+  </div>
+</div>
+
+<div class="sec-summary mb-3">
+  <div class="sec-tile"><span class="sec-label">Nodes</span><strong>{{ nodes }}</strong></div>
+  <div class="sec-tile {% if counts.healthy %}is-ok{% endif %}"><span class="sec-label">Healthy</span><strong>{{ counts.healthy }}</strong></div>
+  <div class="sec-tile {% if attention %}is-danger{% endif %}"><span class="sec-label">Need attention</span><strong>{{ attention }}</strong></div>
+  <div class="sec-tile {% if counts.maintenance %}is-warn{% endif %}"><span class="sec-label">Maintenance</span><strong>{{ counts.maintenance }}</strong></div>
+  <div class="sec-tile"><span class="sec-label">Unknown</span><strong>{{ counts.unknown }}</strong></div>
+  <div class="sec-tile"><span class="sec-label">Hosting accounts</span><strong>{{ accounts }}</strong></div>
+</div>
+
+{% for c in cards %}
+<section class="card mb-3 node-card">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h2 class="h5 mb-0"><i class="bi bi-hdd-rack" aria-hidden="true"></i> {{ c.server.name }}
+        <span class="site-pill {% if c.health == 'healthy' %}is-ok{% elif c.health == 'degraded' or c.health == 'maintenance' %}is-warn{% elif c.health == 'down' or c.health == 'unreachable' or c.health == 'offline' %}is-danger{% endif %} ms-1">{{ c.health|title }}</span></h2>
+      <small class="text-secondary">{{ c.why }}</small>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if perms.accounts.manage_hosting %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'catalog_staff:server_edit' c.server.pk %}">Edit server</a>{% endif %}
+    </div>
+  </div>
+  <div class="card-body">
+    <dl class="meta node-meta">
+      <dt>Hostname</dt><dd>{{ c.server.hostname }}</dd>
+      <dt>IP address</dt><dd>{{ c.server.ip_address|default:"—" }}</dd>
+      <dt>Region</dt><dd>{{ c.server.region|default:"—" }}</dd>
+      <dt>Provider</dt><dd>{% if c.provider %}{{ c.provider }}{% else %}—{% endif %} <span class="text-secondary">· {{ c.kind }}</span></dd>
+      <dt>Hosting accounts</dt><dd>{{ c.accounts }}{% if c.server.max_accounts %} / {{ c.server.max_accounts }}{% endif %} <span class="text-secondary">({{ c.live_accounts }} live)</span></dd>
+      {% if c.status.version %}<dt>Software</dt><dd>{{ c.status.version }}</dd>{% endif %}
+      {% if c.status.uptime_days is not None %}<dt>Uptime</dt><dd>{{ c.status.uptime_days }} days</dd>{% endif %}
+    </dl>
+
+    {% if c.status %}
+    <div class="use-grid mt-3">
+      {% for m in c.meters %}
+      <div class="use-item"><span class="use-label">{{ m.label }}</span>
+        {% if m.known %}<strong>{% if m.label == "CPU" %}{{ m.percent }}%{% else %}{{ m.text }}{% endif %}</strong>
+        <progress class="usage-meter{% if m.state == 'danger' %} is-danger{% elif m.state == 'warning' %} is-warning{% endif %}" max="100" value="{{ m.percent }}" aria-label="{{ m.label }}">{{ m.percent }}%</progress>
+        {% else %}<span class="text-secondary small">Not reported by this server type</span>{% endif %}</div>
+      {% endfor %}
+      <div class="use-item"><span class="use-label">Load (1 / 5 / 15 min)</span>{% if c.load %}<strong>{{ c.load.0 }} / {{ c.load.1 }} / {{ c.load.2 }}</strong>{% else %}<span class="text-secondary small">Not reported by this server type</span>{% endif %}</div>
+      <div class="use-item"><span class="use-label">Network (in / out)</span>{% if c.network %}<strong>{{ c.network.0 }} / {{ c.network.1 }} KB/s</strong>{% else %}<span class="text-secondary small">Not reported by this server type</span>{% endif %}</div>
+      {% if c.capacity %}<div class="use-item"><span class="use-label">Account capacity</span><strong>{{ c.accounts }} / {{ c.server.max_accounts }}</strong>
+        <progress class="usage-meter{% if c.capacity.state == 'danger' %} is-danger{% elif c.capacity.state == 'warning' %} is-warning{% endif %}" max="100" value="{{ c.capacity.percent }}" aria-label="Account capacity">{{ c.capacity.percent }}%</progress></div>{% endif %}
+    </div>
+    <h3 class="h6 mt-3">Services</h3>
+    <div class="node-services">
+      {% for s in c.services %}{% if s %}
+      <span class="site-pill {% if s.state == 'running' %}is-ok{% elif s.state == 'degraded' %}is-warn{% elif s.state == 'down' %}is-danger{% endif %}" title="{{ s.detail }}">{{ s.label }}: {% if s.state == "unavailable" %}not reported{% else %}{{ s.state }}{% endif %}</span>
+      {% endif %}{% endfor %}
+    </div>
+    {% elif c.health == "unreachable" %}<p class="text-danger mb-0 mt-2">{{ c.why }}</p>
+    {% else %}<p class="text-secondary mb-0 mt-2">No live figures for this server{% if c.health == "maintenance" or c.health == "offline" %} while it is {{ c.health }}{% else %}: its type ({{ c.kind }}) reports none{% endif %}.</p>{% endif %}
+  </div>
+</section>
+{% empty %}
+<section class="card"><div class="card-body text-secondary">No servers yet. <a href="{% url 'catalog_staff:server_create' %}">Add one</a>.</div></section>
+{% endfor %}
+{% endblock %}

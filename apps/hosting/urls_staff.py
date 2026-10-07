@@ -7,6 +7,7 @@ app_name = "hosting_staff"
 urlpatterns = [
     path("", views.staff_hosting_list, name="list"),
     path("bulk/", views.staff_hosting_bulk, name="bulk"),
+    path("infrastructure/", views.staff_infrastructure, name="infrastructure"),
     path("<int:pk>/", views.staff_hosting_detail, name="detail"),
     path("<int:pk>/admin-access/", views.staff_hosting_admin_access_start, name="admin_access"),
     path("<int:pk>/admin-access/end/", views.staff_hosting_admin_access_end, name="admin_access_end"),
