@@ -14,13 +14,14 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           AccessCapability, BackupsCapability, CronCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
+                           AccessCapability, BackupsCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
 from .demo_backups import DemoBackups
 from .demo_cron import DemoCron
 from .demo_domains import SERVER_IP, DemoDomains
 from .demo_email import DemoEmail
 from .demo_php import DemoPhp
+from .demo_security import DemoSecurity
 from .demo_tools import DemoAccess, DemoFtp, DemoLogs
 from .demo_ssl import DemoSsl
 from .manual import ManualAdapter
@@ -117,6 +118,12 @@ def _account_domain(username):
     return account.domain if account else ""
 
 
+def security_for(username):
+    """The account's demo security tools, working on its real (sandbox) website files."""
+    sandbox_for(username)
+    return DemoSecurity(files_root() / f"{username}.state", files_root() / username, _account_domain(username))
+
+
 def backups_for(username):
     """The account's demo backups: zip archives kept beside the website folder."""
     sandbox_for(username)  # the website folder exists (with its sample files) before the first backup
@@ -170,7 +177,7 @@ def sandbox_for(username):
 
 
 class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
-                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, ManualAdapter):
+                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -503,3 +510,50 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
 
     def set_backup_schedule(self, username, schedule):
         backups_for(username).set_schedule(schedule)
+
+    # --- Security ----------------------------------------------------------------------------------------------
+
+    def get_scan_result(self, username):
+        return security_for(username).scan_result()
+
+    def run_malware_scan(self, username):
+        return security_for(username).scan()
+
+    def quarantine_file(self, username, path):
+        return security_for(username).quarantine(path)
+
+    def list_quarantine(self, username):
+        return security_for(username).quarantine_list()
+
+    def restore_quarantined(self, username, item_id):
+        security_for(username).restore(item_id)
+
+    def list_protected_dirs(self, username):
+        return security_for(username).protected()
+
+    def protect_directory(self, username, path, login, password):
+        security_for(username).protect(path, login, password)
+
+    def unprotect_directory(self, username, path):
+        security_for(username).unprotect(path)
+
+    def ssh_status(self, username):
+        return security_for(username).ssh_status()
+
+    def set_ssh_enabled(self, username, enabled):
+        security_for(username).set_ssh(enabled)
+
+    def add_ssh_key(self, username, label, public_key):
+        return security_for(username).add_key(label, public_key)
+
+    def delete_ssh_key(self, username, fingerprint):
+        security_for(username).delete_key(fingerprint)
+
+    def integrity_status(self, username):
+        return security_for(username).integrity_status()
+
+    def create_integrity_baseline(self, username):
+        return security_for(username).baseline()
+
+    def check_integrity(self, username):
+        return security_for(username).check()

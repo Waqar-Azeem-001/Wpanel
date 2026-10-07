@@ -18,7 +18,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from apps.clients.models import Client
-from apps.hosting.adapters.demo import access_for, backups_for, cron_for, files_root, ftp_for, php_for, ssl_for
+from apps.hosting.adapters.demo import access_for, backups_for, sandbox_for, security_for, cron_for, files_root, ftp_for, php_for, ssl_for
 from apps.hosting.models import HostingAccount, HostingStatus
 from apps.products.models import Product, ProductType, Server, ServerKind
 
@@ -62,6 +62,15 @@ def seed_certificates_and_php(username):
         backups.verify(backups.create("full"))
         backups.create("database")
         backups.set_schedule("weekly")
+    if username == "demoshop":
+        box = sandbox_for(username)
+        box.make_directory("public_html/wp-content")
+        box.make_directory("public_html/wp-content/uploads")
+        box.write_file("public_html/wp-content/uploads/cache.php", b"<?php /* sample finding, harmless */ eval(base64_decode('SGVsbG8=')); ?>")
+        box.write_file("public_html/wp-content/uploads/photo.php.jpg", b"not really a picture")
+        security = security_for(username)
+        security.baseline()
+        security.scan()
     if username == "demoblog":
         domain = HostingAccount.objects.get(username=username).domain
         php_for(username).set_settings(domain, {"version": "8.0"})

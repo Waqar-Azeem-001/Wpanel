@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Security" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if failed %}
+<section class="card"><div class="card-body text-secondary">{% trans "Security information could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "Security" %}</h2>
+</div>
+
+<div class="sec-summary mb-3">
+  <div class="sec-tile {% if ssl_url and ssl_bad %}is-warn{% elif ssl_url %}is-ok{% endif %}"><span class="sec-label">{% trans "SSL" %}</span><strong>{% if ssl_url %}{% if ssl_bad %}{{ ssl_bad }} {% trans "need attention" %}{% else %}{% trans "All valid" %}{% endif %}{% else %}&mdash;{% endif %}</strong>{% if ssl_url %}<a href="{{ ssl_url }}">{% trans "Open" %}</a>{% endif %}</div>
+  <div class="sec-tile {% if high %}is-danger{% elif scan.findings %}is-warn{% elif scanned %}is-ok{% endif %}"><span class="sec-label">{% trans "Malware scan" %}</span><strong>{% if not scanned %}{% trans "Not scanned yet" %}{% elif scan.findings %}{{ scan.findings|length }} {% trans "to look at" %}{% else %}{% trans "Clean" %}{% endif %}</strong></div>
+  <div class="sec-tile"><span class="sec-label">{% trans "Blocked IPs" %}</span><strong>{% if blocks is not None %}{{ blocks }}{% else %}&mdash;{% endif %}</strong>{% if access_url %}<a href="{{ access_url }}">{% trans "Open" %}</a>{% endif %}</div>
+  <div class="sec-tile {% if ssh.enabled %}is-info{% endif %}"><span class="sec-label">SSH</span><strong>{% if ssh.enabled %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</strong></div>
+  <div class="sec-tile"><span class="sec-label">{% trans "Protected folders" %}</span><strong>{{ protected|length }}</strong></div>
+  <div class="sec-tile {% if integrity_changes %}is-warn{% elif baseline %}is-ok{% endif %}"><span class="sec-label">{% trans "File changes" %}</span><strong>{% if not baseline %}{% trans "No baseline" %}{% elif integrity_changes %}{{ integrity_changes }} {% trans "found" %}{% else %}{% trans "None" %}{% endif %}</strong></div>
+</div>
+
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center gap-2"><h3 class="h6 mb-0">{% trans "Malware scan" %}</h3>
+    <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="scan"><button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Scan now" %}</button></form></div>
+  <div class="card-body pb-2">
+    <p class="small text-secondary mb-2">{% if scanned %}{% trans "Last scan" %}: {{ scanned|date:"j M Y, H:i" }} · {{ scan.files_scanned }} {% trans "files checked" %}.{% else %}{% trans "Your website files have not been scanned yet." %}{% endif %} {% trans "A scan looks for known bad patterns. It is a good warning, not proof, and it never deletes anything." %}</p>
+  </div>
+  {% if scan.findings %}
+  <div class="table-responsive"><table class="table fm-table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "File" %}</th><th scope="col">{% trans "What looks wrong" %}</th><th scope="col">{% trans "Risk" %}</th><th scope="col" class="text-end">{% trans "Action" %}</th></tr></thead>
+    <tbody>
+    {% for f in scan.findings %}
+      <tr><td class="fm-name text-break"><i class="bi bi-file-earmark-code" aria-hidden="true"></i> {{ f.path }}</td><td>{{ f.detail }}</td>
+        <td><span class="site-pill {% if f.severity == 'high' %}is-danger{% else %}is-warn{% endif %}">{% if f.severity == "high" %}{% trans "High" %}{% else %}{% trans "Medium" %}{% endif %}</span></td>
+        <td class="text-end"><form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="quarantine"><input type="hidden" name="path" value="{{ f.path }}"><button class="btn btn-sm btn-outline-danger" type="submit" data-confirm="{% trans 'Move' %} {{ f.path }} {% trans 'to quarantine? It stops working on your website, and you can put it back later.' %}"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> {% trans "Quarantine" %}</button></form></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% elif scanned %}<div class="card-body pt-0 text-success"><i class="bi bi-check-circle" aria-hidden="true"></i> {% trans "Nothing suspicious was found." %}</div>{% endif %}
+  {% if quarantine %}
+  <div class="card-body border-top"><h4 class="h6">{% trans "In quarantine" %}</h4>
+    <ul class="list-unstyled mb-0">{% for r in quarantine %}<li class="d-flex justify-content-between align-items-center gap-2 py-1"><span class="text-break"><code>{{ r.q.path }}</code> <small class="text-secondary">{{ r.at|date:"j M Y" }}</small></span>
+      <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="restore"><input type="hidden" name="item" value="{{ r.q.item_id }}"><button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {% trans "Put back" %}</button></form></li>{% endfor %}</ul></div>
+  {% endif %}
+</section>
+
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center gap-2"><h3 class="h6 mb-0">{% trans "File changes" %}</h3>
+    <div class="d-flex gap-2">
+      <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="baseline"><button class="btn btn-sm btn-outline-secondary" type="submit" {% if baseline %}data-confirm="{% trans 'Take a new baseline? It records your files as they are now and forgets the older one.' %}"{% endif %}>{% if baseline %}{% trans "New baseline" %}{% else %}{% trans "Take a baseline" %}{% endif %}</button></form>
+      {% if baseline %}<form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="check"><button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> {% trans "Check now" %}</button></form>{% endif %}
+    </div></div>
+  <div class="card-body">
+    {% if not baseline %}<p class="small text-secondary mb-0">{% trans "Take a baseline when your website is working and clean. Later, a check shows every file that changed, appeared or vanished, which is how a hack is often found." %}</p>
+    {% else %}
+    <p class="small text-secondary">{% trans "Baseline taken" %}: {{ baseline|date:"j M Y, H:i" }} · {{ integrity.files_in_baseline }} {% trans "files" %}.{% if checked %} {% trans "Last check" %}: {{ checked|date:"j M Y, H:i" }}.{% endif %}</p>
+    {% if integrity_changes %}
+    <div class="row g-3">
+      {% if integrity.changed %}<div class="col-md-4"><h4 class="h6 text-warning">{% trans "Changed" %}</h4><ul class="small mb-0">{% for p in integrity.changed %}<li class="text-break"><code>{{ p }}</code></li>{% endfor %}</ul></div>{% endif %}
+      {% if integrity.added %}<div class="col-md-4"><h4 class="h6 text-info">{% trans "New" %}</h4><ul class="small mb-0">{% for p in integrity.added %}<li class="text-break"><code>{{ p }}</code></li>{% endfor %}</ul></div>{% endif %}
+      {% if integrity.removed %}<div class="col-md-4"><h4 class="h6 text-danger">{% trans "Gone" %}</h4><ul class="small mb-0">{% for p in integrity.removed %}<li class="text-break"><code>{{ p }}</code></li>{% endfor %}</ul></div>{% endif %}
+    </div>
+    {% elif checked %}<p class="text-success mb-0"><i class="bi bi-check-circle" aria-hidden="true"></i> {% trans "No file has changed since the baseline." %}</p>{% endif %}
+    {% endif %}
+  </div>
+</section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Password-protected folders" %}</h3></div>
+  <div class="card-body">
+    <form method="post" action="{{ action_url }}" data-plain autocomplete="off">{% csrf_token %}<input type="hidden" name="action" value="protect">
+      <div class="row g-2">
+        <div class="col-lg-3"><label class="form-label small" for="sec-path">{% trans "Folder" %}</label><input class="form-control" id="sec-path" name="path" maxlength="200" required placeholder="public_html/private"></div>
+        <div class="col-lg-3"><label class="form-label small" for="sec-login">{% trans "Login" %}</label><input class="form-control" id="sec-login" name="login" maxlength="32" required autocomplete="off"></div>
+        <div class="col-lg-4"><label class="form-label small" for="sec-pass">{% trans "Password" %}</label><input class="form-control" id="sec-pass" name="password" type="password" minlength="10" maxlength="128" required autocomplete="new-password"></div>
+        <div class="col-lg-2 d-flex align-items-end"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-lock" aria-hidden="true"></i> {% trans "Protect" %}</button></div>
+      </div>
+    </form>
+  </div>
+  {% if protected %}<div class="table-responsive"><table class="table fm-table align-middle mb-0"><tbody>
+    {% for d in protected %}<tr><td class="fm-name"><i class="bi bi-lock-fill" aria-hidden="true"></i> {{ d.path }}</td><td>{% trans "Login" %}: <code>{{ d.login }}</code></td>
+      <td class="text-end"><form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="unprotect"><input type="hidden" name="path" value="{{ d.path }}"><button class="btn btn-sm btn-outline-secondary" type="submit" data-confirm="{% trans 'Remove the protection from' %} {{ d.path }}? {% trans 'Anyone can then open it.' %}"><i class="bi bi-unlock" aria-hidden="true"></i> {% trans "Remove" %}</button></form></td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+</section>
+
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center gap-2"><h3 class="h6 mb-0">SSH</h3>
+    <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="ssh"><input type="hidden" name="enabled" value="{% if ssh.enabled %}0{% else %}1{% endif %}"><button class="btn btn-sm {% if ssh.enabled %}btn-success{% else %}btn-outline-secondary{% endif %}" type="submit" aria-pressed="{% if ssh.enabled %}true{% else %}false{% endif %}">{% if ssh.enabled %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</button></form></div>
+  <div class="card-body">
+    <p class="small text-secondary">{% trans "Sign in with a key, never a password. Server" %}: <code>{{ ssh.host }}</code> · {% trans "port" %} <code>{{ ssh.port }}</code>. {% trans "Paste only the public key (the .pub file); never share the private one." %}</p>
+    <form method="post" action="{{ action_url }}" data-plain autocomplete="off">{% csrf_token %}<input type="hidden" name="action" value="add_key">
+      <div class="row g-2">
+        <div class="col-lg-3"><label class="form-label small" for="ssh-label">{% trans "Name" %}</label><input class="form-control" id="ssh-label" name="label" maxlength="40" required placeholder="{% trans 'My laptop' %}"></div>
+        <div class="col-lg"><label class="form-label small" for="ssh-key">{% trans "Public key" %}</label><input class="form-control" id="ssh-key" name="public_key" maxlength="8192" required placeholder="ssh-ed25519 AAAA…"></div>
+        <div class="col-lg-auto d-flex align-items-end"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add key" %}</button></div>
+      </div>
+    </form>
+  </div>
+  {% if ssh.keys %}<div class="table-responsive"><table class="table fm-table align-middle mb-0"><tbody>
+    {% for k in ssh.keys %}<tr><td class="fm-name"><i class="bi bi-key" aria-hidden="true"></i> {{ k.label }}</td><td><code class="text-break">{{ k.fingerprint }}</code></td><td>{{ k.key_type }}</td>
+      <td class="text-end"><form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete_key"><input type="hidden" name="fingerprint" value="{{ k.fingerprint }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Remove the key' %} {{ k.label }}?" title="{% trans 'Remove' %}" aria-label="{% trans 'Remove the key' %} {{ k.label }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form></td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+</section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Recent security events" %}</h3></div>
+  {% if events %}<ul class="list-group list-group-flush">
+    {% for e in events %}<li class="list-group-item d-flex justify-content-between gap-2 flex-wrap"><span>{% if e.failed %}<i class="bi bi-x-circle text-danger" aria-hidden="true"></i> {% else %}<i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% endif %}{{ e.text }}{% if e.failed %} ({% trans "refused" %}){% endif %}{% if e.detail %} <code class="text-break">{{ e.detail }}</code>{% endif %}</span><small class="text-secondary">{{ e.by }} · {{ e.when|date:"j M Y, H:i" }}</small></li>{% endfor %}
+  </ul>{% else %}<div class="card-body text-secondary">{% trans "Nothing yet. Scans, quarantine, SSH, blocks and similar changes appear here." %}</div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

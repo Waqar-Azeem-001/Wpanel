@@ -117,6 +117,8 @@ SECTIONS = [
      "Read your website's error and access logs."),
     ("Advanced", "access", "IP blocking", "bi-slash-circle", Capability.ACCESS,
      "Block visitors by IP address or range."),
+    ("Advanced", "security", "Security", "bi-shield-check", Capability.SECURITY,
+     "Scan for malware, protect folders, manage SSH keys and watch for changed files."),
     ("Advanced", "usage", "Usage", "bi-bar-chart-line", Capability.USAGE,
      "Disk and bandwidth used against your plan."),
 ]

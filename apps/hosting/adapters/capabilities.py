@@ -42,6 +42,7 @@ class Capability(str, Enum):
     LOGS = "logs"
     FTP = "ftp"
     ACCESS = "access"
+    SECURITY = "security"
     BACKUPS = "backups"
     USAGE = "usage"
 
@@ -347,6 +348,67 @@ class IpRule:
     network: str  # an address or a CIDR range, tidied
     note: str = ""
     created_at: Optional[str] = None  # ISO 8601
+
+
+@dataclass(frozen=True)
+class ScanFinding:
+    path: str
+    rule: str  # a short stable id, such as "obfuscated-code"
+    severity: str  # "high" or "medium"
+    detail: str  # plain language: what looks wrong
+
+
+@dataclass(frozen=True)
+class ScanResult:
+    """The last malware scan. ``scanned_at`` is None until one has run."""
+
+    scanned_at: Optional[str] = None
+    files_scanned: int = 0
+    findings: list = field(default_factory=list)  # ScanFinding, most severe first
+
+
+@dataclass(frozen=True)
+class QuarantineItem:
+    item_id: str
+    path: str  # where the file was before it was isolated
+    rule: str = ""
+    quarantined_at: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ProtectedDir:
+    path: str
+    login: str
+    created_at: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class SshKey:
+    fingerprint: str  # SHA256:...
+    label: str
+    key_type: str
+    added_at: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class SshStatus:
+    enabled: bool = False
+    host: str = ""
+    port: int = 22
+    keys: list = field(default_factory=list)  # SshKey
+    max_keys: int = 0
+
+
+@dataclass(frozen=True)
+class IntegrityResult:
+    """File-integrity monitoring: what changed since the baseline was taken. ``baseline_at`` is None without a baseline."""
+
+    baseline_at: Optional[str] = None
+    files_in_baseline: int = 0
+    checked_at: Optional[str] = None
+    changed: list = field(default_factory=list)
+    added: list = field(default_factory=list)
+    removed: list = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -786,6 +848,63 @@ class AccessCapability(ABC):
     def delete_ip_rule(self, username: str, rule_id: str) -> None: ...
 
 
+class SecurityCapability(ABC):
+    """
+    Findings and protections for one website. Nothing here deletes a customer's file: a suspicious file is moved to quarantine and
+    can be put back, and the scan result is the provider's opinion, not proof.
+    """
+
+    @abstractmethod
+    def get_scan_result(self, username: str) -> ScanResult: ...
+
+    @abstractmethod
+    def run_malware_scan(self, username: str) -> ScanResult: ...
+
+    @abstractmethod
+    def quarantine_file(self, username: str, path: str) -> str:
+        """Isolate the file; returns the quarantine ``item_id``."""
+
+    @abstractmethod
+    def list_quarantine(self, username: str) -> list:
+        """``QuarantineItem`` rows."""
+
+    @abstractmethod
+    def restore_quarantined(self, username: str, item_id: str) -> None: ...
+
+    @abstractmethod
+    def list_protected_dirs(self, username: str) -> list:
+        """``ProtectedDir`` rows."""
+
+    @abstractmethod
+    def protect_directory(self, username: str, path: str, login: str, password: str) -> None:
+        """Ask for a login before anyone can open the folder from the web."""
+
+    @abstractmethod
+    def unprotect_directory(self, username: str, path: str) -> None: ...
+
+    @abstractmethod
+    def ssh_status(self, username: str) -> SshStatus: ...
+
+    @abstractmethod
+    def set_ssh_enabled(self, username: str, enabled: bool) -> None: ...
+
+    @abstractmethod
+    def add_ssh_key(self, username: str, label: str, public_key: str) -> str:
+        """Returns the key's fingerprint. Only public keys are accepted."""
+
+    @abstractmethod
+    def delete_ssh_key(self, username: str, fingerprint: str) -> None: ...
+
+    @abstractmethod
+    def integrity_status(self, username: str) -> IntegrityResult: ...
+
+    @abstractmethod
+    def create_integrity_baseline(self, username: str) -> IntegrityResult: ...
+
+    @abstractmethod
+    def check_integrity(self, username: str) -> IntegrityResult: ...
+
+
 class BackupsCapability(ABC):
     """
     Recoverability, not just a backup job: a provider that declares this must also be able to check a backup's integrity and
@@ -830,6 +949,7 @@ CONTRACTS = {
     Capability.LOGS: LogsCapability,
     Capability.FTP: FtpCapability,
     Capability.ACCESS: AccessCapability,
+    Capability.SECURITY: SecurityCapability,
     Capability.BACKUPS: BackupsCapability,
 }
 
@@ -865,6 +985,10 @@ OPERATIONS = {
     Capability.LOGS: frozenset({"read_log", "clear_log"}),
     Capability.FTP: frozenset({"ftp_options", "list_ftp_accounts", "create_ftp_account", "set_ftp_password", "delete_ftp_account"}),
     Capability.ACCESS: frozenset({"list_ip_rules", "add_ip_rule", "delete_ip_rule"}),
+    Capability.SECURITY: frozenset({"get_scan_result", "run_malware_scan", "quarantine_file", "list_quarantine", "restore_quarantined",
+                                    "list_protected_dirs", "protect_directory", "unprotect_directory", "ssh_status",
+                                    "set_ssh_enabled", "add_ssh_key", "delete_ssh_key", "integrity_status",
+                                    "create_integrity_baseline", "check_integrity"}),
     Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
                                    "delete_backup", "set_backup_schedule"}),
 }
@@ -875,7 +999,7 @@ READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "data
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "get_mail_profile", "list_domains",
-                             "list_dns_records", "backup_options", "read_log", "ftp_options", "list_ftp_accounts", "list_ip_rules", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
+                             "list_dns_records", "get_scan_result", "list_quarantine", "list_protected_dirs", "ssh_status", "integrity_status", "backup_options", "read_log", "ftp_options", "list_ftp_accounts", "list_ip_rules", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
                              "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 
