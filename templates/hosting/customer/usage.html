@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Usage" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> {% trans "Usage" %}</h2>
+  <p class="db-counts"><span class="site-pill">{{ card.plan }}</span>{% if logs_url %}<a class="btn btn-sm btn-outline-secondary" href="{{ logs_url }}"><i class="bi bi-journal-text" aria-hidden="true"></i> {% trans "Logs" %}</a>{% endif %}</p>
+</div>
+
+{% for w in warnings %}<div class="alert alert-{% if w.level == 'danger' %}danger{% else %}warning{% endif %} py-2" role="alert"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ w.text }}{% if forloop.last %} <a href="{{ upgrade_url }}">{% trans "See upgrade options" %}</a>{% endif %}</div>{% endfor %}
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Plan allowance" %}</h3>
+  <div class="site-usage">
+    {% include "hosting/customer/_meter.html" with label=_("Storage") meter=card.disk %}
+    {% include "hosting/customer/_meter.html" with label=_("Bandwidth (this month)") meter=card.bandwidth %}
+  </div>
+  {% if resources %}
+  <div class="use-grid mt-3">
+    {% for r in resources %}
+    <a class="use-item" href="{{ r.url }}">
+      <span class="use-label"><i class="bi {{ r.icon }}" aria-hidden="true"></i> {{ r.label }}</span>
+      <strong>{{ r.used }}{% if r.limit %} / {{ r.limit }}{% else %} / {% trans "unlimited" %}{% endif %}</strong>
+      {% if r.percent is not None %}<progress class="usage-meter{% if r.state == 'danger' %} is-danger{% elif r.state == 'warning' %} is-warning{% endif %}" max="100" value="{{ r.percent }}" aria-label="{{ r.label }}">{{ r.percent }}%</progress>{% else %}<div class="usage-meter-empty" aria-hidden="true"></div>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div></section>
+
+{% if disk_chart %}
+<section class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><h3 class="h6 mb-0">{% trans "History" %}</h3>
+    <div class="dns-zone-tabs" role="tablist" aria-label="{% trans 'Period' %}">{% for d, link in ranges %}<a class="dns-zone{% if d == days %} is-active{% endif %}" href="{{ link }}"{% if d == days %} aria-current="page"{% endif %}>{{ d }} {% trans "days" %}</a>{% endfor %}</div></div>
+  <div class="card-body">
+    <div class="row g-4">
+      <div class="col-lg-6"><h4 class="h6">{% trans "Storage in use" %} <span class="text-secondary fw-normal">· {% trans "now" %} {{ disk_chart.now }}</span></h4>
+        <svg class="use-chart" viewBox="0 0 {{ chart_w }} {{ chart_h }}" role="img" aria-label="{% trans 'Storage in use over time' %}" preserveAspectRatio="none"><polygon class="use-area" points="{{ disk_chart.area }}"/><polyline class="use-line" points="{{ disk_chart.line }}" fill="none"/></svg>
+        <div class="d-flex justify-content-between small text-secondary"><span>{{ disk_chart.from }}</span><span>{% trans "highest" %} {{ disk_chart.top }}</span><span>{{ disk_chart.to }}</span></div></div>
+      <div class="col-lg-6"><h4 class="h6">{% trans "Bandwidth per day" %} <span class="text-secondary fw-normal">· {% trans "today" %} {{ bandwidth_chart.now }}</span></h4>
+        <svg class="use-chart" viewBox="0 0 {{ chart_w }} {{ chart_h }}" role="img" aria-label="{% trans 'Bandwidth per day over time' %}" preserveAspectRatio="none"><polygon class="use-area" points="{{ bandwidth_chart.area }}"/><polyline class="use-line" points="{{ bandwidth_chart.line }}" fill="none"/></svg>
+        <div class="d-flex justify-content-between small text-secondary"><span>{{ bandwidth_chart.from }}</span><span>{% trans "highest" %} {{ bandwidth_chart.top }}</span><span>{{ bandwidth_chart.to }}</span></div></div>
+    </div>
+    <details class="mt-3"><summary class="small">{% trans "Show the last days as a table" %}</summary>
+      <div class="table-responsive"><table class="table fm-table table-sm mb-0"><thead><tr><th scope="col">{% trans "Day" %}</th><th scope="col">{% trans "Storage" %}</th><th scope="col">{% trans "Bandwidth" %}</th></tr></thead><tbody>
+        {% for p in points %}<tr><td>{{ p.day }}</td><td>{{ p.disk_mb }} MB</td><td>{{ p.bandwidth_mb }} MB</td></tr>{% endfor %}
+      </tbody></table></div></details>
+  </div>
+</section>
+{% endif %}
+
+{% if performance %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Right now" %} <span class="text-secondary fw-normal small">· {% trans "what your website is using against what your plan allows; it changes every few minutes" %}</span></h3>
+  <div class="use-grid">
+    {% for p in performance %}
+    <div class="use-item"><span class="use-label">{{ p.label }}</span><strong>{{ p.used }}{% if p.unit %} {{ p.unit }}{% endif %} / {{ p.limit }}{% if p.unit %} {{ p.unit }}{% endif %}</strong>
+      <progress class="usage-meter{% if p.state == 'danger' %} is-danger{% elif p.state == 'warning' %} is-warning{% endif %}" max="100" value="{{ p.percent }}" aria-label="{{ p.label }}">{{ p.percent }}%</progress></div>
+    {% endfor %}
+  </div>
+</div></section>
+{% endif %}
+{% endblock %}

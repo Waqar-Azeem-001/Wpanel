@@ -43,6 +43,7 @@ class Capability(str, Enum):
     FTP = "ftp"
     ACCESS = "access"
     SECURITY = "security"
+    INSIGHTS = "insights"
     BACKUPS = "backups"
     USAGE = "usage"
 
@@ -409,6 +410,24 @@ class IntegrityResult:
     changed: list = field(default_factory=list)
     added: list = field(default_factory=list)
     removed: list = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class UsagePoint:
+    """One day of usage: disk in use at the end of the day, and the bandwidth used that day."""
+
+    day: str  # ISO date
+    disk_mb: int = 0
+    bandwidth_mb: int = 0
+
+
+@dataclass(frozen=True)
+class PerformanceStat:
+    key: str  # "cpu", "memory", "processes" or "io"
+    label: str
+    used: float
+    limit: float
+    unit: str  # "%", "MB", "" or "KB/s"
 
 
 @dataclass(frozen=True)
@@ -850,6 +869,18 @@ class AccessCapability(ABC):
     def delete_ip_rule(self, username: str, rule_id: str) -> None: ...
 
 
+class InsightsCapability(ABC):
+    """History and live resource use of one website, read-only. Limits are enforced by the provider, not by these screens."""
+
+    @abstractmethod
+    def usage_history(self, username: str, days: int) -> list:
+        """``UsagePoint`` rows, oldest first, one per day, ending today."""
+
+    @abstractmethod
+    def performance_stats(self, username: str) -> list:
+        """``PerformanceStat`` rows for what the account is using right now against its plan's allowance."""
+
+
 class SecurityCapability(ABC):
     """
     Findings and protections for one website. Nothing here deletes a customer's file: a suspicious file is moved to quarantine and
@@ -956,6 +987,7 @@ CONTRACTS = {
     Capability.FTP: FtpCapability,
     Capability.ACCESS: AccessCapability,
     Capability.SECURITY: SecurityCapability,
+    Capability.INSIGHTS: InsightsCapability,
     Capability.BACKUPS: BackupsCapability,
 }
 
@@ -995,6 +1027,7 @@ OPERATIONS = {
                                     "list_protected_dirs", "protect_directory", "unprotect_directory", "ssh_status",
                                     "set_ssh_enabled", "add_ssh_key", "delete_ssh_key", "integrity_status",
                                     "create_integrity_baseline", "check_integrity"}),
+    Capability.INSIGHTS: frozenset({"usage_history", "performance_stats"}),
     Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
                                    "delete_backup", "set_backup_schedule", "set_backup_offsite"}),
 }
@@ -1005,7 +1038,7 @@ READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "data
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
                              "get_mail_profile", "list_domains",
-                             "list_dns_records", "get_scan_result", "list_quarantine", "list_protected_dirs", "ssh_status", "integrity_status", "backup_options", "read_log", "ftp_options", "list_ftp_accounts", "list_ip_rules", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
+                             "list_dns_records", "usage_history", "performance_stats", "get_scan_result", "list_quarantine", "list_protected_dirs", "ssh_status", "integrity_status", "backup_options", "read_log", "ftp_options", "list_ftp_accounts", "list_ip_rules", "cron_options", "list_ssl_status", "get_ssl_status", "php_options", "list_php_extensions",
                              "get_php_settings", "list_cron_jobs",
                              "list_backups"})
 

@@ -14,12 +14,13 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           AccessCapability, BackupsCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
+                           AccessCapability, BackupsCapability, InsightsCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
 from .demo_backups import DemoBackups
 from .demo_cron import DemoCron
 from .demo_domains import SERVER_IP, DemoDomains
 from .demo_email import DemoEmail
+from .demo_insights import DemoInsights
 from .demo_php import DemoPhp
 from .demo_security import DemoSecurity
 from .demo_tools import DemoAccess, DemoFtp, DemoLogs
@@ -177,7 +178,7 @@ def sandbox_for(username):
 
 
 class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
-                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, ManualAdapter):
+                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, InsightsCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -193,7 +194,14 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
     def read_file(self, username, path, *, max_bytes):
         return sandbox_for(username).read_file(path, max_bytes=max_bytes)
 
+    def _require_room(self, username, extra_bytes):
+        """The plan's disk limit is enforced here, not on the screen: a write that would go over it is refused."""
+        usage = self.get_usage(username)
+        if (usage["disk_used_mb"] * 1048576) + extra_bytes > usage["disk_limit_mb"] * 1048576:
+            raise HostingError("Your disk space is full, so this could not be saved. Delete files you do not need, or upgrade your plan.")
+
     def write_file(self, username, path, content, *, overwrite=False):
+        self._require_room(username, len(content))
         sandbox_for(username).write_file(path, content, overwrite=overwrite)
 
     def make_directory(self, username, path):
@@ -560,3 +568,11 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
 
     def check_integrity(self, username):
         return security_for(username).check()
+
+    # --- Usage history and performance -------------------------------------------------------------------------
+
+    def usage_history(self, username, days):
+        return DemoInsights(_seed(username), lambda: self.get_usage(username)).history(days)
+
+    def performance_stats(self, username):
+        return DemoInsights(_seed(username), lambda: self.get_usage(username)).performance()
