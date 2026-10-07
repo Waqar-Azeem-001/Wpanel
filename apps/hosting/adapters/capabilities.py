@@ -44,6 +44,7 @@ class Capability(str, Enum):
     ACCESS = "access"
     SECURITY = "security"
     INSIGHTS = "insights"
+    NATIVE_PANEL = "native_panel"
     BACKUPS = "backups"
     USAGE = "usage"
 
@@ -870,6 +871,14 @@ class AccessCapability(ABC):
 
 
 @dataclass(frozen=True)
+class NativePanelSession:
+    """A one-time sign-in link into the server's own control panel (cPanel). Never stored, never logged, never shown as text."""
+
+    url: str
+    expires_at: Optional[str] = None  # ISO 8601, when the provider says the link stops working
+
+
+@dataclass(frozen=True)
 class NodeService:
     key: str  # "web", "database", "mail", "dns", "agent" or "backups"
     label: str
@@ -906,6 +915,16 @@ class NodeCapability(ABC):
 
 def supports_node(adapter) -> bool:
     return isinstance(adapter, NodeCapability)
+
+
+class NativePanelCapability(ABC):
+    """
+    TRANSITIONAL (H15): sign the customer into the server's own panel with a one-time link, for the things WHPanel does not do yet.
+    It exists only while cPanel is in use and is removed with it. The provider must not reveal its own credentials.
+    """
+
+    @abstractmethod
+    def open_native_panel(self, username: str) -> NativePanelSession: ...
 
 
 class InsightsCapability(ABC):
@@ -1027,6 +1046,7 @@ CONTRACTS = {
     Capability.ACCESS: AccessCapability,
     Capability.SECURITY: SecurityCapability,
     Capability.INSIGHTS: InsightsCapability,
+    Capability.NATIVE_PANEL: NativePanelCapability,
     Capability.BACKUPS: BackupsCapability,
 }
 
@@ -1067,6 +1087,7 @@ OPERATIONS = {
                                     "set_ssh_enabled", "add_ssh_key", "delete_ssh_key", "integrity_status",
                                     "create_integrity_baseline", "check_integrity"}),
     Capability.INSIGHTS: frozenset({"usage_history", "performance_stats"}),
+    Capability.NATIVE_PANEL: frozenset({"open_native_panel"}),
     Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
                                    "delete_backup", "set_backup_schedule", "set_backup_offsite"}),
 }

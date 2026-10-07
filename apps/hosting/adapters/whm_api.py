@@ -25,6 +25,7 @@ from .capabilities import Capability, NodeCapability, NodeService, NodeStatus
 from .cpanel_dns import CpanelDns
 from .cpanel_email import CpanelEmail
 from .cpanel_mysql import CpanelMysql
+from .cpanel_native import CpanelNative
 from .cpanel_php import CpanelPhp
 
 # (key, label, WHM service names): the node is reported as running only when every named service is
@@ -32,7 +33,7 @@ SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]
             ("dns", "DNS", ["named"])]
 
 
-class WhmApiAdapter(CpanelDns, CpanelMysql, CpanelEmail, CpanelPhp, NodeCapability, HostingAdapter):
+class WhmApiAdapter(CpanelDns, CpanelMysql, CpanelEmail, CpanelPhp, CpanelNative, NodeCapability, HostingAdapter):
     @property
     def enabled_capabilities(self):
         """

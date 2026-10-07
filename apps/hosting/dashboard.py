@@ -119,9 +119,13 @@ SECTIONS = [
      "Block visitors by IP address or range."),
     ("Advanced", "security", "Security", "bi-shield-check", Capability.SECURITY,
      "Scan for malware, protect folders, manage SSH keys and watch for changed files."),
+    ("Advanced", "native", "Advanced tools (cPanel)", "bi-box-arrow-up-right", Capability.NATIVE_PANEL,
+     "Open cPanel for the few things WHPanel cannot do yet."),
     ("Advanced", "usage", "Usage", "bi-bar-chart-line", Capability.USAGE,
      "Disk and bandwidth used against your plan."),
 ]
+# Sections shown in the menu only for servers that offer them (a transitional tool is not advertised where it does not exist)
+HIDDEN_UNTIL_SUPPORTED = {"native"}
 SECTION_BY_KEY = {key: (group, label, icon, capability, about) for group, key, label, icon, capability, about in SECTIONS}
 
 
@@ -139,6 +143,8 @@ def workspace_links(request, account):
     for group, key, label, icon, capability, _about in SECTIONS:
         url = reverse("hosting_customer:section", args=[account.pk, key])
         available = capability.value in supported
+        if key in HIDDEN_UNTIL_SUPPORTED and not available:
+            continue
         links.append(Link(label, url if available else "", active=available and request.path == url, icon=icon,
                           group=group if group != last_group else "", disabled=not available))
         last_group = group

@@ -12,7 +12,7 @@ from django.urls import reverse
 from apps.core import portal
 from apps.core.exceptions import ServiceError
 
-from .dashboard import DANGER_AT, WARN_AT, format_mb, meter, website_card
+from .dashboard import DANGER_AT, WARN_AT, format_mb, website_card
 from .views import _own_account
 from .views_domains import _read, _supports
 

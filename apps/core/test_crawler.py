@@ -61,6 +61,8 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:security": "linked only for an account whose provider supports the security tools (the demo provider); tested in apps/hosting/tests/test_security.py",
     "hosting_customer:security_action": "POST-only in practice; reached from the Security screen forms (test_security.py)",
     "hosting_customer:section": "the fallback page for a menu section without its own screen; every section has one now, so it is only reached by a future section (apps/hosting/tests/test_demo.py)",
+    "hosting_customer:native": "linked only for a cPanel server whose Open cPanel tool staff have enabled; tested in apps/hosting/tests/test_native_panel.py",
+    "hosting_customer:native_open": "POST-only: signs in to cPanel and redirects there (test_native_panel.py)",
     "hosting_customer:file_edit": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "hosting_customer:file_download": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "orders_customer:choose_client": "only reachable by a customer who is a contact of more than one account; the "

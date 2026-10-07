@@ -946,7 +946,8 @@ Before marking any phase 🟢:
 | H12 Admin Access | 🟡 local | `docs/h12-admin-access.md`: staff manage a customer's hosting through the same engine with a reason, banner, one-hour grant, role-based actions and full audit |
 | H13 Infrastructure dashboard | 🟡 local | `docs/h13-infrastructure.md`: a card per node with health, region, provider, account count, CPU/memory/disk/load/network and web/database/mail/DNS/agent/backup services; cPanel nodes report only what WHM can |
 | H14a cPanel adapter: DNS, databases, email, PHP | 🟡 local, unverified on a real server | `docs/h14-cpanel-adapter.md`: UAPI mappings behind per-tool flag `HOSTING_CPANEL_CAPABILITIES` (off by default), tested with a fake WHM; files, domains, SSL, cron, backups still to do |
-| H14b-H15, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| H15 Open cPanel (transitional) | 🟡 local, unverified on a real server | `docs/h15-cpanel-escape-hatch.md`: one-time cPanel sign-in via WHM, authorised and audited, no token or password shown, off by default; remove with cPanel |
+| H14b, N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 

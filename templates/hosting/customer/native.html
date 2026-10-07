@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Advanced tools" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Advanced tools" %}</h2>
+  <p class="db-counts"><span class="site-pill is-warn">{% trans "Temporary" %}</span></p>
+</div>
+
+<section class="card mb-3"><div class="card-body">
+  <div class="alert alert-warning" role="note"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "This opens cPanel, the older control panel your server still runs. It is here only while WHPanel does not cover everything, and it will go away. Use the tools in the menu on the left first." %}</div>
+  <ul class="small text-secondary">
+    <li>{% trans "You are signed in automatically with a one-time link. You never need a cPanel password, and none is shown." %}</li>
+    <li>{% trans "The link works once and for a short time. If you need cPanel again, come back here." %}</li>
+    <li>{% trans "Each time you open it is recorded in your activity list." %}</li>
+    <li>{% trans "Things you change in cPanel may not appear in WHPanel until you reload. Avoid changing the same thing in both places." %}</li>
+  </ul>
+  <form method="post" action="{{ open_url }}" data-plain>{% csrf_token %}
+    <button class="btn btn-primary" type="submit" data-confirm="{% trans 'Open cPanel for' %} {{ account.domain }}? {% trans 'A new sign-in is recorded in your activity list.' %}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open cPanel" %}</button>
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Recent sign-ins" %}</h3></div>
+  {% if past %}<ul class="list-group list-group-flush">
+    {% for e in past %}<li class="list-group-item d-flex justify-content-between gap-2 flex-wrap"><span>{% if e.failed %}<i class="bi bi-x-circle text-danger" aria-hidden="true"></i> {% trans "Refused" %}{% else %}<i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% trans "Opened" %}{% endif %}{% if e.support %} <span class="site-pill is-info">{% trans "Support" %}</span>{% endif %}</span><small class="text-secondary">{{ e.by }} · {{ e.when|date:"j M Y, H:i" }}</small></li>{% endfor %}
+  </ul>{% else %}<div class="card-body text-secondary">{% trans "No sign-ins yet." %}</div>{% endif %}
+</section>
+{% endblock %}
