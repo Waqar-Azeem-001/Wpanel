@@ -127,7 +127,7 @@ def security_for(username):
 def backups_for(username):
     """The account's demo backups: zip archives kept beside the website folder."""
     sandbox_for(username)  # the website folder exists (with its sample files) before the first backup
-    return DemoBackups(files_root() / f"{username}.state", files_root() / username)
+    return DemoBackups(files_root() / f"{username}.state", files_root() / username, files_root() / "_offsite" / username)
 
 
 def logs_for(username):
@@ -510,6 +510,9 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
 
     def set_backup_schedule(self, username, schedule):
         backups_for(username).set_schedule(schedule)
+
+    def set_backup_offsite(self, username, enabled):
+        backups_for(username).set_offsite(enabled)
 
     # --- Security ----------------------------------------------------------------------------------------------
 

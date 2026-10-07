@@ -74,6 +74,10 @@ def my_hosting_backup_action(request, pk):
             schedule = post.get("schedule", "")
             _run(request, account, "backups", "set_backup_schedule", schedule, metadata={"schedule": schedule})
             messages.success(request, "The schedule was saved.")
+        elif action == "offsite":
+            enabled = post.get("enabled") == "1"
+            _run(request, account, "backups", "set_backup_offsite", enabled, metadata={"enabled": enabled})
+            messages.success(request, "New backups are also kept away from the server." if enabled else "New backups stay on the server only.")
         else:
             raise ServiceError("That action is not available.", code="unknown_action")
     except ServiceError as exc:

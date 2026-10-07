@@ -20,6 +20,23 @@ from apps.products.models import ProductType
 pytestmark = pytest.mark.django_db
 
 
+def _real_database():
+    import sqlite3
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as scratch:
+        path = Path(scratch) / "x.sqlite3"
+        connection = sqlite3.connect(path)
+        connection.execute("create table t (id integer)")
+        connection.commit()
+        connection.close()
+        return path.read_bytes()
+
+
+DB = _real_database()  # a real SQLite file: the trial restore opens every database it finds
+
+
 @pytest.fixture
 def box(tmp_path):
     site, state = tmp_path / "site", tmp_path / "state"
@@ -28,7 +45,7 @@ def box(tmp_path):
     (site / ".trash").mkdir()
     (site / ".trash" / "gone.txt").write_text("trash", encoding="utf-8")
     (state / "data").mkdir(parents=True)
-    (state / "data" / "shop.sqlite3").write_bytes(b"db-original")
+    (state / "data" / "shop.sqlite3").write_bytes(DB)
     (state / "databases.json").write_text(json.dumps({"databases": ["shop"]}), encoding="utf-8")
     (state / "email.json").write_text(json.dumps({"boxes": ["a"]}), encoding="utf-8")
     (state / "ssl.json").write_text(json.dumps({"certs": {}}), encoding="utf-8")
@@ -91,13 +108,13 @@ def test_restore_brings_back_databases_email_and_settings_only_as_the_kind_says(
     (box.state / "email.json").write_text("{}", encoding="utf-8")
     (box.state / "ssl.json").unlink()
     box.restore(full)
-    assert (box.state / "data" / "shop.sqlite3").read_bytes() == b"db-original" and not (box.state / "data" / "extra.sqlite3").exists()
+    assert (box.state / "data" / "shop.sqlite3").read_bytes() == DB and not (box.state / "data" / "extra.sqlite3").exists()
     assert json.loads((box.state / "email.json").read_text()) == {"boxes": ["a"]} and (box.state / "ssl.json").exists()
     only_db = box.create("database")
     (box.state / "email.json").write_text("{}", encoding="utf-8")
     (box.state / "data" / "shop.sqlite3").write_bytes(b"db-changed")
     box.restore(only_db)
-    assert (box.state / "data" / "shop.sqlite3").read_bytes() == b"db-original" and (box.state / "email.json").read_text() == "{}"
+    assert (box.state / "data" / "shop.sqlite3").read_bytes() == DB and (box.state / "email.json").read_text() == "{}"
 
 
 def test_a_damaged_backup_is_never_restored_and_nothing_changes(box):
@@ -151,6 +168,91 @@ def test_a_schedule_takes_a_full_backup_when_due(box):
         box.set_schedule("hourly")
 
 
+def forge(box, backup_id, name, data):
+    """Rewrite one member of a stored archive and keep its checksum 'matching', as a careless or hostile change would."""
+    import hashlib
+
+    path = box.dir / f"{backup_id}.zip"
+    with zipfile.ZipFile(path) as old:
+        members = {n: old.read(n) for n in old.namelist()}
+    members[name] = data
+    with zipfile.ZipFile(path, "w") as new:
+        for n, d in members.items():
+            new.writestr(n, d)
+    rows = json.loads(box.index_file.read_text())
+    next(r for r in rows if r["id"] == backup_id)["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    box.index_file.write_text(json.dumps(rows))
+
+
+def test_the_test_is_a_real_trial_restore_not_just_a_checksum(box):
+    backup = box.create("database")
+    forge(box, backup, "state/databases.json", b"{ not json")
+    with pytest.raises(HostingError, match="does not match what was saved"):
+        box.verify(backup)
+    other = box.create("files")
+    forge(box, other, "files/public_html/index.html", b"swapped")
+    with pytest.raises(HostingError, match="does not match what was saved"):
+        box.verify(other)
+    third = box.create("database")
+    forge(box, third, "state/data/shop.sqlite3", b"this is not a database at all, just text that is long enough to be read")
+    # the manifest still lists the original checksum, so the swapped database is caught either way
+    with pytest.raises(HostingError):
+        box.restore(third)
+    assert (box.state / "data" / "shop.sqlite3").read_bytes() == DB
+
+
+def test_a_real_sqlite_database_passes_and_a_damaged_one_fails_the_trial_restore(tmp_path):
+    import sqlite3
+
+    site, state = tmp_path / "site", tmp_path / "state"
+    site.mkdir()
+    (state / "data").mkdir(parents=True)
+    connection = sqlite3.connect(state / "data" / "shop.sqlite3")
+    connection.execute("create table t (id integer)")
+    connection.commit()
+    connection.close()
+    box = DemoBackups(state, site)
+    assert box.verify(box.create("database")).verified == "ok"
+
+
+@pytest.fixture
+def off(tmp_path, box):
+    box.offsite = tmp_path / "away"
+    box.set_offsite(True)
+    return box
+
+
+def test_an_off_server_copy_is_kept_checked_and_removed_with_the_backup(off):
+    backup = off.create("files")
+    assert (off.offsite / f"{backup}.zip").exists() and off.list()[0].offsite == "ok" and off.options().offsite
+    assert off.verify(backup).offsite == "ok"
+    off.delete(backup)
+    assert not (off.offsite / f"{backup}.zip").exists()
+
+
+def test_a_lost_local_copy_is_rebuilt_from_the_off_server_one(off):
+    backup = off.create("files")
+    (off.dir / f"{backup}.zip").unlink()
+    (off.site / "public_html" / "index.html").write_text("changed", encoding="utf-8")
+    off.restore(backup)
+    assert (off.site / "public_html" / "index.html").read_text() == "original" and (off.dir / f"{backup}.zip").exists()
+
+
+def test_a_lost_off_server_copy_is_reported_but_the_backup_still_works(off):
+    backup = off.create("files")
+    (off.offsite / f"{backup}.zip").unlink()
+    assert off.verify(backup).offsite == "missing"
+    (off.dir / f"{backup}.zip").unlink()
+    with pytest.raises(HostingError, match="missing"):
+        off.restore(backup)  # both copies are gone: nothing is changed
+
+
+def test_off_server_storage_can_be_refused_when_the_provider_has_none(box):
+    with pytest.raises(HostingError, match="not available"):
+        box.set_offsite(True)
+    assert box.create("files") and box.list()[0].offsite == ""
+
+
 # --- The screen -------------------------------------------------------------------------------------------------------
 
 @pytest.fixture
@@ -184,6 +286,7 @@ def test_the_page_shows_sample_backups_with_their_check_state(client, owner, acc
     page = client.get(burl(account)).content.decode()
     assert "Backups" in page and "Full account" in page and "Databases" in page and "Checked" in page and "Not checked yet" in page
     assert "2 / 7" in " ".join(page.split()) and "Every week" in page and "Back up now" in page
+    assert "Off-server copy" in page and "Kept" in page and "Test restore" in page
 
 
 def test_create_check_restore_and_delete_from_the_page(client, owner, account):
@@ -199,6 +302,17 @@ def test_create_check_restore_and_delete_from_the_page(client, owner, account):
     assert "was restored" in page and "Saved before a restore" in page
     client.post(act, {"action": "delete", "backup": new.backup_id})
     assert all(r.backup_id != new.backup_id for r in control.perform(owner, account, "backups", "list_backups"))
+
+
+def test_the_off_server_switch_works_from_the_page(client, owner, account):
+    client.force_login(owner)
+    client.post(burl(account, "do/"), {"action": "offsite", "enabled": "0"})
+    assert control.perform(owner, account, "backups", "backup_options").offsite is False
+    client.post(burl(account, "do/"), {"action": "create", "kind": "files"})
+    assert control.perform(owner, account, "backups", "list_backups")[0].offsite == ""
+    client.post(burl(account, "do/"), {"action": "offsite", "enabled": "1"})
+    client.post(burl(account, "do/"), {"action": "create", "kind": "files"})
+    assert control.perform(owner, account, "backups", "list_backups")[0].offsite == "ok"
 
 
 def test_refusals_and_unknown_actions_are_shown_as_messages(client, owner, account):

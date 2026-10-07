@@ -4,8 +4,11 @@ with a checksum recorded when it was made.
 
 * Kinds: ``files`` (the website folder), ``database`` (databases and their data), ``email`` (mailboxes and messages) and ``full``
   (those three plus the account's settings: domains, DNS, SSL, PHP, cron jobs, FTP accounts and IP blocks).
-* Integrity: ``verify`` recomputes the checksum, tests every archive member and reads every settings file; a restore is refused
-  unless that passes ("a successful backup job alone is not proof of recoverability").
+* Integrity and a tested restore: ``verify`` recomputes the checksum and then does a trial restore into a scratch folder, comparing
+  every file with the checksum recorded when it was made, opening every database file and reading every settings file; a restore is
+  refused unless that passes ("a successful backup job alone is not proof of recoverability").
+* Off-server copy: when switched on, every new backup is also written to a separate location (standing in for storage away from the
+  hosting server). If the local archive is lost or damaged, a sound off-server copy is used to verify and restore.
 * Restore: takes a safety copy of what it is about to replace (source "before restore"), then replaces exactly the parts the
   backup holds. Archive paths are checked, so a damaged or hostile archive cannot write outside the account.
 * Retention: at most seven backups are kept; making room removes the oldest. A schedule (daily or weekly, full backups) is
@@ -16,6 +19,8 @@ No server snapshot is involved; a real provider (the cPanel adapter, a native no
 import hashlib
 import json
 import shutil
+import sqlite3
+import tempfile
 import uuid
 import zipfile
 from datetime import datetime, timedelta, timezone
@@ -54,9 +59,10 @@ def _safe(name):
 
 
 class DemoBackups:
-    def __init__(self, state_dir, site_dir):
+    def __init__(self, state_dir, site_dir, offsite_dir=None):
         self.state = Path(state_dir)
         self.site = Path(site_dir)
+        self.offsite = Path(offsite_dir) if offsite_dir else None
         self.dir = self.state / "backups"
         self.index_file = self.dir / "backups.json"
         self.schedule_file = self.state / "backup_schedule.json"  # not part of any backup: it must survive a restore
@@ -88,12 +94,13 @@ class DemoBackups:
     @staticmethod
     def _info(row):
         return BackupInfo(backup_id=row["id"], kind=row["kind"], created_at=row["created_at"], size_mb=round(row["size"] / 1048576, 2),
-                          status="complete", source=row["source"], verified=row.get("verified", ""), verified_at=row.get("verified_at"))
+                          status="complete", source=row["source"], verified=row.get("verified", ""), verified_at=row.get("verified_at"),
+                          offsite=row.get("offsite", ""))
 
     def options(self):
         data = self._schedule()
         return BackupOptions(kinds=list(KINDS), max_backups=MAX_BACKUPS, schedules=list(SCHEDULES), schedule=data["schedule"],
-                             last_scheduled_at=data.get("last"))
+                             last_scheduled_at=data.get("last"), offsite=bool(data.get("offsite")) and self.offsite is not None)
 
     # --- what a backup holds ---------------------------------------------------------------------------------------
 
@@ -121,6 +128,9 @@ class DemoBackups:
     def _archive(self, backup_id):
         return self.dir / f"{backup_id}.zip"
 
+    def _offsite_archive(self, backup_id):
+        return (self.offsite or self.dir) / (f"{backup_id}.zip" if self.offsite else f"{backup_id}.no-offsite")
+
     # --- creating --------------------------------------------------------------------------------------------------
 
     def _make(self, kind, source):
@@ -133,14 +143,20 @@ class DemoBackups:
         self.dir.mkdir(parents=True, exist_ok=True)
         target = self._archive(backup_id)
         with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
-            archive.writestr("MANIFEST.json", json.dumps({"kind": kind, "files": len(members)}))
+            archive.writestr("MANIFEST.json", json.dumps({"kind": kind, "files": {name: _sha256(path) for name, path in members}}))
             for name, path in members:
                 archive.write(path, name)
         rows = self._index()
-        rows.insert(0, {"id": backup_id, "kind": kind, "created_at": _now().isoformat(), "size": target.stat().st_size,
-                        "sha256": _sha256(target), "source": source})
+        row = {"id": backup_id, "kind": kind, "created_at": _now().isoformat(), "size": target.stat().st_size,
+               "sha256": _sha256(target), "source": source}
+        if self.options().offsite:
+            self.offsite.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(target, self._offsite_archive(backup_id))
+            row["offsite"] = "ok"
+        rows.insert(0, row)
         for old in rows[MAX_BACKUPS:]:  # retention: the newest are kept
             self._archive(old["id"]).unlink(missing_ok=True)
+            self._offsite_archive(old["id"]).unlink(missing_ok=True)
         self._save_index(rows[:MAX_BACKUPS])
         return backup_id
 
@@ -162,6 +178,14 @@ class DemoBackups:
         self._run_schedule()
         return [self._info(r) for r in self._index()]
 
+    def set_offsite(self, enabled):
+        if enabled and self.offsite is None:
+            raise HostingError("Off-server storage is not available for this account.")
+        data = self._schedule()
+        data["offsite"] = bool(enabled)
+        self.state.mkdir(parents=True, exist_ok=True)
+        self.schedule_file.write_text(json.dumps(data), encoding="utf-8")
+
     def set_schedule(self, schedule):
         if schedule not in dict(SCHEDULES):
             raise HostingError("Choose off, every day or every week.")
@@ -174,31 +198,71 @@ class DemoBackups:
 
     # --- checking and removing -------------------------------------------------------------------------------------
 
-    def _check(self, row):
-        """None when the archive is sound, otherwise a plain reason."""
-        path = self._archive(row["id"])
+    @staticmethod
+    def _trial_restore(path):
+        """A real trial restore into a scratch folder: every file must match the checksum written when the backup was made, every
+        database must open and pass SQLite's own check, and every settings file must be readable. None when all of that holds."""
+        try:
+            with zipfile.ZipFile(path) as archive:
+                expected = json.loads(archive.read("MANIFEST.json"))["files"]
+                names = [n for n in archive.namelist() if n != "MANIFEST.json"]
+                if set(names) != set(expected):
+                    return "The backup is incomplete: its contents do not match what was recorded."
+                with tempfile.TemporaryDirectory() as scratch:
+                    for name in names:
+                        data = archive.read(name)
+                        if hashlib.sha256(data).hexdigest() != expected[name]:
+                            return f"A file in the backup ({name}) does not match what was saved."
+                        if name.endswith(".json"):
+                            json.loads(data)
+                        elif name.endswith(".sqlite3"):
+                            copy = Path(scratch) / Path(name).name
+                            copy.write_bytes(data)
+                            connection = sqlite3.connect(copy)
+                            try:
+                                if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                                    return f"The database {Path(name).name} in the backup is damaged."
+                            finally:
+                                connection.close()
+        except (zipfile.BadZipFile, KeyError, ValueError, OSError, sqlite3.Error):
+            return "The backup cannot be read back."
+        return None
+
+    def _check_file(self, path, sha):
+        """None when this copy is sound, otherwise a plain reason."""
         if not path.is_file():
             return "The backup file is missing."
-        if _sha256(path) != row["sha256"]:
+        if _sha256(path) != sha:
             return "The backup file has changed since it was made."
         try:
             with zipfile.ZipFile(path) as archive:
                 if archive.testzip() is not None:
                     return "The backup file is damaged."
-                names = archive.namelist()
-                if any(not _safe(n) for n in names):
+                if any(not _safe(n) for n in archive.namelist()):
                     return "The backup holds unsafe file names."
-                for name in names:
-                    if name.endswith(".json"):
-                        json.loads(archive.read(name))
-        except (zipfile.BadZipFile, ValueError, OSError):
+        except (zipfile.BadZipFile, OSError):
             return "The backup file cannot be read."
-        return None
+        return self._trial_restore(path)
+
+    def _sound_copy(self, row):
+        """(path, None) of a copy that passes every check, rebuilding a lost local copy from the off-server one, or (None, reason)."""
+        local = self._archive(row["id"])
+        problem = self._check_file(local, row["sha256"])
+        if problem is None:
+            return local, None
+        if row.get("offsite"):
+            remote = self._offsite_archive(row["id"])
+            if self._check_file(remote, row["sha256"]) is None:
+                shutil.copy2(remote, local)
+                return local, None
+        return None, problem
 
     def verify(self, backup_id):
         rows = self._index()
         row = self._find(rows, backup_id)
-        problem = self._check(row)
+        _, problem = self._sound_copy(row)
+        if row.get("offsite"):
+            row["offsite"] = "ok" if self._check_file(self._offsite_archive(row["id"]), row["sha256"]) is None else "missing"
         row["verified"], row["verified_at"] = ("failed" if problem else "ok"), _now().isoformat()
         self._save_index(rows)
         if problem:
@@ -209,18 +273,19 @@ class DemoBackups:
         rows = self._index()
         self._find(rows, backup_id)
         self._archive(backup_id).unlink(missing_ok=True)
+        self._offsite_archive(backup_id).unlink(missing_ok=True)
         self._save_index([r for r in rows if r["id"] != backup_id])
 
     # --- restoring -------------------------------------------------------------------------------------------------
 
     def restore(self, backup_id):
         row = self._find(self._index(), backup_id)
-        problem = self._check(row)
+        source, problem = self._sound_copy(row)
         if problem:
             raise HostingError(f"{problem} It was not restored and nothing was changed.")
         kind = row["kind"]
         self._make(kind, "before restore")  # a way back if the restore turns out to be a mistake
-        with zipfile.ZipFile(self._archive(backup_id)) as archive:
+        with zipfile.ZipFile(source) as archive:
             names = [n for n in archive.namelist() if n != "MANIFEST.json"]
             if kind in ("files", "full"):
                 self._clear_site()

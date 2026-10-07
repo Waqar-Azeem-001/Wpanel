@@ -32,13 +32,18 @@
     <div class="col-md-auto"><button class="btn btn-outline-primary" type="submit">{% trans "Save" %}</button></div>
     {% if last_scheduled and options.schedule != "off" %}<div class="col-md-auto small text-secondary">{% trans "Last automatic backup" %}: {{ last_scheduled|date:"j M Y, H:i" }}</div>{% endif %}
   </form>
+  <form method="post" action="{{ action_url }}" class="d-flex align-items-center gap-2 mt-3" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="offsite"><input type="hidden" name="enabled" value="{% if options.offsite %}0{% else %}1{% endif %}">
+    <button class="btn btn-sm {% if options.offsite %}btn-success{% else %}btn-outline-secondary{% endif %}" type="submit" aria-pressed="{% if options.offsite %}true{% else %}false{% endif %}">{% if options.offsite %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</button>
+    <span><strong>{% trans "Off-server copy" %}</strong> <span class="small text-secondary">{% trans "Keeps a second copy of every new backup away from your hosting server, so it survives if the server is lost." %}</span></span>
+  </form>
 </div></section>
 
 <section class="card mb-3">
   <div class="card-header"><h3 class="h6 mb-0">{% trans "Your backups" %}</h3></div>
   {% if rows %}
   <div class="table-responsive"><table class="table fm-table align-middle mb-0">
-    <thead><tr><th scope="col">{% trans "Made" %}</th><th scope="col">{% trans "What" %}</th><th scope="col">{% trans "Size" %}</th><th scope="col">{% trans "Check" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <thead><tr><th scope="col">{% trans "Made" %}</th><th scope="col">{% trans "What" %}</th><th scope="col">{% trans "Size" %}</th><th scope="col">{% trans "Test restore" %}</th><th scope="col">{% trans "Off-server" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
     <tbody>
     {% for r in rows %}{% with b=r.b %}
       <tr>
@@ -48,8 +53,9 @@
         <td>{% if b.verified == "ok" %}<span class="site-pill is-ok"><i class="bi bi-patch-check" aria-hidden="true"></i> {% trans "Checked" %}</span><small class="d-block text-secondary">{{ r.checked|date:"j M, H:i" }}</small>
           {% elif b.verified == "failed" %}<span class="site-pill is-danger"><i class="bi bi-x-octagon" aria-hidden="true"></i> {% trans "Failed" %}</span>
           {% else %}<span class="site-pill is-warn">{% trans "Not checked yet" %}</span>{% endif %}</td>
+        <td>{% if b.offsite == "ok" %}<span class="site-pill is-ok">{% trans "Kept" %}</span>{% elif b.offsite == "missing" %}<span class="site-pill is-danger">{% trans "Missing" %}</span>{% else %}<span class="text-secondary">&mdash;</span>{% endif %}</td>
         <td class="text-end"><div class="fm-actions">
-          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="verify"><input type="hidden" name="backup" value="{{ b.backup_id }}"><button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "Check" %}</button></form>
+          <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="verify"><input type="hidden" name="backup" value="{{ b.backup_id }}"><button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "Test" %}</button></form>
           <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="restore"><input type="hidden" name="backup" value="{{ b.backup_id }}"><button class="btn btn-sm btn-outline-primary" type="submit" data-confirm="{% trans 'Restore' %} {{ r.label }} {% trans 'from' %} {{ r.made|date:'j M Y, H:i' }}? {% trans 'What it covers is replaced by the backup. A copy of the current data is saved first, so you can go back.' %}"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {% trans "Restore" %}</button></form>
           <form method="post" action="{{ action_url }}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="backup" value="{{ b.backup_id }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete this backup for good?' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete this backup' %}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
         </div></td>
@@ -59,6 +65,6 @@
   </table></div>
   {% else %}<div class="card-body text-secondary">{% trans "No backups yet. Create one above before you change anything important." %}</div>{% endif %}
 </section>
-<p class="small text-secondary">{% trans "A backup is only useful if it can be restored. Use Check to confirm a backup is complete and unchanged. A restore is refused for a backup that fails its check." %}</p>
+<p class="small text-secondary">{% trans "A backup is only useful if it can be restored. Test restores the backup into a scratch area and compares every file and database with what was saved, without touching your website. A real restore is refused for a backup that fails the test." %}</p>
 {% endif %}
 {% endblock %}

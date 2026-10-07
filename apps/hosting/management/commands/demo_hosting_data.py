@@ -59,6 +59,7 @@ def seed_certificates_and_php(username):
         access.add("192.0.2.0/24", "Scraper network")
     if username == "demoshop":
         backups = backups_for(username)
+        backups.set_offsite(True)
         backups.verify(backups.create("full"))
         backups.create("database")
         backups.set_schedule("weekly")

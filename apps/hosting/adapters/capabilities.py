@@ -421,6 +421,7 @@ class BackupInfo:
     source: str = "manual"  # "manual", "scheduled" or "before restore"
     verified: str = ""  # "" (not checked yet), "ok" or "failed"
     verified_at: Optional[str] = None  # ISO 8601
+    offsite: str = ""  # "" (no off-server copy), "ok" or "missing" (the copy is gone or no longer matches)
 
 
 @dataclass(frozen=True)
@@ -430,6 +431,7 @@ class BackupOptions:
     schedules: list = field(default_factory=list)  # (value, label); "off" is always first
     schedule: str = "off"  # the account's current schedule
     last_scheduled_at: Optional[str] = None  # ISO 8601
+    offsite: bool = False  # a second copy of every new backup is kept away from the server
 
 
 # --- Capability contracts --------------------------------------------------------------------------------------
@@ -935,6 +937,10 @@ class BackupsCapability(ABC):
     @abstractmethod
     def set_backup_schedule(self, username: str, schedule: str) -> None: ...
 
+    @abstractmethod
+    def set_backup_offsite(self, username: str, enabled: bool) -> None:
+        """Keep (or stop keeping) a second copy of every new backup away from the hosting server."""
+
 
 # Capability -> the mixin that defines its contract. ACCOUNT and USAGE live on HostingAdapter itself.
 CONTRACTS = {
@@ -990,7 +996,7 @@ OPERATIONS = {
                                     "set_ssh_enabled", "add_ssh_key", "delete_ssh_key", "integrity_status",
                                     "create_integrity_baseline", "check_integrity"}),
     Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
-                                   "delete_backup", "set_backup_schedule"}),
+                                   "delete_backup", "set_backup_schedule", "set_backup_offsite"}),
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
