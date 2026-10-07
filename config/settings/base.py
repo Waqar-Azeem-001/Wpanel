@@ -23,6 +23,9 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 
 SITE_NAME = env("SITE_NAME", default="WHpanel")
+# Customer tools a cPanel/WHM server may offer, switched on one at a time after trying each on a staging server. Empty = none.
+# Values: dns, databases, email, php (more as they are built).
+HOSTING_CPANEL_CAPABILITIES = env.list("HOSTING_CPANEL_CAPABILITIES", default=[])
 SITE_URL = env("SITE_URL", default="http://localhost:8000")
 # All catalog prices and orders are in this one currency (multi-currency is a deferred item).
 STORE_CURRENCY = env("STORE_CURRENCY", default="USD")

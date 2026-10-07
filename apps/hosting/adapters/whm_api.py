@@ -21,14 +21,28 @@ have varied across versions, so it is parsed defensively and falls back to
 import requests
 
 from .base import HostingAdapter, HostingError
-from .capabilities import NodeCapability, NodeService, NodeStatus
+from .capabilities import Capability, NodeCapability, NodeService, NodeStatus
+from .cpanel_dns import CpanelDns
+from .cpanel_email import CpanelEmail
+from .cpanel_mysql import CpanelMysql
+from .cpanel_php import CpanelPhp
 
 # (key, label, WHM service names): the node is reported as running only when every named service is
 SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]), ("mail", "Mail", ["exim", "dovecot"]),
             ("dns", "DNS", ["named"])]
 
 
-class WhmApiAdapter(NodeCapability, HostingAdapter):
+class WhmApiAdapter(CpanelDns, CpanelMysql, CpanelEmail, CpanelPhp, NodeCapability, HostingAdapter):
+    @property
+    def enabled_capabilities(self):
+        """
+        Which customer tools this cPanel server may offer. The cPanel mappings have not been run against a live server, so none is on
+        until staff list it in ``HOSTING_CPANEL_CAPABILITIES`` after trying it on a staging server (see docs/h14-cpanel-adapter.md).
+        """
+        from django.conf import settings
+
+        return frozenset(Capability(c) for c in getattr(settings, "HOSTING_CPANEL_CAPABILITIES", []) if c in {x.value for x in Capability})
+
     def _base_url(self):
         scheme = "https" if self.use_ssl else "http"
         return f"{scheme}://{self.host}:{self.port}/json-api"

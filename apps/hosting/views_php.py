@@ -42,11 +42,13 @@ def my_hosting_php(request, pk):
     try:
         options = _read(request, account, "php", "php_options")
         current = _read(request, account, "php", "get_php_settings", domain)
-        extensions = _read(request, account, "php", "list_php_extensions", domain)
     except ServiceError as exc:
         messages.error(request, exc.message)
         options = current = None
-        extensions = []
+    try:
+        extensions = _read(request, account, "php", "list_php_extensions", domain)
+    except ServiceError:
+        extensions = []  # a provider that does not let the account choose extensions (cPanel) simply has none to show
     return render(request, "hosting/customer/php.html", {
         "account": account, "sidebar": sidebar, "domains": domains, "domain": domain, "options": options, "current": current,
         "extensions": extensions, "domain_urls": [(d, _php_url(account, d)) for d in domains],

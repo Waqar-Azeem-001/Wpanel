@@ -1088,4 +1088,7 @@ def supported_capabilities(adapter) -> frozenset:
     for capability, contract in CONTRACTS.items():
         if isinstance(adapter, contract):
             found.add(capability)
+    allowed = getattr(adapter, "enabled_capabilities", None)  # a provider may switch tools on one at a time (the cPanel adapter does)
+    if allowed is not None:
+        found = {c for c in found if c in allowed or c in (Capability.ACCOUNT, Capability.USAGE)}
     return frozenset(found)
