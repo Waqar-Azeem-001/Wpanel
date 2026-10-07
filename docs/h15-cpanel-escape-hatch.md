@@ -31,7 +31,7 @@ are not cPanel (the demo, manual, a future native node) never show it.
 `create_user_session` with `service=cpaneld` returns `data.url` and `data.expires`.
 
 ## Verified
-19 tests (`test_native_panel.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
+20 tests (`test_native_panel.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
 menu hidden for demo and for cPanel when not enabled; the page makes no sign-in just by opening; the redirect headers; the audit
 holds no link or token; failures shown and audited as failed; the limit; other customers get 404 and no sign-in is made; staff need
 Admin Access and a managing role; pending, suspended and terminated accounts refused.
