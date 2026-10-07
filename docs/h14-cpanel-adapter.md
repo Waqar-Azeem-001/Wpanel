@@ -43,7 +43,7 @@ audit and error mapping apply as for any provider; an operation cPanel cannot do
 6. Fix any field-name differences in the matching `cpanel_*.py` file, add the real shape to `test_cpanel_adapter.py`, then enable.
 
 ## Verified
-60 tests (`test_cpanel_adapter.py`) against a fake WHM: tools off by default and enabled one by one; the UAPI request shape; error
+50 tests (`test_cpanel_adapter.py`) against a fake WHM: tools off by default and enabled one by one; the UAPI request shape; error
 and odd-answer handling; every DNS type read and written with the right WHM fields, bad records refused before sending, stale lines
 refused, foreign and subdomain zones refused; database names prefixed and ownership checked; passwords only in POST bodies; privilege
 validation; mailbox, forwarder and auto-reply parameters; foreign mail domains refused; PHP version mapping, allowed values only;
