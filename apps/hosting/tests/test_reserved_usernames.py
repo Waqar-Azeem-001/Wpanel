@@ -24,16 +24,16 @@ def test_ordinary_names_are_not_reserved(name):
     assert not services.is_reserved_username(name)
 
 
-@pytest.mark.parametrize("domain,expected", [("testing6.com", "webtesting6"), ("test.com", "webtest"), ("root.org", "webroot"), ("cpanel-shop.com", "webcpanelshop"),
-                                             ("example.com", "example"), ("mail.co", "webmail")])
-def test_a_username_derived_from_a_reserved_looking_domain_gets_a_safe_prefix(domain, expected):
-    username = services._generate_username(domain)
-    assert username == expected and not services.is_reserved_username(username) and len(username) <= 16
+@pytest.mark.parametrize("domain", ["testing6.com", "test.com", "root.org", "cpanel-shop.com", "mail.co", "example.com"])
+def test_a_generated_username_is_never_reserved_whatever_the_domain(domain):
+    for _ in range(200):
+        assert not services.is_reserved_username(services._generate_username(domain))
 
 
-def test_the_prefix_never_pushes_the_name_past_sixteen_characters():
-    username = services._generate_username("testingaveryverylongname.com")
-    assert len(username) <= 16 and not services.is_reserved_username(username)
+def test_a_random_name_that_happens_to_be_reserved_is_skipped(monkeypatch):
+    picks = iter(list("t") + list("esting1") + list("a") + list("bcdefgh"))
+    monkeypatch.setattr("apps.hosting.services.secrets.choice", lambda seq: next(picks))
+    assert services._generate_username("x.com") == "abcdefgh"
 
 
 @pytest.fixture
@@ -53,10 +53,10 @@ def setup(manager):
     return client, product, server
 
 
-def test_a_new_request_for_a_test_domain_gets_a_safe_username(manager, setup):
+def test_a_new_request_for_a_test_domain_gets_a_random_safe_username(manager, setup):
     client, product, _ = setup
     account = services.request_hosting(manager, client, product, "testing6.com")
-    assert account.username == "webtesting6"
+    assert len(account.username) == 8 and not services.is_reserved_username(account.username) and "testing" not in account.username
 
 
 def test_provisioning_an_older_request_with_a_reserved_name_fixes_it_first_and_records_the_change(manager, setup, monkeypatch):
@@ -75,9 +75,9 @@ def test_provisioning_an_older_request_with_a_reserved_name_fixes_it_first_and_r
                                             last_error="testing6 is a reserved username on this system")
     services.complete_provisioning(manager, account)
     account.refresh_from_db()
-    assert account.status == HostingStatus.ACTIVE and account.username == "webtesting6" and seen["username"] == "webtesting6"
+    assert account.status == HostingStatus.ACTIVE and account.username != "testing6" and seen["username"] == account.username
     event = AuditEvent.objects.get(action="hosting.username_changed")
-    assert event.metadata == {"from": "testing6", "to": "webtesting6", "reason": "reserved on the server"}
+    assert event.metadata == {"from": "testing6", "to": account.username, "reason": "reserved on the server"}
 
 
 def test_a_good_username_is_left_alone(manager, setup, monkeypatch):

@@ -15,6 +15,7 @@ This is the same bug (and fix) as apps.domains.services; see the Phase 04 gap
 report for how it was found.
 """
 import secrets
+import string
 
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -76,22 +77,20 @@ def is_reserved_username(username):
     return username in RESERVED_USERNAMES or username.startswith(RESERVED_PREFIXES)
 
 
-def _generate_username(domain):
-    """A cPanel-safe username derived from the domain, unique among live accounts, and never one WHM reserves."""
-    base = "".join(ch for ch in domain.split(".")[0].lower() if ch.isalnum())[:16] or "acct"
-    if not base[0].isalpha():
-        base = "a" + base[:15]
-    for prefix in ("web", "site", "host"):
-        if not is_reserved_username(base):
-            break
-        base = (prefix + base)[:16]
-    candidate = base
-    suffix = 2
-    while HostingAccount.objects.filter(username=candidate, status__in=("pending", "active", "suspended")).exists():
-        tail = str(suffix)
-        candidate = f"{base[:16 - len(tail)]}{tail}"
-        suffix += 1
-    return candidate
+USERNAME_LENGTH = 8  # a letter and seven letters or digits: valid on every cPanel version, even those that still limit names to eight characters
+USERNAME_CHARS = string.ascii_lowercase + string.digits
+
+
+def _generate_username(domain=None):
+    """
+    A random cPanel account username (``domain`` is accepted only so callers need not change). Random names cannot clash with an account
+    that already exists on the server (a leftover from an earlier try, or one made by hand), never look like a reserved name, and give
+    nothing away about the customer. Unique among every account WHPanel has ever recorded, not only the live ones.
+    """
+    while True:
+        candidate = secrets.choice(string.ascii_lowercase) + "".join(secrets.choice(USERNAME_CHARS) for _ in range(USERNAME_LENGTH - 1))
+        if not is_reserved_username(candidate) and not HostingAccount.objects.filter(username=candidate).exists():
+            return candidate
 
 
 def visible_hosting_accounts_for_user(user):

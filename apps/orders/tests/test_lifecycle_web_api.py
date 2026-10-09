@@ -88,7 +88,7 @@ def test_the_order_page_shows_fulfilment_history_and_the_right_buttons(client, m
     client.force_login(manager)
     page = client.get(f"/staff/orders/{order.pk}/").content.decode()
     assert "paid &rarr; processing" in page and "provisioning &rarr; active" in page and "by system" in page
-    assert "hosting shown" in page and "shown.com" in page and "Done" in page
+    assert "hosting " + order.items.get(kind="hosting").hosting_account.username in page and "shown.com" in page and "Done" in page
     assert "Suspend" in page and "Terminate" in page and "Flag as fraud" not in page and "Retry" not in page
 
 

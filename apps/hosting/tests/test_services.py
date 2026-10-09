@@ -44,15 +44,18 @@ def owner(client_obj):
 
 # --- Username generation --------------------------------------------------------------------
 
-def test_generate_username_from_domain():
-    assert services._generate_username("example.com") == "example"
-    assert services._generate_username("my-cool-site.co") == "mycoolsite"
+def test_generated_usernames_are_random_valid_and_unrelated_to_the_domain():
+    import re
+
+    names = {services._generate_username("example.com") for _ in range(50)}
+    assert len(names) > 40 and all(re.fullmatch(r"[a-z][a-z0-9]{7}", n) for n in names)
+    assert not any("example" in n for n in names)
 
 
-def test_generate_username_ensures_letter_start_and_uniqueness(manager, client_obj, product):
-    services.request_hosting(manager, client_obj, product, "example.com")
+def test_generate_username_never_repeats_an_account_ever_recorded(manager, client_obj, product):
+    first = services.request_hosting(manager, client_obj, product, "example.com")
     second = services.request_hosting(manager, client_obj, product, "example.net")
-    assert second.username == "example2"
+    assert first.username != second.username and len(second.username) == 8
 
 
 # --- Request & provisioning ----------------------------------------------------------------
@@ -183,11 +186,11 @@ def test_cancel_only_from_pending_or_failed(manager, client_obj, product):
     assert exc.value.code == "invalid_status"
 
 
-def test_unique_live_username_allows_reuse_after_cancellation(manager, client_obj, product):
+def test_a_cancelled_accounts_username_is_never_handed_out_again(manager, client_obj, product):
     account = services.request_hosting(manager, client_obj, product, "example.com")
     services.cancel_request(manager, account)
-    again = services.request_hosting(manager, client_obj, product, "example.org")  # same base "example"
-    assert again.username == "example"  # freed up since the cancelled row no longer holds it
+    again = services.request_hosting(manager, client_obj, product, "example.org")
+    assert again.username != account.username  # the name may still exist on the server, so it is not reused
 
 
 # --- Lifecycle: suspend, unsuspend, terminate, change package -------------------------------
