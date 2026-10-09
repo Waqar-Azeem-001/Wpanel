@@ -1,6 +1,6 @@
 # ADR 15: Agent language and runtime
 
-**Status:** Proposed  
+**Status:** Accepted 2026-10-10 (chosen by the business, as recommended)  
 **Roadmap:** N0 (area 15 of 20)
 
 ## Context

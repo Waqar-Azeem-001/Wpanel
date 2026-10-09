@@ -1,6 +1,6 @@
 # ADR 03: Tenant isolation
 
-**Status:** Proposed  
+**Status:** Accepted 2026-10-10 (chosen by the business, as recommended)  
 **Roadmap:** N0 (area 3 of 20)
 
 ## Context

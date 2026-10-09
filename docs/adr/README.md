@@ -13,9 +13,9 @@ customers' sites came from cPanel and depend on `.htaccess`; the roadmap wants n
 
 | # | Decision area | Status | Recommendation in one line |
 |---|---|---|---|
-| 01 | [Web server](001-web-server.md) | Proposed (needs your decision) | Apache 2 |
+| 01 | [Web server](001-web-server.md) | Accepted 2026-10-10 (chosen by the business, as recommended) | Apache 2 |
 | 02 | [PHP process and runtime model](002-php-runtime.md) | Proposed | PHP-FPM with one pool per tenant, each version in its own FPM master, pool settings written by the agent from the allowlist H7 already enforces (memor |
-| 03 | [Tenant isolation](003-tenant-isolation.md) | Proposed (needs your decision) | Linux user per tenant plus systemd sandboxing and cgroup v2 limits, with a written hardening baseline and an automated cross-tenant attack test (a ten |
+| 03 | [Tenant isolation](003-tenant-isolation.md) | Accepted 2026-10-10 (chosen by the business, as recommended) | Linux user per tenant plus systemd sandboxing and cgroup v2 limits, with a written hardening baseline and an automated cross-tenant attack test (a ten |
 | 04 | [Linux account and storage model](004-account-model.md) | Proposed | One system user and group per hosting account (numeric IDs allocated from a reserved range and recorded in WHPanel), a fixed layout under /srv/tenants |
 | 05 | [Database topology](005-database-topology.md) | Proposed | MariaDB LTS, one instance per node, with the database host a field of the node so databases can move to their own nodes without changing the customer  |
 | 06 | [Mail topology and software](006-mail-platform.md) | Proposed (needs your decision) | Do not build native mail first |
@@ -27,12 +27,12 @@ customers' sites came from cPanel and depend on `.htaccess`; the roadmap wants n
 | 12 | [Firewall and network model](012-firewall-network.md) | Proposed | nftables default-deny with the provider's firewall as a second layer, SSH only on the VPN with keys (no password login, no root login), the agent conn |
 | 13 | [Monitoring](013-monitoring.md) | Proposed | Start with the agent's own heartbeat (the same states H13 shows) plus one external uptime service |
 | 14 | [Operating-system and server updates](014-os-updates.md) | Proposed | Automatic security updates, a monthly maintenance window, nodes marked 'maintenance' in WHPanel before a reboot (H13 already shows that state), and An |
-| 15 | [Agent language and runtime](015-agent-language.md) | Proposed (needs your decision) | Go for the agent, with the command definitions (names, parameters, validation rules) written once in a shared specification that both WHPanel's tests  |
+| 15 | [Agent language and runtime](015-agent-language.md) | Accepted 2026-10-10 (chosen by the business, as recommended) | Go for the agent, with the command definitions (names, parameters, validation rules) written once in a shared specification that both WHPanel's tests  |
 | 16 | [Node authentication and transport](016-node-authentication.md) | Proposed | Agent-initiated mutual TLS, per-node certificates from an internal CA, one-time enrolment tokens (N2), signed command envelopes with nonce, expiry and |
 | 17 | [Secret rotation](017-secret-rotation.md) | Proposed | Node certificates valid 90 days and renewed automatically from day 60 |
 | 18 | [Disaster recovery](018-disaster-recovery.md) | Proposed | Backup-and-rebuild recovery with written targets and a yearly drill, WHPanel's database and secrets backed up separately from node backups, break-glas |
 | 19 | [cPanel migration compatibility](019-cpanel-migration.md) | Proposed | Build the importer around `pkgacct` backups, keep Apache for ` |
-| 20 | [Supported Linux distributions](020-linux-distributions.md) | Proposed (needs your decision) | One distribution at launch: AlmaLinux 9 for all native nodes, so staff already know its tools and the migration path from cPanel (AlmaLinux-family) is |
+| 20 | [Supported Linux distributions](020-linux-distributions.md) | Accepted 2026-10-10 (chosen by the business, as recommended) | One distribution at launch: AlmaLinux 9 for all native nodes, so staff already know its tools and the migration path from cPanel (AlmaLinux-family) is |
 
 ## How a record becomes Accepted
 1. The business reads the record, especially *Open questions*.
