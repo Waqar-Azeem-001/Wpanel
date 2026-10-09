@@ -16,7 +16,7 @@
     <li>{% trans "Each time you open it is recorded in your activity list." %}</li>
     <li>{% trans "Things you change in cPanel may not appear in WHPanel until you reload. Avoid changing the same thing in both places." %}</li>
   </ul>
-  <form method="post" action="{{ open_url }}" data-plain>{% csrf_token %}
+  <form method="post" action="{{ open_url }}" class="mt-3" data-plain>{% csrf_token %}
     <button class="btn btn-primary" type="submit" data-confirm="{% trans 'Open cPanel for' %} {{ account.domain }}? {% trans 'A new sign-in is recorded in your activity list.' %}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open cPanel" %}</button>
   </form>
 </div></section>

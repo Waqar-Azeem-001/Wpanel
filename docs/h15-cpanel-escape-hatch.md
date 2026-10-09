@@ -26,13 +26,19 @@ are not cPanel (the demo, manual, a future native node) never show it.
 - The redirect is POST-only, sent with `Cache-Control: no-store` and `Referrer-Policy: no-referrer`; a link that is not http(s) (for
   example `javascript:`) is refused.
 
+## Seeing it on the demo server
+Demo accounts show **Advanced tools (cPanel)** too. **Open cPanel** there signs in to a **sample page** that stands in for cPanel (a
+one-time link to `.../manage/native/sample/?session=...`): the link works once and for two minutes (only a hash of it is kept; a wrong
+guess also spends it), and reloading shows "This sign-in link has expired". Nothing about it is cPanel-specific, so the whole flow,
+audit and warnings can be looked at without a cPanel server.
+
 ## Turning it on
 `HOSTING_CPANEL_CAPABILITIES=native_panel` (add to the list of tools; see `docs/h14-cpanel-adapter.md`). Check on a staging server that
 `create_user_session` with `service=cpaneld` returns `data.url` and `data.expires`.
 
 ## Verified
-20 tests (`test_native_panel.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
-menu hidden for demo and for cPanel when not enabled; the page makes no sign-in just by opening; the redirect headers; the audit
+24 tests (`test_native_panel.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
+menu hidden for cPanel when not enabled; the demo flow with its sample page (single use, expiry, only a hash stored, demo-only, owner-only); the page makes no sign-in just by opening; the redirect headers; the audit
 holds no link or token; failures shown and audited as failed; the limit; other customers get 404 and no sign-in is made; staff need
 Admin Access and a managing role; pending, suspended and terminated accounts refused.
 

@@ -111,15 +111,55 @@ def test_the_menu_shows_advanced_tools_only_where_it_exists(client, owner, accou
         assert "not available for your hosting server yet" in client.get(page(account)).content.decode()
 
 
-@pytest.mark.django_db
-def test_a_demo_account_never_sees_it(client, owner, manager):
+@pytest.fixture
+def demo(owner, manager):
     from django.core.management import call_command
 
     product_services.create_product(manager, {"name": "Demo plan", "type": ProductType.SHARED_HOSTING})
     call_command("demo_hosting_data")
-    demo = HostingAccount.objects.get(domain="demo-shop.example.com")
+    return HostingAccount.objects.get(domain="demo-shop.example.com")
+
+
+def test_a_demo_account_can_try_the_whole_flow_with_a_sample_page(client, owner, demo):
     client.force_login(owner)
-    assert "Advanced tools" not in client.get(f"/account/hosting/{demo.pk}/").content.decode()
+    assert page(demo) in client.get(f"/account/hosting/{demo.pk}/").content.decode()
+    response = client.post(page(demo, "open/"))
+    assert response.status_code == 302 and response.url.startswith(page(demo, "sample/?session="))
+    sample = client.get(response.url)
+    text = sample.content.decode()
+    assert sample.status_code == 200 and "sample page standing in for cPanel" in text and "File Manager" in text and sample["Cache-Control"] == "no-store"
+    assert "has expired" in client.get(response.url).content.decode()  # the link works once
+
+
+def test_the_sample_link_is_single_use_wrongly_guessed_or_expired_links_fail_and_burn_it(client, owner, demo, monkeypatch):
+    import time
+
+    client.force_login(owner)
+    url = client.post(page(demo, "open/")).url
+    assert "has expired" in client.get(page(demo, "sample/?session=guess")).content.decode()
+    assert "has expired" in client.get(url).content.decode()  # a wrong guess spent the real link too
+    url = client.post(page(demo, "open/")).url
+    monkeypatch.setattr(time, "time", lambda: 4_000_000_000)  # long after the two minutes
+    assert "has expired" in client.get(url).content.decode()
+    assert "has expired" in client.get(page(demo, "sample/")).content.decode()
+
+
+def test_the_sample_page_is_only_for_demo_servers_and_only_for_the_owner(client, owner, customer, demo, account):
+    client.force_login(owner)
+    assert client.get(page(account, "sample/")).status_code == 404  # a cPanel account has no sample page
+    client.force_login(customer)
+    assert client.get(page(demo, "sample/")).status_code == 404
+
+
+def test_only_a_hash_of_the_demo_link_is_kept(client, owner, demo):
+    from apps.hosting.adapters.demo import files_root
+
+    client.force_login(owner)
+    url = client.post(page(demo, "open/")).url
+    token = url.split("session=")[1]
+    assert token not in (files_root() / f"{demo.username}.state" / "native_session.json").read_text()
+    everything = str(list(AuditEvent.objects.values_list("metadata", flat=True)))
+    assert token not in everything
 
 
 # --- The page and the sign-in -------------------------------------------------------------------------------------------------

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}cPanel (sample) · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% if valid %}
+<div class="alert alert-info" role="note"><i class="bi bi-info-circle" aria-hidden="true"></i> {% trans "This is a sample page standing in for cPanel, because this is a demo server. On a real cPanel server this button opens the real cPanel." %}</div>
+<section class="card mb-3">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"><h1 class="h5 mb-0"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> cPanel <small class="text-secondary">· {{ account.username }} · {{ account.domain }}</small></h1>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Back to WHPanel" %}</a></div>
+  <div class="card-body">
+    <div class="use-grid">
+      <div class="use-item"><span class="use-label"><i class="bi bi-folder2-open" aria-hidden="true"></i> {% trans "Files" %}</span><strong>File Manager</strong></div>
+      <div class="use-item"><span class="use-label"><i class="bi bi-envelope" aria-hidden="true"></i> {% trans "Email" %}</span><strong>Email Accounts</strong></div>
+      <div class="use-item"><span class="use-label"><i class="bi bi-database" aria-hidden="true"></i> {% trans "Databases" %}</span><strong>MySQL Databases</strong></div>
+      <div class="use-item"><span class="use-label"><i class="bi bi-globe2" aria-hidden="true"></i> {% trans "Domains" %}</span><strong>Domains</strong></div>
+      <div class="use-item"><span class="use-label"><i class="bi bi-shield-lock" aria-hidden="true"></i> {% trans "Security" %}</span><strong>SSL/TLS</strong></div>
+      <div class="use-item"><span class="use-label"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Backups" %}</span><strong>Backup</strong></div>
+    </div>
+    <p class="small text-secondary mt-3 mb-0">{% trans "You were signed in with a one-time link. It cannot be used again: reload this page and it will say it has expired." %}</p>
+  </div>
+</section>
+{% else %}
+<section class="card"><div class="card-body">
+  <h1 class="h5"><i class="bi bi-clock-history" aria-hidden="true"></i> {% trans "This sign-in link has expired" %}</h1>
+  <p class="text-secondary">{% trans "A sign-in link works once, for about two minutes. Go back and open cPanel again to get a new one." %}</p>
+  <a class="btn btn-primary" href="{{ back_url }}">{% trans "Back to Advanced tools" %}</a>
+</div></section>
+{% endif %}
+{% endblock %}

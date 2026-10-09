@@ -47,5 +47,6 @@ urlpatterns = [
     path("<int:pk>/manage/usage/", views_usage.my_hosting_usage, name="usage"),
     path("<int:pk>/manage/native/", views_native.my_hosting_native, name="native"),
     path("<int:pk>/manage/native/open/", views_native.my_hosting_native_open, name="native_open"),
+    path("<int:pk>/manage/native/sample/", views_native.my_hosting_native_demo, name="native_demo"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

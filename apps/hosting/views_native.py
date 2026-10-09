@@ -11,7 +11,7 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -24,6 +24,8 @@ from apps.core.exceptions import ServiceError
 from . import dashboard
 from .models import HostingStatus
 from .views import _own_account
+from .adapters.demo import files_root
+from .adapters.demo_native import consume_token
 from .views_domains import _run, _supports
 
 LIMIT = 6  # sign-ins per account in the window below, counting refused ones: a brake on a stuck button or abuse
@@ -66,6 +68,20 @@ def my_hosting_native_open(request, pk):
         messages.error(request, exc.message)
         return back
     response = HttpResponseRedirect(session.url)
+    response["Cache-Control"] = "no-store"
+    response["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+@login_required
+def my_hosting_native_demo(request, pk):
+    """The demo server's stand-in for cPanel: a sample page, opened by the one-time link and never again by the same link."""
+    account = _own_account(request, pk)
+    if account.server is None or account.server.kind != "demo":
+        raise Http404
+    valid = consume_token(files_root() / f"{account.username}.state", request.GET.get("session", ""))
+    response = render(request, "hosting/customer/native_demo.html", {"account": account, "valid": valid,
+                                                                     "back_url": reverse("hosting_customer:native", args=[account.pk])})
     response["Cache-Control"] = "no-store"
     response["Referrer-Policy"] = "no-referrer"
     return response
