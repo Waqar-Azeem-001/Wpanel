@@ -184,6 +184,7 @@ ITEMS = [
     item("staff.providers", _("Providers"), areas=STAFF, section=_("System"), icon="bi-plug"),
     item("staff.providers.servers", _("Servers"), "catalog_staff:server_list", areas=STAFF, parent="staff.providers",
          permission="view_hosting"),
+    item("staff.providers.nodes", _("Native nodes"), "agent_staff:nodes", areas=STAFF, parent="staff.providers", permission="view_hosting"),
     item("staff.providers.registrar", _("Domain registrar"), "console:registrars", areas=STAFF,
          parent="staff.providers", permission="view_providers"),
     item("staff.providers.email", _("Email provider"), "console:email_providers", areas=STAFF,
