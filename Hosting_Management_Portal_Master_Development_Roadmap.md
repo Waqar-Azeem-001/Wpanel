@@ -948,7 +948,8 @@ Before marking any phase 🟢:
 | H14 cPanel adapter (files, domains, DNS, SSL, databases, email, PHP, cron, backups) | 🟡 local, unverified on a real server | `docs/h14-cpanel-adapter.md`: UAPI and API 2 mappings behind a per-tool switch `HOSTING_CPANEL_CAPABILITIES` (off by default), tested with a fake WHM; real-server verification still to do |
 | H15 Open cPanel (transitional) | 🟡 local, unverified on a real server | `docs/h15-cpanel-escape-hatch.md`: one-time cPanel sign-in via WHM, authorised and audited, no token or password shown, off by default; remove with cPanel |
 | Provider-neutral hosting API | 🟡 local | `docs/hosting-api.md`: `/api/v1/hosting/services/{id}/files, databases, emails, domains, dns, ssl, php, cron, backups, usage` through the same gateway |
-| N0-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| N0 Native architecture and security design | 🟡 proposed, awaiting decisions | `docs/adr/`: 20 architecture decision records with options, scores and a recommendation each; none is Accepted yet |
+| N1-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 
