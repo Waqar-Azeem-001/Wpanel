@@ -8,7 +8,7 @@
 {% else %}
 <div class="db-top">
   <h2 class="h5 mb-0"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Backups" %}</h2>
-  <p class="db-counts"><span class="site-pill"><i class="bi bi-archive" aria-hidden="true"></i> {{ count }} / {{ options.max_backups }} {% trans "kept" %}</span></p>
+  <p class="db-counts"><span class="site-pill"><i class="bi bi-archive" aria-hidden="true"></i> {{ count }}{% if options.max_backups %} / {{ options.max_backups }}{% endif %} {% trans "kept" %}</span></p>
 </div>
 
 <section class="card mb-3"><div class="card-body">
@@ -19,7 +19,7 @@
       {% for kind, label, about in options.kinds %}<label class="em-choice"><input class="form-check-input" type="radio" name="kind" value="{{ kind }}" {% if kind == "full" %}checked{% endif %}> <span><strong>{{ label }}</strong><small>{{ about }}</small></span></label>{% endfor %}
     </div>
     <button class="btn btn-primary mt-2" type="submit"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Create backup" %}</button>
-    <span class="small text-secondary ms-2">{% trans "Only the newest" %} {{ options.max_backups }} {% trans "are kept: older ones are removed to make room." %}</span>
+    {% if options.max_backups %}<span class="small text-secondary ms-2">{% trans "Only the newest" %} {{ options.max_backups }} {% trans "are kept: older ones are removed to make room." %}</span>{% endif %}
   </form>
 </div></section>
 

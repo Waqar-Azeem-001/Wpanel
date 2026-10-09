@@ -46,3 +46,9 @@ Admin Access and a managing role; pending, suspended and terminated accounts ref
 The gateway treats a *pending* account as live (it holds the username), so other tools can be called for an account WHM has not
 created yet; they simply get WHM's own error. Open cPanel therefore checks for **active** itself. Tightening the gateway for every tool
 is a separate, small change worth doing before going live.
+
+
+## Checked live (9 Oct 2026)
+`create_user_session` on the live WHM answered with a single-use link on the server's own host name (port 2083, a `/cpsess...` path and a
+login query) and an expiry about a minute away, exactly the shape the code expects. Clicking Open cPanel therefore lands in the customer's own
+cPanel, already signed in, without a cPanel password.

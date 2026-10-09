@@ -59,3 +59,9 @@ def staff(make_user):
 def auth(api, user):
     api.force_authenticate(user)
     return api
+
+
+@pytest.fixture(autouse=True)
+def _cpanel_tools_off_unless_a_test_turns_them_on(settings):
+    """The developer's own .env may switch cPanel tools on for the live server; tests must start from the safe default (none)."""
+    settings.HOSTING_CPANEL_CAPABILITIES = []

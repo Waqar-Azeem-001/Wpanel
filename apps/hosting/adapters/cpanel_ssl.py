@@ -26,10 +26,19 @@ class CpanelSsl(CpanelApi, SslCapability):
             if not isinstance(item, dict):
                 continue
             cert = item.get("certificate") if isinstance(item.get("certificate"), dict) else {}
-            for host in [item.get("servername"), *(item.get("domains") or [])]:
+            for host in [item.get("servername"), *(item.get("domains") or []), *(cert.get("domains") or [])]:
                 if isinstance(host, str) and host:
                     found.setdefault(host.lower(), cert)
         return found
+
+    @staticmethod
+    def _issuer(cert):
+        """Who issued it, from cPanel's flat keys (``issuer.organizationName``, ``issuer.commonName``); a certificate that signed itself says so."""
+        if str(cert.get("is_self_signed", "")) in ("1", "True", "true"):
+            return "Self-signed (browsers will warn)"
+        nested = cert.get("issuer") if isinstance(cert.get("issuer"), dict) else {}
+        text = (cert.get("issuer.organizationName") or nested.get("organizationName") or cert.get("issuer.commonName") or nested.get("commonName") or "")
+        return " ".join(str(text).split())
 
     def _status(self, domain, cert):
         if not cert:
@@ -41,9 +50,8 @@ class CpanelSsl(CpanelApi, SslCapability):
             status = "active"
         else:
             status = "expired" if expires <= now else "expiring" if days <= EXPIRING_DAYS else "active"
-        issuer = cert.get("issuer") if isinstance(cert.get("issuer"), dict) else {}
         issued = _when(cert.get("not_before"))
-        return SslStatus(domain=domain, active=status in ("active", "expiring"), issuer=str(issuer.get("organizationName") or cert.get("issuer_text") or ""),
+        return SslStatus(domain=domain, active=status in ("active", "expiring"), issuer=self._issuer(cert),
                          expires_at=expires.isoformat() if expires else None, auto_renew=True, https_redirect=False, status=status,
                          issued_at=issued.isoformat() if issued else None, days_left=days)
 

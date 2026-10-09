@@ -11,7 +11,6 @@ No traffic is filtered and no FTP server runs here; a real provider (the cPanel 
 """
 import ipaddress
 import json
-import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,13 +18,13 @@ from pathlib import Path
 from django.contrib.auth.hashers import make_password
 
 from .base import HostingError
+from .ftp_rules import FTP_NAME, check_ftp_password
 from .capabilities import LOG_LINE_CHOICES, FtpAccount, FtpOptions, IpRule, LogView
 
 LOG_KINDS = {"error": "logs/error.log", "access": "logs/access.log"}
 MAX_LOG_READ = 2_000_000
 MAX_FTP = 5
 MAX_RULES = 50
-FTP_NAME = re.compile(r"^[a-z0-9][a-z0-9_.-]{1,31}$")
 
 
 def _now():
@@ -104,16 +103,6 @@ class DemoFtp:
     def accounts(self):
         return [FtpAccount(login=r["login"], directory=r["directory"], created_at=r["created_at"]) for r in self.store.load()]
 
-    @staticmethod
-    def _check_password(password):
-        password = password or ""
-        if len(password) < 10 or len(password) > 128:
-            raise HostingError("Use a password of 10 to 128 characters.")
-        if len({c for c in password}) < 5 or not (re.search(r"[a-z]", password) and re.search(r"[A-Z]", password)
-                                                     and re.search(r"\d", password)):
-            raise HostingError("Mix upper and lower case letters and numbers, and avoid repeating characters.")
-        return password
-
     def create(self, name, password, directory):
         name = (name or "").strip().lower()
         if not FTP_NAME.match(name):
@@ -121,7 +110,7 @@ class DemoFtp:
         directory = (directory or "").strip().strip("/")
         if directory and not self.folder_exists(directory):
             raise HostingError("That folder does not exist in your hosting space. Create it in the file manager first.")
-        password = self._check_password(password)
+        password = check_ftp_password(password)
         rows = self.store.load()
         login = f"{name}@{self.domain}"
         if any(r["login"] == login for r in rows):
@@ -137,7 +126,7 @@ class DemoFtp:
         row = next((r for r in rows if r["login"] == login), None)
         if row is None:
             raise HostingError("That FTP account no longer exists.")
-        row["password_hash"] = make_password(self._check_password(password))
+        row["password_hash"] = make_password(check_ftp_password(password))
         self.store.save(rows)
 
     def delete(self, login):

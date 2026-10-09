@@ -55,14 +55,22 @@ def my_hosting_email(request, pk):
         limits = _read(request, account, "email_limits")
         mailboxes = _read(request, account, "list_mailboxes")
         forwarders = _read(request, account, "list_forwarders")
-        responders = {r.address: r for r in _read(request, account, "list_autoresponders")}
-        routing = _read(request, account, "get_mail_routing")
-        spam = _read(request, account, "get_spam_settings")
     except ServiceError as exc:
         messages.error(request, exc.message)
         limits = None
         mailboxes = forwarders = []
-        responders, routing, spam = {}, "local", None
+
+    def optional(operation, default, *args):
+        """A part some servers do not offer (automatic replies, routing, spam settings, webmail): left out of the page instead of failing it."""
+        try:
+            return _read(request, account, operation, *args)
+        except ServiceError:
+            return default
+
+    responders = {r.address: r for r in optional("list_autoresponders", [])}
+    routing = optional("get_mail_routing", "")
+    spam = optional("get_spam_settings", None)
+    webmail = bool(mailboxes) and optional("webmail_access", None, mailboxes[0].address) is not None
     rows = []
     for box in mailboxes:
         percent = round(box.used_mb * 100 / box.quota_mb) if box.quota_mb and box.used_mb is not None else None
@@ -72,7 +80,8 @@ def my_hosting_email(request, pk):
                      "webmail": reverse("hosting_customer:webmail", args=[account.pk]) + "?" + urlencode({"address": box.address})})
     return render(request, "hosting/customer/email.html", {
         "account": account, "sidebar": sidebar, "limits": limits, "rows": rows, "forwarders": forwarders,
-        "routing": routing, "spam": spam, "spam_levels": SPAM_LEVELS, "routing_modes": MAIL_ROUTING_MODES,
+        "routing": routing, "spam": spam, "has_webmail": webmail, "has_responders": bool(responders) or optional("list_autoresponders", None) is not None,
+        "spam_levels": SPAM_LEVELS, "routing_modes": MAIL_ROUTING_MODES,
         "mailbox_full": bool(limits and limits.max_mailboxes is not None and len(mailboxes) >= limits.max_mailboxes),
         "forwarder_full": bool(limits and limits.max_forwarders is not None and len(forwarders) >= limits.max_forwarders),
         "quota_choices": [c for c in (256, 512, 1024, 2048, 5120) if limits and (limits.max_quota_mb is None or c <= limits.max_quota_mb)]})

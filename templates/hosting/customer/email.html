@@ -11,7 +11,7 @@
   <p class="db-counts">
     <span class="site-pill {% if mailbox_full %}is-warn{% endif %}"><i class="bi bi-inbox" aria-hidden="true"></i> {{ rows|length }}{% if limits.max_mailboxes %} / {{ limits.max_mailboxes }}{% endif %} {% trans "mailboxes" %}</span>
     <span class="site-pill {% if forwarder_full %}is-warn{% endif %}"><i class="bi bi-forward" aria-hidden="true"></i> {{ forwarders|length }}{% if limits.max_forwarders %} / {{ limits.max_forwarders }}{% endif %} {% trans "forwarders" %}</span>
-    <span class="site-pill {% if spam.enabled %}is-ok{% else %}is-warn{% endif %}"><i class="bi bi-shield-check" aria-hidden="true"></i> {% if spam.enabled %}{% trans "Spam filter on" %}{% else %}{% trans "Spam filter off" %}{% endif %}</span>
+    {% if spam %}<span class="site-pill {% if spam.enabled %}is-ok{% else %}is-warn{% endif %}"><i class="bi bi-shield-check" aria-hidden="true"></i> {% if spam.enabled %}{% trans "Spam filter on" %}{% else %}{% trans "Spam filter off" %}{% endif %}</span>{% endif %}
   </p>
 </div>
 
@@ -48,10 +48,10 @@
         <td><div class="site-meter-row"><span class="site-meter-label">{{ r.box.used_mb }} MB</span><span class="site-meter-figure"><strong>{{ r.box.quota_mb }} MB</strong></span></div>
           {% if r.percent is not None %}<progress class="usage-meter{% if r.state == 'danger' %} is-danger{% elif r.state == 'warning' %} is-warning{% endif %}" max="100" value="{{ r.percent }}" aria-label="{{ r.box.address }}">{{ r.percent }}%</progress>{% endif %}</td>
         <td class="text-end"><div class="fm-actions">
-          <a class="btn btn-sm btn-outline-secondary" href="{{ r.webmail }}" target="_blank" rel="noopener" title="{% trans 'Opens in a new window' %}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Webmail" %}</a>
+          {% if has_webmail %}<a class="btn btn-sm btn-outline-secondary" href="{{ r.webmail }}" target="_blank" rel="noopener" title="{% trans 'Opens in a new window' %}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Webmail" %}</a>{% endif %}
           <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#em-password" data-address="{{ r.box.address }}" title="{% trans 'Change password' %}" aria-label="{% trans 'Change the password of' %} {{ r.box.address }}"><i class="bi bi-key" aria-hidden="true"></i></button>
           <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#em-quota" data-address="{{ r.box.address }}" data-quota="{{ r.box.quota_mb }}" title="{% trans 'Change size' %}" aria-label="{% trans 'Change the size of' %} {{ r.box.address }}"><i class="bi bi-hdd" aria-hidden="true"></i></button>
-          <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#em-auto" data-address="{{ r.box.address }}" data-subject="{{ r.responder.subject|default:'' }}" data-body="{{ r.responder.body|default:'' }}" data-enabled="{% if r.responder.enabled %}1{% endif %}" data-has="{% if r.responder %}1{% endif %}" title="{% trans 'Automatic reply' %}" aria-label="{% trans 'Automatic reply for' %} {{ r.box.address }}"><i class="bi bi-reply" aria-hidden="true"></i></button>
+          {% if has_responders %}<button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#em-auto" data-address="{{ r.box.address }}" data-subject="{{ r.responder.subject|default:'' }}" data-body="{{ r.responder.body|default:'' }}" data-enabled="{% if r.responder.enabled %}1{% endif %}" data-has="{% if r.responder %}1{% endif %}" title="{% trans 'Automatic reply' %}" aria-label="{% trans 'Automatic reply for' %} {{ r.box.address }}"><i class="bi bi-reply" aria-hidden="true"></i></button>{% endif %}
           <form method="post" action="{% url 'hosting_customer:email_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete_mailbox"><input type="hidden" name="address" value="{{ r.box.address }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Delete the mailbox' %} {{ r.box.address }}? {% trans 'All its mail is lost and this cannot be undone.' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete' %} {{ r.box.address }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
         </div></td>
       </tr>
@@ -83,8 +83,8 @@
   {% endif %}
 </section>
 
-<div class="row g-3 mb-3">
-  <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+{% if routing or spam %}<div class="row g-3 mb-3">
+  {% if routing %}<div class="col-lg-6"><section class="card h-100"><div class="card-body">
     <h3 class="h6">{% trans "Where your mail is delivered" %}</h3>
     <form method="post" action="{% url 'hosting_customer:email_action' account.pk %}" data-plain>{% csrf_token %}
       <input type="hidden" name="action" value="set_routing">
@@ -92,8 +92,8 @@
       <label class="em-choice"><input class="form-check-input" type="radio" name="mode" value="remote"{% if routing == "remote" %} checked{% endif %}> <span><strong>{% trans "At another email service" %}</strong><small>{% trans "Google Workspace, Microsoft 365 and similar. Mail for your domain is not kept here." %}</small></span></label>
       <button class="btn btn-primary mt-2" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> {% trans "Save" %}</button>
     </form>
-  </div></section></div>
-  <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+  </div></section></div>{% endif %}
+  {% if spam %}<div class="col-lg-6"><section class="card h-100"><div class="card-body">
     <h3 class="h6">{% trans "Spam protection" %}</h3>
     <form method="post" action="{% url 'hosting_customer:email_action' account.pk %}" data-plain>{% csrf_token %}
       <input type="hidden" name="action" value="set_spam">
@@ -103,8 +103,8 @@
       <label class="em-choice"><input class="form-check-input" type="checkbox" name="delete_spam" value="1"{% if spam.delete_spam %} checked{% endif %}> <span><strong>{% trans "Delete spam straight away" %}</strong><small>{% trans "Otherwise it waits in the Spam folder." %}</small></span></label>
       <button class="btn btn-primary mt-2" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> {% trans "Save" %}</button>
     </form>
-  </div></section></div>
-</div>
+  </div></section></div>{% endif %}
+</div>{% endif %}
 
 <div class="modal fade" id="em-password" tabindex="-1" aria-labelledby="em-password-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
   <form method="post" action="{% url 'hosting_customer:email_action' account.pk %}" data-plain>{% csrf_token %}

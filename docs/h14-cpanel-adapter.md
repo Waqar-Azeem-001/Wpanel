@@ -22,6 +22,8 @@ Local only. **Status: written and tested against a fake WHM; NOT verified agains
 | Domains (`domains`) | DomainInfo domains_data; API 2 AddonDomain, SubDomain, Park; Mime add, list and delete redirects; limits from accountsummary | nameserver list |
 | SSL (`ssl`) | SSL installed_hosts, start_autossl_check, delete_ssl | per-domain auto-renew switch and Always-use-HTTPS (AutoSSL renews by itself) |
 | Cron (`cron`) | API 2 Cron listcron, add_line, remove_line (a switched-off job is kept as a commented line); same schedule and command rules as everywhere (`cron_rules.py`) | Run now |
+| FTP (`ftp`) | Ftp list_ftp (only the customer's own `sub` logins), add_ftp, passwd, delete_ftp; each login limited to a folder in the home folder | SFTP port is not reported |
+| Logs (`logs`) | Stats get_site_errors (the website's recent errors, tailed and filtered) | the access log (cPanel keeps it outside the account's folder), clearing a log |
 | Backups (`backups`) | Backup list_backups, fullbackup_to_homedir (full account only) | testing a backup, restore, delete, schedules, off-server copy: use Open cPanel |
 
 Safety rules in every tool: the domain, zone, database or user named must belong to **this account** (checked against `DomainInfo` /
@@ -71,3 +73,20 @@ mixins share a method name (one did, and silently broke PHP until a test caught 
 
 ## Still to do in H14
 The real-server verification above, and a pass for the cPanel versions actually in use. Nothing in this slice has met a live server.
+
+
+## Checked against the live server (9 Oct 2026, read-only)
+With the tools switched on for the first real account on the live WHM (11.138), these **reads** were run and answered correctly: domains and
+limits, home folder and file listing, MySQL limits and lists, mailbox limits and lists, forwarders, DNS zone, SSL status, PHP versions and
+settings, cron, backup list, usage, FTP list, error log, and **Open cPanel** (WHM made a single-use link on the server's own host name with a
+short expiry; the link was not followed). Two real differences were found and fixed from it: cPanel returns certificate details with flat dotted
+keys (`issuer.commonName`...) and a self-signed certificate must be called that; and the account's home folder holds server-internal folders
+(`.cagefs`, `.cl.selector`...) which are now hidden.
+
+**Still not run live (they change things, so they were not tried):** creating or deleting a database, mailbox, forwarder, FTP login, domain, DNS
+record, cron job or file; changing PHP, a password or a redirect; starting a backup or AutoSSL. Their request shapes follow cPanel's documentation
+and are covered by the fake-WHM tests. Try each once on a throw-away account before relying on it.
+
+**Not offered on cPanel servers** (shown as "not available for your hosting server yet" or left out of a page): IP blocking, the Security Center
+(malware scan, quarantine, folder protection, SSH keys, file-integrity), usage history and live performance, webmail inside WHPanel, spam and
+routing settings, automatic replies on some versions, backup testing/restore/schedules, per-domain SSL switches. Open cPanel covers the gap.

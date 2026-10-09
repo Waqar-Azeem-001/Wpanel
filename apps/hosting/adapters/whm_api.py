@@ -30,6 +30,8 @@ from .cpanel_dns import CpanelDns
 from .cpanel_domains import CpanelDomains
 from .cpanel_email import CpanelEmail
 from .cpanel_files import CpanelFiles
+from .cpanel_ftp import CpanelFtp
+from .cpanel_logs import CpanelLogs
 from .cpanel_mysql import CpanelMysql
 from .cpanel_native import CpanelNative
 from .cpanel_php import CpanelPhp
@@ -40,7 +42,7 @@ SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]
             ("dns", "DNS", ["named"])]
 
 
-class WhmApiAdapter(CpanelFiles, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelNative,
+class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelNative,
                     NodeCapability, HostingAdapter):
     @property
     def enabled_capabilities(self):
