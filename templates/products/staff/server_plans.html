@@ -25,18 +25,27 @@
   <h2 class="h5">Server packages no product uses yet</h2>
   {% if unlinked %}
   <p class="text-secondary">Tick the ones to add to your catalog. They are created <strong>hidden</strong> and with <strong>no price</strong>: nothing appears in the store until you set a price and publish.</p>
-  <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th class="w-1"></th><th>Package</th><th>Becomes</th></tr></thead><tbody>
+  <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th class="w-1"></th><th>Package</th><th>Becomes</th><th>What the server says it includes</th></tr></thead><tbody>
     {% for u in unlinked %}<tr><td><input class="form-check-input" type="checkbox" name="create" value="{{ u.package }}" id="create-{{ forloop.counter }}" {% if u.type %}checked{% endif %}></td>
-      <td><label for="create-{{ forloop.counter }}">{{ u.package }}</label></td><td>{% if u.type %}{{ u.type|cut:"_"|title }}{% else %}<span class="text-secondary">Not clear from the name (shared hosting if you tick it)</span>{% endif %}</td></tr>{% endfor %}
+      <td><label for="create-{{ forloop.counter }}">{{ u.package }}</label></td><td>{% if u.type %}{{ u.type|cut:"_"|title }}{% else %}<span class="text-secondary">Not clear from the name (shared hosting if you tick it)</span>{% endif %}</td>
+      <td class="small text-secondary">{% for title, value in u.features %}{{ title }}: {{ value }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</td></tr>{% endfor %}
   </tbody></table></div>
   {% else %}<p class="text-secondary mb-0">Every package on the server already has a product.</p>{% endif %}
 </div></section>
 
 <section class="card mb-3"><div class="card-body">
   <h2 class="h5">Already linked</h2>
-  {% for l in linked %}<span class="badge text-bg-light me-1 mb-1">{{ l.package }} &rarr; {% for p in l.products %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% empty %}<p class="text-secondary mb-0">None yet.</p>{% endfor %}
+  <p class="text-secondary">Tick a product to copy the server's features (disk, bandwidth, mailboxes, databases...) onto it again. The price is never touched: a server does not know prices.</p>
+  {% for l in linked %}
+  <div class="border rounded p-2 mb-2">
+    <strong>{{ l.package }}</strong>
+    <div class="small text-secondary">{% for title, value in l.features %}{{ title }}: {{ value }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</div>
+    {% for p in l.products %}<div class="form-check"><input class="form-check-input" type="checkbox" name="refresh" value="{{ p.pk }}" id="refresh-{{ p.pk }}" {% if p in l.stale %}checked{% endif %}>
+      <label class="form-check-label" for="refresh-{{ p.pk }}">{{ p.name }} {% if p in l.stale %}<span class="badge text-bg-warning">features differ from the server</span>{% else %}<span class="badge text-bg-success">same as the server</span>{% endif %}</label></div>{% endfor %}
+  </div>
+  {% empty %}<p class="text-secondary mb-0">None yet.</p>{% endfor %}
 </div></section>
 
-{% if broken or unlinked %}<button class="btn btn-primary" type="submit">Apply</button>{% endif %}
+<button class="btn btn-primary" type="submit">Apply</button>
 </form>
 {% endblock %}

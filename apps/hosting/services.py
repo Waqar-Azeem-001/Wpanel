@@ -399,7 +399,7 @@ def sync_usage(actor, account, *, request=None):
 def check_server(actor, server, *, request=None):
     """
     "Test connection" for a server: reach it with the saved details (read-only), and compare the packages it has with the
-    package name each product mapped to it creates. Returns ``{"version", "packages", "missing"}``; ``missing`` lists the
+    package name each product mapped to it creates. Returns ``{"version", "packages", "missing", "details"}`` (``details`` says what each package includes); ``missing`` lists the
     products whose package name the server does not have (an order for one of those would fail).
     """
     _require(actor, "manage_hosting")
@@ -416,7 +416,7 @@ def check_server(actor, server, *, request=None):
     audit.record("server.connection_tested", actor=actor, target=server,
                  metadata={"version": result.get("version", ""), "packages": len(packages), "missing": len(missing)},
                  request=request)
-    return {"version": result.get("version", ""), "packages": packages, "missing": missing}
+    return {"version": result.get("version", ""), "packages": packages, "missing": missing, "details": result.get("details") or {}}
 
 
 def check_infrastructure(actor, server, *, request=None):

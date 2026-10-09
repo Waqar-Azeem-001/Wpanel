@@ -501,8 +501,9 @@ def staff_server_plans(request, pk):
     if request.method == "POST":
         remap = {int(k[len("remap_"):]): v for k, v in request.POST.items() if k.startswith("remap_") and k[len("remap_"):].isdigit()}
         try:
-            remapped, created = services.apply_server_plans(request.user, server, packages, remap=remap, create=request.POST.getlist("create"),
-                                                            request=request)
+            refresh = [int(v) for v in request.POST.getlist("refresh") if v.isdigit()]
+            remapped, created, refreshed = services.apply_server_plans(request.user, server, packages, remap=remap, create=request.POST.getlist("create"),
+                                                                       details=result["details"], refresh=refresh, request=request)
         except (ServiceError, ValueError) as exc:
             messages.error(request, getattr(exc, "message", str(exc)))
         else:
@@ -511,11 +512,13 @@ def staff_server_plans(request, pk):
             if created:
                 messages.success(request, f"{len(created)} product(s) created from the server's plans. They are hidden and have no price yet: "
                                           "set a price and publish them when ready.")
-            if not remapped and not created:
+            if refreshed:
+                messages.success(request, f"The features of {len(refreshed)} product(s) were copied from the server's plans.")
+            if not remapped and not created and not refreshed:
                 messages.info(request, "Nothing was changed.")
         return redirect("catalog_staff:server_plans", pk=server.pk)
     return render(request, "products/staff/server_plans.html", {"server": server, "version": result["version"], "packages": packages,
-                                                                 **services.plans_report(server, packages)})
+                                                                 **services.plans_report(server, packages, result["details"])})
 
 
 @require_POST

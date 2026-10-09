@@ -93,10 +93,11 @@ class WhmApiAdapter(CpanelFiles, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysq
         return payload
 
     def check_connection(self):
-        """Read-only: the WHM version and the hosting packages it offers (so a product's package name can be checked)."""
+        """Read-only: the WHM version, the hosting packages it offers and what each includes (disk, bandwidth, mailboxes, databases...)."""
         version = (self._call("version").get("data") or {}).get("version") or ""
         packages = (self._call("listpkgs").get("data") or {}).get("pkg") or []
-        return {"version": str(version), "packages": sorted(p.get("name", "") for p in packages if p.get("name"))}
+        details = {p["name"]: package_features(p) for p in packages if p.get("name")}
+        return {"version": str(version), "packages": sorted(details), "details": details}
 
     def node_status(self):
         """
@@ -187,6 +188,30 @@ class WhmApiAdapter(CpanelFiles, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysq
         except (HostingError, TypeError, ValueError):
             pass
         return result
+
+
+def _count(value):
+    """A WHM limit as a number, or None for unlimited ("unlimited", "0" and empty all mean no limit)."""
+    text = str(value if value is not None else "").strip().lower()
+    if text in ("", "unlimited", "0", "none"):
+        return None
+    try:
+        number = int(float(text))
+    except ValueError:
+        return None
+    return number if number > 0 else None
+
+
+def package_features(raw):
+    """What a WHM package includes, as the neutral feature keys a product uses (WHM spells them QUOTA, MAXPOP, MAXSQL...)."""
+    def yes(value):
+        return "Yes" if str(value).strip().lower() in ("y", "yes", "1", "true") else "No"
+
+    return {"disk_mb": _count(raw.get("QUOTA")), "bandwidth_mb": _count(raw.get("BWLIMIT")), "email_accounts": _count(raw.get("MAXPOP")),
+            "databases": _count(raw.get("MAXSQL")), "ftp_accounts": _count(raw.get("MAXFTP")), "subdomains": _count(raw.get("MAXSUB")),
+            "parked_domains": _count(raw.get("MAXPARK")), "addon_domains": _count(raw.get("MAXADDON")),
+            "mailing_lists": _count(raw.get("MAXLST")), "emails_per_hour": _count(raw.get("MAX_EMAIL_PER_HOUR")),
+            "shell_access": yes(raw.get("HASSHELL")), "dedicated_ip": yes(raw.get("IP"))}
 
 
 def _redact_url(exc):

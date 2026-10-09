@@ -51,20 +51,20 @@ def test_the_report_finds_broken_unlinked_and_linked(manager, server):
     report = services.plans_report(server, PACKAGES)
     assert report["broken"] == [broken] and elsewhere not in report["broken"]
     assert [u["package"] for u in report["unlinked"]][:2] == ["WordPress-Starter Startup", "WordPress-Best Value Grow"]
-    assert report["linked"] == [{"package": "Shared Starter", "products": [fine]}]
+    assert [(l["package"], l["products"], l["stale"]) for l in report["linked"]] == [("Shared Starter", [fine], [])]
     assert {u["package"]: u["type"] for u in report["unlinked"]}["default"] == ""
 
 
 def test_a_broken_product_is_pointed_at_a_real_package_and_the_change_is_audited(manager, server):
     broken = product(manager, "WordPress Hosting", ProductType.WORDPRESS_HOSTING, "wordpress_hosting", server)
-    remapped, created = services.apply_server_plans(manager, server, PACKAGES, remap={broken.pk: "WordPress-Starter Startup"})
+    remapped, created, refreshed = services.apply_server_plans(manager, server, PACKAGES, remap={broken.pk: "WordPress-Starter Startup"})
     broken.refresh_from_db()
     assert remapped == [broken] and created == [] and broken.whm_package_name == "WordPress-Starter Startup" and server in broken.servers.all()
     assert AuditEvent.objects.get(action="product.package_remapped").metadata == {"from": "wordpress_hosting", "to": "WordPress-Starter Startup", "server": "live"}
 
 
 def test_new_products_are_hidden_unpriced_typed_and_mapped_to_the_server(manager, server):
-    remapped, created = services.apply_server_plans(manager, server, PACKAGES, create=["WordPress-Best Value Grow", "Business-Recommended Digital"])
+    remapped, created, refreshed = services.apply_server_plans(manager, server, PACKAGES, create=["WordPress-Best Value Grow", "Business-Recommended Digital"])
     assert remapped == [] and [p.name for p in created] == ["WordPress-Best Value Grow", "Business-Recommended Digital"]
     wordpress, business = created
     assert wordpress.type == ProductType.WORDPRESS_HOSTING and business.type == ProductType.BUSINESS_HOSTING
@@ -75,10 +75,10 @@ def test_new_products_are_hidden_unpriced_typed_and_mapped_to_the_server(manager
 
 
 def test_an_unclear_package_becomes_shared_hosting_only_when_ticked_and_a_twin_is_never_made(manager, server):
-    _, created = services.apply_server_plans(manager, server, PACKAGES, create=["default"])
+    _, created, _ = services.apply_server_plans(manager, server, PACKAGES, create=["default"])
     assert created[0].type == ProductType.SHARED_HOSTING
     again = services.apply_server_plans(manager, server, PACKAGES, create=["default", "Shared Starter"])
-    assert again[1][0].name == "Shared Starter" and Product.objects.filter(whm_package_name="default").count() == 1
+    assert again[1][0].name == "Shared Starter" and len(again) == 3 and Product.objects.filter(whm_package_name="default").count() == 1
 
 
 def test_a_package_the_server_does_not_have_is_refused_and_nothing_is_half_applied(manager, server):

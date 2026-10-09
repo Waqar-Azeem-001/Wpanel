@@ -13,7 +13,7 @@ from apps.core.exceptions import ServiceError
 from apps.core.utils import unique_slug
 
 from . import categories
-from .models import (Addon, AddonKind, AddonPrice, BillingCycle, CatalogStatus, Product, ProductPrice, ProductType, Server,
+from .models import (LIMIT_LABELS, Addon, AddonKind, AddonPrice, BillingCycle, CatalogStatus, Product, ProductPrice, ProductType, Server,
                      StoreCategory)
 
 PRODUCT_FIELDS = (
@@ -369,32 +369,87 @@ def type_for_package(package):
     return ""
 
 
-def plans_report(server, packages):
+FEATURE_ORDER = ["disk_mb", "bandwidth_mb", "email_accounts", "databases", "ftp_accounts", "subdomains", "addon_domains", "parked_domains",
+                 "mailing_lists", "emails_per_hour", "shell_access", "dedicated_ip"]
+
+
+def features_of(details):
+    """(limits, order) for a product, from what a server package includes. A missing number means unlimited (None)."""
+    limits = {key: details.get(key) for key in FEATURE_ORDER if key in details}
+    return limits, [key for key in FEATURE_ORDER if key in limits]
+
+
+def feature_lines(limits):
+    """The plan's features as short lines for its description, for example '50 GB storage' and 'Unlimited email accounts'."""
+    def number(key, one, many):
+        value = limits.get(key, "missing")
+        if value == "missing":
+            return None
+        return f"Unlimited {many}" if value is None else f"{value} {one if value == 1 else many}"
+
+    lines = []
+    for key, one, many in (("databases", "database", "databases"), ("email_accounts", "email account", "email accounts"),
+                           ("ftp_accounts", "FTP account", "FTP accounts"), ("subdomains", "subdomain", "subdomains"),
+                           ("addon_domains", "addon domain", "addon domains")):
+        text = number(key, one, many)
+        if text:
+            lines.append(text)
+    disk, bandwidth = limits.get("disk_mb", "missing"), limits.get("bandwidth_mb", "missing")
+
+    def size(mb):
+        return f"{mb // 1024} GB" if mb % 1024 == 0 and mb >= 1024 else f"{mb} MB"
+
+    head = []
+    if disk != "missing":
+        head.append("Unlimited storage" if disk is None else f"{size(disk)} storage")
+    if bandwidth != "missing":
+        head.append("Unlimited bandwidth" if bandwidth is None else f"{size(bandwidth)} bandwidth")
+    if limits.get("shell_access") == "Yes":
+        lines.append("Shell access")
+    return head + lines
+
+
+def plans_report(server, packages, details=None):
     """
     What differs between a server's packages and the catalog: ``broken`` are products mapped to this server whose package the server does not
-    have (they would fail at provisioning); ``unlinked`` are server packages no product uses yet, each with a suggested product type;
-    ``linked`` pairs a package with the product that already uses it.
+    have (they would fail at provisioning); ``unlinked`` are server packages no product uses yet, each with a suggested product type and the
+    features it includes; ``linked`` pairs a package with the products that use it and says which of them no longer show the server's features.
     """
+    details = details or {}
     products = list(Product.objects.exclude(whm_package_name="").prefetch_related("servers").order_by("name"))
     by_package = {}
     for product in products:
         by_package.setdefault(product.whm_package_name, []).append(product)
     broken = [p for p in products if server in p.servers.all() and p.whm_package_name not in packages]
-    unlinked = [{"package": name, "type": type_for_package(name)} for name in packages if name not in by_package]
-    linked = [{"package": name, "products": by_package[name]} for name in packages if name in by_package]
+    unlinked = [{"package": name, "type": type_for_package(name), "features": _shown(details.get(name))} for name in packages if name not in by_package]
+    linked = []
+    for name in packages:
+        if name in by_package:
+            wanted = features_of(details[name])[0] if name in details else None
+            stale = [p for p in by_package[name] if wanted is not None and (p.resource_limits or {}) != wanted]
+            linked.append({"package": name, "products": by_package[name], "stale": stale, "features": _shown(details.get(name))})
     return {"broken": broken, "unlinked": unlinked, "linked": linked}
 
 
+def _shown(details):
+    """[(title, value)] for showing a package's features on screen."""
+    limits = features_of(details or {})[0]
+    return [(LIMIT_LABELS.get(key, key), "Unlimited" if value is None else value) for key, value in limits.items()]
+
+
 @transaction.atomic
-def apply_server_plans(actor, server, packages, *, remap=None, create=None, request=None):
+def apply_server_plans(actor, server, packages, *, remap=None, create=None, details=None, refresh=None, request=None):
     """
     Bring the catalog in line with a server's packages. ``remap`` is {product id: package} for products pointing at a package the server does
-    not have; ``create`` lists server packages to turn into new products. New products are created HIDDEN with no price, so nothing reaches
-    the store until staff price and publish them. Only packages the server really has are accepted. Returns (remapped, created).
+    not have; ``create`` lists server packages to turn into new products; ``refresh`` lists product ids whose features (disk, bandwidth,
+    mailboxes, databases...) are copied again from their package. New products are created HIDDEN with no price, so nothing reaches the store
+    until staff price and publish them (a server does not know prices). Only packages the server really has are accepted.
+    Returns (remapped, created, refreshed).
     """
     _require(actor, "manage_products")
+    details = details or {}
     known = set(packages)
-    remapped, created = [], []
+    remapped, created, refreshed = [], [], []
     for product_id, package in (remap or {}).items():
         if not package:
             continue
@@ -414,9 +469,24 @@ def apply_server_plans(actor, server, packages, *, remap=None, create=None, requ
         if Product.objects.filter(whm_package_name=package).exists():
             continue  # something already uses it; never make a twin
         kind = type_for_package(package) or ProductType.SHARED_HOSTING
-        product = create_product(actor, {"name": package, "type": kind, "whm_package_name": package}, request=request)
+        data = {"name": package, "type": kind, "whm_package_name": package}
+        if package in details:
+            data["resource_limits"], data["limit_order"] = features_of(details[package])
+            data["description"] = "\n".join(feature_lines(data["resource_limits"]))
+        product = create_product(actor, data, request=request)
         product.servers.add(server)
         audit.record("product.created_from_server", actor=actor, target=product, metadata={"package": package, "server": server.name},
                      request=request)
         created.append(product)
-    return remapped, created
+    for product in Product.objects.filter(pk__in=refresh or []):
+        if product.whm_package_name not in details:
+            continue
+        limits, order = features_of(details[product.whm_package_name])
+        data = {"resource_limits": limits, "limit_order": order}
+        if not product.description.strip():
+            data["description"] = "\n".join(feature_lines(limits))
+        update_product(actor, product, data, request=request)
+        audit.record("product.features_synced", actor=actor, target=product, metadata={"package": product.whm_package_name, "server": server.name},
+                     request=request)
+        refreshed.append(product)
+    return remapped, created, refreshed

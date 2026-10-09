@@ -175,7 +175,7 @@ def test_check_connection_reads_the_version_and_the_packages_without_changing_an
 
     with mock.patch("requests.get", side_effect=fake_get), mock.patch("requests.post") as post:
         result = _adapter().check_connection()
-    assert result == {"version": "11.118.0.5", "packages": ["business", "starter"]}
+    assert result["version"] == "11.118.0.5" and result["packages"] == ["business", "starter"] and set(result["details"]) == {"business", "starter"}
     assert calls == ["version", "listpkgs"] and not post.called  # two reads, no write
 
 

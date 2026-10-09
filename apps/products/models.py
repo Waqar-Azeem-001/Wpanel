@@ -16,7 +16,8 @@ KNOWN_RESOURCE_LIMITS = (
 LIMIT_LABELS = {
     "disk_mb": "Disk space (MB)", "bandwidth_mb": "Bandwidth (MB)", "email_accounts": "Email accounts", "databases": "Databases",
     "ftp_accounts": "FTP accounts", "subdomains": "Subdomains", "parked_domains": "Parked domains",
-    "addon_domains": "Addon domains", "websites": "Websites",
+    "addon_domains": "Addon domains", "websites": "Websites", "mailing_lists": "Mailing lists", "emails_per_hour": "Emails per hour",
+    "shell_access": "Shell access", "dedicated_ip": "Dedicated IP",
 }
 
 
