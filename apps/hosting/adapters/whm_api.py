@@ -26,6 +26,7 @@ from .base import HostingAdapter, HostingError
 from .capabilities import Capability, NodeCapability, NodeService, NodeStatus
 from .cpanel_backups import CpanelBackups
 from .cpanel_cron import CpanelCron
+from .cpanel_api import plan_limit
 from .cpanel_dns import CpanelDns
 from .cpanel_domains import CpanelDomains
 from .cpanel_email import CpanelEmail
@@ -75,15 +76,25 @@ class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns
             query.update(params or {})
         try:
             request = requests.post if sensitive else requests.get
-            response = request(f"{self._base_url()}/{function}", headers=headers, params=query, data=body,
-                               timeout=self.timeout, verify=self.verify_ssl)
+            for attempt in (1, 2):
+                try:
+                    response = request(f"{self._base_url()}/{function}", headers=headers, params=query, data=body,
+                                       timeout=self.timeout, verify=self.verify_ssl)
+                    break
+                except requests.exceptions.Timeout:
+                    # A slow answer is common on a busy server. A read is safe to ask for again; anything that might change something is never
+                    # repeated, because the first attempt may already have gone through (and a second delete or create would then fail).
+                    if sensitive or attempt == 2 or not is_read(function, params):
+                        raise
             if response.status_code in (401, 403):
                 raise HostingError("The server refused the login. Check the API username and the API token, and that the "
                                    "token is allowed to do this (WHM > Manage API Tokens).")
             response.raise_for_status()
             payload = response.json()
         except requests.RequestException as exc:
-            raise HostingError(f"Could not reach the server: {_describe(exc)}") from exc
+            note = " The change may still have been made on the server: reload the page to check." if not is_read(function, params) and \
+                isinstance(exc, requests.exceptions.Timeout) else ""
+            raise HostingError(f"Could not reach the server: {_describe(exc)}{note}") from exc
         except ValueError as exc:
             raise HostingError("The server returned an unexpected (non-JSON) response.") from exc
 
@@ -110,7 +121,7 @@ class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns
         version = str((self._call("version").get("data") or {}).get("version") or "")
         load = None
         try:
-            payload = self._call("loadavg")
+            payload = self._call("systemloadavg")
             data = payload.get("data") if isinstance(payload.get("data"), dict) and "one" in payload["data"] else payload
             load = (float(data["one"]), float(data["five"]), float(data["fifteen"]))
         except (HostingError, KeyError, TypeError, ValueError):
@@ -124,11 +135,12 @@ class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns
                     running.append(bool(int(entries[0].get("running", 0))) if entries else None)
                 except (HostingError, TypeError, ValueError, IndexError, AttributeError):
                     running.append(None)
-            if all(r is None for r in running):
+            known = [r for r in running if r is not None]  # a check that timed out says nothing either way
+            if not known:
                 state = "unavailable"
-            elif all(running):
+            elif all(known):
                 state = "running"
-            elif not any(running):
+            elif not any(known):
                 state = "down"
             else:
                 state = "degraded"
@@ -196,16 +208,17 @@ class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns
         return result
 
 
-def _count(value):
-    """A WHM limit as a number, or None for unlimited ("unlimited", "0" and empty all mean no limit)."""
-    text = str(value if value is not None else "").strip().lower()
-    if text in ("", "unlimited", "0", "none"):
-        return None
-    try:
-        number = int(float(text))
-    except ValueError:
-        return None
-    return number if number > 0 else None
+READ_FUNCTIONS = frozenset({"version", "listpkgs", "servicestatus", "systemloadavg", "dumpzone", "accountsummary", "showbw", "listaccts", "getpkginfo"})
+READ_WORDS = ("list", "get", "domains_data", "installed_hosts", "listcron", "php_get", "php_ini_get", "query", "check_")
+
+
+def is_read(function, params):
+    """True for a call that only asks (so it is safe to repeat). WHM's own read functions are listed; a call run as an account (UAPI or API 2) is a
+    read only when its function name says so (list..., get..., and a few others). Anything unknown counts as a change, so it is never repeated."""
+    if function in READ_FUNCTIONS:
+        return True
+    name = str((params or {}).get("cpanel.function") or (params or {}).get("cpanel_jsonapi_func") or "")
+    return bool(name) and (name.startswith(READ_WORDS) or name in ("domains_data", "installed_hosts", "listcron"))
 
 
 def package_features(raw):
@@ -213,11 +226,16 @@ def package_features(raw):
     def yes(value):
         return "Yes" if str(value).strip().lower() in ("y", "yes", "1", "true") else "No"
 
-    return {"disk_mb": _count(raw.get("QUOTA")), "bandwidth_mb": _count(raw.get("BWLIMIT")), "email_accounts": _count(raw.get("MAXPOP")),
-            "databases": _count(raw.get("MAXSQL")), "ftp_accounts": _count(raw.get("MAXFTP")), "subdomains": _count(raw.get("MAXSUB")),
-            "parked_domains": _count(raw.get("MAXPARK")), "addon_domains": _count(raw.get("MAXADDON")),
-            "mailing_lists": _count(raw.get("MAXLST")), "emails_per_hour": _count(raw.get("MAX_EMAIL_PER_HOUR")),
-            "shell_access": yes(raw.get("HASSHELL")), "dedicated_ip": yes(raw.get("IP"))}
+    def size(key):
+        return plan_limit(raw.get(key), zero_is_unlimited=True)
+
+    def count(key):
+        return plan_limit(raw.get(key))
+
+    return {"disk_mb": size("QUOTA"), "bandwidth_mb": size("BWLIMIT"), "email_accounts": count("MAXPOP"), "databases": count("MAXSQL"),
+            "ftp_accounts": count("MAXFTP"), "subdomains": count("MAXSUB"), "parked_domains": count("MAXPARK"), "addon_domains": count("MAXADDON"),
+            "mailing_lists": count("MAXLST"), "emails_per_hour": size("MAX_EMAIL_PER_HOUR"), "shell_access": yes(raw.get("HASSHELL")),
+            "dedicated_ip": yes(raw.get("IP"))}
 
 
 def _redact_url(exc):

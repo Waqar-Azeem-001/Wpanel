@@ -92,7 +92,7 @@ def my_hosting_ftp(request, pk):
     return render(request, "hosting/customer/ftp.html", {
         "account": account, "sidebar": portal.service_sidebar(request, account), "options": options,
         "rows": [{"a": a, "created": _when(a.created_at)} for a in accounts], "count": len(accounts),
-        "full": bool(options and options.max_accounts and len(accounts) >= options.max_accounts),  # 0 means no fixed limit
+        "full": bool(options and options.max_accounts is not None and len(accounts) >= options.max_accounts),  # None means no fixed limit
         "files_url": reverse("hosting_customer:files", args=[account.pk]) if _supports(account, "files") else "",
         "action_url": reverse("hosting_customer:ftp_action", args=[account.pk])})
 

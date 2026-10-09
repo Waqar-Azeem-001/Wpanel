@@ -1,24 +1,15 @@
 """MySQL databases on a cPanel server, through UAPI's ``Mysql`` module. Looking inside a database (tables, rows, SQL) is not offered here."""
 from .base import HostingError
 from .capabilities import (DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabasesCapability, DatabaseUserInfo)
-from .cpanel_api import CpanelApi
+from .cpanel_api import CpanelApi, plan_limit
 
 PRIVILEGES = {"SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER", "INDEX", "REFERENCES", "LOCK TABLES",
               "CREATE TEMPORARY TABLES", "CREATE ROUTINE", "ALTER ROUTINE", "EXECUTE", "CREATE VIEW", "SHOW VIEW", "TRIGGER", "EVENT"}
 
 
-def _limit(value):
-    """WHM reports a plan limit as a number or the word unlimited."""
-    try:
-        number = int(str(value))
-    except (TypeError, ValueError):
-        return None
-    return number if number > 0 else None
-
-
 class CpanelMysql(CpanelApi, DatabasesCapability):
     def _prefix(self, user):
-        restrictions = self._uapi(user, "Mysql", "get_restrictions") or {}
+        restrictions = self._remember(("restrictions", user), lambda: self._uapi(user, "Mysql", "get_restrictions") or {})
         return str(restrictions.get("prefix") or f"{user}_")
 
     def _full(self, user, name):
@@ -41,7 +32,7 @@ class CpanelMysql(CpanelApi, DatabasesCapability):
     def database_limits(self, username):
         data = self._call("accountsummary", {"user": username}).get("data") or {}
         accounts = data.get("acct") or [{}]
-        return DatabaseLimits(name_prefix=self._prefix(username), max_databases=_limit(accounts[0].get("maxsql")), max_users=None,
+        return DatabaseLimits(name_prefix=self._prefix(username), max_databases=plan_limit(accounts[0].get("maxsql")), max_users=None,
                               password_min_length=12)
 
     def list_databases(self, username):

@@ -3,24 +3,16 @@ from urllib.parse import urlsplit
 
 from .base import HostingError
 from .capabilities import DOMAIN_KINDS, DomainInfo, DomainLimits, DomainsCapability
-from .cpanel_api import CpanelApi
+from .cpanel_api import CpanelApi, plan_limit
 from .dns_rules import clean_domain
 from .sandbox import clean_relative
 
 
 
-def _limit(value):
-    try:
-        number = int(str(value))
-    except (TypeError, ValueError):
-        return None
-    return number if number > 0 else None
-
-
 class CpanelDomains(CpanelApi, DomainsCapability):
     def domain_limits(self, username):
         accounts = (self._call("accountsummary", {"user": username}).get("data") or {}).get("acct") or [{}]
-        return DomainLimits(max_addon_domains=_limit(accounts[0].get("maxaddons")), max_subdomains=_limit(accounts[0].get("maxsub")), nameservers=[])
+        return DomainLimits(max_addon_domains=plan_limit(accounts[0].get("maxaddons")), max_subdomains=plan_limit(accounts[0].get("maxsub")), nameservers=[])
 
     def _redirects(self, user):
         """{domain: (target, permanent)} from the account's redirects, read defensively."""
@@ -63,6 +55,7 @@ class CpanelDomains(CpanelApi, DomainsCapability):
         if name in {main, *addon, *subs, *parked}:
             raise HostingError("That domain is already on this account.")
         root = clean_relative(document_root) or f"public_html/{name}"
+        self._forget(("domains", username))  # the list changes with this call
         if kind == "addon":
             self._api2(username, "AddonDomain", "addaddondomain", {"dir": root, "newdomain": name, "subdomain": name.split(".")[0]})
         elif kind == "subdomain":
@@ -86,6 +79,7 @@ class CpanelDomains(CpanelApi, DomainsCapability):
             self._api2(username, "Park", "unpark", {"domain": name})
         else:
             raise HostingError("That domain is not on this account.")
+        self._forget(("domains", username))
 
     def set_redirect(self, username, name, redirect_to, permanent):
         name = self._owned_domain(username, name)

@@ -5,7 +5,8 @@ import pytest
 
 from apps.accounts.roles import Role
 from apps.audit.models import AuditEvent
-from apps.hosting.adapters.whm_api import WhmApiAdapter, _count, package_features
+from apps.hosting.adapters.cpanel_api import plan_limit
+from apps.hosting.adapters.whm_api import WhmApiAdapter, package_features
 from apps.products import services
 from apps.products.models import CatalogStatus, Product, ProductType, Server, ServerKind
 
@@ -17,15 +18,20 @@ GROW = {"name": "Shared Grow", "QUOTA": "0", "BWLIMIT": "102400", "MAXPOP": "unl
         "MAXPARK": "unlimited", "MAXADDON": "unlimited", "MAXLST": "0", "MAX_EMAIL_PER_HOUR": "unlimited", "HASSHELL": "y", "IP": "y"}
 
 
-@pytest.mark.parametrize("value,expected", [("unlimited", None), ("0", None), ("", None), (None, None), ("none", None), ("51200", 51200), (" 20 ", 20),
-                                            ("7.0", 7), ("-5", None), ("abc", None)])
-def test_a_server_limit_becomes_a_number_or_unlimited(value, expected):
-    assert _count(value) == expected
+@pytest.mark.parametrize("value,expected", [("unlimited", None), ("", None), (None, None), ("none", None), ("51200", 51200), (" 20 ", 20), ("7.0", 7), ("-5", None),
+                                            ("abc", None), ("0", 0)])
+def test_a_count_limit_is_a_number_unlimited_or_zero_meaning_none_allowed(value, expected):
+    assert plan_limit(value) == expected  # checked on the live server: a plain 0 for subdomains or addon domains means none are allowed
+
+
+@pytest.mark.parametrize("value,expected", [("0", None), ("unlimited", None), ("81920", 81920)])
+def test_disk_and_bandwidth_treat_zero_as_unlimited(value, expected):
+    assert plan_limit(value, zero_is_unlimited=True) == expected
 
 
 def test_a_whm_package_is_read_into_neutral_features():
     assert package_features(STARTER) == {"disk_mb": 51200, "bandwidth_mb": None, "email_accounts": 10, "databases": 5, "ftp_accounts": None, "subdomains": 20,
-                                         "parked_domains": None, "addon_domains": 1, "mailing_lists": None, "emails_per_hour": 100, "shell_access": "No",
+                                         "parked_domains": 0, "addon_domains": 1, "mailing_lists": None, "emails_per_hour": 100, "shell_access": "No",
                                          "dedicated_ip": "No"}
     grow = package_features(GROW)
     assert grow["disk_mb"] is None and grow["bandwidth_mb"] == 102400 and grow["shell_access"] == "Yes" and grow["dedicated_ip"] == "Yes"

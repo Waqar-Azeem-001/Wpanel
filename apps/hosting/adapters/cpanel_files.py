@@ -1,5 +1,6 @@
 """The File Manager on a cPanel server: UAPI ``Fileman`` for reading and listing, API 2 ``Fileman::fileop`` and ``mkdir`` for changes. Every path is made
 relative to the account's own home folder first, so nothing outside it can be named. Uploads of binary files, the trash view and name search are not offered."""
+import secrets
 from datetime import datetime, timezone
 
 from .base import HostingError
@@ -106,9 +107,24 @@ class CpanelFiles(CpanelApi, FilesCapability):
         clean_name(_leaf(target))
         if self._exists(username, target):
             raise HostingError("Something with that name already exists.")
-        self._op(username, "copy", source, self._abs(username, _parent(target)))
-        if _leaf(source) != _leaf(target):
-            self._op(username, "rename", f"{_parent(target)}/{_leaf(source)}".lstrip("/"), _leaf(target))
+        if _parent(source) != _parent(target):
+            self._op(username, "copy", source, self._abs(username, _parent(target)))
+            if _leaf(source) != _leaf(target):
+                self._op(username, "rename", f"{_parent(target)}/{_leaf(source)}".lstrip("/"), _leaf(target))
+            return
+        # Into the same folder cPanel would copy a file onto itself, so copy it into a temporary folder first, then move the copy into place.
+        scratch = f"tmp/whpanel-copy-{secrets.token_hex(4)}"
+        self.make_directory(username, scratch)
+        try:
+            self._op(username, "copy", source, self._abs(username, scratch))
+            if _leaf(source) != _leaf(target):
+                self._op(username, "rename", f"{scratch}/{_leaf(source)}", _leaf(target))
+            self._op(username, "move", f"{scratch}/{_leaf(target)}", self._abs(username, _parent(target)))
+        finally:
+            try:
+                self._op(username, "unlink", scratch)
+            except HostingError:
+                pass  # a leftover empty folder in tmp is harmless
 
     def set_permissions(self, username, path, mode):
         rel = clean_relative(path)

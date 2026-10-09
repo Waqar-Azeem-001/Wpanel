@@ -45,7 +45,7 @@ def test_only_the_logins_the_customer_made_are_listed_and_the_folder_is_relative
     real, fake = adapter({**DOMAINS, **HOME, ("uapi_cpanel", "Ftp::list_ftp"): REAL_FTP, "accountsummary": {"acct": [{"maxftp": "unlimited"}]}})
     assert [(a.login, a.directory) for a in real.list_ftp_accounts(USER)] == [("dev@acme.com", "public_html/site")]
     options = real.ftp_options(USER)
-    assert options.host == "whm.test" and options.max_accounts == 0 and options.port == 21
+    assert options.host == "whm.test" and options.max_accounts is None and options.port == 21
     real2, _ = adapter({"accountsummary": {"acct": [{"maxftp": "5"}]}})
     assert real2.ftp_options(USER).max_accounts == 5
 
@@ -103,3 +103,18 @@ def test_the_servers_internal_folders_are_hidden_from_the_file_list():
     listing = [{"file": name, "type": "dir"} for name in (".cagefs", ".caldav", ".cl.selector", ".htpasswds", "etc", "logs", "mail", "public_ftp", "public_html", "tmp")]
     real, _ = adapter({**HOME, ("uapi_cpanel", "Fileman::list_files"): listing})
     assert [e.name for e in real.list_files(USER, "")] == ["etc", "logs", "mail", "public_ftp", "public_html", "tmp"]
+
+
+def test_a_plain_zero_for_a_count_means_none_allowed_as_the_live_server_does():
+    """Live (9 Oct 2026): the package WordPress-Starter Startup has MAXSUB, MAXADDON and MAXPARK of 0 and the server refused a subdomain."""
+    answers = {"accountsummary": {"acct": [{"maxsub": "0", "maxaddons": "0", "maxparked": "0", "maxsql": "2", "maxpop": "15", "maxftp": "5"}]}}
+    real, _ = adapter({**HOME, **answers, ("uapi_cpanel", "Mysql::get_restrictions"): {"prefix": "acme_"}})
+    limits = real.domain_limits(USER)
+    assert limits.max_subdomains == 0 and limits.max_addon_domains == 0
+    assert real.database_limits(USER).max_databases == 2 and real.email_limits(USER).max_mailboxes == 15 and real.ftp_options(USER).max_accounts == 5
+
+
+def test_a_missing_autossl_feature_is_explained_in_plain_words():
+    real, _ = adapter({**DOMAINS, ("uapi_cpanel", "SSL::start_autossl_check"): {"__uapi_error__": "You do not have the feature “autossl”."}})
+    with pytest.raises(HostingError, match="Automatic SSL is not switched on for this plan"):
+        real.request_ssl(USER, "acme.com")

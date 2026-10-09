@@ -66,7 +66,12 @@ class CpanelSsl(CpanelApi, SslCapability):
 
     def request_ssl(self, username, domain):
         self._owned_domain(username, domain)
-        self._uapi(username, "SSL", "start_autossl_check")  # AutoSSL looks at every site of the account and installs what is missing
+        try:
+            self._uapi(username, "SSL", "start_autossl_check")  # AutoSSL looks at every site of the account and installs what is missing
+        except HostingError as exc:
+            if "feature" in str(exc).lower() and "autossl" in str(exc).lower():
+                raise HostingError("Automatic SSL is not switched on for this plan. Ask support to add the AutoSSL feature to it.") from exc
+            raise
 
     def remove_ssl(self, username, domain):
         domain = self._owned_domain(username, domain)

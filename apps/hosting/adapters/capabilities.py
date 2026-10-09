@@ -333,7 +333,7 @@ class FtpOptions:
     host: str = ""
     port: int = 21
     secure_port: int = 22  # SFTP, when the provider offers it (0 when not)
-    max_accounts: int = 0
+    max_accounts: Optional[int] = 0  # None means no fixed limit
     root: str = ""  # the account's own folder name shown as the top of every FTP login
 
 

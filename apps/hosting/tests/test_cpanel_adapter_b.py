@@ -241,3 +241,19 @@ def test_an_api2_failure_is_a_plain_error():
     real._call = lambda *a, **k: {"unexpected": True}
     with pytest.raises(HostingError, match="do not understand"):
         real.make_directory(USER, "x")
+
+
+def test_copying_into_the_same_folder_goes_through_a_temporary_folder_and_cleans_it_up():
+    real, fake = adapter({**FILES, ("cpanel", "Fileman::fileop"): [{"result": 1}]})
+    real.copy_path(USER, "public_html/a.txt", "public_html/a-copy.txt")
+    operations = [(p["op"], p["sourcefiles"].rsplit("/", 1)[-1], p.get("destfiles", "").rsplit("/", 1)[-1]) for p, _ in fake.api2_calls("Fileman", "fileop")]
+    assert [o[0] for o in operations] == ["copy", "rename", "move", "unlink"]
+    assert operations[1][2] == "a-copy.txt" and fake.api2_calls("Fileman", "mkdir")[0][0]["name"].startswith("whpanel-copy-")
+    assert fake.api2_calls("Fileman", "fileop")[-1][0]["sourcefiles"].startswith("/home/acme/tmp/whpanel-copy-")
+
+
+def test_a_service_check_that_timed_out_does_not_make_a_service_look_degraded():
+    from apps.hosting.tests.test_infrastructure import GOOD, whm
+
+    responses = {**GOOD, "servicestatus:dovecot": HostingError("timed out")}
+    assert {s.key: s.state for s in whm(responses).node_status().services}["mail"] == "running"

@@ -4,7 +4,7 @@ changed: only the logins the customer made. Each is limited to a folder inside t
 """
 from .base import HostingError
 from .capabilities import FtpAccount, FtpCapability, FtpOptions
-from .cpanel_api import CpanelApi
+from .cpanel_api import CpanelApi, plan_limit
 from .ftp_rules import FTP_NAME, check_ftp_password
 from .sandbox import clean_relative
 
@@ -20,11 +20,7 @@ class CpanelFtp(CpanelApi, FtpCapability):
 
     def ftp_options(self, username):
         accounts = (self._call("accountsummary", {"user": username}).get("data") or {}).get("acct") or [{}]
-        try:
-            limit = int(str(accounts[0].get("maxftp")))
-        except (TypeError, ValueError):
-            limit = 0
-        return FtpOptions(host=self.host, port=21, secure_port=0, max_accounts=limit if limit > 0 else 0, root="")
+        return FtpOptions(host=self.host, port=21, secure_port=0, max_accounts=plan_limit(accounts[0].get("maxftp")), root="")  # None: no limit
 
     def list_ftp_accounts(self, username):
         found = []

@@ -385,7 +385,7 @@ def feature_lines(limits):
     """The plan's features as short lines for its description, for example '50 GB storage' and 'Unlimited email accounts'."""
     def number(key, one, many):
         value = limits.get(key, "missing")
-        if value == "missing":
+        if value == "missing" or value == 0:  # a plan with none of something does not advertise it
             return None
         return f"Unlimited {many}" if value is None else f"{value} {one if value == 1 else many}"
 

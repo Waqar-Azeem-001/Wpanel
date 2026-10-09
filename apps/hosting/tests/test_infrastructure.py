@@ -45,7 +45,7 @@ def whm(responses):
     return adapter
 
 
-GOOD = {"version": {"data": {"version": "11.118.0"}}, "loadavg": {"one": "0.5", "five": "0.4", "fifteen": "0.3"},
+GOOD = {"version": {"data": {"version": "11.118.0"}}, "systemloadavg": {"one": "0.5", "five": "0.4", "fifteen": "0.3"},
         **{f"servicestatus:{n}": {"data": {"service": [{"name": n, "running": 1}]}} for n in ("httpd", "mysql", "exim", "dovecot", "named")}}
 
 
@@ -65,8 +65,8 @@ def test_whm_service_states_down_degraded_and_unavailable():
 
 
 def test_load_in_whm_data_envelope_and_a_missing_load_are_both_handled():
-    assert whm({**GOOD, "loadavg": {"data": {"one": "1", "five": "2", "fifteen": "3"}}}).node_status().load == (1.0, 2.0, 3.0)
-    assert whm({**GOOD, "loadavg": HostingError("no")}).node_status().load is None
+    assert whm({**GOOD, "systemloadavg": {"data": {"one": "1", "five": "2", "fifteen": "3"}}}).node_status().load == (1.0, 2.0, 3.0)
+    assert whm({**GOOD, "systemloadavg": HostingError("no")}).node_status().load is None
 
 
 def test_an_unreachable_whm_server_raises_so_the_dashboard_can_say_so():

@@ -24,6 +24,24 @@ def clean_error(text):
     return text[:MAX_ERROR]
 
 
+def plan_limit(value, *, zero_is_unlimited=False):
+    """
+    A WHM plan limit as a number, or None for unlimited. Checked against the live server: for counts (mailboxes, databases, FTP logins,
+    subdomains, addon and parked domains) a plain 0 means NONE are allowed and only the word ``unlimited`` means no limit, while for disk space,
+    bandwidth and emails per hour a 0 means unlimited (``zero_is_unlimited``).
+    """
+    text = str(value if value is not None else "").strip().lower()
+    if text in ("", "unlimited", "none"):
+        return None
+    try:
+        number = int(float(text))
+    except ValueError:
+        return None
+    if number < 0:
+        return None
+    return None if number == 0 and zero_is_unlimited else number
+
+
 def names(items, key="domain"):
     """Domain names out of a list that may hold strings or dicts."""
     found = []
@@ -49,6 +67,18 @@ class CpanelApi:
             raise HostingError(clean_error(errors[0]) if errors else f"{module}::{function} did not succeed.")
         return result.get("data")
 
+    def _remember(self, key, make):
+        """Each call to the server takes seconds, so what cannot change during one request (the home folder, the account's domains, the name prefix)
+        is asked for once per adapter. An adapter lives for one request."""
+        memory = self.__dict__.setdefault("_memory", {})
+        if key not in memory:
+            memory[key] = make()
+        return memory[key]
+
+    def _forget(self, *keys):
+        for key in keys:
+            self.__dict__.setdefault("_memory", {}).pop(key, None)
+
     def _api2(self, user, module, function, params=None, *, secret=False):
         """A legacy cPanel API 2 function run as the account (for the few things UAPI does not offer): the ``data`` of its ``cpanelresult``."""
         payload = self._call("cpanel", {"cpanel_jsonapi_user": user, "cpanel_jsonapi_apiversion": 2, "cpanel_jsonapi_module": module,
@@ -65,7 +95,7 @@ class CpanelApi:
 
     def _home(self, user):
         """The account's home folder on the server (usually /home/<user>), which every file path is relative to."""
-        info = self._uapi(user, "Variables", "get_user_information") or {}
+        info = self._remember(("home", user), lambda: self._uapi(user, "Variables", "get_user_information") or {})
         home = str(info.get("home") or f"/home/{user}").rstrip("/")
         if not home.startswith("/") or ".." in home.split("/"):
             raise HostingError("The server reported an unusable home folder.")
@@ -79,7 +109,7 @@ class CpanelApi:
 
     def _account_domains(self, user):
         """(main domain, addon domains, subdomains, parked/alias domains) of the account, all lower-case."""
-        data = self._uapi(user, "DomainInfo", "domains_data", {"format": "hash"}) or {}
+        data = self._remember(("domains", user), lambda: self._uapi(user, "DomainInfo", "domains_data", {"format": "hash"}) or {})
         main = data.get("main_domain")
         main = (main.get("domain") if isinstance(main, dict) else main) or ""
         return (str(main).lower(), names(data.get("addon_domains")), names(data.get("sub_domains")), names(data.get("parked_domains")))

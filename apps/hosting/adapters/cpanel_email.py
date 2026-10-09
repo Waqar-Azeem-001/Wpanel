@@ -1,7 +1,7 @@
 """Email on a cPanel server, through UAPI's ``Email`` module: mailboxes, quotas, passwords, forwarders and automatic replies. Reading mail inside WHPanel is not offered."""
 from .base import HostingError
 from .capabilities import (AutoresponderInfo, EmailCapability, EmailLimits, ForwarderInfo, MailboxInfo)
-from .cpanel_api import CpanelApi
+from .cpanel_api import CpanelApi, plan_limit
 
 
 def _split(address):
@@ -31,14 +31,7 @@ class CpanelEmail(CpanelApi, EmailCapability):
     def email_limits(self, username):
         summary = self._summary(username)
 
-        def limit(key):
-            try:
-                value = int(str(summary.get(key)))
-            except (TypeError, ValueError):
-                return None
-            return value if value > 0 else None
-
-        return EmailLimits(domain=str(summary.get("domain", "")), max_mailboxes=limit("maxpop"), max_forwarders=None, default_quota_mb=1024,
+        return EmailLimits(domain=str(summary.get("domain", "")), max_mailboxes=plan_limit(summary.get("maxpop")), max_forwarders=None, default_quota_mb=1024,
                            max_quota_mb=None, password_min_length=12)
 
     # --- mailboxes -----------------------------------------------------------------------------------------------------
