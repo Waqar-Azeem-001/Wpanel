@@ -9,7 +9,7 @@
   <div class="field"><label for="id_status">Status</label>{{ filter_form.status }}</div>
   <div class="field"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
 </form>
-<form method="post" action="{% url 'hosting_staff:bulk' %}" data-confirm="Terminate every ticked hosting account? This removes the account from the server; one that is not active or suspended is left alone.">{% csrf_token %}
+<form method="post" action="{% url 'hosting_staff:bulk' %}">{% csrf_token %}
 <input type="hidden" name="next" value="{{ request.get_full_path }}">
 <div class="table-responsive">
 <table class="table">
@@ -34,8 +34,8 @@
 {% if can_manage and page.paginator.count %}
 <div class="d-flex flex-wrap align-items-center gap-2 p-3 bulk-bar">
   <span class="fw-semibold me-1">With selected:</span>
-  <input type="hidden" name="do" value="terminate">
-  <button class="btn btn-sm btn-outline-danger" type="submit">Terminate</button>
+  <button class="btn btn-sm btn-outline-danger" type="submit" name="do" value="terminate" data-confirm="Terminate every ticked hosting account? This removes the account from the server; one that is not active or suspended is left alone.">Terminate</button>
+  <button class="btn btn-sm btn-outline-secondary" type="submit" name="do" value="delete" data-confirm="Delete the record of every ticked account that is failed, cancelled or terminated? Only WHPanel's record is removed; nothing is changed on the server. Any other account is left alone.">Delete record</button>
 </div>
 {% endif %}
 </form>

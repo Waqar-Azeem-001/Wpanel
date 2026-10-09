@@ -120,13 +120,32 @@ def staff_hosting_bulk(request):
     real call to the server, as one at a time). There is no bulk delete here: a real hosting account is almost
     always protected from being removed from the database by the order it came from, and its row is how the system
     remembers a service exists at all until it is properly terminated - "terminate" is the meaningful bulk action."""
-    if request.POST.get("do") != "terminate":
-        messages.error(request, "Choose what to do with the selected accounts.")
-    else:
+    do = request.POST.get("do")
+    if do == "terminate":
         bulk.run(request, HostingAccount.objects.all(), bulk.selected_ids(request),
                  lambda a: services.terminate_account(request.user, a, request=request),
                  verb="account(s) terminated", label=lambda a: a.domain)
+    elif do == "delete":  # only the records of finished accounts (failed, cancelled, terminated); nothing is sent to a server
+        bulk.run(request, HostingAccount.objects.all(), bulk.selected_ids(request),
+                 lambda a: services.delete_dead_record(request.user, a, request=request),
+                 verb="record(s) deleted", label=lambda a: a.domain)
+    else:
+        messages.error(request, "Choose what to do with the selected accounts.")
     return bulk.back_to(request, "hosting_staff:list")
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def staff_hosting_delete_record(request, pk):
+    account = get_object_or_404(HostingAccount, pk=pk)
+    domain = account.domain
+    try:
+        services.delete_dead_record(request.user, account, request=request)
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        return redirect("hosting_staff:detail", pk=pk)
+    messages.success(request, f"The record of {domain} was deleted. Nothing was changed on the server.")
+    return redirect("hosting_staff:list")
 
 
 @portal_permission_required(perm("view_hosting"))
@@ -143,6 +162,7 @@ def staff_hosting_detail(request, pk):
     return render(request, "hosting/staff/detail.html", {
         "account": account,
         "can_manage": can_manage,
+        "can_delete_record": can_manage and account.status in services.DEAD_STATUSES,
         "can_admin": account.server is not None and account.status in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED),
         "admin_minutes": admin_access.minutes_left(request, account),
         "admin_minutes_total": admin_access.MINUTES,

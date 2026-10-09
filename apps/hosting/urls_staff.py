@@ -11,6 +11,7 @@ urlpatterns = [
     path("<int:pk>/", views.staff_hosting_detail, name="detail"),
     path("<int:pk>/admin-access/", views.staff_hosting_admin_access_start, name="admin_access"),
     path("<int:pk>/admin-access/end/", views.staff_hosting_admin_access_end, name="admin_access_end"),
+    path("<int:pk>/delete-record/", views.staff_hosting_delete_record, name="delete_record"),
     path("<int:pk>/assign-server/", views.staff_hosting_assign_server, name="assign_server"),
     path("<int:pk>/complete/", views.staff_hosting_complete, name="complete"),
     path("<int:pk>/cancel/", views.staff_hosting_cancel, name="cancel"),

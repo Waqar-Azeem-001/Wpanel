@@ -17,6 +17,7 @@ report for how it was found.
 import secrets
 
 from django.db import transaction
+from django.db.models import ProtectedError
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
@@ -181,6 +182,31 @@ def cancel_request(actor, account, *, reason="", request=None):
     audit.record("hosting.cancelled", actor=actor, target=account, metadata={"reason": reason[:500]},
                  request=request)
     return account
+
+
+# --- Removing a dead record ---------------------------------------------------------------------------------
+
+DEAD_STATUSES = (HostingStatus.FAILED, HostingStatus.CANCELLED, HostingStatus.TERMINATED)
+
+
+@transaction.atomic
+def delete_dead_record(actor, account, *, request=None):
+    """
+    Remove the record of a hosting account that is already finished with: a failed provisioning, a cancelled request or a terminated
+    account. Only WHPanel's own record goes; nothing is sent to the server, so nothing there is removed. An account that is pending,
+    active or suspended is refused (terminate or cancel it first), and so is one that something else (an order, a renewal, a cancellation
+    request) still points at, so history is never left dangling.
+    """
+    _require(actor, "manage_hosting")
+    if account.status not in DEAD_STATUSES:
+        raise ServiceError("Only a failed, cancelled or terminated account's record can be deleted. Cancel or terminate it first.", code="invalid_status")
+    details = {"domain": account.domain, "username": account.username, "status": account.status, "client_id": account.client_id,
+               "server": account.server.name if account.server else ""}
+    try:
+        account.delete()
+    except ProtectedError as exc:
+        raise ServiceError("This record is still linked to an order, renewal or cancellation, so it was kept.", code="record_in_use") from exc
+    audit.record("hosting.record_deleted", actor=actor, target=None, metadata=details, request=request)
 
 
 # --- Lifecycle: suspend, unsuspend, terminate, change package -------------------------------
