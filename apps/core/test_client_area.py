@@ -255,7 +255,7 @@ def test_the_information_tab_shows_the_server_but_never_a_password(world, owner)
     page = browser(owner).get(reverse("hosting_customer:information", args=[world.objects["accounts"]["active"].pk])).content.decode()
     main = page.split("<main")[1].split("</main>")[0].lower()
     assert "hosting information" in main and "srv1.harness.test" in main
-    assert "we never show or store your control panel password" in main
+    assert "we never keep your password" in main
     from apps.hosting.models import HostingAccount
 
     assert not [f.name for f in HostingAccount._meta.fields if "password" in f.name]  # there is nothing to show
