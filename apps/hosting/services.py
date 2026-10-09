@@ -63,11 +63,28 @@ def get_adapter(server):
     return build_adapter(server)
 
 
+# cPanel/WHM refuses these as account usernames ("... is a reserved username on this system"): anything beginning with test or one of
+# cPanel's own prefixes, and the names of system and mail accounts.
+RESERVED_PREFIXES = ("test", "cpanel", "cphulk", "cpses", "cptmp", "cpmove", "virtfs")
+RESERVED_USERNAMES = frozenset("""root daemon bin sys sync games man lp mail news uucp proxy www wwwdata backup list irc gnats nobody mysql postgres named
+dovecot dovenull exim mailman apache nginx ftp sshd ssh admin administrator operator system user users adm shell whm webmaster support info sales
+postmaster abuse mailnull cpanel nagios munin redis memcached clamav tomcat git svn oracle""".split())
+
+
+def is_reserved_username(username):
+    username = (username or "").lower()
+    return username in RESERVED_USERNAMES or username.startswith(RESERVED_PREFIXES)
+
+
 def _generate_username(domain):
-    """A cPanel-safe username derived from the domain, unique among live accounts."""
+    """A cPanel-safe username derived from the domain, unique among live accounts, and never one WHM reserves."""
     base = "".join(ch for ch in domain.split(".")[0].lower() if ch.isalnum())[:16] or "acct"
     if not base[0].isalpha():
         base = "a" + base[:15]
+    for prefix in ("web", "site", "host"):
+        if not is_reserved_username(base):
+            break
+        base = (prefix + base)[:16]
     candidate = base
     suffix = 2
     while HostingAccount.objects.filter(username=candidate, status__in=("pending", "active", "suspended")).exists():
@@ -146,6 +163,12 @@ def complete_provisioning(actor, account, *, request=None):
     if account.server.status != ServerStatus.ACTIVE:
         raise ServiceError("The assigned server is not active.", code="server_not_active")
 
+    if is_reserved_username(account.username):  # an older request (or a hand-typed name) WHM would refuse: pick a safe one and say so
+        old = account.username
+        account.username = _generate_username(account.domain)
+        account.save(update_fields=["username", "updated_at"])
+        audit.record("hosting.username_changed", actor=actor, target=account, metadata={"from": old, "to": account.username,
+                                                                                      "reason": "reserved on the server"}, request=request)
     adapter = get_adapter(account.server)
     raw_password = secrets.token_urlsafe(16)
     try:
