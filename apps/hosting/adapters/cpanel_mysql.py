@@ -30,9 +30,7 @@ class CpanelMysql(CpanelApi, DatabasesCapability):
         return full
 
     def database_limits(self, username):
-        data = self._call("accountsummary", {"user": username}).get("data") or {}
-        accounts = data.get("acct") or [{}]
-        return DatabaseLimits(name_prefix=self._prefix(username), max_databases=plan_limit(accounts[0].get("maxsql")), max_users=None,
+        return DatabaseLimits(name_prefix=self._prefix(username), max_databases=plan_limit(self._summary(username).get("maxsql")), max_users=None,
                               password_min_length=12)
 
     def list_databases(self, username):

@@ -24,10 +24,6 @@ class CpanelEmail(CpanelApi, EmailCapability):
         local, domain = _split(address)
         return local, self._owned_domain(user, domain)
 
-    def _summary(self, user):
-        accounts = (self._call("accountsummary", {"user": user}).get("data") or {}).get("acct") or [{}]
-        return accounts[0]
-
     def email_limits(self, username):
         summary = self._summary(username)
 

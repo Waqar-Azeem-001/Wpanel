@@ -45,6 +45,8 @@ SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]
 
 class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelNative,
                     NodeCapability, HostingAdapter):
+    read_cache_seconds = 45  # a real server is slow to answer, so what the gateway has just read is remembered for a few seconds
+
     @property
     def enabled_capabilities(self):
         """

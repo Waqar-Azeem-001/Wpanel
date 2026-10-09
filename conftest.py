@@ -65,3 +65,13 @@ def auth(api, user):
 def _cpanel_tools_off_unless_a_test_turns_them_on(settings):
     """The developer's own .env may switch cPanel tools on for the live server; tests must start from the safe default (none)."""
     settings.HOSTING_CPANEL_CAPABILITIES = []
+
+
+@pytest.fixture(autouse=True)
+def _empty_cache_between_tests():
+    """Remembered server answers are keyed by account id, and every test starts its ids again from 1."""
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()

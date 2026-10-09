@@ -13,9 +13,20 @@ every screen of it, and only then enable it for customers.
 Security rule that every mixin follows: an operation names a domain or a user only after it has been checked against what *this
 account* owns, so one customer can never reach another's domain, zone or database by typing its name.
 """
+from django.core.cache import cache
+
 from .base import HostingError
 
 MAX_ERROR = 300
+MEMORY_SECONDS = 45
+
+
+def forget_account(host, user):
+    """Everything remembered about one account on one server is stale from now on (the gateway calls this after every change)."""
+    try:
+        cache.incr(f"cpmem-ver:{host}:{user}")
+    except ValueError:
+        cache.set(f"cpmem-ver:{host}:{user}", 2, None)
 
 
 def clean_error(text):
@@ -67,17 +78,31 @@ class CpanelApi:
             raise HostingError(clean_error(errors[0]) if errors else f"{module}::{function} did not succeed.")
         return result.get("data")
 
+    def _memory_key(self, user, key):
+        version = cache.get_or_set(f"cpmem-ver:{self.host}:{user}", 1, None)
+        return f"cpmem:{self.host}:{user}:{version}:{key}"
+
     def _remember(self, key, make):
-        """Each call to the server takes seconds, so what cannot change during one request (the home folder, the account's domains, the name prefix)
-        is asked for once per adapter. An adapter lives for one request."""
-        memory = self.__dict__.setdefault("_memory", {})
-        if key not in memory:
-            memory[key] = make()
-        return memory[key]
+        """
+        Each call to the server takes seconds, so what rarely changes (the home folder, the account's domains and plan, the name prefix) is asked for
+        once and remembered for a short while, shared by every request. ``key`` is ``(name, username)``. A change made through the hosting-control
+        gateway, or ``_forget``, makes everything remembered for that account stale at once.
+        """
+        full = self._memory_key(key[1], key[0])
+        found = cache.get(full)
+        if found is None:
+            found = (make(),)
+            cache.set(full, found, MEMORY_SECONDS)
+        return found[0]
 
     def _forget(self, *keys):
-        for key in keys:
-            self.__dict__.setdefault("_memory", {}).pop(key, None)
+        for _name, user in keys:
+            forget_account(self.host, user)
+
+    def _summary(self, user):
+        """The account's WHM summary (plan limits and so on), as a dict."""
+        data = self._remember(("summary", user), lambda: (self._call("accountsummary", {"user": user}).get("data") or {}).get("acct") or [{}])
+        return data[0] if data else {}
 
     def _api2(self, user, module, function, params=None, *, secret=False):
         """A legacy cPanel API 2 function run as the account (for the few things UAPI does not offer): the ``data`` of its ``cpanelresult``."""

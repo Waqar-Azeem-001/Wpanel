@@ -46,6 +46,9 @@ def test_only_the_logins_the_customer_made_are_listed_and_the_folder_is_relative
     assert [(a.login, a.directory) for a in real.list_ftp_accounts(USER)] == [("dev@acme.com", "public_html/site")]
     options = real.ftp_options(USER)
     assert options.host == "whm.test" and options.max_accounts is None and options.port == 21
+    from django.core.cache import cache
+
+    cache.clear()  # what the first adapter learned about this account is remembered for a while, as in real use
     real2, _ = adapter({"accountsummary": {"acct": [{"maxftp": "5"}]}})
     assert real2.ftp_options(USER).max_accounts == 5
 

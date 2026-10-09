@@ -21,6 +21,9 @@ contract and UI, never its own authorization or audit code:
   with only the non-secret arguments the caller chooses to record.
 * Nothing in a response or an audit record carries the server's credentials.
 """
+import hashlib
+
+from django.core.cache import cache
 from rest_framework import status
 
 from apps.accounts.roles import perm
@@ -33,6 +36,33 @@ from .adapters.capabilities import (OPERATIONS, READ_OPERATIONS, Capability, Cap
 from . import admin_access, snapshots
 from .models import LIVE_STATUSES
 from .services import can_self_service, get_adapter, visible_hosting_accounts_for_user
+
+
+# A provider that answers slowly (a real server a continent away takes seconds per question) can ask for its reads to be remembered for a few
+# seconds: ``read_cache_seconds`` on the adapter. Any change to the account makes everything remembered for it stale at once. These are never
+# remembered: file and mail contents, one-time links and database rows.
+NOT_CACHED = frozenset({"read_file", "read_message", "list_messages", "message_folders", "webmail_access", "browse_table", "database_admin_access",
+                        "read_log", "open_native_panel"})
+
+
+def _cache_version(account):
+    return cache.get_or_set(f"hostread-version:{account.pk}", 1, None)
+
+
+def _bump_cache_version(account, adapter=None):
+    try:
+        cache.incr(f"hostread-version:{account.pk}")
+    except ValueError:
+        cache.set(f"hostread-version:{account.pk}", 2, None)
+    if adapter is not None and getattr(adapter, "read_cache_seconds", 0):
+        from .adapters.cpanel_api import forget_account
+
+        forget_account(adapter.host, account.username)  # what the adapter itself remembers about the account (its plan, its domains) is stale too
+
+
+def _read_key(account, capability, operation, args, kwargs):
+    digest = hashlib.sha1(repr((args, sorted(kwargs.items()))).encode()).hexdigest()
+    return f"hostread:{account.pk}:{_cache_version(account)}:{capability.value}:{operation}:{digest}"
 
 
 def _denied():
@@ -92,20 +122,27 @@ def perform(user, account, capability, operation, *args, audit_metadata=None, re
     metadata = {"capability": capability.value, "operation": operation, **(audit_metadata or {}),
                 **({"admin_access": True, "client": account.client_id, "service": account.pk} if admin else {})}
     before = snapshots.read(adapter, account.username, operation, args) if changing else None
+    ttl = 0 if changing or operation in NOT_CACHED else int(getattr(adapter, "read_cache_seconds", 0) or 0)
+    key = _read_key(account, capability, operation, args, kwargs) if ttl else None
+    remembered = cache.get(key) if key else None
     try:
-        result = getattr(adapter, operation)(account.username, *args, **kwargs)
+        result = remembered[0] if remembered is not None else getattr(adapter, operation)(account.username, *args, **kwargs)
+        if key and remembered is None:
+            cache.set(key, (result,), ttl)
     except CapabilityNotSupported as exc:
         raise ServiceError("This hosting account does not support that feature yet.",
                            code="capability_not_supported", status_code=status.HTTP_501_NOT_IMPLEMENTED) from exc
     except HostingError as exc:
         if changing:
             audit.record("hosting.control_failed", actor=user, target=account, metadata=metadata, request=request)
+            _bump_cache_version(account, adapter)  # a failed change may still have changed something
         raise ServiceError(f"The hosting server could not complete that: {exc}", code="adapter_error") from exc
     if changing:
         old, new = snapshots.difference(before, snapshots.read(adapter, account.username, operation, args))
         if old or new:
             metadata = {**metadata, "old": old, "new": new}
         audit.record("hosting.control", actor=user, target=account, metadata=metadata, request=request)
+        _bump_cache_version(account, adapter)
     elif admin and operation in PRIVATE_READS:
         audit.record("hosting.admin_read", actor=user, target=account, metadata=metadata, request=request)
     return result

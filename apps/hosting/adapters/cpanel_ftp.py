@@ -19,8 +19,7 @@ class CpanelFtp(CpanelApi, FtpCapability):
         return any(str(i.get("file")) == leaf and str(i.get("type", "")).lower() in ("dir", "directory") for i in listing if isinstance(i, dict))
 
     def ftp_options(self, username):
-        accounts = (self._call("accountsummary", {"user": username}).get("data") or {}).get("acct") or [{}]
-        return FtpOptions(host=self.host, port=21, secure_port=0, max_accounts=plan_limit(accounts[0].get("maxftp")), root="")  # None: no limit
+        return FtpOptions(host=self.host, port=21, secure_port=0, max_accounts=plan_limit(self._summary(username).get("maxftp")), root="")  # None: no limit
 
     def list_ftp_accounts(self, username):
         found = []

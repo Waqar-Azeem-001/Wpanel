@@ -11,8 +11,8 @@ from .sandbox import clean_relative
 
 class CpanelDomains(CpanelApi, DomainsCapability):
     def domain_limits(self, username):
-        accounts = (self._call("accountsummary", {"user": username}).get("data") or {}).get("acct") or [{}]
-        return DomainLimits(max_addon_domains=plan_limit(accounts[0].get("maxaddons")), max_subdomains=plan_limit(accounts[0].get("maxsub")), nameservers=[])
+        summary = self._summary(username)
+        return DomainLimits(max_addon_domains=plan_limit(summary.get("maxaddons")), max_subdomains=plan_limit(summary.get("maxsub")), nameservers=[])
 
     def _redirects(self, user):
         """{domain: (target, permanent)} from the account's redirects, read defensively."""
