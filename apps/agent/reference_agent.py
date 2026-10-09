@@ -85,3 +85,19 @@ class ReferenceAgent:
             return
         if "signature" not in why:
             self._post(f"/api/agent/v1/jobs/{job_id}/result/", {"ok": False, "code": "refused", "message": why[:200], "data": {}})
+
+
+def make_csr(kind="ec"):
+    """What a fresh agent does first: make its own private key and a certificate request. Returns (private key PEM, CSR PEM)."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec, rsa
+
+    key = ec.generate_private_key(ec.SECP256R1()) if kind == "ec" else rsa.generate_private_key(65537, 1024 if kind == "weak" else 2048)
+    csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, "whatever-i-want")])).sign(key, hashes.SHA256())
+    return (key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()).decode(),
+            csr.public_bytes(serialization.Encoding.PEM).decode())
+
+
+INVENTORY = {"hostname": "node1.example.com", "ip_addresses": ["203.0.113.10", "2001:db8::10"], "os_name": "AlmaLinux 9.4", "cpu_cores": 8, "ram_mb": 32768,
+             "disk_gb": 500, "capabilities": ["web", "php", "database"]}

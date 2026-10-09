@@ -6,6 +6,7 @@ ADAPTERS = {
     "manual": ManualAdapter,
     "whm_api": WhmApiAdapter,
     "demo": DemoAdapter,
+    "native": ManualAdapter,  # N2: enrolled and monitored, but nothing is provisioned on it until N3 brings the native provider
 }
 
 

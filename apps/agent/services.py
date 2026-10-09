@@ -16,7 +16,9 @@ from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
 from . import catalog, envelope
-from .models import FINISHED, AgentJob, AgentNode, JobStatus
+from django.conf import settings
+
+from .models import FINISHED, AgentJob, AgentNode, JobStatus, NodeStatus
 
 VALID_FOR = 600  # seconds a signed command stays valid if the node does not pick it up
 MAX_MESSAGE = 500
@@ -30,15 +32,24 @@ def _hash(token):
 def issue_token(server):
     """Create (or replace) the agent identity for a server. The token is returned once and never stored. N2 turns this into proper enrolment."""
     token = secrets.token_urlsafe(32)
-    node, _ = AgentNode.objects.update_or_create(server=server, defaults={"token_hash": _hash(token)})
+    node, _ = AgentNode.objects.update_or_create(server=server, defaults={"token_hash": _hash(token), "status": NodeStatus.ENROLLED})
     return node, token
 
 
-def authenticate(token):
+def authenticate(token, fingerprint=""):
+    """
+    The node a request comes from, or None. The token must belong to an enrolled node. When ``AGENT_REQUIRE_CLIENT_CERT`` is on, the TLS-terminating
+    proxy must also have verified a client certificate and passed its SHA-256 fingerprint, and it must be the one issued to this node.
+    """
     if not token:
         return None
-    node = AgentNode.objects.select_related("server").filter(token_hash=_hash(token)).first()
-    return node if node and hmac.compare_digest(node.token_hash, _hash(token)) else None
+    node = AgentNode.objects.select_related("server").filter(token_hash=_hash(token), status=NodeStatus.ENROLLED).first()
+    if node is None or not hmac.compare_digest(node.token_hash, _hash(token)):
+        return None
+    if getattr(settings, "AGENT_REQUIRE_CLIENT_CERT", False) and not (fingerprint and node.cert_fingerprint
+                                                                      and hmac.compare_digest(node.cert_fingerprint, fingerprint.lower().replace(":", ""))):
+        return None
+    return node
 
 
 def dispatch(user, server, command, params, *, idempotency_key=None, correlation_id=None, request=None):
@@ -47,8 +58,8 @@ def dispatch(user, server, command, params, *, idempotency_key=None, correlation
     with different ones it is refused. Raises ServiceError for anything not on the allow-list.
     """
     node = getattr(server, "agent", None)
-    if node is None:
-        raise ServiceError("This server has no agent installed.")
+    if node is None or node.status != NodeStatus.ENROLLED:
+        raise ServiceError("This server has no enrolled agent.")
     try:
         cleaned = catalog.validate(command, params)
     except catalog.InvalidCommand as exc:

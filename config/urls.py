@@ -38,6 +38,7 @@ urlpatterns = [
     path("domains/", include("apps.domains.urls_public")),
     path("account/hosting/", include("apps.hosting.urls_customer")),
     path("staff/hosting/", include("apps.hosting.urls_staff")),
+    path("staff/nodes/", include("apps.agent.urls_staff")),
     path("staff/orders/", include("apps.orders.urls_staff")),
     path("staff/billing/", include("apps.billing.urls_staff")),
     path("account/billing/", include("apps.billing.urls_customer")),

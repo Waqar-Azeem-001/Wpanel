@@ -377,3 +377,6 @@ LOGGING = {
 CREDENTIALS_ENCRYPTION_KEY = env("CREDENTIALS_ENCRYPTION_KEY", default="")
 # N1: base64 Ed25519 seed that signs commands for native-node agents (python -c "from apps.agent import envelope; print(envelope.generate_key())")
 AGENT_SIGNING_KEY = env("AGENT_SIGNING_KEY", default="")
+# N2: set True once the reverse proxy does mutual TLS and passes the verified client certificate fingerprint in AGENT_CERT_HEADER (it must strip any copy sent by clients)
+AGENT_REQUIRE_CLIENT_CERT = env.bool("AGENT_REQUIRE_CLIENT_CERT", default=False)
+AGENT_CERT_HEADER = "X-Client-Cert-Fingerprint"

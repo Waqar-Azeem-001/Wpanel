@@ -1,18 +1,19 @@
 """The two endpoints a node's agent calls. The agent always connects out to WHPanel; WHPanel never connects in (ADR 16)."""
 import json
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.core.exceptions import ServiceError
 
-from . import services
+from . import enrollment, services
 
 
 def _node(request):
     header = request.headers.get("Authorization", "")
-    return services.authenticate(header[6:].strip() if header.startswith("Agent ") else "")
+    return services.authenticate(header[6:].strip() if header.startswith("Agent ") else "", request.headers.get(settings.AGENT_CERT_HEADER, ""))
 
 
 def _body(request):
@@ -25,6 +26,51 @@ def _body(request):
 
 def _fail(error):
     return JsonResponse({"error": error.message}, status=error.status_code)
+
+
+@csrf_exempt
+@require_POST
+def enroll(request):
+    """The only call that needs no identity yet: it carries the one-time token."""
+    body = _body(request)
+    if body is None:
+        return JsonResponse({"error": "Send a JSON object."}, status=400)
+    try:
+        reply = enrollment.enroll(body.get("token"), body.get("csr"), body.get("node"), body.get("agent_version", ""), request)
+    except ServiceError as exc:
+        return _fail(exc)
+    return JsonResponse(reply)
+
+
+@csrf_exempt
+@require_POST
+def renew(request):
+    node = _node(request)
+    body = _body(request)
+    if node is None:
+        return JsonResponse({"error": "Unknown agent."}, status=401)
+    if body is None:
+        return JsonResponse({"error": "Send a JSON object."}, status=400)
+    try:
+        return JsonResponse(enrollment.renew(node, body.get("csr"), request))
+    except ServiceError as exc:
+        return _fail(exc)
+
+
+@csrf_exempt
+@require_POST
+def heartbeat(request):
+    node = _node(request)
+    body = _body(request)
+    if node is None:
+        return JsonResponse({"error": "Unknown agent."}, status=401)
+    if body is None:
+        return JsonResponse({"error": "Send a JSON object."}, status=400)
+    try:
+        enrollment.heartbeat(node, body)
+    except ServiceError as exc:
+        return _fail(exc)
+    return JsonResponse({"ok": True})
 
 
 @csrf_exempt

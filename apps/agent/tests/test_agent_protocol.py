@@ -66,7 +66,7 @@ def test_the_catalog_has_no_free_form_text_field():
 
 def test_dispatch_refuses_off_list_commands_and_servers_without_an_agent(manager):
     bare = Server.objects.create(name="bare", hostname="b.test", kind=ServerKind.MANUAL)
-    with pytest.raises(ServiceError, match="no agent"):
+    with pytest.raises(ServiceError, match="no enrolled agent"):
         services.dispatch(manager, bare, "CREATE_WEBSITE", GOOD)
 
 
