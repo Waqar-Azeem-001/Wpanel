@@ -18,6 +18,8 @@ the part most likely to need adjustment: the exact field names WHM reports
 have varied across versions, so it is parsed defensively and falls back to
 ``None`` (unknown) rather than guessing.
 """
+import re
+
 import requests
 
 from .base import HostingAdapter, HostingError
@@ -79,7 +81,7 @@ class WhmApiAdapter(CpanelFiles, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysq
             response.raise_for_status()
             payload = response.json()
         except requests.RequestException as exc:
-            raise HostingError(f"Could not reach the server: {_redact_url(exc)}") from exc
+            raise HostingError(f"Could not reach the server: {_describe(exc)}") from exc
         except ValueError as exc:
             raise HostingError("The server returned an unexpected (non-JSON) response.") from exc
 
@@ -189,14 +191,34 @@ class WhmApiAdapter(CpanelFiles, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysq
 
 def _redact_url(exc):
     """
-    A network exception's own message often quotes the request URL back (``requests.ConnectionError``,
-    ``requests.HTTPError``...); if a query string ever ended up on it, this is the last line of defence against a
-    password reaching an error message that a Super Admin sees on the order/audit history (``createacct`` itself
-    is sent as a POST body precisely so it never has one, but a defence that only works for one call site is not a
-    defence). Cuts the string at the first ``?``, which is always where a query string starts.
+    A network exception's own message often quotes the request URL back (``requests.ConnectionError``, ``requests.HTTPError``...); if a
+    query string ever ended up on it, this is the last line of defence against a password reaching an error message that a Super Admin
+    sees on the order/audit history (``createacct`` itself is sent as a POST body precisely so it never has one, but a defence that only
+    works for one call site is not a defence). Removes everything from a ``?`` to the end of that address (the next space or bracket),
+    and keeps the rest, because the part after the address (``Caused by ...``) is what says WHY the call failed.
     """
-    text = str(exc)
-    return text.split("?", 1)[0]
+    return re.sub(r"\?[^\s)'\"]*", "", str(exc))
+
+
+def _describe(exc):
+    """What went wrong with reaching the server, in plain words, followed by the redacted technical detail."""
+    detail = _redact_url(exc)
+    lowered = detail.lower()
+    if isinstance(exc, requests.exceptions.SSLError) or "certificate verify failed" in lowered or "sslerror" in lowered:
+        why = ("The server answered, but its security certificate could not be verified. Use the server's host name (not the IP address) "
+               "with a valid certificate, or untick 'verify SSL' on the server for a certificate you trust.")
+    elif isinstance(exc, requests.exceptions.Timeout) or "timed out" in lowered or "timeout" in lowered:
+        why = ("The server did not answer in time. It may be switched off, or a firewall is dropping this application's connection: "
+               "check that the server is running and that this application's public IP address is allowed on the WHM port.")
+    elif "name or service not known" in lowered or "getaddrinfo failed" in lowered or "nodename nor servname" in lowered:
+        why = "The server's name could not be found. Check the host name saved on the server."
+    elif "connection refused" in lowered or "actively refused" in lowered or "winerror 10061" in lowered:
+        why = "The server refused the connection. Check the WHM port (usually 2087) and that WHM is running."
+    elif "network is unreachable" in lowered or "no route to host" in lowered or "winerror 10051" in lowered or "winerror 10065" in lowered:
+        why = "There is no network route to the server from this application."
+    else:
+        why = ""
+    return f"{why} ({detail})" if why else detail
 
 
 def _parse_size_mb(value):
