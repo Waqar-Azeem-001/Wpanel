@@ -58,10 +58,10 @@
     <div class="table-responsive"><table class="table fm-table align-middle mb-0">
       <thead><tr>
         <th scope="col" class="fm-check"><input class="form-check-input" type="checkbox" data-fm-all aria-label="{% trans 'Select all' %}"></th>
-        <th scope="col">{% trans "Name" %}</th><th scope="col" class="text-end">{% trans "Size" %}</th><th scope="col">{% trans "Modified" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+        <th scope="col">{% trans "Name" %}</th><th scope="col" class="text-end">{% trans "Size" %}</th><th scope="col">{% trans "Modified" %}</th><th scope="col">{% trans "Permissions" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
       <tbody>
       {% if path and not query %}
-        <tr><td></td><td colspan="4"><a href="{{ up_url }}"><i class="bi bi-arrow-up-short" aria-hidden="true"></i> {% trans "Up one folder" %}</a></td></tr>
+        <tr><td></td><td colspan="5"><a href="{{ up_url }}"><i class="bi bi-arrow-up-short" aria-hidden="true"></i> {% trans "Up one folder" %}</a></td></tr>
       {% endif %}
       {% for row in rows %}{% with e=row.entry %}
         <tr>
@@ -75,17 +75,20 @@
           </td>
           <td class="text-end text-secondary">{% if e.is_dir %}&mdash;{% else %}{{ e.size_bytes|filesizeformat }}{% endif %}</td>
           <td class="text-secondary">{{ e.modified_at|slice:":10" }}</td>
+          <td><code class="fm-mode">{{ e.permissions|default:"—" }}</code></td>
           <td class="text-end"><div class="fm-actions">
             {% if row.editable %}<a class="fm-icon" href="{% url 'hosting_customer:file_edit' account.pk %}?path={{ e.path|urlencode }}" title="{% trans 'Edit' %}" aria-label="{% trans 'Edit' %} {{ e.name }}"><i class="bi bi-pencil-square" aria-hidden="true"></i></a>{% endif %}
             {% if not e.is_dir %}<a class="fm-icon" href="{% url 'hosting_customer:file_download' account.pk %}?path={{ e.path|urlencode }}" title="{% trans 'Download' %}" aria-label="{% trans 'Download' %} {{ e.name }}"><i class="bi bi-download" aria-hidden="true"></i></a>{% endif %}
             <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#fm-rename" data-item="{{ e.path }}" data-name="{{ e.name }}" title="{% trans 'Rename' %}" aria-label="{% trans 'Rename' %} {{ e.name }}"><i class="bi bi-input-cursor-text" aria-hidden="true"></i></button>
-            <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#fm-copy" data-item="{{ e.path }}" data-name="{{ e.name }}" title="{% trans 'Copy' %}" aria-label="{% trans 'Copy' %} {{ e.name }}"><i class="bi bi-files" aria-hidden="true"></i></button>
+            <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#fm-move" data-item="{{ e.path }}" data-name="{{ e.name }}" data-folder="{{ row.folder }}" title="{% trans 'Move' %}" aria-label="{% trans 'Move' %} {{ e.name }}"><i class="bi bi-folder-symlink" aria-hidden="true"></i></button>
+            <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#fm-copy" data-item="{{ e.path }}" data-name="{{ e.name }}" data-folder="{{ row.folder }}" title="{% trans 'Copy' %}" aria-label="{% trans 'Copy' %} {{ e.name }}"><i class="bi bi-files" aria-hidden="true"></i></button>
+            <button type="button" class="fm-icon" data-bs-toggle="modal" data-bs-target="#fm-chmod" data-item="{{ e.path }}" data-name="{{ e.name }}" data-mode="{{ e.permissions }}" title="{% trans 'Permissions' %}" aria-label="{% trans 'Permissions of' %} {{ e.name }}"><i class="bi bi-shield-lock" aria-hidden="true"></i></button>
             {% if row.is_zip %}<form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="extract"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="{{ e.path }}"><button class="fm-icon" type="submit" title="{% trans 'Extract here' %}" aria-label="{% trans 'Extract' %} {{ e.name }}"><i class="bi bi-box-arrow-down" aria-hidden="true"></i></button></form>{% endif %}
             <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" class="d-inline" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="{{ e.path }}"><button class="fm-icon is-danger" type="submit" data-confirm="{% trans 'Move' %} {{ e.name }} {% trans 'to the trash?' %}" title="{% trans 'Delete' %}" aria-label="{% trans 'Delete' %} {{ e.name }}"><i class="bi bi-trash" aria-hidden="true"></i></button></form>
           </div></td>
         </tr>
       {% endwith %}{% empty %}
-        <tr><td colspan="5" class="text-secondary">{% if query %}{% trans "Nothing matches that search." %}{% else %}{% trans "This folder is empty." %}{% endif %}</td></tr>
+        <tr><td colspan="6" class="text-secondary">{% if query %}{% trans "Nothing matches that search." %}{% else %}{% trans "This folder is empty." %}{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table></div>
@@ -108,8 +111,25 @@
   <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" data-plain>{% csrf_token %}
     <input type="hidden" name="action" value="copy"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="">
     <div class="modal-header"><h2 class="modal-title h5" id="fm-copy-title">{% trans "Copy" %} <span data-fm-name></span></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button></div>
-    <div class="modal-body"><label class="form-label" for="fm-copy-input">{% trans "Name of the copy" %}</label><input class="form-control" id="fm-copy-input" type="text" name="new_name" maxlength="255" required></div>
+    <div class="modal-body"><label class="form-label" for="fm-copy-input">{% trans "Name of the copy" %}</label><input class="form-control mb-3" id="fm-copy-input" type="text" name="new_name" maxlength="255" required>
+      <label class="form-label" for="fm-copy-to">{% trans "Into folder (leave empty for the same folder)" %}</label><input class="form-control" id="fm-copy-to" type="text" name="to_folder" maxlength="1000" placeholder="public_html/backup"></div>
     <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button><button type="submit" class="btn btn-primary">{% trans "Copy" %}</button></div>
+  </form></div></div></div>
+<div class="modal fade" id="fm-move" tabindex="-1" aria-labelledby="fm-move-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="move"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="">
+    <div class="modal-header"><h2 class="modal-title h5" id="fm-move-title">{% trans "Move" %} <span data-fm-name></span></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button></div>
+    <div class="modal-body"><label class="form-label" for="fm-move-to">{% trans "Move into folder" %}</label><input class="form-control" id="fm-move-to" type="text" name="to_folder" maxlength="1000" placeholder="public_html/images" required>
+      <div class="form-text">{% trans "The folder must exist. Leave the box as it is to keep the name; use Rename to change it." %}</div></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button><button type="submit" class="btn btn-primary">{% trans "Move" %}</button></div>
+  </form></div></div></div>
+<div class="modal fade" id="fm-chmod" tabindex="-1" aria-labelledby="fm-chmod-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <form method="post" action="{% url 'hosting_customer:file_action' account.pk %}" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="chmod"><input type="hidden" name="path" value="{{ path }}"><input type="hidden" name="item" value="">
+    <div class="modal-header"><h2 class="modal-title h5" id="fm-chmod-title">{% trans "Permissions of" %} <span data-fm-name></span></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button></div>
+    <div class="modal-body"><label class="form-label" for="fm-chmod-mode">{% trans "Permission" %}</label><input class="form-control" id="fm-chmod-mode" type="text" name="mode" maxlength="4" inputmode="numeric" pattern="[0-7]{3,4}" required>
+      <div class="form-text">{% trans "Usual choices: 644 for files, 755 for folders, 600 or 700 to keep something private. Anyone-can-write settings are not allowed." %}</div></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button><button type="submit" class="btn btn-primary">{% trans "Save" %}</button></div>
   </form></div></div></div>
 {% endif %}
 {% endblock %}

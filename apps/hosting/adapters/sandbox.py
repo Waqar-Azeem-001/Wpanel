@@ -15,6 +15,7 @@ Failures raise ``HostingError`` with a plain-language message, which the gateway
 """
 import json
 import os
+import re
 import shutil
 import uuid
 import zipfile
@@ -62,11 +63,65 @@ def clean_name(name) -> str:
     return name
 
 
+def check_mode(mode, is_dir):
+    """A permission such as 644 or 0755, tidied to four digits, or a HostingError saying why it is not allowed on a shared host."""
+    mode = str(mode or "").strip()
+    if not re.fullmatch(r"[0-7]{3,4}", mode):
+        raise HostingError("Use a permission such as 644 or 755.")
+    digits = mode.zfill(4)
+    if digits[0] != "0":
+        raise HostingError("Special permission bits (setuid, setgid, sticky) are not allowed here.")
+    owner, group, other = (int(d) for d in digits[1:])
+    if other & 2:
+        raise HostingError("Anyone-can-write permissions are not allowed: they let any other user on the server change your files.")
+    if is_dir and owner != 7:
+        raise HostingError("A folder needs full access for you (7 first), or you could lock yourself out of it.")
+    if not is_dir and owner & 6 != 6:
+        raise HostingError("A file must stay readable and writable by you (6 or 7 first).")
+    return digits
+
+
 class Sandbox:
-    def __init__(self, root):
+    def __init__(self, root, meta_file=None):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self._real_root = self.root.resolve()
+        self._meta = Path(meta_file) if meta_file else None  # where permissions are kept, outside the website folder
+
+    # --- Permissions (a sidecar map, so they are the same on every operating system) ----------------------------------
+
+    def _modes(self) -> dict:
+        try:
+            return json.loads(self._meta.read_text(encoding="utf-8")) if self._meta else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _save_modes(self, modes):
+        if self._meta:
+            self._meta.parent.mkdir(parents=True, exist_ok=True)
+            self._meta.write_text(json.dumps(modes), encoding="utf-8")
+
+    def _carry_modes(self, old, new, *, keep_old):
+        """After a move or copy, the entries under ``old`` now also (or only) live under ``new``; after a delete, ``new`` is None."""
+        modes = self._modes()
+        moved = {}
+        for key in list(modes):
+            if key == old or key.startswith(old + "/"):
+                if new is not None:
+                    moved[new + key[len(old):]] = modes[key]
+                if not keep_old:
+                    del modes[key]
+        modes.update(moved)
+        self._save_modes(modes)
+
+    def set_permissions(self, rel, mode):
+        target = self.resolve(rel)
+        if target == self._real_root:
+            raise HostingError("The permissions of your website's main folder cannot be changed.")
+        digits = check_mode(mode, target.is_dir())
+        modes = self._modes()
+        modes[self.relative(target)] = digits
+        self._save_modes(modes)
 
     # --- Resolving -------------------------------------------------------------------------------------------
 
@@ -95,7 +150,7 @@ class Sandbox:
         return FileEntry(name=path.name, path=self.relative(path), is_dir=path.is_dir(),
                          size_bytes=None if path.is_dir() else stat.st_size,
                          modified_at=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
-                         permissions=oct(stat.st_mode & 0o777)[2:].zfill(4))
+                         permissions=self._modes().get(self.relative(path), "0755" if path.is_dir() else "0644"))
 
     # --- Operations ------------------------------------------------------------------------------------------
 
@@ -160,7 +215,9 @@ class Sandbox:
             raise HostingError("The destination folder does not exist.")
         if source.is_dir() and (destination == source or source in destination.parents):
             raise HostingError("A folder cannot be moved into itself.")
+        old = self.relative(source)
         source.rename(destination)
+        self._carry_modes(old, self.relative(destination), keep_old=False)
 
     def copy_path(self, rel, new_rel):
         source = self.resolve(rel)
@@ -181,15 +238,18 @@ class Sandbox:
             shutil.copytree(source, destination, symlinks=False)
         else:
             shutil.copy2(source, destination)
+        self._carry_modes(self.relative(source), self.relative(destination), keep_old=True)
 
     def delete_path(self, rel):
         target = self.resolve(rel)
         if target == self._real_root:
             raise HostingError("Your website's main folder cannot be deleted.")
+        old = self.relative(target)
         if target.is_dir():
             shutil.rmtree(target)
         else:
             target.unlink()
+        self._carry_modes(old, None, keep_old=False)
 
     def search_files(self, rel, query):
         query = (query or "").strip().lower()
@@ -328,6 +388,7 @@ class Sandbox:
         self._trash().mkdir(exist_ok=True)
         size = None if source.is_dir() else source.stat().st_size
         shutil.move(str(source), str(self._trash() / item_id))
+        self._carry_modes(original, None, keep_old=False)
         index = self._read_index()
         index[item_id] = {"name": source.name, "original": original, "is_dir": source.is_dir(), "size": size,
                           "deleted_at": datetime.now(timezone.utc).isoformat()}

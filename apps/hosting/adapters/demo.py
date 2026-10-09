@@ -170,7 +170,7 @@ def sandbox_for(username):
     """The account's folder, created with a few sample files the first time it is used."""
     root = files_root() / username
     fresh = not root.exists()
-    box = Sandbox(root)
+    box = Sandbox(root, meta_file=files_root() / f"{username}.state" / "permissions.json")
     if fresh:
         for rel, text in SAMPLE_FILES.items():
             target = root / rel
@@ -199,7 +199,7 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
     def _require_room(self, username, extra_bytes):
         """The plan's disk limit is enforced here, not on the screen: a write that would go over it is refused."""
         usage = self.get_usage(username)
-        if (usage["disk_used_mb"] * 1048576) + extra_bytes > usage["disk_limit_mb"] * 1048576:
+        if (usage["disk_used_mb"] * 1048576) + extra_bytes >= usage["disk_limit_mb"] * 1048576:
             raise HostingError("Your disk space is full, so this could not be saved. Delete files you do not need, or upgrade your plan.")
 
     def write_file(self, username, path, content, *, overwrite=False):
@@ -213,7 +213,11 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
         sandbox_for(username).rename_path(path, new_path)
 
     def copy_path(self, username, path, new_path):
+        self._require_room(username, 0)
         sandbox_for(username).copy_path(path, new_path)
+
+    def set_permissions(self, username, path, mode):
+        sandbox_for(username).set_permissions(path, mode)
 
     def delete_path(self, username, path):
         sandbox_for(username).delete_path(path)
@@ -222,9 +226,11 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
         return sandbox_for(username).search_files(path, query)
 
     def archive_paths(self, username, paths, archive_path):
+        self._require_room(username, 0)
         return sandbox_for(username).archive_paths(paths, archive_path)
 
     def extract_archive(self, username, path, destination):
+        self._require_room(username, 0)
         return sandbox_for(username).extract_archive(path, destination)
 
     def trash_path(self, username, path):

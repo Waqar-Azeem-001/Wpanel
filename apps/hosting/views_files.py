@@ -114,15 +114,29 @@ def my_hosting_file_action(request, pk):
             control.perform(request.user, account, "files", "write_file", target, upload.read(), request=request,
                             audit_metadata={"path": target, "bytes": upload.size})
             messages.success(request, "File uploaded.")
-        elif action in ("rename", "copy"):
+        elif action in ("rename", "copy", "move"):
             source, problem = _safe_path(request.POST.get("item", ""))
             if problem or not source:
                 raise ServiceError(problem or "Choose what to change.", code="bad_path")
-            destination = files.join(files.parent_of(source), request.POST.get("new_name", "").strip())
-            operation = "rename_path" if action == "rename" else "copy_path"
+            name = request.POST.get("new_name", "").strip() or source.rsplit("/", 1)[-1]
+            target_folder = files.parent_of(source)
+            if action in ("move", "copy") and request.POST.get("to_folder", "").strip() not in ("", "."):
+                target_folder, problem = _safe_path(request.POST.get("to_folder", "").strip().strip("/"))
+                if problem:
+                    raise ServiceError(problem, code="bad_path")
+            destination = files.join(target_folder, name)
+            operation = "copy_path" if action == "copy" else "rename_path"  # a move is a rename into another folder
             control.perform(request.user, account, "files", operation, source, destination, request=request,
                             audit_metadata={"path": source, "to": destination})
-            messages.success(request, "Renamed." if action == "rename" else "Copied.")
+            messages.success(request, {"rename": "Renamed.", "copy": "Copied.", "move": "Moved."}[action])
+        elif action == "chmod":
+            source, problem = _safe_path(request.POST.get("item", ""))
+            if problem or not source:
+                raise ServiceError(problem or "Choose what to change.", code="bad_path")
+            mode = request.POST.get("mode", "").strip()
+            control.perform(request.user, account, "files", "set_permissions", source, mode, request=request,
+                            audit_metadata={"path": source, "mode": mode})
+            messages.success(request, "Permissions changed.")
         elif action in ("delete", "zip"):
             chosen = [x for x in request.POST.getlist("ids") + [request.POST.get("item", "")] if x]
             sources = []

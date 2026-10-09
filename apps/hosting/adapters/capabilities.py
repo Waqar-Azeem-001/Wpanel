@@ -478,6 +478,10 @@ class FilesCapability(ABC):
     def copy_path(self, username: str, path: str, new_path: str) -> None: ...
 
     @abstractmethod
+    def set_permissions(self, username: str, path: str, mode: str) -> None:
+        """Set a file's or folder's permission (an octal text such as "644"). The provider refuses modes unsafe on a shared server."""
+
+    @abstractmethod
     def delete_path(self, username: str, path: str) -> None: ...
 
     @abstractmethod
@@ -1056,7 +1060,7 @@ OPERATIONS = {
     Capability.ACCOUNT: frozenset({"get_status"}),
     Capability.USAGE: frozenset({"get_usage"}),
     Capability.FILES: frozenset({"list_files", "read_file", "write_file", "make_directory", "rename_path",
-                                 "copy_path", "delete_path", "search_files", "archive_paths", "extract_archive",
+                                 "copy_path", "set_permissions", "delete_path", "search_files", "archive_paths", "extract_archive",
                                  "trash_path", "list_trash", "restore_trash", "purge_trash"}),
     Capability.DATABASES: frozenset({"database_limits", "database_admin_access", "list_tables", "browse_table",
                                      "describe_table", "run_query", "insert_row", "update_row", "delete_row",

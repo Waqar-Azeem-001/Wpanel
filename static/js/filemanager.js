@@ -43,5 +43,20 @@
     dialog.addEventListener("shown.bs.modal", function () { input.focus(); input.select(); });
   });
 
+  // Move and permissions dialogs are filled from the row that opened them.
+  [["fm-move", "data-move-start", "to_folder"], ["fm-chmod", "data-mode", "mode"]].forEach(function (trio) {
+    var dialog = document.getElementById(trio[0]);
+    if (!dialog) { return; }
+    var field = dialog.querySelector("[name=" + trio[2] + "]");
+    dialog.addEventListener("show.bs.modal", function (event) {
+      var opener = event.relatedTarget;
+      if (!opener) { return; }
+      dialog.querySelector("[name=item]").value = opener.getAttribute("data-item") || "";
+      dialog.querySelector("[data-fm-name]").textContent = opener.getAttribute("data-name") || "";
+      field.value = opener.getAttribute(trio[1]) || "";
+    });
+    dialog.addEventListener("shown.bs.modal", function () { field.focus(); field.select(); });
+  });
+
   refresh();
 })();
