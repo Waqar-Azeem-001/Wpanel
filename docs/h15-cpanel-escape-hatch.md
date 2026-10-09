@@ -37,7 +37,7 @@ audit and warnings can be looked at without a cPanel server.
 `create_user_session` with `service=cpaneld` returns `data.url` and `data.expires`.
 
 ## Verified
-24 tests (`test_native_panel.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
+23 tests (`test_native_panel.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
 menu hidden for cPanel when not enabled; the demo flow with its sample page (single use, expiry, only a hash stored, demo-only, owner-only); the page makes no sign-in just by opening; the redirect headers; the audit
 holds no link or token; failures shown and audited as failed; the limit; other customers get 404 and no sign-in is made; staff need
 Admin Access and a managing role; pending, suspended and terminated accounts refused.
