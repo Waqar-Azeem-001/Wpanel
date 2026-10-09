@@ -949,7 +949,8 @@ Before marking any phase 🟢:
 | H15 Open cPanel (transitional) | 🟡 local, unverified on a real server | `docs/h15-cpanel-escape-hatch.md`: one-time cPanel sign-in via WHM, authorised and audited, no token or password shown, off by default; remove with cPanel |
 | Provider-neutral hosting API | 🟡 local | `docs/hosting-api.md`: `/api/v1/hosting/services/{id}/files, databases, emails, domains, dns, ssl, php, cron, backups, usage` through the same gateway |
 | N0 Native architecture and security design | ✅ decided locally | `docs/adr/`: 20 architecture decision records, all Accepted on 2026-10-10 (4 chosen by the business; mail deferred to N7 and the backup vendor chosen at N8) |
-| N1-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| N1 WH Agent | 🟡 protocol built locally | `docs/n1-wh-agent.md`: allow-listed commands, signed envelopes, replay/expiry/idempotency, leases, versions, audit, Python reference agent (tested). The Go agent is an untested skeleton; real node work is N3, mutual TLS is N2 |
+| N2-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 

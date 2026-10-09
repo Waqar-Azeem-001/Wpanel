@@ -1,0 +1,87 @@
+"""
+A small Python agent that speaks the whole protocol against a fake machine. It exists to prove the protocol end to end in tests and to give the
+Go agent (``agent/``) a behaviour to match. It changes nothing on the computer it runs on: the "machine" is a dictionary.
+"""
+from . import envelope
+
+
+class FakeMachine:
+    def __init__(self):
+        self.sites, self.databases, self.backups = {}, {}, {}
+        self.executed = []  # every command actually carried out, in order
+
+    def run(self, command, p):
+        self.executed.append(command)
+        if command == "CREATE_WEBSITE":
+            self.sites[p["domain"]] = {"account": p["account"], "php": p["php_version"], "ssl": None}
+            return "created", {"root": f"/home/{p['account']}/sites/{p['domain']}"}
+        if command == "DELETE_WEBSITE":
+            self.sites.pop(p["domain"], None)
+            return "deleted", {}
+        if command == "CREATE_DATABASE":
+            self.databases[p["name"]] = p["account"]
+            return "created", {}
+        if command == "CHANGE_PHP_VERSION":
+            if p["domain"] not in self.sites:
+                raise LookupError("No such website on this node.")
+            self.sites[p["domain"]]["php"] = p["php_version"]
+            return "changed", {}
+        if command == "ISSUE_SSL":
+            if p["domain"] not in self.sites:
+                raise LookupError("No such website on this node.")
+            self.sites[p["domain"]]["ssl"] = p["method"]
+            return "issued", {}
+        if command == "CREATE_MAILBOX":
+            return "created", {"address": f"{p['local_part']}@{p['domain']}"}
+        if command == "CREATE_BACKUP":
+            backup_id = f"20261010T000000Z-{len(self.backups):08x}"
+            self.backups[backup_id] = p["account"]
+            return "created", {"backup_id": backup_id}
+        if command == "RESTORE_BACKUP":
+            if self.backups.get(p["backup_id"]) != p["account"]:
+                raise LookupError("No such backup for this account.")
+            return "restored", {}
+        raise LookupError("Not implemented.")
+
+
+class ReferenceAgent:
+    version = "0.1.0"
+
+    def __init__(self, client, token, node_id, public_key, machine=None):
+        self.client, self.token, self.node_id, self.public_key = client, token, node_id, public_key
+        self.machine, self.seen = machine or FakeMachine(), envelope.ReplayGuard()
+
+    def _post(self, url, body=None):
+        return self.client.post(url, data=body or {}, content_type="application/json", HTTP_AUTHORIZATION="Agent " + self.token,
+                                HTTP_X_AGENT_VERSION=self.version)
+
+    def poll_once(self):
+        """Fetch one job, check it, do it, report. Returns the job id handled, or None."""
+        reply = self._post("/api/agent/v1/poll/")
+        if reply.status_code != 200 or not reply.json()["job"]:
+            return None
+        env = reply.json()["job"]
+        try:
+            job = envelope.verify(env, public_key=self.public_key, node=self.node_id, seen=self.seen)
+        except envelope.EnvelopeError as exc:
+            self.report_refusal(env, str(exc))
+            return None
+        try:
+            code, data = self.machine.run(job["command"], job["params"])
+            result = {"ok": True, "code": code, "message": "", "data": data}
+        except LookupError as exc:
+            result = {"ok": False, "code": "not_found", "message": str(exc), "data": {}}
+        self._post(f"/api/agent/v1/jobs/{job['job']}/result/", result)
+        return job["job"]
+
+    def report_refusal(self, env, why):
+        """A command that fails verification is reported as refused; the job id is only readable once the signature is known good, so a forged one is just dropped."""
+        import base64
+        import json
+
+        try:
+            job_id = json.loads(base64.b64decode(env["payload"]))["job"]
+        except Exception:
+            return
+        if "signature" not in why:
+            self._post(f"/api/agent/v1/jobs/{job_id}/result/", {"ok": False, "code": "refused", "message": why[:200], "data": {}})

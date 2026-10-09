@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "apps.products",
     "apps.domains",
     "apps.hosting",
+    "apps.agent",
     "apps.billing",
     "apps.orders",
     "apps.renewals",
@@ -374,3 +375,5 @@ LOGGING = {
 # key derived from SECRET_KEY; set explicitly in production so SECRET_KEY rotation
 # does not make stored credentials unreadable.
 CREDENTIALS_ENCRYPTION_KEY = env("CREDENTIALS_ENCRYPTION_KEY", default="")
+# N1: base64 Ed25519 seed that signs commands for native-node agents (python -c "from apps.agent import envelope; print(envelope.generate_key())")
+AGENT_SIGNING_KEY = env("AGENT_SIGNING_KEY", default="")
