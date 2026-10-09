@@ -504,3 +504,49 @@ def apply_server_plans(actor, server, packages, *, remap=None, create=None, deta
                      request=request)
         refreshed.append(product)
     return remapped, created, refreshed
+
+
+# --- Prices from WHMCS ------------------------------------------------------------------------------------------------------------
+
+def whmcs_preview(rows):
+    """
+    Each WHMCS product beside the WHPanel product it most likely is (same name, ignoring case and punctuation, or the same WHM package name), with
+    the prices WHPanel has now and the ones WHMCS has, and what would change. Nothing is written.
+    """
+    from .whmcs import normal
+
+    products = list(Product.objects.prefetch_related("prices").order_by("name"))
+    by_name = {}
+    for product in products:
+        by_name.setdefault(normal(product.name), product)
+        if product.whm_package_name:
+            by_name.setdefault(normal(product.whm_package_name), product)
+    shown = []
+    for row in rows:
+        match = by_name.get(normal(row["name"]))
+        current = {}
+        if match:
+            for entry in match.prices.all():
+                key = f"custom:{entry.custom_months}" if entry.billing_cycle == BillingCycle.CUSTOM else entry.billing_cycle
+                current[key] = str(entry.price)
+        changes = [key for key, value in row["prices"].items() if current.get(key) != value["price"]]
+        shown.append({**row, "match": match, "current": current, "changes": changes})
+    return {"rows": shown, "products": products}
+
+
+@transaction.atomic
+def apply_whmcs_prices(actor, choices, *, request=None):
+    """
+    ``choices`` is ``[(product id, WHMCS prices)]``. Sets (or replaces) the price of each cycle WHMCS offers; a cycle WHMCS does not offer is left as
+    it is. Returns the number of prices written. Names, features, status and everything else about a product are never touched.
+    """
+    _require(actor, "manage_products")
+    written = 0
+    for product_id, prices in choices:
+        product = Product.objects.get(pk=product_id)
+        for value in prices.values():
+            set_price(actor, product, billing_cycle=value["cycle"], price=value["price"], custom_months=value["custom_months"],
+                      setup_fee=value["setup"], request=request)
+            written += 1
+        audit.record("product.prices_imported", actor=actor, target=product, metadata={"source": "whmcs", "cycles": sorted(prices)}, request=request)
+    return written

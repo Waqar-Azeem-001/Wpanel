@@ -33,6 +33,7 @@ urlpatterns = [
     path("addons/<slug:slug>/prices/<int:price_id>/remove/", views.staff_addon_price_remove,
          name="addon_price_remove"),
 
+    path("import/whmcs/", views.staff_whmcs_import, name="whmcs_import"),
     path("servers/", views.staff_server_list, name="server_list"),
     path("servers/new/", views.staff_server_create, name="server_create"),
     path("servers/<int:pk>/edit/", views.staff_server_edit, name="server_edit"),

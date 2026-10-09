@@ -8,6 +8,7 @@
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <a href="{% url 'catalog_staff:addon_list' %}">Addons</a>
     <a href="{% url 'catalog_staff:server_list' %}">Servers</a>
+    {% if perms.accounts.manage_products %}<a href="{% url 'catalog_staff:whmcs_import' %}">Import prices from WHMCS</a>{% endif %}
     {% if perms.accounts.manage_products %}<a class="btn btn-primary" href="{% url 'catalog_staff:product_create' %}">Add product</a>{% endif %}
   </div>
 </div>

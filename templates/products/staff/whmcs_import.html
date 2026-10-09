@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Import prices from WHMCS · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'catalog_staff:product_list' %}">&larr; Products</a></p>
+<div class="page-head"><h1>Import prices from WHMCS</h1>
+  <p class="page-sub">A hosting server knows what a plan includes but not what it costs. WHMCS knows the prices: this reads them and puts them on the matching WHPanel products. Nothing is changed until you tick products and press Import.</p></div>
+
+{% if not preview %}
+<section class="card"><div class="card-body">
+  <form method="post" action="{% url 'catalog_staff:whmcs_import' %}" autocomplete="off">{% csrf_token %}
+    <div class="row g-3">
+      <div class="col-lg-5"><label class="form-label" for="w-address">Your WHMCS site</label><input class="form-control" id="w-address" name="address" value="{{ address }}" required placeholder="billing.example.com"><div class="form-text">The address where WHMCS is installed (https).</div></div>
+      <div class="col-lg-3"><label class="form-label" for="w-id">API identifier</label><input class="form-control" id="w-id" name="identifier" value="{{ identifier }}" required autocomplete="off"></div>
+      <div class="col-lg-4"><label class="form-label" for="w-secret">API secret</label><input class="form-control" id="w-secret" name="secret" type="password" required autocomplete="new-password"><div class="form-text">Used for this one request. It is not saved.</div></div>
+    </div>
+    <p class="small text-secondary mt-3 mb-2">In WHMCS: <strong>Configuration &gt; System Settings &gt; Manage API Credentials</strong>, create a credential that may use <em>GetProducts</em>, and allow this server's address under <strong>General Settings &gt; Security &gt; API IP Access Restriction</strong> (if the address is wrong, WHMCS tells us which one to add).</p>
+    <button class="btn btn-primary" type="submit">Read WHMCS products</button>
+  </form>
+</div></section>
+{% else %}
+{% if codes and currency != store_currency %}<div class="alert alert-warning">WHMCS has no prices in <strong>{{ store_currency }}</strong> (this store's currency). These are its <strong>{{ currency }}</strong> prices: check them before importing.</div>{% endif %}
+<form method="post" action="{% url 'catalog_staff:whmcs_import' %}">{% csrf_token %}<input type="hidden" name="step" value="apply">
+<p class="text-secondary">Prices in <strong>{{ currency }}</strong>. A cycle WHMCS does not offer is left as it is in WHPanel.</p>
+<div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th class="w-1"></th><th>WHMCS product</th><th>Goes to WHPanel product</th><th>WHMCS prices</th><th>WHPanel now</th></tr></thead><tbody>
+  {% for r in preview.rows %}
+    <tr>
+      <td><input class="form-check-input" type="checkbox" name="use" value="{{ r.pid }}" id="use-{{ r.pid }}" {% if r.match and r.changes %}checked{% endif %} {% if not r.prices %}disabled{% endif %} aria-label="Import {{ r.name }}"></td>
+      <td><label for="use-{{ r.pid }}">{{ r.name }}</label>{% if r.paytype == "free" %} <span class="badge text-bg-light">free</span>{% elif r.paytype == "onetime" %} <span class="badge text-bg-light">one-time</span>{% endif %}</td>
+      <td><select class="form-select form-select-sm" name="product_{{ r.pid }}" aria-label="WHPanel product for {{ r.name }}"><option value="">Do not import</option>{% for p in preview.products %}<option value="{{ p.pk }}" {% if r.match and r.match.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>{% if not r.match %}<div class="form-text">No product with this name: choose one, or leave it.</div>{% endif %}</td>
+      <td class="small">{% for key, v in r.prices.items %}<div>{{ key }}: <strong>{{ v.price }}</strong>{% if v.setup != "0.00" %} (setup {{ v.setup }}){% endif %}</div>{% empty %}<span class="text-secondary">no recurring price</span>{% endfor %}</td>
+      <td class="small">{% for key, value in r.current.items %}<div {% if key in r.changes %}class="text-warning"{% endif %}>{{ key }}: {{ value }}</div>{% empty %}<span class="text-secondary">{% if r.match %}no price yet{% else %}&mdash;{% endif %}</span>{% endfor %}</td>
+    </tr>
+  {% endfor %}
+  </tbody></table></div>
+<button class="btn btn-primary" type="submit">Import the ticked prices</button> <a class="btn btn-outline-secondary" href="{% url 'catalog_staff:whmcs_import' %}">Start again</a>
+</form>
+{% endif %}
+{% endblock %}

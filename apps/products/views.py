@@ -1,4 +1,5 @@
 """Server-rendered catalog pages (staff and public). Rules live in ``services``."""
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -411,6 +412,50 @@ def staff_addon_price_remove(request, slug, price_id):
         return "Price removed."
 
     return _redirect_back(request, addon, action)
+
+
+# --- Staff: prices from WHMCS --------------------------------------------------------------------------------
+
+SESSION_KEY = "whmcs_price_import"
+
+
+@portal_permission_required(perm("manage_products"))
+def staff_whmcs_import(request):
+    """Step 1 asks for the WHMCS address and API login (used once, never kept) and shows a preview; step 2 writes the chosen prices."""
+    from . import whmcs
+
+    if request.method == "POST" and request.POST.get("step") == "apply":
+        saved = request.session.get(SESSION_KEY) or {}
+        rows = {r["pid"]: r for r in saved.get("rows", [])}
+        choices = []
+        for pid in request.POST.getlist("use"):
+            product_id, row = request.POST.get(f"product_{pid}", ""), rows.get(pid)
+            if row and product_id.isdigit() and row["prices"]:
+                choices.append((int(product_id), row["prices"]))
+        if not choices:
+            messages.warning(request, "Tick at least one product and choose the WPanel product its prices go to.")
+            return redirect("catalog_staff:whmcs_import") if not saved else render(request, "products/staff/whmcs_import.html", {
+                "preview": services.whmcs_preview(saved["rows"]), "currency": saved.get("currency")})
+        try:
+            written = services.apply_whmcs_prices(request.user, choices, request=request)
+        except (ServiceError, ValidationError) as exc:
+            messages.error(request, getattr(exc, "message", None) or "; ".join(getattr(exc, "messages", [str(exc)])))
+            return render(request, "products/staff/whmcs_import.html", {"preview": services.whmcs_preview(saved["rows"]), "currency": saved.get("currency")})
+        request.session.pop(SESSION_KEY, None)
+        messages.success(request, f"{written} price(s) set on {len(choices)} product(s) from WHMCS.")
+        return redirect("catalog_staff:product_list")
+    if request.method == "POST":
+        try:
+            rows, currency, codes = whmcs.fetch_products(request.POST.get("address", ""), request.POST.get("identifier", "").strip(),
+                                                         request.POST.get("secret", ""), request.POST.get("currency", "").strip().upper())
+        except whmcs.WhmcsError as exc:
+            messages.error(request, str(exc))
+            return render(request, "products/staff/whmcs_import.html", {"address": request.POST.get("address", ""),
+                                                                         "identifier": request.POST.get("identifier", "")})
+        request.session[SESSION_KEY] = {"rows": rows, "currency": currency}  # prices only: the login is not kept
+        return render(request, "products/staff/whmcs_import.html", {"preview": services.whmcs_preview(rows), "currency": currency, "codes": codes,
+                                                                     "store_currency": settings.STORE_CURRENCY})
+    return render(request, "products/staff/whmcs_import.html", {})
 
 
 # --- Staff: servers --------------------------------------------------------------------------
