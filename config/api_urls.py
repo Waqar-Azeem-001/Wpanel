@@ -12,6 +12,7 @@ from apps.billing.api import CouponViewSet, PaymentMethodViewSet, TaxRuleViewSet
 from apps.clients.api import ClientViewSet, MyClientViewSet
 from apps.core.views import HealthView
 from apps.domains.api import AvailabilityView, DomainViewSet, TldPricingViewSet
+from apps.hosting import api_services as hs
 from apps.hosting.api import HostingAccountViewSet
 from apps.lifecycle import api as lifecycle_api
 from apps.reports import api as reports_api
@@ -67,7 +68,32 @@ auth_patterns = [
     path("password-change/", accounts_api.PasswordChangeView.as_view(), name="password-change"),
 ]
 
+# Provider-neutral hosting API: /api/v1/hosting/services/{id}/<resource>/ (no provider is ever named)
+S = "hosting/services/<int:pk>/"
+hosting_service_patterns = [
+    path(S + "files/", hs.FilesView.as_view(), name="hosting-files"),
+    path(S + "databases/", hs.DatabasesView.as_view(), name="hosting-databases"),
+    path(S + "databases/<str:name>/", hs.DatabaseView.as_view(), name="hosting-database"),
+    path(S + "emails/", hs.EmailsView.as_view(), name="hosting-emails"),
+    path(S + "emails/<str:address>/", hs.EmailView.as_view(), name="hosting-email"),
+    path(S + "domains/", hs.DomainsView.as_view(), name="hosting-domains"),
+    path(S + "domains/<str:name>/", hs.DomainView.as_view(), name="hosting-domain"),
+    path(S + "dns/", hs.DnsView.as_view(), name="hosting-dns"),
+    path(S + "dns/<str:record_id>/", hs.DnsRecordView.as_view(), name="hosting-dns-record"),
+    path(S + "ssl/", hs.SslView.as_view(), name="hosting-ssl"),
+    path(S + "ssl/<str:domain>/", hs.SslDomainView.as_view(), name="hosting-ssl-domain"),
+    path(S + "php/", hs.PhpView.as_view(), name="hosting-php"),
+    path(S + "cron/", hs.CronView.as_view(), name="hosting-cron"),
+    path(S + "cron/<str:job_id>/", hs.CronJobView.as_view(), name="hosting-cron-job"),
+    path(S + "cron/<str:job_id>/run/", hs.CronRunView.as_view(), name="hosting-cron-run"),
+    path(S + "backups/", hs.BackupsView.as_view(), name="hosting-backups"),
+    path(S + "backups/<str:backup_id>/", hs.BackupView.as_view(), name="hosting-backup"),
+    path(S + "backups/<str:backup_id>/<slug:action>/", hs.BackupActionView.as_view(), name="hosting-backup-action"),
+    path(S + "usage/", hs.UsageView.as_view(), name="hosting-usage"),
+]
+
 urlpatterns = [
+    *hosting_service_patterns,
     path("health/", HealthView.as_view(), name="health"),
     path("auth/", include(auth_patterns)),
     path("me/", accounts_api.MeView.as_view(), name="me"),
