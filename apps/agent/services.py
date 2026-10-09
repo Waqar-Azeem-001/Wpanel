@@ -52,12 +52,12 @@ def authenticate(token, fingerprint=""):
     return node
 
 
-def dispatch(user, server, command, params, *, idempotency_key=None, correlation_id=None, request=None):
+def dispatch(user, server, command, params, *, idempotency_key=None, correlation_id=None, subject="", request=None):
     """
     Queue one allow-listed command for a server. Same ``idempotency_key`` with the same command and parameters returns the job already made;
     with different ones it is refused. Raises ServiceError for anything not on the allow-list.
     """
-    node = getattr(server, "agent", None)
+    node = AgentNode.objects.filter(server=server).first()  # fresh from the database: a cached server.agent may be from before enrolment
     if node is None or node.status != NodeStatus.ENROLLED:
         raise ServiceError("This server has no enrolled agent.")
     try:
@@ -72,7 +72,7 @@ def dispatch(user, server, command, params, *, idempotency_key=None, correlation
             raise ServiceError("That idempotency key was already used for a different command.")
         return existing
     job = AgentJob.objects.create(node=node, command=command, params=cleaned, correlation_id=(correlation_id or uuid.uuid4().hex)[:64],
-                                  idempotency_key=key, nonce=secrets.token_hex(16), requested_by=user if getattr(user, "is_authenticated", False) else None,
+                                  idempotency_key=key, subject=subject[:40], nonce=secrets.token_hex(16), requested_by=user if getattr(user, "is_authenticated", False) else None,
                                   expires_at=timezone.now() + timedelta(seconds=VALID_FOR))
     audit.record("agent.job_queued", actor=user, target=job, request=request,
                  metadata={"command": command, "params": catalog.scrub(command, cleaned), "correlation_id": job.correlation_id, "node": server.name})
@@ -106,6 +106,9 @@ def _finish(job, status, code, message, ok=None, data=None):
     job.leased_until = None
     job.save()
     audit.record("agent.job_" + status, target=job, metadata={"command": job.command, "correlation_id": job.correlation_id, "code": job.result_code})
+    from . import hooks
+
+    hooks.job_finished(job)
 
 
 def poll(node, agent_version):

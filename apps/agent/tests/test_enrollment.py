@@ -177,11 +177,11 @@ def test_a_pending_node_cannot_use_the_api_with_a_guessed_token(server, manager)
     assert services.authenticate("") is None and services.authenticate("x") is None
 
 
-def test_the_native_server_type_exists_but_provisions_nothing_yet():
-    from apps.hosting.adapters.manual import ManualAdapter
+def test_the_native_server_type_has_its_own_adapter():
+    from apps.hosting.adapters.native import NativeAdapter
     from apps.hosting.adapters.registry import ADAPTERS
 
-    assert ADAPTERS["native"] is ManualAdapter
+    assert ADAPTERS["native"] is NativeAdapter
 
 
 # --- the staff screen ---------------------------------------------------------------------------------------------------------------------

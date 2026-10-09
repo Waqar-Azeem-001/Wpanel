@@ -951,7 +951,8 @@ Before marking any phase 🟢:
 | N0 Native architecture and security design | ✅ decided locally | `docs/adr/`: 20 architecture decision records, all Accepted on 2026-10-10 (4 chosen by the business; mail deferred to N7 and the backup vendor chosen at N8) |
 | N1 WH Agent | 🟡 protocol built locally | `docs/n1-wh-agent.md`: allow-listed commands, signed envelopes, replay/expiry/idempotency, leases, versions, audit, Python reference agent (tested). The Go agent is an untested skeleton; real node work is N3, mutual TLS is N2 |
 | N2 Native node enrollment | 🟡 built locally | `docs/n2-node-enrollment.md`: one-time token, own CA signs the node's certificate request, inventory/heartbeat/health/capacity, renewal, revocation, staff screen. **Not exercised: mutual TLS on a real proxy, the Go agent's enroll/heartbeat** |
-| N3-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| N3 Native website provisioning | 🟡 control plane built, node untested | `docs/n3-native-website-provisioning.md`: NativeAdapter, async order-to-active flow, node handlers (user, quota, own PHP-FPM + systemd slice, Apache vhost, suspend, PHP version, limits, delete with archive, rollback) tested against a pretend machine, placement. **Never run on a real node; Go agent has none of it** |
+| N4-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 

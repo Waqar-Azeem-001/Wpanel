@@ -68,9 +68,22 @@ def _f(kind, **kw):
     return Field(kind, **kw)
 
 
+# Optional on CREATE_WEBSITE (the node applies its defaults when absent); required on SET_LIMITS.
+LIMIT_FIELDS = {
+    "disk_mb": Field("int", low=100, high=10_000_000, required=False),
+    "memory_mb": Field("int", low=64, high=1_000_000, required=False),
+    "processes": Field("int", low=5, high=10_000, required=False),
+    "cpu_percent": Field("int", low=5, high=6400, required=False),
+}
+
+
 COMMANDS = {c.name: c for c in [
-    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS)}, 180,
-            description="Make the isolated hosting environment: user, folders, web and PHP-FPM configuration."),
+    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS), **LIMIT_FIELDS}, 180,
+            description="Make the isolated hosting environment: user, folders, web and PHP-FPM configuration, resource limits."),
+    Command("SET_LIMITS", {"account": _f("account"), **{k: Field(f.kind, low=f.low, high=f.high) for k, f in LIMIT_FIELDS.items()}}, 60,
+            description="Change an account's disk quota and CPU, memory and process limits."),
+    Command("SUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Stop serving the account's sites (a suspended page is shown) and stop its PHP."),
+    Command("UNSUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Undo SUSPEND_WEBSITE."),
     Command("DELETE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "keep_archive": _f("enum", choices=("yes", "no"))}, 180,
             description="Remove the website; with keep_archive=yes a final backup is kept first."),
     Command("CREATE_DATABASE", {"account": _f("account"), "name": _f("db_name")}, 60, description="Create one database owned by the account."),

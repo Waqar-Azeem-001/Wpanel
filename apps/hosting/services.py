@@ -122,6 +122,10 @@ def request_hosting(actor, client, product, domain, *, server=None, request=None
     mapped_servers = list(product.servers.all())
     if server is None and len(mapped_servers) == 1:
         server = mapped_servers[0]
+    elif server is None and len(mapped_servers) > 1 and all(s.kind == "native" for s in mapped_servers):
+        from apps.agent.placement import pick_node
+
+        server = pick_node(among=mapped_servers)  # several native nodes are mapped: the least full healthy one gets the website
     elif server is not None and mapped_servers and server not in mapped_servers:
         raise ServiceError("This server is not mapped to the selected product.", code="server_not_mapped")
 
@@ -180,6 +184,12 @@ def complete_provisioning(actor, account, *, request=None):
         audit.record("hosting.provisioning_failed", actor=actor, target=account, metadata={"error": str(exc)},
                      request=request)
         raise ServiceError(f"Provisioning failed: {exc}", code="adapter_error") from exc
+
+    if result.get("pending"):  # a provider that works through a queue (the native one): the account becomes active when the node reports back
+        account.last_error = ""
+        account.save(update_fields=["last_error", "updated_at"])
+        audit.record("hosting.provisioning_started", actor=actor, target=account, metadata={"provider_ref": result.get("provider_ref", "")}, request=request)
+        return account
 
     account.status = HostingStatus.ACTIVE
     account.last_error = ""

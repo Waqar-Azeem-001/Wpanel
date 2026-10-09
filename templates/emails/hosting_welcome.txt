@@ -2,10 +2,13 @@ Hello,
 
 Your hosting account for {{ account.domain }} is now active.
 
-cPanel username: {{ username }}
+{% if password %}cPanel username: {{ username }}
 Temporary password: {{ password }}
 
 Please sign in to cPanel and change this password as soon as possible. We do
-not keep a copy of it after this email is sent.
+not keep a copy of it after this email is sent.{% else %}Username: {{ username }}
+
+Manage your website from your account: files, databases, PHP version and more.
+No separate control panel login is needed.{% endif %}
 
 {{ site_name }}

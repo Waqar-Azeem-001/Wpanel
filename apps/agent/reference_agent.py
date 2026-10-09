@@ -44,6 +44,26 @@ class FakeMachine:
         raise LookupError("Not implemented.")
 
 
+class NativeMachine(FakeMachine):
+    """Website commands run through the real node handlers (apps.agent.node) against a pretend Linux machine; the rest stays the simple fake."""
+
+    WEBSITE = ("CREATE_WEBSITE", "DELETE_WEBSITE", "SUSPEND_WEBSITE", "UNSUSPEND_WEBSITE", "CHANGE_PHP_VERSION", "SET_LIMITS")
+
+    def __init__(self, system=None):
+        from .node.system import FakeSystem
+        from .node.website import Websites
+
+        super().__init__()
+        self.system = system or FakeSystem()
+        self.websites = Websites(self.system)
+
+    def run(self, command, p):
+        if command in self.WEBSITE:
+            self.executed.append(command)
+            return self.websites.run(command, p)
+        return super().run(command, p)
+
+
 class ReferenceAgent:
     version = "0.1.0"
 
@@ -71,6 +91,10 @@ class ReferenceAgent:
             result = {"ok": True, "code": code, "message": "", "data": data}
         except LookupError as exc:
             result = {"ok": False, "code": "not_found", "message": str(exc), "data": {}}
+        except Exception as exc:  # a node-side handler failure (HandlerError) carries its own code
+            if not hasattr(exc, "code"):
+                raise
+            result = {"ok": False, "code": exc.code, "message": exc.message, "data": {}}
         self._post(f"/api/agent/v1/jobs/{job['job']}/result/", result)
         return job["job"]
 

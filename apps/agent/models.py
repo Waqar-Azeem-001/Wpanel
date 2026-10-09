@@ -80,6 +80,7 @@ class AgentJob(TimeStampedModel):
     command = models.CharField(max_length=40, db_index=True)
     params = models.JSONField(default=dict, help_text="Secret values are replaced with *** once the job has finished.")
     status = models.CharField(max_length=12, choices=JobStatus.choices, default=JobStatus.QUEUED, db_index=True)
+    subject = models.CharField(max_length=40, blank=True, db_index=True, help_text="What this job is for, for example hosting:12. Lets the right part of WHPanel hear about the outcome.")
     correlation_id = models.CharField(max_length=64, db_index=True)
     idempotency_key = models.CharField(max_length=64)
     nonce = models.CharField(max_length=64, unique=True)
