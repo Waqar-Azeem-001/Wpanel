@@ -1,6 +1,6 @@
 # ADR 06: Mail topology and software
 
-**Status:** Proposed  
+**Status:** Accepted 2026-10-10 as proposed: no native mail until N7; mail stays on cPanel nodes; N7 re-decides with real numbers  
 **Roadmap:** N0 (area 6 of 20)
 
 ## Context

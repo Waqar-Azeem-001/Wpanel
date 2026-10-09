@@ -1,6 +1,6 @@
 # ADR 14: Operating-system and server updates
 
-**Status:** Proposed  
+**Status:** Accepted 2026-10-10 (the business asked for all records to be completed; accepted as proposed)  
 **Roadmap:** N0 (area 14 of 20)
 
 ## Context

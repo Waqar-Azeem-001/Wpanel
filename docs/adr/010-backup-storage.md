@@ -1,6 +1,6 @@
 # ADR 10: Backup storage and retention
 
-**Status:** Proposed  
+**Status:** Accepted 2026-10-10 as proposed: restic to S3-compatible storage; the vendor is chosen when N8 starts (it does not block N1 to N7)  
 **Roadmap:** N0 (area 10 of 20)
 
 ## Context

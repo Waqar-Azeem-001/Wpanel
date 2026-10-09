@@ -1,6 +1,6 @@
 # ADR 08: SSL and ACME
 
-**Status:** Proposed  
+**Status:** Accepted 2026-10-10 (the business asked for all records to be completed; accepted as proposed)  
 **Roadmap:** N0 (area 8 of 20)
 
 ## Context
