@@ -13,7 +13,7 @@ from apps.core.exceptions import ServiceError
 from apps.core.utils import unique_slug
 
 from . import categories
-from .models import (Addon, AddonKind, AddonPrice, BillingCycle, CatalogStatus, CategoryKind, Product, ProductPrice, Server,
+from .models import (Addon, AddonKind, AddonPrice, BillingCycle, CatalogStatus, Product, ProductPrice, ProductType, Server,
                      StoreCategory)
 
 PRODUCT_FIELDS = (
@@ -352,3 +352,71 @@ def delete_server(actor, server, *, request=None):
         raise ServiceError("This server still has hosting accounts on it. Move them to another server first.",
                            code="server_in_use")
     audit.record("server.deleted", actor=actor, metadata={"name": name}, request=request)
+
+
+# --- Plans from a server -------------------------------------------------------------------------------------------------
+
+def type_for_package(package):
+    """The kind of product a server package most likely is, from its name, or "" when it is not clear (then it is not suggested). A name with
+    an underscore (``owner_plan``) is a reseller's own package, never suggested."""
+    lowered = package.lower()
+    if "_" in lowered:
+        return ""
+    for prefix, kind in (("reseller", ProductType.RESELLER_HOSTING), ("wordpress", ProductType.WORDPRESS_HOSTING), ("business", ProductType.BUSINESS_HOSTING),
+                         ("ecommerce", ProductType.ECOMMERCE_HOSTING), ("e-commerce", ProductType.ECOMMERCE_HOSTING), ("shared", ProductType.SHARED_HOSTING)):
+        if lowered.startswith(prefix):
+            return kind
+    return ""
+
+
+def plans_report(server, packages):
+    """
+    What differs between a server's packages and the catalog: ``broken`` are products mapped to this server whose package the server does not
+    have (they would fail at provisioning); ``unlinked`` are server packages no product uses yet, each with a suggested product type;
+    ``linked`` pairs a package with the product that already uses it.
+    """
+    products = list(Product.objects.exclude(whm_package_name="").prefetch_related("servers").order_by("name"))
+    by_package = {}
+    for product in products:
+        by_package.setdefault(product.whm_package_name, []).append(product)
+    broken = [p for p in products if server in p.servers.all() and p.whm_package_name not in packages]
+    unlinked = [{"package": name, "type": type_for_package(name)} for name in packages if name not in by_package]
+    linked = [{"package": name, "products": by_package[name]} for name in packages if name in by_package]
+    return {"broken": broken, "unlinked": unlinked, "linked": linked}
+
+
+@transaction.atomic
+def apply_server_plans(actor, server, packages, *, remap=None, create=None, request=None):
+    """
+    Bring the catalog in line with a server's packages. ``remap`` is {product id: package} for products pointing at a package the server does
+    not have; ``create`` lists server packages to turn into new products. New products are created HIDDEN with no price, so nothing reaches
+    the store until staff price and publish them. Only packages the server really has are accepted. Returns (remapped, created).
+    """
+    _require(actor, "manage_products")
+    known = set(packages)
+    remapped, created = [], []
+    for product_id, package in (remap or {}).items():
+        if not package:
+            continue
+        if package not in known:
+            raise ServiceError(f"The server has no package called '{package}'.", code="unknown_package")
+        product = Product.objects.get(pk=product_id)
+        old = product.whm_package_name
+        product.whm_package_name = package
+        product.save(update_fields=["whm_package_name", "updated_at"])
+        product.servers.add(server)
+        audit.record("product.package_remapped", actor=actor, target=product, metadata={"from": old, "to": package, "server": server.name},
+                     request=request)
+        remapped.append(product)
+    for package in create or []:
+        if package not in known:
+            raise ServiceError(f"The server has no package called '{package}'.", code="unknown_package")
+        if Product.objects.filter(whm_package_name=package).exists():
+            continue  # something already uses it; never make a twin
+        kind = type_for_package(package) or ProductType.SHARED_HOSTING
+        product = create_product(actor, {"name": package, "type": kind, "whm_package_name": package}, request=request)
+        product.servers.add(server)
+        audit.record("product.created_from_server", actor=actor, target=product, metadata={"package": package, "server": server.name},
+                     request=request)
+        created.append(product)
+    return remapped, created

@@ -29,6 +29,7 @@
       {% if perms.accounts.manage_hosting %}
       <td class="d-flex gap-2"><a href="{% url 'catalog_staff:server_edit' server.pk %}">Edit</a>
         <button class="btn btn-sm btn-outline-secondary" type="submit" formaction="{% url 'catalog_staff:server_test' server.pk %}" formnovalidate>Test connection</button>
+        {% if server.kind == "whm_api" %}<a class="btn btn-sm btn-outline-primary" href="{% url 'catalog_staff:server_plans' server.pk %}">Sync plans</a>{% endif %}
         <button class="btn btn-sm btn-outline-danger" type="submit" formaction="{% url 'catalog_staff:server_delete' server.pk %}" formnovalidate data-confirm="Delete {{ server.name }}?">Delete</button></td>
       {% endif %}
     </tr>

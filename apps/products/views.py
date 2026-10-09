@@ -485,6 +485,39 @@ def staff_server_test(request, pk):
     return redirect("catalog_staff:server_edit", pk=server.pk)
 
 
+@portal_permission_required(perm("manage_hosting"))
+def staff_server_plans(request, pk):
+    """Compare a server's own packages with the catalog and bring them in line: fix products pointing at a missing package, and turn new
+    server packages into (hidden, unpriced) products."""
+    from apps.hosting import services as hosting_services
+
+    server = get_object_or_404(Server, pk=pk)
+    try:
+        result = hosting_services.check_server(request.user, server, request=request)
+    except ServiceError as exc:
+        messages.error(request, f"Could not read the plans from {server.name}: {exc.message}")
+        return redirect("catalog_staff:server_list")
+    packages = result["packages"]
+    if request.method == "POST":
+        remap = {int(k[len("remap_"):]): v for k, v in request.POST.items() if k.startswith("remap_") and k[len("remap_"):].isdigit()}
+        try:
+            remapped, created = services.apply_server_plans(request.user, server, packages, remap=remap, create=request.POST.getlist("create"),
+                                                            request=request)
+        except (ServiceError, ValueError) as exc:
+            messages.error(request, getattr(exc, "message", str(exc)))
+        else:
+            if remapped:
+                messages.success(request, f"{len(remapped)} product(s) now use a package the server has.")
+            if created:
+                messages.success(request, f"{len(created)} product(s) created from the server's plans. They are hidden and have no price yet: "
+                                          "set a price and publish them when ready.")
+            if not remapped and not created:
+                messages.info(request, "Nothing was changed.")
+        return redirect("catalog_staff:server_plans", pk=server.pk)
+    return render(request, "products/staff/server_plans.html", {"server": server, "version": result["version"], "packages": packages,
+                                                                 **services.plans_report(server, packages)})
+
+
 @require_POST
 @portal_permission_required(perm("manage_hosting"))
 def staff_server_infra_test(request, pk):
