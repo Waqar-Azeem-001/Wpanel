@@ -1,10 +1,10 @@
 {% load i18n %}{% if show %}
 <div class="aa-banner" role="region" aria-label="{% trans 'Admin Access' %}">
-  <span class="aa-who"><strong><i class="bi bi-person-badge" aria-hidden="true"></i> {% trans "Admin Access" %}</strong> &middot; {% trans "You are managing" %} <strong>{{ client.display_name }}</strong>'s {% trans "service" %} <strong>{{ account.domain }}</strong> ({{ account.username }}) {% trans "as" %} {{ staff }}. {% trans "No customer password is used." %} {% if can_change %}{% trans "Every change is recorded." %}{% else %}{% trans "Your role can look but not change." %}{% endif %} {{ minutes }} {% trans "min left." %}</span>
+  <span class="aa-who"><strong><i class="bi bi-person-badge" aria-hidden="true"></i> {% trans "Admin Access" %}</strong> &middot; {% trans "You are managing" %} <strong>{{ client.display_name }}</strong>'s {% trans "service" %} <strong>{{ account.domain }}</strong> ({{ account.product.name }}, {{ account.username }}){% if account.server %}, {% trans "node" %} <strong>{{ account.server.name }}</strong>{% endif %}, {% trans "as" %} {{ staff }}. {% trans "No customer password is used." %} {% if can_change %}{% trans "Every change is recorded." %}{% else %}{% trans "Your role can look but not change." %}{% endif %} {{ minutes }} {% trans "min left." %}</span>
   <span class="aa-links">
-    <a class="btn btn-sm btn-outline-secondary" href="{% url 'clients_staff:detail' client.pk %}"><i class="bi bi-person" aria-hidden="true"></i> {% trans "Client" %}</a>
-    <a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_staff:detail' account.pk %}"><i class="bi bi-hdd-rack" aria-hidden="true"></i> {% trans "Service" %}</a>
-    <form method="post" action="{% url 'hosting_staff:admin_access_end' account.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-warning" type="submit">{% trans "End Admin Access" %}</button></form>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'clients_staff:detail' client.pk %}"><i class="bi bi-person" aria-hidden="true"></i> {% trans "Client Profile" %}</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_staff:detail' account.pk %}"><i class="bi bi-hdd-rack" aria-hidden="true"></i> {% trans "Service Details" %}</a>
+    <form method="post" action="{% url 'hosting_staff:admin_access_end' account.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-warning" type="submit">{% trans "Exit Admin Access" %}</button></form>
   </span>
 </div>
 {% endif %}

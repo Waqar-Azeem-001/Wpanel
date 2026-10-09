@@ -216,6 +216,15 @@ def test_unknown_zones_are_refused(dom):
             call()
 
 
+def test_the_starting_records_keep_their_ids_so_the_first_edit_after_viewing_finds_them(dom):
+    first = {r.record_id: r for r in dom.records("shop.example.com")}
+    again = {r.record_id: r for r in dom.records("shop.example.com")}
+    assert first.keys() == again.keys()
+    a = next(r for r in first.values() if r.type == "A" and r.name == "@")
+    dom.update_record("shop.example.com", rec("A", "@", "203.0.113.55", record_id=a.record_id))
+    assert next(r for r in dom.records("shop.example.com") if r.record_id == a.record_id).value == "203.0.113.55"
+
+
 # --- The screens ------------------------------------------------------------------------------------------------------
 
 @pytest.fixture

@@ -59,7 +59,7 @@ def mgr(account, tail=""):
 def test_the_staff_service_page_offers_manage_hosting_with_a_reason_field(client, technical, account):
     client.force_login(technical)
     page = client.get(f"/staff/hosting/{account.pk}/").content.decode()
-    assert "Manage this customer" in page and 'name="reason"' in page and "never needed" in page
+    assert "Manage Hosting" in page and 'name="reason"' in page and "never needed" in page
 
 
 def test_staff_cannot_open_a_customers_hosting_screens_without_starting_admin_access(client, technical, account):
@@ -94,9 +94,9 @@ def test_the_banner_names_the_customer_the_service_and_the_way_back_on_every_scr
             continue
         page = response.content.decode()
         assert "Admin Access" in page and "Ada" in page and "demo-shop.example.com" in page and "demoshop" in page, tail
-        assert f"/staff/hosting/{account.pk}/" in page and "/staff/clients/" in page and "End Admin Access" in page
+        assert f"/staff/hosting/{account.pk}/" in page and "/staff/clients/" in page and "Exit Admin Access" in page and "Client Profile" in page and "Service Details" in page and "Starter" in page and "Demo (sample data)" in page
         assert "No customer password is used" in page
-    assert "Admin Access" not in client.get(f"/staff/hosting/{account.pk}/").content.decode().split("Manage this customer")[0]
+    assert "Admin Access" not in client.get(f"/staff/hosting/{account.pk}/").content.decode().split("Manage Hosting")[0]
 
 
 def test_the_customer_sees_no_banner_on_their_own_screens(client, owner, account):

@@ -36,6 +36,7 @@ class DemoDomains:
         data.setdefault("zones", {})
         if self.primary and self.primary not in data["zones"]:
             data["zones"][self.primary] = self._default_zone(self.primary)
+            self._save(data)  # the starting records keep the same ids from now on, so an edit made after viewing them finds them
         return data
 
     def _save(self, data):

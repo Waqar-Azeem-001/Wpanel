@@ -46,6 +46,8 @@
         <button class="btn btn-light site-more" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'More actions for' %} {{ card.account.domain }}"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="{{ card.manage_url }}"><i class="bi bi-speedometer2" aria-hidden="true"></i> {% trans "Overview" %}</a></li>
+          {% for label, url, icon in card.quick %}<li><a class="dropdown-item" href="{{ url }}"><i class="bi {{ icon }}" aria-hidden="true"></i> {{ label }}</a></li>{% endfor %}
+          {% if card.quick %}<li><hr class="dropdown-divider"></li>{% endif %}
           <li><a class="dropdown-item" href="{% url 'hosting_customer:information' card.account.pk %}"><i class="bi bi-info-circle" aria-hidden="true"></i> {% trans "Hosting information" %}</a></li>
           {% if card.upgrade_url %}<li><a class="dropdown-item" href="{{ card.upgrade_url }}"><i class="bi bi-arrow-up-circle" aria-hidden="true"></i> {% trans "Upgrade" %}</a></li>{% endif %}
           <li><a class="dropdown-item" href="{% url 'support_customer:new' %}"><i class="bi bi-life-preserver" aria-hidden="true"></i> {% trans "Get help" %}</a></li>

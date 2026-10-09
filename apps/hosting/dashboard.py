@@ -56,6 +56,15 @@ def _optional(user, account, capabilities, capability, operation, *args):
         return None
 
 
+QUICK_ACTIONS = ["files", "email", "databases", "dns", "backups"]  # the tools people reach for most, offered straight from the website card
+
+
+def _quick_actions(account, capabilities):
+    return [(label, reverse("hosting_customer:section", args=[account.pk, key]), icon)
+            for key, (_group, label, icon, capability, _about) in ((k, SECTION_BY_KEY[k]) for k in QUICK_ACTIONS)
+            if capability.value in capabilities]
+
+
 def website_card(user, account):
     try:
         capabilities = control.capabilities_for(account)
@@ -75,6 +84,7 @@ def website_card(user, account):
         "capabilities": capabilities,
         "tone": sum(ord(c) for c in account.domain) % 6,  # which of the six preview-tile colours this website gets
         "manage_url": reverse("hosting_customer:detail", args=[account.pk]),
+        "quick": _quick_actions(account, capabilities) if live else [],
         "upgrade_url": (reverse("renewals_customer:hosting_upgrade", args=[account.pk])
                         if account.status == HostingStatus.ACTIVE else ""),
     }

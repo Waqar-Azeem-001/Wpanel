@@ -70,9 +70,10 @@ def _sources(client, user):
 
     def hosting():
         rows = client.hosting_accounts.select_related("product", "server").order_by("domain")
-        return rows, ["Domain", "Product", "Status", "Paid through", "Server"], lambda h: [
+        return rows, ["Domain", "Product", "Status", "Paid through", "Server", ""], lambda h: [
             text(h.domain, reverse("hosting_staff:detail", args=[h.pk])), text(h.product.name), status(h.status, h.get_status_display()),
-            text(h.expires_at, ""), text(h.server.name if h.server else "—")]
+            text(h.expires_at, ""), text(h.server.name if h.server else "—"),
+            text("Manage Hosting", reverse("hosting_staff:detail", args=[h.pk]) + "#manage") if h.server_id and h.status in ("active", "suspended") else text("")]
 
     def domains():
         rows = client.domains.order_by("name")

@@ -30,7 +30,7 @@ from apps.core.exceptions import ServiceError
 from .adapters.base import HostingError
 from .adapters.capabilities import (OPERATIONS, READ_OPERATIONS, Capability, CapabilityNotSupported,
                                     supported_capabilities)
-from . import admin_access
+from . import admin_access, snapshots
 from .models import LIVE_STATUSES
 from .services import can_self_service, get_adapter, visible_hosting_accounts_for_user
 
@@ -89,7 +89,9 @@ def perform(user, account, capability, operation, *args, audit_metadata=None, re
                            code="capability_not_supported", status_code=status.HTTP_501_NOT_IMPLEMENTED)
     changing = operation not in READ_OPERATIONS
     admin = admin_access.is_admin_actor(user, account)
-    metadata = {"capability": capability.value, "operation": operation, **(audit_metadata or {}), **({"admin_access": True} if admin else {})}
+    metadata = {"capability": capability.value, "operation": operation, **(audit_metadata or {}),
+                **({"admin_access": True, "client": account.client_id, "service": account.pk} if admin else {})}
+    before = snapshots.read(adapter, account.username, operation, args) if changing else None
     try:
         result = getattr(adapter, operation)(account.username, *args, **kwargs)
     except CapabilityNotSupported as exc:
@@ -100,6 +102,9 @@ def perform(user, account, capability, operation, *args, audit_metadata=None, re
             audit.record("hosting.control_failed", actor=user, target=account, metadata=metadata, request=request)
         raise ServiceError(f"The hosting server could not complete that: {exc}", code="adapter_error") from exc
     if changing:
+        old, new = snapshots.difference(before, snapshots.read(adapter, account.username, operation, args))
+        if old or new:
+            metadata = {**metadata, "old": old, "new": new}
         audit.record("hosting.control", actor=user, target=account, metadata=metadata, request=request)
     elif admin and operation in PRIVATE_READS:
         audit.record("hosting.admin_read", actor=user, target=account, metadata=metadata, request=request)

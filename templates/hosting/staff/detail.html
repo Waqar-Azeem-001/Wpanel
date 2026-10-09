@@ -14,8 +14,8 @@
 {% if account.last_error %}<div class="alert alert-danger"><p>{{ account.last_error }}</p></div>{% endif %}
 
 {% if can_admin %}
-<section class="card mb-3"><div class="card-body">
-  <h2 class="h5">Manage this customer's hosting</h2>
+<section class="card mb-3" id="manage"><div class="card-body">
+  <h2 class="h5">Manage Hosting</h2>
   <p class="text-secondary mb-2">Opens the customer's own hosting screens (files, databases, email, DNS and the rest) with your sign-in, so the customer's password is never needed. It needs a reason, lasts {{ admin_minutes_total }} minutes and is recorded against you and the customer.{% if not can_manage %} Your role can look but not change anything, and cannot read the customer's mail or database rows.{% endif %}</p>
   {% if admin_minutes %}
   <p class="mb-2"><span class="badge text-bg-warning">Admin Access active</span> {{ admin_minutes }} minutes left.</p>
