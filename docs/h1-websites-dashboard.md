@@ -39,3 +39,8 @@ version of the bar; fixed with the native element.
   and is left for the owner to confirm.
 - Next slice: **H2 File Manager**. It needs the Files capability on a provider: the manual adapter can get a
   safe, sandboxed local implementation for development; the real cPanel provider waits for H14.
+
+
+## Completed after the roadmap check
+The website card's more-actions menu now offers **quick actions** straight to the tools the account's server supports (File manager,
+Email accounts, MySQL databases, DNS records, Backups), only for live accounts.

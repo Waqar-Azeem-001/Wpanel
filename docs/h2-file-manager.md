@@ -48,3 +48,12 @@ The first screen hid Download/Delete in a three-dot menu that was also cut off b
 Permissions editing, drag-and-drop upload, bulk copy and move, automatic emptying of old trash, folder size, and
 checking at 375 / 768 px. The cPanel provider cannot offer files until H14 and a verified WHM adapter; a native node
 needs the N track.
+
+
+## Completed after the roadmap check
+The roadmap lists **copy/move** and **permissions**, which the first version lacked (copy and rename stayed in the same folder, and
+permissions were not shown or changeable). Now: **Move** into another folder, **Copy** into another folder, a **Permissions** column and a
+dialog. Rules (`check_mode`): three or four octal digits; no special bits; nothing world-writable; a folder needs full owner access and a
+file must stay readable and writable by its owner, so nobody locks themselves out. Permissions are kept in a sidecar beside the website
+folder (not inside it), so they behave the same on every operating system, follow a file when it is moved or copied, and go when it is
+deleted. The plan's disk limit now also stops copy, zip and extract (not only writes). Tests in `test_files_extras.py`.

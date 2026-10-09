@@ -23,10 +23,15 @@ class FakeWhm:
         self.calls = []
         self.answers = answers or {}
 
-    def __call__(self, function, params=None, *, sensitive=False):
+    def __call__(self, function, params=None, *, sensitive=False, raw=False):
         params = dict(params or {})
         self.calls.append((function, params, sensitive))
-        key = (function, f"{params['cpanel.module']}::{params['cpanel.function']}") if function == "uapi_cpanel" else (function, None)
+        if function == "uapi_cpanel":
+            key = (function, f"{params['cpanel.module']}::{params['cpanel.function']}")
+        elif function == "cpanel":
+            key = (function, f"{params['cpanel_jsonapi_module']}::{params['cpanel_jsonapi_func']}")
+        else:
+            key = (function, None)
         answer = self.answers.get(key, self.answers.get(function))
         if isinstance(answer, Exception):
             raise answer
@@ -34,7 +39,13 @@ class FakeWhm:
             if isinstance(answer, dict) and answer.get("__uapi_error__"):
                 return {"data": {"uapi": {"status": 0, "errors": [answer["__uapi_error__"]], "data": None}}}
             return {"data": {"uapi": {"status": 1, "errors": None, "data": answer}}}
+        if function == "cpanel":
+            return {"cpanelresult": {"data": answer, "event": {"result": 1}}}
         return {"metadata": {"result": 1}, "data": answer}
+
+    def api2_calls(self, module=None, function=None):
+        return [(p, s) for f, p, s in self.calls if f == "cpanel" and (module is None or p["cpanel_jsonapi_module"] == module)
+                and (function is None or p["cpanel_jsonapi_func"] == function)]
 
     def uapi_calls(self, module=None, function=None):
         return [(p, s) for f, p, s in self.calls if f == "uapi_cpanel" and (module is None or p["cpanel.module"] == module)
@@ -66,7 +77,7 @@ def test_enabled_tools_appear_one_by_one_and_unknown_names_are_ignored():
     assert {c.value for c in supported_capabilities(real)} == {"account", "usage", "dns", "php"}
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["dns", "databases", "email", "php"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "domains", "dns", "ssl", "databases", "email", "php", "cron", "backups", "native_panel"])
 def test_every_enabled_cpanel_tool_goes_through_the_normal_gateway_checks():
     from apps.hosting.adapters.capabilities import OPERATIONS
 
@@ -400,3 +411,16 @@ def test_the_gateway_turns_an_unsupported_cpanel_operation_into_a_clear_501(monk
     assert unsupported.value.code == "capability_not_supported" and unsupported.value.status_code == 501
     with pytest.raises(ServiceError):
         control.perform(owner, account, "email", "list_mailboxes")  # not enabled in this test's settings
+
+
+def test_no_two_cpanel_mixins_share_a_method_name():
+    """The mixins are combined into one adapter, so a shared name would silently let one tool override another's helper."""
+    import collections
+    import glob
+    import re
+
+    seen = collections.defaultdict(list)
+    for path in glob.glob("apps/hosting/adapters/cpanel_*.py"):
+        for match in re.finditer(r"^    def (\w+)\(", open(path, encoding="utf-8").read(), re.M):
+            seen[match.group(1)].append(path)
+    assert {name: paths for name, paths in seen.items() if len(paths) > 1} == {}

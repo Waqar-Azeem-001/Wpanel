@@ -1,4 +1,4 @@
-# H14: Complete transitional cPanel adapter - part a (DNS, databases, email, PHP)
+# H14: Complete transitional cPanel adapter (parts a and b)
 
 **Source:** next-generation roadmap, H14 ("no cPanel-specific logic should leak into generic hosting services or customer UI").
 Local only. **Status: written and tested against a fake WHM; NOT verified against a real cPanel/WHM server.**
@@ -18,6 +18,11 @@ Local only. **Status: written and tested against a fake WHM; NOT verified agains
 | Databases | Mysql: get_restrictions, list_databases, list_users, create/delete database and user, set_password, set/revoke privileges, get_privileges_on_database; plan limit from accountsummary | tables, rows, SQL, phpMyAdmin session |
 | Email | Email: list_pops_with_disk, add_pop, delete_pop, passwd_pop, edit_pop_quota, list/add/delete forwarders, auto responders | reading and writing mail in WHPanel, webmail, spam and routing settings |
 | PHP | LangPHP: installed and per-domain versions, set version, basic ini directives (memory, upload, run time, errors) | extensions (the server owner picks them on cPanel) |
+| Files (`files`) | Fileman list_files, get_file_content, save_file_content (UAPI); mkdir and fileop copy, move, rename, chmod, trash, unlink, compress, extract (API 2). Paths are made relative to the account's home folder first | binary uploads (use FTP/SFTP), trash view, name search |
+| Domains (`domains`) | DomainInfo domains_data; API 2 AddonDomain, SubDomain, Park; Mime add, list and delete redirects; limits from accountsummary | nameserver list |
+| SSL (`ssl`) | SSL installed_hosts, start_autossl_check, delete_ssl | per-domain auto-renew switch and Always-use-HTTPS (AutoSSL renews by itself) |
+| Cron (`cron`) | API 2 Cron listcron, add_line, remove_line (a switched-off job is kept as a commented line); same schedule and command rules as everywhere (`cron_rules.py`) | Run now |
+| Backups (`backups`) | Backup list_backups, fullbackup_to_homedir (full account only) | testing a backup, restore, delete, schedules, off-server copy: use Open cPanel |
 
 Safety rules in every tool: the domain, zone, database or user named must belong to **this account** (checked against `DomainInfo` /
 `Mysql` listings first, so typing another customer's name reaches nothing); names are plain ASCII; values must come from the plan's
@@ -28,7 +33,7 @@ Because the field names cPanel returns differ between versions and none of this 
 offered by default**. Turn tools on one at a time in the environment:
 
 ```
-HOSTING_CPANEL_CAPABILITIES=dns,databases,email,php
+HOSTING_CPANEL_CAPABILITIES=files,domains,dns,ssl,databases,email,php,cron,backups
 ```
 
 Values not listed are not shown in the customer's menu; account actions and usage keep working as before. The gateway, permissions,
@@ -50,6 +55,19 @@ validation; mailbox, forwarder and auto-reply parameters; foreign mail domains r
 unsupported operations clearly refused; the gateway's 501 mapping. These tests prove our side of the conversation, **not** that cPanel
 answers like the fake.
 
+## Part b (files, domains, SSL, cron, backups)
+Added in the same style: a fake WHM that also answers API 2 (`cpanelresult`), further tests (`test_cpanel_adapter_b.py`) covering path
+safety (nothing outside the home folder can be named), each file operation, each kind of domain, redirect address rules, certificate status
+(active, ending soon, expired, none), cron rules and switched-off jobs, backup listing, API 2 failures, and a guard test that no two cPanel
+mixins share a method name (one did, and silently broke PHP until a test caught it).
+
+## Staging checklist additions
+7. Files: list a folder, edit a text file, create a folder, rename, move, copy, chmod, zip and extract; confirm `Fileman::list_files` fields
+   (`file`, `type`, `size`, `mtime`, `nicemode`) and the API 2 `fileop` parameter names (`op`, `sourcefiles`, `destfiles`, `metadata`).
+8. Domains: add an addon, a subdomain and an alias, remove them, set and remove a redirect (`Mime` parameters are the least certain).
+9. SSL: confirm `SSL::installed_hosts` returns `servername` and `certificate.not_after`; try `start_autossl_check` and `delete_ssl`.
+10. Cron: confirm `Cron::listcron` returns `linekey` and `count`, and that `remove_line` takes `line`.
+11. Backups: confirm `Backup::list_backups` file names look like `backup-M.D.YYYY_HH-MM-SS_user.tar.gz`.
+
 ## Still to do in H14
-Files (Fileman), domains and subdomains (addon, subdomain, redirects), SSL (list, install, AutoSSL, HTTPS redirect), cron, backups
-(full backup, list, restore), and the real-server verification above. The tools above also need a pass for cPanel versions in use.
+The real-server verification above, and a pass for the cPanel versions actually in use. Nothing in this slice has met a live server.

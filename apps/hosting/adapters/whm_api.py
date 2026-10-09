@@ -22,18 +22,24 @@ import requests
 
 from .base import HostingAdapter, HostingError
 from .capabilities import Capability, NodeCapability, NodeService, NodeStatus
+from .cpanel_backups import CpanelBackups
+from .cpanel_cron import CpanelCron
 from .cpanel_dns import CpanelDns
+from .cpanel_domains import CpanelDomains
 from .cpanel_email import CpanelEmail
+from .cpanel_files import CpanelFiles
 from .cpanel_mysql import CpanelMysql
 from .cpanel_native import CpanelNative
 from .cpanel_php import CpanelPhp
+from .cpanel_ssl import CpanelSsl
 
 # (key, label, WHM service names): the node is reported as running only when every named service is
 SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]), ("mail", "Mail", ["exim", "dovecot"]),
             ("dns", "DNS", ["named"])]
 
 
-class WhmApiAdapter(CpanelDns, CpanelMysql, CpanelEmail, CpanelPhp, CpanelNative, NodeCapability, HostingAdapter):
+class WhmApiAdapter(CpanelFiles, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelNative,
+                    NodeCapability, HostingAdapter):
     @property
     def enabled_capabilities(self):
         """
@@ -48,7 +54,7 @@ class WhmApiAdapter(CpanelDns, CpanelMysql, CpanelEmail, CpanelPhp, CpanelNative
         scheme = "https" if self.use_ssl else "http"
         return f"{scheme}://{self.host}:{self.port}/json-api"
 
-    def _call(self, function, params=None, *, sensitive=False):
+    def _call(self, function, params=None, *, sensitive=False, raw=False):
         """
         ``sensitive=True`` (only ``create_account``, which carries a new password) sends ``params`` as a POST body
         instead of a GET query string, so it never appears in this server's own request URL - which the WHM/Apache
@@ -77,6 +83,8 @@ class WhmApiAdapter(CpanelDns, CpanelMysql, CpanelEmail, CpanelPhp, CpanelNative
         except ValueError as exc:
             raise HostingError("The server returned an unexpected (non-JSON) response.") from exc
 
+        if raw:  # WHM's ``cpanel`` function answers with the module's own ``cpanelresult``, not the usual metadata envelope
+            return payload
         metadata = payload.get("metadata") or {}
         if metadata.get("result") != 1:
             raise HostingError(metadata.get("reason") or f"{function} failed.")

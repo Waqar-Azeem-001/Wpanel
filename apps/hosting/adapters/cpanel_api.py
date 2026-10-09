@@ -49,6 +49,34 @@ class CpanelApi:
             raise HostingError(clean_error(errors[0]) if errors else f"{module}::{function} did not succeed.")
         return result.get("data")
 
+    def _api2(self, user, module, function, params=None, *, secret=False):
+        """A legacy cPanel API 2 function run as the account (for the few things UAPI does not offer): the ``data`` of its ``cpanelresult``."""
+        payload = self._call("cpanel", {"cpanel_jsonapi_user": user, "cpanel_jsonapi_apiversion": 2, "cpanel_jsonapi_module": module,
+                                        "cpanel_jsonapi_func": function, **(params or {})}, sensitive=secret, raw=True)
+        result = payload.get("cpanelresult")
+        if not isinstance(result, dict):
+            raise HostingError(f"The server answered {module}::{function} in a way we do not understand.")
+        if result.get("error") or (result.get("event") or {}).get("result") not in (1, "1", None):
+            raise HostingError(clean_error(result.get("error") or (result.get("data") or [{}])[0].get("reason") or f"{module}::{function} did not succeed."))
+        data = result.get("data")
+        if isinstance(data, list) and data and isinstance(data[0], dict) and str(data[0].get("result", 1)) == "0":
+            raise HostingError(clean_error(data[0].get("reason") or f"{module}::{function} did not succeed."))
+        return data
+
+    def _home(self, user):
+        """The account's home folder on the server (usually /home/<user>), which every file path is relative to."""
+        info = self._uapi(user, "Variables", "get_user_information") or {}
+        home = str(info.get("home") or f"/home/{user}").rstrip("/")
+        if not home.startswith("/") or ".." in home.split("/"):
+            raise HostingError("The server reported an unusable home folder.")
+        return home
+
+    def _relative(self, user, absolute):
+        """A server path made relative to the account's home folder (or "" when it is not inside it)."""
+        home = self._home(user)
+        absolute = str(absolute or "").rstrip("/")
+        return absolute[len(home) + 1:] if absolute.startswith(home + "/") else ""
+
     def _account_domains(self, user):
         """(main domain, addon domains, subdomains, parked/alias domains) of the account, all lower-case."""
         data = self._uapi(user, "DomainInfo", "domains_data", {"format": "hash"}) or {}

@@ -24,6 +24,17 @@ audit of private reads. H12 keeps the same engine and adds the controls around i
   support did with a "Support" tag.
 - A staff member who is also a contact of the client is treated as the customer (no banner, no grant).
 
+## Completed after the roadmap check
+- **Path:** Client -> Products/Services tab now has a **Manage Hosting** link on every live service (it opens the service page's Manage
+  Hosting card, where the reason is entered).
+- **Admin context** names the customer, service, plan, username and **node**, and has **Client Profile**, **Service Details** and **Exit
+  Admin Access** buttons, as in the roadmap.
+- **Audit fields:** actor, client, service, action, IP, timestamp and result were already recorded (client and service are now in the
+  metadata of every Admin Access change). **Old and new values** are now recorded for settings-style changes (PHP settings, SSL switches,
+  backup schedule and off-server copy, SSH, cron schedule and on/off, DNS edit and delete, redirects, mailbox quota), as only the fields
+  that changed. Anything carrying a secret or content (passwords, keys, file and mail content, a job's arguments) records no values on purpose.
+- The provider-neutral API (`docs/hosting-api.md`) asks staff for a written reason in a header, the API equivalent of the Admin Access form.
+
 ## Verified
 13 tests (`test_admin_access.py`): direct access refused without a grant, reason rules, start audit, banner content and return links on
 several screens, no banner for the customer, same engine and `admin_access` audit, the customer's activity list marks support, a
