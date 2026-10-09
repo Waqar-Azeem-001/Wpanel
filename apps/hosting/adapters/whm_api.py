@@ -141,6 +141,10 @@ class WhmApiAdapter(CpanelFiles, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysq
         # WHM's own username is the natural, stable reference for this account.
         return {"provider_ref": username}
 
+    def change_password(self, username, password):
+        """WHM's ``passwd`` function; the new password travels in a POST body, never in a web address."""
+        self._call("passwd", {"user": username, "password": password, "db_pass_update": 0}, sensitive=True)
+
     def suspend_account(self, username, reason=""):
         self._call("suspendacct", {"user": username, "reason": reason})
 

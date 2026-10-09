@@ -65,6 +65,7 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:native_demo": "the demo provider's sample cPanel page, reached only through a one-time link from Open cPanel (test_native_panel.py)",
     "hosting_customer:native_open": "POST-only: signs in to cPanel and redirects there (test_native_panel.py)",
     "catalog_staff:server_plans": "linked only from the server list for a cPanel/WHM server (a manual or demo server has no plans to read); tested in apps/products/tests/test_server_plans.py",
+    "hosting_customer:password": "POST-only: the reset-password form on the hosting information page (apps/hosting/tests/test_password.py)",
     "hosting_customer:file_edit": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "hosting_customer:file_download": "opened from a file in the File Manager, which needs a files-capable provider (test_files.py)",
     "orders_customer:choose_client": "only reachable by a customer who is a contact of more than one account; the "

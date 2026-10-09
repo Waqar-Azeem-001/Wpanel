@@ -47,6 +47,10 @@ class HostingAdapter(ABC):
     def terminate_account(self, username: str, *, keep_dns: bool = False) -> None:
         ...
 
+    def change_password(self, username: str, password: str) -> None:
+        """Set the account's control-panel password. A provider that cannot do this says so."""
+        raise HostingError("This server cannot change the control panel password from here.")
+
     @abstractmethod
     def backup_account(self, username: str) -> dict:
         """Request a backup/snapshot of the account's data - a safety net before something destructive

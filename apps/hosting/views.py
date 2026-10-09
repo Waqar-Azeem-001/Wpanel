@@ -86,7 +86,31 @@ def my_hosting_section(request, pk, section):
 
 @login_required
 def my_hosting_information(request, pk):
-    return _service_page(request, pk, "hosting/customer/information.html")
+    return _service_page(request, pk, "hosting/customer/information.html", can_change_password=_can_change_password(request, pk))
+
+
+def _can_change_password(request, pk):
+    account = _own_account(request, pk)
+    return account.server is not None and account.status in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED)
+
+
+@require_POST
+@login_required
+def my_hosting_password(request, pk):
+    """Give the account a new control-panel password and show it once, on this page only (never stored, emailed or put in a web address)."""
+    account = _own_account(request, pk)
+    chosen = request.POST.get("mode") == "own"
+    try:
+        password = services.change_account_password(request.user, account, request.POST.get("password", "") if chosen else None, request=request)
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        return redirect("hosting_customer:information", pk=account.pk)
+    response = render(request, "hosting/customer/information.html", {
+        "account": account, "sidebar": portal.service_sidebar(request, account), "new_password": password, "chosen": chosen,
+        "can_change_password": True})
+    response["Cache-Control"] = "no-store"
+    response["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @login_required

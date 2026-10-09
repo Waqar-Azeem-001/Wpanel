@@ -16,6 +16,9 @@ class ManualAdapter(HostingAdapter):
     def create_account(self, *, username, domain, package, contact_email, password):
         return {"provider_ref": f"manual-{uuid.uuid4().hex[:12]}"}
 
+    def change_password(self, username, password):
+        pass  # nothing real to change on a simulated server
+
     def suspend_account(self, username, reason=""):
         pass
 

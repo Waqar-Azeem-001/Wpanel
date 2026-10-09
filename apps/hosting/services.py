@@ -206,6 +206,51 @@ def cancel_request(actor, account, *, reason="", request=None):
     return account
 
 
+# --- The control panel password ------------------------------------------------------------------------------------
+
+PASSWORD_MIN, PASSWORD_MAX = 12, 64
+PASSWORD_SYMBOLS = "!@#%^*-_=+"
+
+
+def generate_password(length=20):
+    """A strong random password with every kind of character (some servers refuse one that is not strong enough)."""
+    pools = [string.ascii_lowercase, string.ascii_uppercase, string.digits, PASSWORD_SYMBOLS]
+    chars = [secrets.choice(pool) for pool in pools] + [secrets.choice("".join(pools)) for _ in range(length - len(pools))]
+    secrets.SystemRandom().shuffle(chars)
+    return "".join(chars)
+
+
+def check_password(password, username=""):
+    if not PASSWORD_MIN <= len(password or "") <= PASSWORD_MAX:
+        raise ServiceError(f"Use a password of {PASSWORD_MIN} to {PASSWORD_MAX} characters.", code="weak_password")
+    if not (any(c.islower() for c in password) and any(c.isupper() for c in password) and any(c.isdigit() for c in password)):
+        raise ServiceError("Mix upper and lower case letters and numbers.", code="weak_password")
+    if username and username.lower() in password.lower():
+        raise ServiceError("The password must not contain the username.", code="weak_password")
+    return password
+
+
+def change_account_password(actor, account, password=None, *, request=None):
+    """
+    Give the account a new control-panel password: a strong random one when ``password`` is None, otherwise the one the person chose (checked).
+    Returns it so the caller can show it ONCE; it is sent to the server and nowhere else: never stored, logged, audited or emailed here.
+    """
+    if not can_self_service(actor, account):
+        raise ServiceError("You do not have permission to perform this action.", code="permission_denied", status_code=403)
+    if account.status not in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED) or account.server is None:
+        raise ServiceError("The password can be changed once the hosting account is active.", code="invalid_status")
+    chosen = password is not None
+    password = check_password(password, account.username) if chosen else generate_password()
+    try:
+        get_adapter(account.server).change_password(account.username, password)
+    except HostingError as exc:
+        audit.record("hosting.password_change_failed", actor=actor, target=account, metadata={"error": str(exc)[:200]}, request=request)
+        raise ServiceError(f"The server could not change the password: {exc}", code="adapter_error") from exc
+    audit.record("hosting.password_changed", actor=actor, target=account, metadata={"chosen": chosen, "username": account.username},
+                 request=request)
+    return password
+
+
 # --- Removing a dead record ---------------------------------------------------------------------------------
 
 DEAD_STATUSES = (HostingStatus.FAILED, HostingStatus.CANCELLED, HostingStatus.TERMINATED)

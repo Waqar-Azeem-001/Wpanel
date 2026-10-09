@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.my_hosting_list, name="list"),
     path("<int:pk>/", views.my_hosting_detail, name="detail"),
     path("<int:pk>/information/", views.my_hosting_information, name="information"),
+    path("<int:pk>/password/", views.my_hosting_password, name="password"),
     path("<int:pk>/addons/", views.my_hosting_addons, name="addons"),
     path("<int:pk>/manage/files/", views_files.my_hosting_files, name="files"),
     path("<int:pk>/manage/files/do/", views_files.my_hosting_file_action, name="file_action"),
