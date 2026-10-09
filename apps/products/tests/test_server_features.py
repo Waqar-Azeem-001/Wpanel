@@ -72,7 +72,7 @@ def test_a_new_product_arrives_with_the_servers_features_hidden_and_with_no_pric
     assert product.status == CatalogStatus.HIDDEN and not product.prices.exists()
 
 
-def test_refreshing_a_linked_product_copies_the_features_and_leaves_its_price_and_description(manager, server):
+def test_refreshing_a_linked_product_copies_the_features_and_keeps_its_price_and_its_own_description_lines(manager, server):
     product = services.create_product(manager, {"name": "My Grow", "type": ProductType.SHARED_HOSTING, "whm_package_name": "Shared Grow",
                                                 "description": "My own words", "resource_limits": {"disk_mb": 10, "databases": 1}, "price": "750"})
     product = Product.objects.get(pk=product.pk)
@@ -81,7 +81,7 @@ def test_refreshing_a_linked_product_copies_the_features_and_leaves_its_price_an
     _, _, refreshed = services.apply_server_plans(manager, server, PACKAGES, details=DETAILS, refresh=[product.pk])
     product.refresh_from_db()
     assert refreshed == [product] and product.resource_limits["disk_mb"] is None and product.resource_limits["bandwidth_mb"] == 102400
-    assert product.description == "My own words" and product.prices.get().price == Decimal("750.00")
+    assert product.description.splitlines()[-1] == "My own words" and "Unlimited storage" in product.description and product.prices.get().price == Decimal("750.00")
     assert services.plans_report(server, PACKAGES, DETAILS)["linked"][0]["stale"] == []
     assert AuditEvent.objects.filter(action="product.features_synced", target_id=str(product.pk)).exists()
 
@@ -112,3 +112,4 @@ def test_the_page_shows_the_features_and_the_refresh_boxes_and_applying_works(cl
     text = client.post(f"/staff/servers/{server.pk}/plans/", {"refresh": [str(product.pk)], "create": ["WordPress-Starter Startup"]}, follow=True).content.decode()
     assert "features of 1 product(s) were copied" in text and "1 product(s) created" in text
     assert "same as the server" in client.get(f"/staff/servers/{server.pk}/plans/").content.decode()
+

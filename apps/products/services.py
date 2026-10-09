@@ -3,6 +3,8 @@ Catalog business logic. Staff API, staff web pages, the public catalog and the
 admin all call these functions; none of them holds pricing or visibility rules
 of its own.
 """
+import re
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import ProtectedError, Q
@@ -409,6 +411,19 @@ def feature_lines(limits):
     return head + lines
 
 
+FEATURE_WORDS = re.compile(r"\b(storage|web ?space|disk|bandwidth|traffic|databases?|e-?mail accounts?|mailboxes|ftp accounts?|subdomains?|addon domains?|"
+                           r"shell access|dedicated ip)\b|^\W*(\d+|unlimited)\s+(parked\s+)?domains?\b", re.I)  # "10 domains" is a feature; "Free domain name" is not
+
+
+def merge_description(old, limits):
+    """
+    The plan's description lines with the feature lines (storage, bandwidth, databases, mailboxes...) replaced by what the server says, in the
+    same words the store uses, and every other line (free domain, support, anything staff wrote) kept as it was after them.
+    """
+    kept = [line for line in (old or "").splitlines() if line.strip() and not FEATURE_WORDS.search(line)]
+    return "\n".join(feature_lines(limits) + kept)
+
+
 def plans_report(server, packages, details=None):
     """
     What differs between a server's packages and the catalog: ``broken`` are products mapped to this server whose package the server does not
@@ -426,7 +441,8 @@ def plans_report(server, packages, details=None):
     for name in packages:
         if name in by_package:
             wanted = features_of(details[name])[0] if name in details else None
-            stale = [p for p in by_package[name] if wanted is not None and (p.resource_limits or {}) != wanted]
+            stale = [p for p in by_package[name] if wanted is not None
+                     and ((p.resource_limits or {}) != wanted or p.description != merge_description(p.description, wanted))]
             linked.append({"package": name, "products": by_package[name], "stale": stale, "features": _shown(details.get(name))})
     return {"broken": broken, "unlinked": unlinked, "linked": linked}
 
@@ -482,10 +498,8 @@ def apply_server_plans(actor, server, packages, *, remap=None, create=None, deta
         if product.whm_package_name not in details:
             continue
         limits, order = features_of(details[product.whm_package_name])
-        data = {"resource_limits": limits, "limit_order": order}
-        if not product.description.strip():
-            data["description"] = "\n".join(feature_lines(limits))
-        update_product(actor, product, data, request=request)
+        update_product(actor, product, {"resource_limits": limits, "limit_order": order, "description": merge_description(product.description, limits)},
+                       request=request)
         audit.record("product.features_synced", actor=actor, target=product, metadata={"package": product.whm_package_name, "server": server.name},
                      request=request)
         refreshed.append(product)
