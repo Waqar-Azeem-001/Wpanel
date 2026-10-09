@@ -90,3 +90,29 @@ and are covered by the fake-WHM tests. Try each once on a throw-away account bef
 **Not offered on cPanel servers** (shown as "not available for your hosting server yet" or left out of a page): IP blocking, the Security Center
 (malware scan, quarantine, folder protection, SSH keys, file-integrity), usage history and live performance, webmail inside WHPanel, spam and
 routing settings, automatic replies on some versions, backup testing/restore/schedules, per-domain SSL switches. Open cPanel covers the gap.
+
+
+## Live write test (9 Oct 2026) - what was tried on the throw-away account and what it taught
+Through the real gateway, one small thing of each kind was created, changed and removed on `testing2.com`; afterwards the account was checked
+and nothing was left behind.
+
+**Worked live:** make a folder, write, read, list, rename, copy, change permissions, zip, delete files and folders; create a database and a
+database user, give and take privileges, change the user's password, delete both; create a mailbox, change its size and password, create and
+delete a forwarder and an automatic reply, delete the mailbox; add, edit and delete TXT, A, CNAME and MX records; set and remove a redirect on
+the main domain; change a PHP setting and put it back; create, edit, switch off and delete a cron job; create, change the password of and
+delete an FTP login; read the error log; start a full backup; read usage and the server's health; Open cPanel.
+
+**Found and fixed from it:**
+- A plain **0** for subdomains, addon and parked domains means *none allowed* (the plan WordPress-Starter Startup has 0 and the server refused a
+  subdomain); only the word unlimited means no limit (for disk, bandwidth and emails per hour a 0 does mean unlimited). Limits and the plan sync
+  now read it that way (`plan_limit`).
+- Copying a file into its own folder failed (cPanel copies into a folder): it now goes through a temporary folder.
+- A timeout on a *change* was being asked again, and the second ask (for example deleting a forwarder that the first ask had already deleted)
+  reported a false error. Now only plain reads are repeated; a timeout on a change says it may still have been made.
+- WHM's load average function is `systemloadavg`; a service check that timed out no longer shows a service as degraded.
+- Each call to this server takes 1 to 3 seconds (more at busy times), so the gateway remembers a slow provider's reads for 45 seconds (and the
+  account's plan and domains too); any change forgets them. A page that took 10 to 15 seconds the first time now opens at once the second time.
+- AutoSSL is not on this plan (`You do not have the feature autossl`): the message now says so in plain words.
+
+**Not tried live:** adding a domain, subdomain or alias (this plan allows none), AutoSSL, restoring a backup, changing the account's control
+panel password, and suspending and unsuspending the account (the last two were left for you to try).

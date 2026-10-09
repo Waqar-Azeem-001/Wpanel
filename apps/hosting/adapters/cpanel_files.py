@@ -8,7 +8,7 @@ from .capabilities import FileEntry, FilesCapability
 from .cpanel_api import CpanelApi
 from .sandbox import check_mode, clean_name, clean_relative
 
-HIDDEN = {".trash", ".cpanel", ".cphorde", ".softaculous", ".spamassassin", ".cagefs", ".cl.selector", ".caldav", ".htpasswds", ".contactemail", ".lastlogin"}
+HIDDEN = {".trash", ".cpanel", ".cphorde", ".softaculous", ".spamassassin", ".cagefs", ".cl.selector", ".caldav", ".htpasswds", ".contactemail", ".lastlogin", ".autorespond", ".cache", ".subaccounts"}
 
 
 def _parent(rel):
