@@ -27,3 +27,15 @@ def decrypt(token: str) -> str:
         return _fernet().decrypt(token.encode()).decode()
     except InvalidToken as exc:
         raise ValueError("Stored credential cannot be decrypted with the current key.") from exc
+
+
+def encrypt_bytes(data: bytes) -> bytes:
+    """Encrypt a whole file's worth of bytes with the same key as stored credentials (used for the panel's own database backup)."""
+    return _fernet().encrypt(data)
+
+
+def decrypt_bytes(token: bytes) -> bytes:
+    try:
+        return _fernet().decrypt(token)
+    except InvalidToken as exc:
+        raise ValueError("This backup cannot be decrypted with the current key.") from exc

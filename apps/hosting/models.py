@@ -99,3 +99,36 @@ class HostingAccount(TimeStampedModel):
         self.domain = self.domain.lower()
         self.username = self.username.lower()
         super().save(*args, **kwargs)
+
+
+class NativeBackup(models.Model):
+    """
+    One backup of a native hosting account (N8). WHPanel keeps this register itself, so what exists is known even if a node is lost. A customer's backup is a *group*: the web node's
+    part, and the mail node's part when mail is used.
+    """
+
+    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="native_backups")
+    node = models.ForeignKey("agent.AgentNode", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    group = models.CharField(max_length=12, db_index=True)
+    part = models.CharField(max_length=4, choices=[("web", "Web node"), ("mail", "Mail node")])
+    kind = models.CharField(max_length=10, help_text="What this part holds: files, database, email or full.")
+    requested_kind = models.CharField(max_length=10, help_text="What the customer asked for.")
+    source = models.CharField(max_length=20, default="manual", help_text="manual, scheduled or before restore")
+    snapshot_id = models.CharField(max_length=64, blank=True)
+    status = models.CharField(max_length=10, default="running", db_index=True, help_text="running, complete, failed, deleting or deleted")
+    size_mb = models.FloatField(null=True, blank=True)
+    error = models.CharField(max_length=300, blank=True)
+    verified = models.CharField(max_length=6, blank=True)  # "", "ok" or "failed"
+    verified_at = models.DateTimeField(null=True, blank=True)
+    restore_tested_at = models.DateTimeField(null=True, blank=True)
+    restore_test_ok = models.BooleanField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class NativeBackupSettings(models.Model):
+    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="native_backup_settings")
+    schedule = models.CharField(max_length=8, default="off")  # off, daily or weekly
+    last_scheduled_at = models.DateTimeField(null=True, blank=True)

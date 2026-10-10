@@ -21,6 +21,10 @@ DB_PRIVILEGES = ("select", "insert", "update", "delete", "create", "alter", "dro
 EMAIL = re.compile(r"^[a-z0-9][a-z0-9._+-]{0,63}@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 MSG_ID = re.compile(r"^[A-Za-z0-9._,=-]{1,120}$")
 MAIL_FOLDER_NAMES = ("inbox", "drafts", "sent", "archive", "spam", "trash", "starred")
+HTTPS_URL = re.compile(r"^https" + r"://[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:[0-9]{1,5})?$")
+BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{2,62}$")
+S3_PATH = re.compile(r"^[a-z0-9][a-z0-9._/-]{0,60}$")
+SNAPSHOT = re.compile(r"^[a-f0-9]{8,64}$")
 SFTP_NAME = re.compile(r"^[a-z][a-z0-9]{1,14}$")
 TRASH_ID = re.compile(r"^([a-f0-9]{12}|ALL)$")
 MODE = re.compile(r"^[0-7]{3,4}$")
@@ -94,7 +98,7 @@ class Field:
             if not 12 <= len(value) <= 128 or any(ord(c) < 32 or ord(c) == 127 for c in value):
                 raise InvalidCommand(f"{name} must be 12 to 128 printable characters.")
             return value
-        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
+        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
         if not pattern.fullmatch(value):
             raise InvalidCommand(f"{name} is not a valid {self.kind.replace('_', ' ')}.")
         return value
@@ -200,6 +204,18 @@ COMMANDS = {c.name: c for c in [
     Command("MAIL_SEND", {"account": _f("account"), "address": _f("email"), "to": Field("text", high=1000), "subject": Field("text", high=200), "body": Field("text", high=100000),
                           "html": Field("text", high=200000), "draft_id": Field("text", high=120)}, 120, idempotent=False, max_attempts=1,
             description="Send a message from a mailbox. Counts against the hourly sending limit; a second run would send twice."),
+    Command("BACKUP_CONFIGURE", {"endpoint": _f("https_url"), "bucket": _f("bucket"), "prefix": _f("s3path"), "access_key": _f("secret", sensitive=True),
+                                 "secret_key": _f("secret", sensitive=True), "repo_password": _f("secret", sensitive=True)}, 120,
+            description="Tell the node where its encrypted backups go (an S3-compatible bucket) and the keys. Node-wide, not per account."),
+    Command("BACKUP_RUN", {"account": _f("account"), "kind": _f("enum", choices=("files", "database", "email", "full")), "source": _f("enum", choices=("manual", "scheduled"))}, 3600,
+            idempotent=False, max_attempts=1, description="Take an encrypted backup of one account. Not repeated automatically: a second run would be a second backup."),
+    Command("BACKUP_VERIFY", {"account": _f("account"), "snapshot_id": _f("snapshot")}, 1800, description="Check a backup is complete and unaltered."),
+    Command("BACKUP_RESTORE", {"account": _f("account"), "snapshot_id": _f("snapshot"), "kind": _f("enum", choices=("files", "database", "email", "full"))}, 3600, idempotent=False,
+            max_attempts=1, description="Put a backup back. A safety backup of what it replaces is taken first."),
+    Command("BACKUP_FORGET", {"account": _f("account"), "snapshot_id": _f("snapshot")}, 600, description="Delete one backup."),
+    Command("BACKUP_TEST_RESTORE", {"account": _f("account"), "snapshot_id": _f("snapshot")}, 3600,
+            description="Restore a backup into a scratch folder, compare every file with the list made at backup time, and throw the copy away. Touches nothing live."),
+    Command("BACKUP_NODE_CONFIG", {}, 600, idempotent=False, max_attempts=1, description="Back up this node's own configuration (what is needed to rebuild it), never its backup keys."),
     Command("REMOVE_SSL", {"account": _f("account"), "domain": _f("domain")}, 60, description="Remove the certificate; the site is served without HTTPS."),
     Command("SSL_STATUS", {"account": _f("account")}, 30, description="Read the account's certificate (issuer, dates, renewal and redirect settings)."),
     Command("SET_SSL_OPTIONS", {"account": _f("account"), "domain": _f("domain"), "auto_renew": _f("enum", choices=("yes", "no")),

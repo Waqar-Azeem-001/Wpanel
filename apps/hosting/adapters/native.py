@@ -10,6 +10,7 @@ node later reports a failure, the account's ``last_error`` and the audit trail s
 from .base import HostingAdapter, HostingError
 from .native_db import NativeDatabases
 from . import native_dns
+from .native_backups import NativeBackups
 from .native_dns import NativeDns
 from .native_files import NativeFiles, NativeFtp
 from .native_mail import NativeEmail
@@ -21,7 +22,7 @@ COUNT_KEYS = {"databases": "databases", "ftp_accounts": "sftp_accounts"}  # the 
 UNLIMITED = 1000
 
 
-class NativeAdapter(NativeEmail, NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
+class NativeAdapter(NativeBackups, NativeEmail, NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
     server = None  # set by the registry
     read_cache_seconds = 20  # every read is a trip to the node; the gateway remembers answers briefly and forgets them after any change
 

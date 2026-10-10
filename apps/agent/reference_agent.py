@@ -55,7 +55,7 @@ class NativeMachine(FakeMachine):
     SFTP = ("SFTP_LIST", "SFTP_CREATE", "SFTP_SET_PASSWORD", "SFTP_DELETE")
     MAIL_EXTRA = ("CREATE_MAILBOX",)  # an older name for a mail command
 
-    def __init__(self, system=None, files_dir=None, mail_dir=None):
+    def __init__(self, system=None, files_dir=None, mail_dir=None, bucket_dir=None):
         from .node.system import FakeSystem
         from .node.website import Websites
 
@@ -83,6 +83,19 @@ class NativeMachine(FakeMachine):
 
         self.mail = Mail(self.system, mail_dir or (self.files_dir / "_mail" if self.files_dir else "."), now=lambda: self.clock())
         self.clock = __import__("time").time
+        import re
+        from pathlib import Path as _P
+
+        from .node.backups import Backups
+        from .node.restic import FakeRestic
+
+        self.bucket_dir = _P(bucket_dir) if bucket_dir else (self.files_dir / "_bucket" if self.files_dir else _P("."))  # the "object storage": a folder
+
+        def restic_for(env):
+            match = re.match(r"s3:https?://[^/]+/([^/]+)/(.+)$", env["RESTIC_REPOSITORY"])
+            return FakeRestic(self.bucket_dir / match.group(1) / match.group(2), env["RESTIC_PASSWORD"])
+
+        self.backups = Backups(self.system, restic_for, root_for, self.engine, self.files_dir / "_stage" if self.files_dir else _P("."), mail=self.mail, websites=self.websites)
         self.acme = FakeAcme()
         self.ssl = Ssl(self.system, self.acme)
 
@@ -90,6 +103,9 @@ class NativeMachine(FakeMachine):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command.startswith("BACKUP_"):
+            self.executed.append(command)
+            return self.backups.run(command, p)
         if command.startswith("MAIL_") or command in self.MAIL_EXTRA:
             self.executed.append(command)
             return self.mail.run(command, p)

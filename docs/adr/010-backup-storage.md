@@ -27,3 +27,6 @@ Object storage is a recurring cost per GB. A tenant's backup can be restored wit
 
 ## Open questions
 Which object storage vendor, and the retention per plan.
+
+## Follow-up (N8)
+Built vendor-neutral (any S3-compatible bucket; endpoint, bucket and keys are entered by staff). **The vendor is still not chosen**, and object lock or an append-only policy has to be set at the provider; the screen warns until staff confirm it. Retention per plan is `resource_limits.backups` (default 7).

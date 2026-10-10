@@ -46,6 +46,37 @@ class AgentNode(TimeStampedModel):
         return f"Agent on {self.server}"
 
 
+class BackupRepository(TimeStampedModel):
+    """
+    Where one node's encrypted backups go (N8, ADR 10): an S3-compatible bucket and the keys, held here encrypted with the same key as other stored credentials. Staff can set
+    the keys but never read them back. The node is told through ``BACKUP_CONFIGURE``.
+    """
+
+    node = models.OneToOneField(AgentNode, on_delete=models.CASCADE, related_name="backup_repository")
+    endpoint = models.CharField(max_length=300, help_text="The storage service address (starting with https), for example s3.example.net")
+    bucket = models.CharField(max_length=63)
+    prefix = models.CharField(max_length=60, help_text="A folder inside the bucket, one per node.")
+    access_key_encrypted = models.TextField(editable=False, blank=True)
+    secret_key_encrypted = models.TextField(editable=False, blank=True)
+    password_encrypted = models.TextField(editable=False, blank=True, help_text="Encrypts every backup. Lose it and the backups cannot be read: keep a copy offline.")
+    object_lock_confirmed = models.BooleanField(default=False, help_text="Staff confirm the bucket refuses deletes and overwrites from this node's credential (object lock / append-only).")
+    applied_at = models.DateTimeField(null=True, blank=True)
+    applied_ok = models.BooleanField(default=False)
+    apply_error = models.CharField(max_length=300, blank=True)
+    node_config_at = models.DateTimeField(null=True, blank=True)
+    node_config_snapshot = models.CharField(max_length=64, blank=True)
+
+    def secrets(self):
+        from apps.core import crypto
+
+        return crypto.decrypt(self.access_key_encrypted), crypto.decrypt(self.secret_key_encrypted), crypto.decrypt(self.password_encrypted)
+
+    def set_secrets(self, access_key, secret_key, password):
+        from apps.core import crypto
+
+        self.access_key_encrypted, self.secret_key_encrypted, self.password_encrypted = crypto.encrypt(access_key), crypto.encrypt(secret_key), crypto.encrypt(password)
+
+
 class EnrollmentToken(TimeStampedModel):
     """A one-time secret that lets one fresh server enrol. Only its hash is stored; it works once and expires."""
 

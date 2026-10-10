@@ -88,10 +88,10 @@ class RealSystem:
 
     def list(self, prefix):
         base = check_path(prefix.rstrip('/'))
-        try:
-            return sorted(os.path.join(base, name) for name in os.listdir(base))
-        except FileNotFoundError:
-            return []
+        found = []
+        for folder, _dirs, names in os.walk(base):
+            found += [os.path.join(folder, name).replace("\\", "/") for name in names]
+        return sorted(found)
 
     def read(self, path):
         try:

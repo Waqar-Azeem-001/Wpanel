@@ -5,6 +5,7 @@ The node's database engine (N4, ADR 05: one MariaDB per node). ``FakeMariadb`` i
 Rules for both: names are checked again here (letters, digits, underscore only) before they are placed in SQL; a password never appears in a command line (it
 is sent to the client's standard input, already turned into a hash); the client is started from an argument list, never a shell.
 """
+import json
 import re
 import subprocess
 
@@ -81,10 +82,22 @@ class FakeMariadb:
         return data[offset:offset + limit], len(data)
 
     def dump(self, db, path):
-        self.dumps[path] = {t: {"columns": list(v["columns"]), "rows": [list(r) for r in v["rows"]]} for t, v in self.dbs[db].items()}
+        data = {t: {"columns": list(v["columns"]), "rows": [list(r) for r in v["rows"]]} for t, v in self.dbs[db].items()}
+        self.dumps[path] = data
+        import os
+
+        if os.path.isdir(os.path.dirname(path)):  # a real folder (backup staging): the dump is a real file, so it travels with the backup
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(data, handle)
 
     def load(self, db, path):
-        self.dbs[ident(db)] = {t: {"columns": list(v["columns"]), "rows": [list(r) for r in v["rows"]]} for t, v in self.dumps[path].items()}
+        import os
+
+        data = self.dumps.get(path)
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8") as handle:
+                data = json.load(handle)
+        self.dbs[ident(db)] = {t: {"columns": list(v["columns"]), "rows": [list(r) for r in v["rows"]]} for t, v in data.items()}
 
 
 class RealMariadb:

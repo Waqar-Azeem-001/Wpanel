@@ -12,6 +12,9 @@ def job_finished(job):
     except (ValueError, HostingAccount.DoesNotExist):
         return
     ok = job.result_ok is True
+    from .control import _bump_cache_version
+
+    _bump_cache_version(account)
     if job.command == "CREATE_WEBSITE":
         if ok and account.status in (HostingStatus.PENDING, HostingStatus.FAILED):
             account.status, account.last_error = HostingStatus.ACTIVE, ""

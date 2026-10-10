@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Backup storage · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Backup storage</h1>
+  <p class="page-sub">Each native node keeps its encrypted backups in its own folder of an S3-compatible bucket. The keys are kept encrypted here and can be replaced but never read back.
+    The backup password cannot be changed once set. <strong>Keep a copy of it offline: without it no backup can be read.</strong></p>
+  <div class="d-flex flex-wrap gap-2"><a href="{% url 'agent_staff:nodes' %}">Native nodes</a></div>
+</div>
+
+{% for r in rows %}
+<section class="card mb-3">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <h2 class="h5 mb-0">{{ r.node.server.name }}
+      {% if not r.repo %}<span class="site-pill is-danger ms-1">No backup storage</span>
+      {% elif r.repo.applied_ok %}<span class="site-pill is-ok ms-1">Ready</span>
+      {% elif r.repo.apply_error %}<span class="site-pill is-danger ms-1">Node refused</span>
+      {% else %}<span class="site-pill is-warn ms-1">Not applied yet</span>{% endif %}</h2>
+    <small class="text-secondary">{{ r.complete }} backups kept · {{ r.failed }} failed
+      {% if r.last_test %}· last restore test {{ r.last_test.restore_tested_at|timesince }} ago: {% if r.last_test.restore_test_ok %}passed{% else %}<span class="text-danger">FAILED</span>{% endif %}{% else %}· never restore-tested{% endif %}</small>
+  </div>
+  <div class="card-body">
+    {% if r.repo and not r.repo.object_lock_confirmed %}<p class="text-danger mb-2">The bucket has not been confirmed as locked. A taken-over node could delete its own backups. Turn on object lock or an append-only policy at the storage provider, then tick the box below.</p>{% endif %}
+    {% if r.repo.apply_error %}<p class="text-danger mb-2">The node said: {{ r.repo.apply_error }}</p>{% endif %}
+    {% if r.repo.node_config_at %}<p class="mb-2 text-secondary">Node configuration last backed up {{ r.repo.node_config_at|timesince }} ago.</p>{% endif %}
+    {% for f in r.recent_failures %}<p class="mb-1 text-danger"><small>{{ f.account.domain }}: {{ f.error }}</small></p>{% endfor %}
+    {% if can_manage %}
+    <form method="post" action="{% url 'agent_staff:backup_save' r.node.pk %}" class="row g-2 align-items-end mb-2">{% csrf_token %}
+      <div class="col-md-4"><label class="form-label">Storage address</label>{{ r.form.endpoint }}</div>
+      <div class="col-md-2"><label class="form-label">Bucket</label>{{ r.form.bucket }}</div>
+      <div class="col-md-2"><label class="form-label">Folder</label>{{ r.form.prefix }}</div>
+      <div class="col-md-4"><label class="form-label">Access key</label>{{ r.form.access_key }}</div>
+      <div class="col-md-4"><label class="form-label">Secret key</label>{{ r.form.secret_key }}</div>
+      <div class="col-md-4"><label class="form-label">Backup password {% if r.repo %}(already set){% endif %}</label>{{ r.form.password }}</div>
+      <div class="col-md-4"><label class="form-check-label">{{ r.form.object_lock }} {{ r.form.object_lock.label }}</label></div>
+      <div class="col-12"><button class="btn btn-sm btn-primary">Save</button></div>
+    </form>
+    <div class="d-flex gap-2">
+      {% if r.repo %}<form method="post" action="{% url 'agent_staff:backup_apply' r.node.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">Apply to node</button></form>{% endif %}
+      {% if r.repo.applied_ok %}<form method="post" action="{% url 'agent_staff:backup_node_config' r.node.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Back up this node's configuration</button></form>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% empty %}<p class="text-secondary">No enrolled native nodes.</p>{% endfor %}
+{% endblock %}

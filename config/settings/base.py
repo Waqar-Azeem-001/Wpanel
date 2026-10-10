@@ -280,6 +280,8 @@ CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
+    "native-scheduled-backups": {"task": "apps.hosting.tasks.run_native_backups_task", "schedule": crontab(hour=2, minute=30)},
+    "native-restore-test": {"task": "apps.hosting.tasks.native_restore_test_task", "schedule": crontab(day_of_month=1, hour=4, minute=0)},
     "generate-renewal-invoices": {
         "task": "apps.renewals.tasks.generate_renewal_invoices_task",
         "schedule": crontab(hour=3, minute=0),
@@ -378,6 +380,8 @@ CREDENTIALS_ENCRYPTION_KEY = env("CREDENTIALS_ENCRYPTION_KEY", default="")
 # N1: base64 Ed25519 seed that signs commands for native-node agents (python -c "from apps.agent import envelope; print(envelope.generate_key())")
 AGENT_SIGNING_KEY = env("AGENT_SIGNING_KEY", default="")
 # N2: set True once the reverse proxy does mutual TLS and passes the verified client certificate fingerprint in AGENT_CERT_HEADER (it must strip any copy sent by clients)
+# N8: where `manage.py backup_panel` writes the panel's own encrypted database backups (copy them away from this server)
+PANEL_BACKUP_DIR = env("PANEL_BACKUP_DIR", default=str(BASE_DIR / "panel_backups"))
 AGENT_REQUIRE_CLIENT_CERT = env.bool("AGENT_REQUIRE_CLIENT_CERT", default=False)
 AGENT_CERT_HEADER = "X-Client-Cert-Fingerprint"
 # N5: the PowerDNS API that serves native hosting zones (ADR 07). Blank means native DNS is not offered.

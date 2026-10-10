@@ -9,3 +9,4 @@ db.sqlite3
 .pytest_cache/
 celerybeat-schedule*
 /demo_hosting_files/
+/panel_backups/
