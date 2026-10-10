@@ -59,9 +59,13 @@ def test_a_valid_command_passes_and_secrets_are_hidden_when_stored():
 
 
 def test_the_catalog_has_no_free_form_text_field():
-    for spec in catalog.COMMANDS.values():
+    typed = ("domain", "account", "db_name", "db_user", "table", "local_part", "backup_id", "enum", "enum_list", "int", "secret", "sftp_name", "trash_id", "mode")
+    sandboxed = ("relpath", "path_list", "b64", "query")  # names inside the account's own file area, and file content: only the file and SFTP commands may carry them
+    for name, spec in catalog.COMMANDS.items():
         for rule in spec.fields.values():
-            assert rule.kind in ("domain", "account", "db_name", "db_user", "table", "local_part", "backup_id", "enum", "enum_list", "int", "secret")
+            assert rule.kind in typed + sandboxed
+            if rule.kind in sandboxed:
+                assert name.startswith(("FILE_", "SFTP_")), name
 
 
 def test_dispatch_refuses_off_list_commands_and_servers_without_an_agent(manager):

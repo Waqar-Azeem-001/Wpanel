@@ -10,7 +10,7 @@ import os
 import posixpath
 import subprocess
 
-ALLOWED_ROOTS = ("/home/", "/etc/", "/var/lib/whp/", "/var/log/whp/", "/var/backups/whp/", "/run/whp/")
+ALLOWED_ROOTS = ("/home/", "/etc/", "/var/lib/whp/", "/var/log/whp/", "/var/backups/whp/", "/run/whp/", "/srv/whp/")
 
 
 class SystemError_(Exception):
@@ -58,7 +58,7 @@ class FakeSystem:
     def uid(self, user):
         return self.users.get(user)
 
-    def run(self, argv):
+    def run(self, argv, input=None):
         if not isinstance(argv, list) or not all(isinstance(a, str) for a in argv):
             raise SystemError_("A command must be a list of strings.")
         if self.fail_on is not None and len(self.commands) == self.fail_on:
@@ -120,10 +120,11 @@ class RealSystem:
         except KeyError:
             return None
 
-    def run(self, argv):
+    def run(self, argv, input=None):
+        """``input`` goes to the program's standard input (used for passwords, which must never be on a command line)."""
         if not isinstance(argv, list) or not all(isinstance(a, str) for a in argv):
             raise SystemError_("A command must be a list of strings.")
-        done = subprocess.run(argv, shell=False, capture_output=True, text=True, timeout=300, check=False)
+        done = subprocess.run(argv, shell=False, capture_output=True, text=True, timeout=300, check=False, input=input)
         if done.returncode != 0:
             raise SystemError_(f"{argv[0]} failed: {done.stderr.strip()[:200]}")
         return done.stdout

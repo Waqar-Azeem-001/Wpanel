@@ -41,6 +41,11 @@ class Websites:
             raise HandlerError("not_found", "No such website on this node.")
         return state
 
+    def _sftp(self):
+        from .sftp import Sftp
+
+        return Sftp(self.s, None)  # the parts used here need no file area
+
     def _reload_web(self):
         self.s.run(["httpd", "-t"])  # a bad config is caught before it can take every site down
         self.s.run(["systemctl", "reload", "httpd"])
@@ -78,7 +83,7 @@ class Websites:
             self.s.run(["useradd", "--create-home", "--home-dir", paths["home"], "--shell", "/sbin/nologin", "--user-group", account])
             undo.append(lambda: self.s.run(["userdel", "--remove", account]))
             uid = self.s.uid(account)
-            self.s.mkdir(paths["home"], 0o711, account)
+            self.s.mkdir(paths["home"], 0o755)  # root-owned: OpenSSH only chroots into folders root owns; the account's own folders below it are its own
             for folder, mode in ((f"{paths['home']}/sites", 0o755), (paths["site"], 0o755), (paths["docroot"], 0o755), (paths["logs"], 0o750), (paths["tmp"], 0o700)):
                 self.s.mkdir(folder, mode, account)
             self.s.write(f"{paths['docroot']}/index.html", INDEX.format(domain=domain), 0o644, account)
@@ -116,6 +121,7 @@ class Websites:
         paths = render.paths(p["account"], state["domain"])
         self.s.write(paths["vhost"], render.vhost(p["account"], state["domain"], suspended=True))
         self.s.run(["systemctl", "stop", f"whp-php-{p['account']}.service"])
+        self._sftp().lock_all(p["account"], state, True)  # sessions already open end on their own; no new login is accepted
         self._reload_web()
         self._save(p["account"], {**state, "suspended": True})
         return "suspended", {}
@@ -126,6 +132,7 @@ class Websites:
             return "active", {}
         paths = render.paths(p["account"], state["domain"])
         self.s.run(["systemctl", "start", f"whp-php-{p['account']}.service"])
+        self._sftp().lock_all(p["account"], state, False)
         self.s.write(paths["vhost"], render.vhost(p["account"], state["domain"], ssl=state.get("ssl")))
         self._reload_web()
         self._save(p["account"], {**state, "suspended": False})
@@ -175,6 +182,7 @@ class Websites:
             self.s.remove(paths[key])
         self.s.run(["systemctl", "daemon-reload"])
         self._reload_web()
+        self._sftp().remove_all(account, state)
         self.s.run(["xfs_quota", "-x", "-c", f"limit -p bsoft=0 bhard=0 {state['uid']}", "/home"])
         self.s.run(["userdel", "--remove", account])
         self.s.remove(paths["state"])

@@ -52,8 +52,9 @@ class NativeMachine(FakeMachine):
                 "DB_DESCRIBE", "DB_BROWSE", "BACKUP_DATABASE", "RESTORE_DATABASE")
 
     SSL = ("ISSUE_SSL", "REMOVE_SSL", "SSL_STATUS", "SET_SSL_OPTIONS")
+    SFTP = ("SFTP_LIST", "SFTP_CREATE", "SFTP_SET_PASSWORD", "SFTP_DELETE")
 
-    def __init__(self, system=None):
+    def __init__(self, system=None, files_dir=None):
         from .node.system import FakeSystem
         from .node.website import Websites
 
@@ -68,6 +69,15 @@ class NativeMachine(FakeMachine):
         from .node.acme import FakeAcme
         from .node.ssl import Ssl
 
+        from pathlib import Path
+
+        from .node.files import Files
+        from .node.sftp import Sftp
+
+        self.files_dir = Path(files_dir) if files_dir else None  # real folders for the file commands (the system above is only pretend)
+        root_for = lambda account: (self.files_dir / account / "sites") if self.files_dir and self.websites._state(account) else None  # noqa: E731
+        self.files = Files(root_for, meta_for=lambda account: (self.files_dir / f"{account}.perms.json") if self.files_dir else None)  # real chmod on Linux; a side file where the OS cannot
+        self.sftp = Sftp(self.system, root_for)
         self.acme = FakeAcme()
         self.ssl = Ssl(self.system, self.acme)
 
@@ -75,6 +85,12 @@ class NativeMachine(FakeMachine):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command.startswith("FILE_"):
+            self.executed.append(command)
+            return self.files.run(command, p)
+        if command in self.SFTP:
+            self.executed.append(command)
+            return self.sftp.run(command, p)
         if command in self.SSL:
             self.executed.append(command)
             return self.ssl.run(command, p)

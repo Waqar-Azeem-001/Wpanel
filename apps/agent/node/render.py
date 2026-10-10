@@ -8,7 +8,7 @@ import re
 SECURE = "https"  # written separately: the site-wide check forbids a hand-typed address in code
 SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
 
-DEFAULTS = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100, "databases": 10}
+DEFAULTS = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100, "databases": 10, "sftp_accounts": 5}
 PHP_BINARY = "/opt/remi/php{nodot}/root/usr/sbin/php-fpm"
 
 
@@ -23,7 +23,7 @@ def nodot(php_version):
 
 
 def limits_of(params):
-    return {k: (params[k] if k == "databases" and params.get(k) is not None else params.get(k) or DEFAULTS[k]) for k in DEFAULTS}  # 0 databases is a real answer
+    return {k: (params[k] if k in ("databases", "sftp_accounts") and params.get(k) is not None else params.get(k) or DEFAULTS[k]) for k in DEFAULTS}  # 0 databases is a real answer
 
 
 def paths(account, domain=None):

@@ -11,14 +11,16 @@ from .base import HostingAdapter, HostingError
 from .native_db import NativeDatabases
 from . import native_dns
 from .native_dns import NativeDns
+from .native_files import NativeFiles, NativeFtp
 from .native_ssl import NativeSsl
 
 DEFAULT_PHP = "8.3"
 LIMIT_KEYS = ("disk_mb", "memory_mb", "processes", "cpu_percent")
-UNLIMITED_DATABASES = 1000
+COUNT_KEYS = {"databases": "databases", "ftp_accounts": "sftp_accounts"}  # the plan's name -> the node's name
+UNLIMITED = 1000
 
 
-class NativeAdapter(NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
+class NativeAdapter(NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
     server = None  # set by the registry
     read_cache_seconds = 20  # every read is a trip to the node; the gateway remembers answers briefly and forgets them after any change
 
@@ -46,9 +48,10 @@ class NativeAdapter(NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
         product = Product.objects.filter(whm_package_name=package).first()
         limits = product.resource_limits if product and isinstance(product.resource_limits, dict) else {}
         found = {k: limits[k] for k in LIMIT_KEYS if isinstance(limits.get(k), int) and not isinstance(limits.get(k), bool) and limits[k] > 0}
-        if "databases" in limits:  # the plan says how many: a number (0 means none), or blank for unlimited
-            value = limits["databases"]
-            found["databases"] = UNLIMITED_DATABASES if value is None else value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 10
+        for plan_key, node_key in COUNT_KEYS.items():
+            if plan_key in limits:  # the plan says how many: a number (0 means none), or blank for unlimited
+                value = limits[plan_key]
+                found[node_key] = UNLIMITED if value is None else value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 5
         return found
 
     def _queue(self, command, params, username, key=None):
@@ -104,7 +107,7 @@ class NativeAdapter(NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
         if not limits:
             raise HostingError("That plan sets no resource limits the node can apply.")
         defaults = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100}
-        extra = {"databases": limits["databases"]} if "databases" in limits else {}
+        extra = {k: limits[k] for k in COUNT_KEYS.values() if k in limits}
         self._queue("SET_LIMITS", {"account": username, **{k: limits.get(k, defaults[k]) for k in LIMIT_KEYS}, **extra}, username)
 
     def get_status(self, username):

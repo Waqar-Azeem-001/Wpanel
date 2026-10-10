@@ -18,8 +18,26 @@ LOCAL_PART = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 DB_USER = re.compile(r"^[a-z][a-z0-9_]{2,31}$")
 TABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 DB_PRIVILEGES = ("select", "insert", "update", "delete", "create", "alter", "drop", "index")
+SFTP_NAME = re.compile(r"^[a-z][a-z0-9]{1,14}$")
+TRASH_ID = re.compile(r"^([a-f0-9]{12}|ALL)$")
+MODE = re.compile(r"^[0-7]{3,4}$")
+MAX_INLINE_BYTES = 3_000_000  # file content that travels inside a command; bigger files go by SFTP
 BACKUP_ID = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$")
 PHP_VERSIONS = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
+
+
+_B64 = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
+
+
+def _relpath(name, value, allow_root=True):
+    """A path inside the account's own file area: relative, no '..', no control characters, backslash or colon. It names something inside a sandbox the
+    node enforces again (including refusing links); it is never put into a shell command."""
+    if not isinstance(value, str) or len(value) > 1024 or any(ord(c) < 32 or ord(c) == 127 for c in value) or "\\" in value or ":" in value or value.startswith("/"):
+        raise InvalidCommand(f"{name} is not a valid path.")
+    parts = [p for p in value.split("/") if p not in ("", ".")]
+    if ".." in parts or any(len(p) > 255 for p in parts) or (not parts and not allow_root):
+        raise InvalidCommand(f"{name} is not a valid path.")
+    return "/".join(parts)
 
 
 class InvalidCommand(ValueError):
@@ -28,7 +46,7 @@ class InvalidCommand(ValueError):
 
 @dataclass(frozen=True)
 class Field:
-    kind: str  # domain | account | db_name | db_user | table | local_part | backup_id | enum | enum_list | int | secret
+    kind: str  # relpath | path_list | b64 | query | mode | trash_id | sftp_name | domain | account | db_name | db_user | table | local_part | backup_id | enum | enum_list | int | secret
     choices: tuple = ()
     low: int = 0
     high: int = 0
@@ -39,6 +57,20 @@ class Field:
         if self.kind == "int":
             if isinstance(value, bool) or not isinstance(value, int) or not self.low <= value <= self.high:
                 raise InvalidCommand(f"{name} must be a whole number from {self.low} to {self.high}.")
+            return value
+        if self.kind == "relpath":
+            return _relpath(name, value)
+        if self.kind == "path_list":
+            if not isinstance(value, list) or not 1 <= len(value) <= 200:
+                raise InvalidCommand(f"{name} must be a list of 1 to 200 paths.")
+            return [_relpath(name, v, allow_root=False) for v in value]
+        if self.kind == "b64":
+            if not isinstance(value, str) or len(value) > MAX_INLINE_BYTES * 4 // 3 + 8 or not _B64.fullmatch(value):
+                raise InvalidCommand(f"{name} must be base64 text of at most {MAX_INLINE_BYTES // 1_000_000} MB.")
+            return value
+        if self.kind == "query":
+            if not isinstance(value, str) or not 1 <= len(value) <= 100 or any(ord(c) < 32 or ord(c) == 127 for c in value):
+                raise InvalidCommand(f"{name} must be 1 to 100 printable characters.")
             return value
         if self.kind == "enum_list":
             if (not isinstance(value, list) or len(value) > len(self.choices) or len(set(map(str, value))) != len(value)
@@ -55,7 +87,7 @@ class Field:
             if not 12 <= len(value) <= 128 or any(ord(c) < 32 or ord(c) == 127 for c in value):
                 raise InvalidCommand(f"{name} must be 12 to 128 printable characters.")
             return value
-        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
+        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
         if not pattern.fullmatch(value):
             raise InvalidCommand(f"{name} is not a valid {self.kind.replace('_', ' ')}.")
         return value
@@ -85,12 +117,13 @@ LIMIT_FIELDS = {
     "cpu_percent": Field("int", low=5, high=6400, required=False),
 }
 DATABASES_FIELD = Field("int", low=0, high=100_000, required=False)  # how many databases the account may have
+SFTP_FIELD = Field("int", low=0, high=10_000, required=False)  # how many extra SFTP logins
 
 
 COMMANDS = {c.name: c for c in [
-    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS), **LIMIT_FIELDS, "databases": DATABASES_FIELD}, 180,
+    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS), **LIMIT_FIELDS, "databases": DATABASES_FIELD, "sftp_accounts": SFTP_FIELD}, 180,
             description="Make the isolated hosting environment: user, folders, web and PHP-FPM configuration, resource limits."),
-    Command("SET_LIMITS", {"account": _f("account"), **{k: Field(f.kind, low=f.low, high=f.high) for k, f in LIMIT_FIELDS.items()}, "databases": DATABASES_FIELD}, 60,
+    Command("SET_LIMITS", {"account": _f("account"), **{k: Field(f.kind, low=f.low, high=f.high) for k, f in LIMIT_FIELDS.items()}, "databases": DATABASES_FIELD, "sftp_accounts": SFTP_FIELD}, 60,
             description="Change an account's disk quota and CPU, memory and process limits."),
     Command("SUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Stop serving the account's sites (a suspended page is shown) and stop its PHP."),
     Command("UNSUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Undo SUSPEND_WEBSITE."),
@@ -104,6 +137,28 @@ COMMANDS = {c.name: c for c in [
     Command("DELETE_DB_USER", {"account": _f("account"), "name": _f("db_user")}, 60, description="Drop a database user."),
     Command("GRANT_DB_ACCESS", {"account": _f("account"), "database": _f("db_name"), "user": _f("db_user"), "privileges": _f("enum_list", choices=DB_PRIVILEGES)}, 60,
             description="Set exactly these privileges for a user on a database; an empty list removes access."),
+    Command("FILE_LIST", {"account": _f("account"), "path": _f("relpath")}, 30, ephemeral=True, description="List a folder."),
+    Command("FILE_READ", {"account": _f("account"), "path": _f("relpath"), "max_bytes": _f("int", low=1, high=MAX_INLINE_BYTES)}, 30, ephemeral=True,
+            description="Read a file (refused if larger than max_bytes)."),
+    Command("FILE_WRITE", {"account": _f("account"), "path": _f("relpath"), "content": Field("b64", sensitive=True), "overwrite": _f("enum", choices=("yes", "no"))}, 60,
+            description="Write a file. The content is removed from WHPanel's record once the command finishes."),
+    Command("FILE_MKDIR", {"account": _f("account"), "path": _f("relpath")}, 30, description="Make a folder."),
+    Command("FILE_RENAME", {"account": _f("account"), "path": _f("relpath"), "new_path": _f("relpath")}, 30, idempotent=False, max_attempts=1, description="Rename or move."),
+    Command("FILE_COPY", {"account": _f("account"), "path": _f("relpath"), "new_path": _f("relpath")}, 300, idempotent=False, max_attempts=1, description="Copy."),
+    Command("FILE_CHMOD", {"account": _f("account"), "path": _f("relpath"), "mode": _f("mode")}, 30, description="Set a permission (unsafe modes are refused)."),
+    Command("FILE_DELETE", {"account": _f("account"), "path": _f("relpath")}, 120, description="Delete for good."),
+    Command("FILE_ARCHIVE", {"account": _f("account"), "paths": _f("path_list"), "archive_path": _f("relpath")}, 600, idempotent=False, max_attempts=1, description="Zip files."),
+    Command("FILE_EXTRACT", {"account": _f("account"), "path": _f("relpath"), "destination": _f("relpath")}, 600, idempotent=False, max_attempts=1, description="Unzip."),
+    Command("FILE_TRASH", {"account": _f("account"), "path": _f("relpath")}, 120, idempotent=False, max_attempts=1, description="Move to the trash."),
+    Command("FILE_TRASH_LIST", {"account": _f("account")}, 30, ephemeral=True, description="List the trash."),
+    Command("FILE_TRASH_RESTORE", {"account": _f("account"), "item_id": _f("trash_id")}, 120, idempotent=False, max_attempts=1, description="Put a trashed item back."),
+    Command("FILE_TRASH_PURGE", {"account": _f("account"), "item_id": _f("trash_id")}, 120, description="Delete one trashed item for good, or ALL of them."),
+    Command("FILE_SEARCH", {"account": _f("account"), "path": _f("relpath"), "query": _f("query")}, 60, ephemeral=True, description="Find files by name."),
+    Command("SFTP_LIST", {"account": _f("account")}, 30, description="List the account's extra SFTP logins."),
+    Command("SFTP_CREATE", {"account": _f("account"), "name": _f("sftp_name"), "password": _f("secret", sensitive=True), "directory": _f("relpath")}, 60,
+            description="Make an SFTP login limited to one folder of the account."),
+    Command("SFTP_SET_PASSWORD", {"account": _f("account"), "name": _f("sftp_name"), "password": _f("secret", sensitive=True)}, 60, description="Change an SFTP login's password."),
+    Command("SFTP_DELETE", {"account": _f("account"), "name": _f("sftp_name")}, 60, description="Remove an SFTP login."),
     Command("REMOVE_SSL", {"account": _f("account"), "domain": _f("domain")}, 60, description="Remove the certificate; the site is served without HTTPS."),
     Command("SSL_STATUS", {"account": _f("account")}, 30, description="Read the account's certificate (issuer, dates, renewal and redirect settings)."),
     Command("SET_SSL_OPTIONS", {"account": _f("account"), "domain": _f("domain"), "auto_renew": _f("enum", choices=("yes", "no")),
