@@ -15,6 +15,9 @@ DOMAIN = re.compile(r"^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[
 ACCOUNT = re.compile(r"^[a-z][a-z0-9]{2,15}$")
 DB_NAME = re.compile(r"^[a-z][a-z0-9_]{2,47}$")
 LOCAL_PART = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+DB_USER = re.compile(r"^[a-z][a-z0-9_]{2,31}$")
+TABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
+DB_PRIVILEGES = ("select", "insert", "update", "delete", "create", "alter", "drop", "index")
 BACKUP_ID = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$")
 PHP_VERSIONS = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
 
@@ -25,7 +28,7 @@ class InvalidCommand(ValueError):
 
 @dataclass(frozen=True)
 class Field:
-    kind: str  # domain | account | db_name | local_part | backup_id | enum | int | secret
+    kind: str  # domain | account | db_name | db_user | table | local_part | backup_id | enum | enum_list | int | secret
     choices: tuple = ()
     low: int = 0
     high: int = 0
@@ -37,6 +40,11 @@ class Field:
             if isinstance(value, bool) or not isinstance(value, int) or not self.low <= value <= self.high:
                 raise InvalidCommand(f"{name} must be a whole number from {self.low} to {self.high}.")
             return value
+        if self.kind == "enum_list":
+            if (not isinstance(value, list) or len(value) > len(self.choices) or len(set(map(str, value))) != len(value)
+                    or any(not isinstance(v, str) or v not in self.choices for v in value)):
+                raise InvalidCommand(f"{name} must be a list of: {', '.join(self.choices)}.")
+            return value
         if not isinstance(value, str):
             raise InvalidCommand(f"{name} must be text.")
         if self.kind == "enum":
@@ -47,7 +55,7 @@ class Field:
             if not 12 <= len(value) <= 128 or any(ord(c) < 32 or ord(c) == 127 for c in value):
                 raise InvalidCommand(f"{name} must be 12 to 128 printable characters.")
             return value
-        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
+        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
         if not pattern.fullmatch(value):
             raise InvalidCommand(f"{name} is not a valid {self.kind.replace('_', ' ')}.")
         return value
@@ -62,6 +70,7 @@ class Command:
     max_attempts: int = 3
     min_agent_version: tuple = (0, 1, 0)
     description: str = ""
+    ephemeral: bool = False  # the answer holds customer data (table rows): it is wiped from WHPanel's database as soon as the caller has read it
 
 
 def _f(kind, **kw):
@@ -75,18 +84,38 @@ LIMIT_FIELDS = {
     "processes": Field("int", low=5, high=10_000, required=False),
     "cpu_percent": Field("int", low=5, high=6400, required=False),
 }
+DATABASES_FIELD = Field("int", low=0, high=100_000, required=False)  # how many databases the account may have
 
 
 COMMANDS = {c.name: c for c in [
-    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS), **LIMIT_FIELDS}, 180,
+    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS), **LIMIT_FIELDS, "databases": DATABASES_FIELD}, 180,
             description="Make the isolated hosting environment: user, folders, web and PHP-FPM configuration, resource limits."),
-    Command("SET_LIMITS", {"account": _f("account"), **{k: Field(f.kind, low=f.low, high=f.high) for k, f in LIMIT_FIELDS.items()}}, 60,
+    Command("SET_LIMITS", {"account": _f("account"), **{k: Field(f.kind, low=f.low, high=f.high) for k, f in LIMIT_FIELDS.items()}, "databases": DATABASES_FIELD}, 60,
             description="Change an account's disk quota and CPU, memory and process limits."),
     Command("SUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Stop serving the account's sites (a suspended page is shown) and stop its PHP."),
     Command("UNSUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Undo SUSPEND_WEBSITE."),
     Command("DELETE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "keep_archive": _f("enum", choices=("yes", "no"))}, 180,
             description="Remove the website; with keep_archive=yes a final backup is kept first."),
-    Command("CREATE_DATABASE", {"account": _f("account"), "name": _f("db_name")}, 60, description="Create one database owned by the account."),
+    Command("CREATE_DATABASE", {"account": _f("account"), "name": _f("db_name")}, 60,
+            description="Create one database. Its name must start with the account name and an underscore; the plan's database limit is enforced on the node."),
+    Command("DELETE_DATABASE", {"account": _f("account"), "name": _f("db_name")}, 60, description="Drop one of the account's databases."),
+    Command("CREATE_DB_USER", {"account": _f("account"), "name": _f("db_user"), "password": _f("secret", sensitive=True)}, 60, description="Create a database user."),
+    Command("SET_DB_PASSWORD", {"account": _f("account"), "name": _f("db_user"), "password": _f("secret", sensitive=True)}, 60, description="Change a database user's password."),
+    Command("DELETE_DB_USER", {"account": _f("account"), "name": _f("db_user")}, 60, description="Drop a database user."),
+    Command("GRANT_DB_ACCESS", {"account": _f("account"), "database": _f("db_name"), "user": _f("db_user"), "privileges": _f("enum_list", choices=DB_PRIVILEGES)}, 60,
+            description="Set exactly these privileges for a user on a database; an empty list removes access."),
+    Command("REMOVE_SSL", {"account": _f("account"), "domain": _f("domain")}, 60, description="Remove the certificate; the site is served without HTTPS."),
+    Command("SSL_STATUS", {"account": _f("account")}, 30, description="Read the account's certificate (issuer, dates, renewal and redirect settings)."),
+    Command("SET_SSL_OPTIONS", {"account": _f("account"), "domain": _f("domain"), "auto_renew": _f("enum", choices=("yes", "no")),
+                                "https_redirect": _f("enum", choices=("yes", "no"))}, 60, description="Set automatic renewal and the always-use-HTTPS redirect."),
+    Command("DB_INVENTORY", {"account": _f("account")}, 30, ephemeral=True, description="List the account's databases (with sizes), users and grants."),
+    Command("DB_TABLES", {"account": _f("account"), "database": _f("db_name")}, 30, ephemeral=True, description="List the tables of a database."),
+    Command("DB_DESCRIBE", {"account": _f("account"), "database": _f("db_name"), "table": _f("table")}, 30, ephemeral=True, description="List a table's columns."),
+    Command("DB_BROWSE", {"account": _f("account"), "database": _f("db_name"), "table": _f("table"), "offset": _f("int", low=0, high=10_000_000),
+                          "limit": _f("int", low=1, high=100)}, 30, ephemeral=True, description="Read one page of rows from a table (read-only)."),
+    Command("BACKUP_DATABASE", {"account": _f("account"), "name": _f("db_name")}, 1800, idempotent=False, max_attempts=1, description="Dump one database to a backup file."),
+    Command("RESTORE_DATABASE", {"account": _f("account"), "name": _f("db_name"), "backup_id": _f("backup_id")}, 1800, idempotent=False, max_attempts=1,
+            description="Replace a database with a backup. A safety backup of the current contents is taken first."),
     Command("CHANGE_PHP_VERSION", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS)}, 60,
             description="Switch the site's PHP-FPM pool to another version."),
     Command("ISSUE_SSL", {"account": _f("account"), "domain": _f("domain"), "method": _f("enum", choices=("http-01", "dns-01"))}, 300,

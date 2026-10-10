@@ -126,7 +126,7 @@ class Websites:
             return "active", {}
         paths = render.paths(p["account"], state["domain"])
         self.s.run(["systemctl", "start", f"whp-php-{p['account']}.service"])
-        self.s.write(paths["vhost"], render.vhost(p["account"], state["domain"]))
+        self.s.write(paths["vhost"], render.vhost(p["account"], state["domain"], ssl=state.get("ssl")))
         self._reload_web()
         self._save(p["account"], {**state, "suspended": False})
         return "active", {}

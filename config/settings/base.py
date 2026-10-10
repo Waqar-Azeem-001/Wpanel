@@ -380,3 +380,7 @@ AGENT_SIGNING_KEY = env("AGENT_SIGNING_KEY", default="")
 # N2: set True once the reverse proxy does mutual TLS and passes the verified client certificate fingerprint in AGENT_CERT_HEADER (it must strip any copy sent by clients)
 AGENT_REQUIRE_CLIENT_CERT = env.bool("AGENT_REQUIRE_CLIENT_CERT", default=False)
 AGENT_CERT_HEADER = "X-Client-Cert-Fingerprint"
+# N5: the PowerDNS API that serves native hosting zones (ADR 07). Blank means native DNS is not offered.
+POWERDNS_URL = env("POWERDNS_URL", default="")
+POWERDNS_API_KEY = env("POWERDNS_API_KEY", default="")
+POWERDNS_NAMESERVERS = env("POWERDNS_NAMESERVERS", default="")  # comma separated, for example ns1.example.net,ns2.example.net

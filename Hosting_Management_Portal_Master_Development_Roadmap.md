@@ -952,7 +952,9 @@ Before marking any phase 🟢:
 | N1 WH Agent | 🟡 protocol built locally | `docs/n1-wh-agent.md`: allow-listed commands, signed envelopes, replay/expiry/idempotency, leases, versions, audit, Python reference agent (tested). The Go agent is an untested skeleton; real node work is N3, mutual TLS is N2 |
 | N2 Native node enrollment | 🟡 built locally | `docs/n2-node-enrollment.md`: one-time token, own CA signs the node's certificate request, inventory/heartbeat/health/capacity, renewal, revocation, staff screen. **Not exercised: mutual TLS on a real proxy, the Go agent's enroll/heartbeat** |
 | N3 Native website provisioning | 🟡 control plane built, node untested | `docs/n3-native-website-provisioning.md`: NativeAdapter, async order-to-active flow, node handlers (user, quota, own PHP-FPM + systemd slice, Apache vhost, suspend, PHP version, limits, delete with archive, rollback) tested against a pretend machine, placement. **Never run on a real node; Go agent has none of it** |
-| N4-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
+| N4 Native database platform | 🟡 control plane built, node untested | `docs/n4-native-databases.md`: the H3 database screens work unchanged through the native provider; create/drop, users (hash only), grants, limits enforced on the node, read-only browsing, backup/restore with safety backup. **RealMariadb never run on a real server; no row editing/SQL on native; Go agent has none of it** |
+| N5 Native DNS and SSL | 🟡 control plane built, nothing run for real | `docs/n5-native-dns-ssl.md`: PowerDNS zones/records and HTTP-01 certificates behind the unchanged DNS and SSL screens; 443 vhost, redirect, renewal logic. **PowerDNS client and certbot never run for real; DNS-01/wildcards not built; nothing yet runs the daily renewal** |
+| N6-N10, M0-M4 | ⬜ | Per the next-generation roadmap; H14 needs the WHM adapter verified on a real server |
 
 ## Recommended order
 

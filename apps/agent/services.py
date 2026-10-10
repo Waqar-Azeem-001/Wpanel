@@ -6,6 +6,7 @@ Nothing here runs anything. A job is only a validated, signed request that sits 
 import hashlib
 import hmac
 import secrets
+import time
 import uuid
 from datetime import timedelta
 
@@ -77,6 +78,56 @@ def dispatch(user, server, command, params, *, idempotency_key=None, correlation
     audit.record("agent.job_queued", actor=user, target=job, request=request,
                  metadata={"command": command, "params": catalog.scrub(command, cleaned), "correlation_id": job.correlation_id, "node": server.name})
     return job
+
+
+class NoAnswer(ServiceError):
+    """The node did not answer in time."""
+
+
+class CommandFailed(ServiceError):
+    """The node answered that it could not do it. ``code`` is the node's own short code."""
+
+    def __init__(self, message, node_code=""):
+        super().__init__(message)
+        self.node_code = node_code
+
+
+# Something that lets an agent run inside this process while ``call`` waits (tests, a one-box demo). In production it stays None and the real agent,
+# which long-polls (see ``views.poll``), answers from its own machine.
+inline_agent = None
+POLL_INTERVAL = 0.25
+
+
+def call(server, command, params, *, wait=15, user=None, subject=""):
+    """
+    Ask a node to do something and wait for the answer, for screens that need it now (listing a customer's databases). Returns the node's ``data``.
+
+    If the node has not answered in ``wait`` seconds and the job has not started, it is cancelled so it cannot run later unseen; if it has started, it is left
+    to finish and the caller is told the outcome is unknown.
+    """
+    job = dispatch(user, server, command, params, subject=subject)
+    deadline = time.monotonic() + wait
+    while True:
+        job.refresh_from_db()
+        if job.status in FINISHED:
+            break
+        if inline_agent is not None:
+            inline_agent()
+            job.refresh_from_db()
+            if job.status in FINISHED:
+                break
+        if time.monotonic() > deadline:
+            if job.status == JobStatus.QUEUED:
+                _finish(job, JobStatus.CANCELLED, "no_answer", "The node did not pick this up in time.")
+                raise NoAnswer("The server did not answer in time. Nothing was changed.")
+            raise NoAnswer("The server is taking longer than expected; the change may still be made.")
+        time.sleep(POLL_INTERVAL)
+    data = job.result_data
+    if catalog.COMMANDS[command].ephemeral:
+        AgentJob.objects.filter(pk=job.pk).update(result_data={})  # customer data: read once, not kept
+    if job.status != JobStatus.SUCCEEDED:
+        raise CommandFailed(job.result_message or "The server could not do that.", job.result_code)
+    return data
 
 
 def _envelope(job):

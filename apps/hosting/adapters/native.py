@@ -8,13 +8,29 @@ node later reports a failure, the account's ``last_error`` and the audit trail s
 """
 
 from .base import HostingAdapter, HostingError
+from .native_db import NativeDatabases
+from . import native_dns
+from .native_dns import NativeDns
+from .native_ssl import NativeSsl
 
 DEFAULT_PHP = "8.3"
 LIMIT_KEYS = ("disk_mb", "memory_mb", "processes", "cpu_percent")
+UNLIMITED_DATABASES = 1000
 
 
-class NativeAdapter(HostingAdapter):
+class NativeAdapter(NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
     server = None  # set by the registry
+    read_cache_seconds = 20  # every read is a trip to the node; the gateway remembers answers briefly and forgets them after any change
+
+    @property
+    def enabled_capabilities(self):
+        """Everything this provider has, except DNS when no nameservers are configured (the screen is then not offered, instead of failing)."""
+        from .capabilities import CONTRACTS, Capability
+
+        have = {c for c, contract in CONTRACTS.items() if isinstance(self, contract)}
+        if native_dns.get_dns() is None:
+            have.discard(Capability.DNS)
+        return have
 
     # --- helpers ---------------------------------------------------------------------------------------------------------------------
     def _account(self, username):
@@ -29,7 +45,11 @@ class NativeAdapter(HostingAdapter):
 
         product = Product.objects.filter(whm_package_name=package).first()
         limits = product.resource_limits if product and isinstance(product.resource_limits, dict) else {}
-        return {k: limits[k] for k in LIMIT_KEYS if isinstance(limits.get(k), int) and not isinstance(limits.get(k), bool) and limits[k] > 0}
+        found = {k: limits[k] for k in LIMIT_KEYS if isinstance(limits.get(k), int) and not isinstance(limits.get(k), bool) and limits[k] > 0}
+        if "databases" in limits:  # the plan says how many: a number (0 means none), or blank for unlimited
+            value = limits["databases"]
+            found["databases"] = UNLIMITED_DATABASES if value is None else value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 10
+        return found
 
     def _queue(self, command, params, username, key=None):
         from apps.agent import services as agent
@@ -84,7 +104,8 @@ class NativeAdapter(HostingAdapter):
         if not limits:
             raise HostingError("That plan sets no resource limits the node can apply.")
         defaults = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100}
-        self._queue("SET_LIMITS", {"account": username, **{k: limits.get(k, defaults[k]) for k in LIMIT_KEYS}}, username)
+        extra = {"databases": limits["databases"]} if "databases" in limits else {}
+        self._queue("SET_LIMITS", {"account": username, **{k: limits.get(k, defaults[k]) for k in LIMIT_KEYS}, **extra}, username)
 
     def get_status(self, username):
         from apps.hosting.models import HostingStatus

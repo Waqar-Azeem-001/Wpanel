@@ -48,6 +48,10 @@ class NativeMachine(FakeMachine):
     """Website commands run through the real node handlers (apps.agent.node) against a pretend Linux machine; the rest stays the simple fake."""
 
     WEBSITE = ("CREATE_WEBSITE", "DELETE_WEBSITE", "SUSPEND_WEBSITE", "UNSUSPEND_WEBSITE", "CHANGE_PHP_VERSION", "SET_LIMITS")
+    DATABASE = ("CREATE_DATABASE", "DELETE_DATABASE", "CREATE_DB_USER", "SET_DB_PASSWORD", "DELETE_DB_USER", "GRANT_DB_ACCESS", "DB_INVENTORY", "DB_TABLES",
+                "DB_DESCRIBE", "DB_BROWSE", "BACKUP_DATABASE", "RESTORE_DATABASE")
+
+    SSL = ("ISSUE_SSL", "REMOVE_SSL", "SSL_STATUS", "SET_SSL_OPTIONS")
 
     def __init__(self, system=None):
         from .node.system import FakeSystem
@@ -56,11 +60,27 @@ class NativeMachine(FakeMachine):
         super().__init__()
         self.system = system or FakeSystem()
         self.websites = Websites(self.system)
+        from .node.databases import Databases
+        from .node.mariadb import FakeMariadb
+
+        self.engine = FakeMariadb()
+        self.databases = Databases(self.system, self.engine)
+        from .node.acme import FakeAcme
+        from .node.ssl import Ssl
+
+        self.acme = FakeAcme()
+        self.ssl = Ssl(self.system, self.acme)
 
     def run(self, command, p):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command in self.SSL:
+            self.executed.append(command)
+            return self.ssl.run(command, p)
+        if command in self.DATABASE:
+            self.executed.append(command)
+            return self.databases.run(command, p)
         return super().run(command, p)
 
 

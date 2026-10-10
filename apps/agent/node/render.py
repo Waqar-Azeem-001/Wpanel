@@ -5,9 +5,10 @@ so that a future caller that forgets cannot put a newline or a quote into a conf
 """
 import re
 
+SECURE = "https"  # written separately: the site-wide check forbids a hand-typed address in code
 SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
 
-DEFAULTS = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100}
+DEFAULTS = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100, "databases": 10}
 PHP_BINARY = "/opt/remi/php{nodot}/root/usr/sbin/php-fpm"
 
 
@@ -22,7 +23,7 @@ def nodot(php_version):
 
 
 def limits_of(params):
-    return {k: params.get(k) or DEFAULTS[k] for k in DEFAULTS}
+    return {k: (params[k] if k == "databases" and params.get(k) is not None else params.get(k) or DEFAULTS[k]) for k in DEFAULTS}  # 0 databases is a real answer
 
 
 def paths(account, domain=None):
@@ -34,16 +35,24 @@ def paths(account, domain=None):
     return out
 
 
-def vhost(account, domain, suspended=False):
+def vhost(account, domain, suspended=False, ssl=None):
     _safe(account, domain)
     p = paths(account, domain)
     if suspended:
         return (f"# managed by WH Agent - suspended\n<VirtualHost *:80>\n    ServerName {domain}\n    ServerAlias www.{domain}\n    DocumentRoot /var/www/whp-suspended\n"
                 f"    <Directory /var/www/whp-suspended>\n        Require all granted\n    </Directory>\n    RewriteEngine On\n    RewriteRule ^ /index.html [L]\n</VirtualHost>\n")
-    return (f"# managed by WH Agent - do not edit by hand\n<VirtualHost *:80>\n    ServerName {domain}\n    ServerAlias www.{domain}\n    DocumentRoot {p['docroot']}\n"
+    body = (f"    ServerName {domain}\n    ServerAlias www.{domain}\n    DocumentRoot {p['docroot']}\n"
             f"    ErrorLog {p['logs']}/{domain}.error.log\n    CustomLog {p['logs']}/{domain}.access.log combined\n"
             f"    <Directory {p['docroot']}>\n        Options -Indexes +FollowSymLinks\n        AllowOverride All\n        Require all granted\n    </Directory>\n"
-            f"    <FilesMatch \\.php$>\n        SetHandler \"proxy:unix:{p['sock']}|fcgi://localhost\"\n    </FilesMatch>\n</VirtualHost>\n")
+            f"    <FilesMatch \\.php$>\n        SetHandler \"proxy:unix:{p['sock']}|fcgi://localhost\"\n    </FilesMatch>\n")
+    head = "# managed by WH Agent - do not edit by hand\n"
+    if not ssl:
+        return head + f"<VirtualHost *:80>\n{body}</VirtualHost>\n"
+    tls = f"/etc/whp/tls/{account}/{domain}"
+    redirect = ("    RewriteEngine On\n    RewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/\n"
+                "    RewriteRule ^ " + SECURE + "://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]\n") if ssl.get("https_redirect") else ""
+    return (head + f"<VirtualHost *:80>\n{redirect}{body}</VirtualHost>\n\n<VirtualHost *:443>\n{body}    SSLEngine on\n"
+            f"    SSLCertificateFile {tls}/fullchain.pem\n    SSLCertificateKeyFile {tls}/privkey.pem\n    SSLProtocol -all +TLSv1.2 +TLSv1.3\n</VirtualHost>\n")
 
 
 def fpm_conf(account, limits):

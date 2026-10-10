@@ -61,7 +61,7 @@ def test_a_valid_command_passes_and_secrets_are_hidden_when_stored():
 def test_the_catalog_has_no_free_form_text_field():
     for spec in catalog.COMMANDS.values():
         for rule in spec.fields.values():
-            assert rule.kind in ("domain", "account", "db_name", "local_part", "backup_id", "enum", "int", "secret")
+            assert rule.kind in ("domain", "account", "db_name", "db_user", "table", "local_part", "backup_id", "enum", "enum_list", "int", "secret")
 
 
 def test_dispatch_refuses_off_list_commands_and_servers_without_an_agent(manager):
