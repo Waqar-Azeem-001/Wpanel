@@ -280,6 +280,7 @@ CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
+    "native-monitoring-sweep": {"task": "apps.agent.tasks.monitor_sweep_task", "schedule": crontab(minute="*")},
     "native-scheduled-backups": {"task": "apps.hosting.tasks.run_native_backups_task", "schedule": crontab(hour=2, minute=30)},
     "native-restore-test": {"task": "apps.hosting.tasks.native_restore_test_task", "schedule": crontab(day_of_month=1, hour=4, minute=0)},
     "generate-renewal-invoices": {
@@ -384,6 +385,9 @@ AGENT_SIGNING_KEY = env("AGENT_SIGNING_KEY", default="")
 PANEL_BACKUP_DIR = env("PANEL_BACKUP_DIR", default=str(BASE_DIR / "panel_backups"))
 # N9: what to do when a native account uses more than its monthly bandwidth: "notify" (tell the customer) or "suspend" (take the site offline until next month or until staff reactivate it)
 NATIVE_BANDWIDTH_OVER_ACTION = env("NATIVE_BANDWIDTH_OVER_ACTION", default="notify")
+# N10: who is emailed when a native node turns warning, critical or offline (comma separated), and whether WHPanel may restart a failed service by itself (off until proven on a real node)
+MONITORING_ALERT_EMAILS = env("MONITORING_ALERT_EMAILS", default="")
+SELF_HEALING_ENABLED = env.bool("SELF_HEALING_ENABLED", default=False)
 AGENT_REQUIRE_CLIENT_CERT = env.bool("AGENT_REQUIRE_CLIENT_CERT", default=False)
 AGENT_CERT_HEADER = "X-Client-Cert-Fingerprint"
 # N5: the PowerDNS API that serves native hosting zones (ADR 07). Blank means native DNS is not offered.

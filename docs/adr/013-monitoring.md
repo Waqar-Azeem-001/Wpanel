@@ -27,3 +27,6 @@ No monitoring server is needed for the first nodes. Self-healing (N10) may only 
 
 ## Open questions
 Alert channel (email, Telegram, WhatsApp) and who is on call.
+
+## Follow-up (N10)
+Built as recommended: the agent's heartbeat plus one decision point in WHPanel (`docs/n10-monitoring-self-healing.md`). **Not built:** the external uptime service, Prometheus and metric history, and any alert channel except email. Self-healing is restricted to six listed services and is off by default.

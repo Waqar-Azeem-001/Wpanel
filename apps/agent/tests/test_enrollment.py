@@ -131,11 +131,15 @@ def test_heartbeat_stores_figures_and_sets_health(enrolled):
     post("heartbeat/", {"cpu_percent": 12.5, "memory_used_mb": 2048, "disk_used_gb": 40, "sites": 3, "load_1m": 0.4, "evil": "x",
                         "services": {"web": "up", "database": "degraded"}}, body["token"])
     node.refresh_from_db()
-    assert node.health["sites"] == 3 and "evil" not in node.health and enrollment.health_state(node) == "degraded"
+    assert node.health["sites"] == 3 and "evil" not in node.health and enrollment.health_state(node) == "warning"
+    assert any("backup storage" in r for r in __import__("apps.agent.monitoring", fromlist=["x"]).evaluate(node)["checks"][-1:][0].values())  # a web node without backup storage is a warning
+    from apps.agent.models import BackupRepository
+
+    BackupRepository.objects.create(node=node, endpoint="https://s.example.net", bucket="bkt", prefix="n", applied_ok=True)
     node.health = {"services": {"web": "up"}}
     assert enrollment.health_state(node) == "healthy"
     node.health = {"services": {"web": "down"}}
-    assert enrollment.health_state(node) == "down"
+    assert enrollment.health_state(node) == "critical"
     assert enrollment.health_state(node, now=timezone.now() + timedelta(minutes=10)) == "offline"
 
 

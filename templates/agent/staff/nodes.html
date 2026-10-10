@@ -5,7 +5,7 @@
 <div class="page-head">
   <h1>Native nodes</h1>
   <p class="page-sub">Servers that run the WH Agent. A node enrols once with a one-time token, then proves itself with its own certificate. Nothing is hosted on a native node until N3.</p>
-  <div class="d-flex flex-wrap gap-2"><a href="{% url 'hosting_staff:infrastructure' %}">Infrastructure</a><a href="{% url 'catalog_staff:server_list' %}">Servers</a><a href="{% url 'agent_staff:backups' %}">Backup storage</a></div>
+  <div class="d-flex flex-wrap gap-2"><a href="{% url 'hosting_staff:infrastructure' %}">Infrastructure</a><a href="{% url 'catalog_staff:server_list' %}">Servers</a><a href="{% url 'agent_staff:monitoring' %}">Monitoring</a><a href="{% url 'agent_staff:backups' %}">Backup storage</a></div>
 </div>
 
 {% if secret %}
@@ -35,7 +35,7 @@
 <section class="card mb-3">
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <h2 class="h5 mb-0">{{ r.node.server.name }}
-      <span class="site-pill {% if r.state == 'healthy' %}is-ok{% elif r.state == 'degraded' or r.state == 'pending' %}is-warn{% else %}is-danger{% endif %} ms-1">{{ r.state|title }}</span></h2>
+      <span class="site-pill {% if r.state == 'healthy' %}is-ok{% elif r.state == 'warning' or r.state == 'pending' %}is-warn{% else %}is-danger{% endif %} ms-1">{{ r.state|title }}</span></h2>
     {% if can_manage %}<div class="d-flex gap-2">
       {% if r.node.status != 'enrolled' %}<form method="post" action="{% url 'agent_staff:invite' r.node.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">New enrolment token</button></form>{% endif %}
       {% if r.node.status == 'enrolled' %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'agent_staff:isolation' r.node.pk %}">Isolation check</a>{% endif %}

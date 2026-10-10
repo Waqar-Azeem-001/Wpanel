@@ -25,6 +25,8 @@ HTTPS_URL = re.compile(r"^https" + r"://[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:[0
 BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{2,62}$")
 S3_PATH = re.compile(r"^[a-z0-9][a-z0-9._/-]{0,60}$")
 SNAPSHOT = re.compile(r"^[a-f0-9]{8,64}$")
+# The ONLY services automatic self-healing may restart (N10). A short, written list: the web server, the database, the mail trio and the SSH server. Never a customer's own process, never a reboot.
+HEAL_SERVICES = ("httpd", "mariadb", "postfix", "dovecot", "rspamd", "sshd")
 SFTP_NAME = re.compile(r"^[a-z][a-z0-9]{1,14}$")
 TRASH_ID = re.compile(r"^([a-f0-9]{12}|ALL)$")
 MODE = re.compile(r"^[0-7]{3,4}$")
@@ -220,6 +222,8 @@ COMMANDS = {c.name: c for c in [
     Command("BACKUP_NODE_CONFIG", {}, 600, idempotent=False, max_attempts=1, description="Back up this node's own configuration (what is needed to rebuild it), never its backup keys."),
     Command("USAGE_REPORT", {"account": _f("account"), "days": _f("int", low=1, high=90)}, 60, description="What the account uses now, its recent daily history, and its live CPU, memory, process and I/O figures."),
     Command("ISOLATION_CHECK", {}, 120, description="Check this node against the isolation baseline and every account's installed limits against what the plan says."),
+    Command("SERVICE_RESTART", {"service": _f("enum", choices=HEAL_SERVICES)}, 120, idempotent=False, max_attempts=1,
+            description="Restart one of the node's own services (an allow-listed few). The web server's configuration is tested first; a failing test stops the restart."),
     Command("REMOVE_SSL", {"account": _f("account"), "domain": _f("domain")}, 60, description="Remove the certificate; the site is served without HTTPS."),
     Command("SSL_STATUS", {"account": _f("account")}, 30, description="Read the account's certificate (issuer, dates, renewal and redirect settings)."),
     Command("SET_SSL_OPTIONS", {"account": _f("account"), "domain": _f("domain"), "auto_renew": _f("enum", choices=("yes", "no")),

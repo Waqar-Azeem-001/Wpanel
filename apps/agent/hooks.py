@@ -5,7 +5,14 @@ logger = logging.getLogger(__name__)
 
 
 def job_finished(job):
-    if job.subject.startswith("backupcfg:"):
+    if job.subject.startswith("heal:"):
+        try:
+            from . import monitoring
+
+            monitoring.job_finished(job)
+        except Exception:  # noqa: BLE001
+            logger.exception("Could not apply the outcome of agent job %s", job.pk)
+    elif job.subject.startswith("backupcfg:"):
         try:
             from . import backup_repo
 

@@ -34,6 +34,8 @@ class FakeSystem:
         self.files, self.dirs, self.users, self.commands = {}, set(), {}, []
         self.next_uid = 2000
         self.fail_on = None
+        self.service_state = {}  # unit name -> "active", "inactive", "activating" ... (what ``systemctl is-active`` would say)
+        self.probes = {}  # argv tuple -> output, for other read-only questions
 
     def exists(self, path):
         return check_path(path) in self.files or check_path(path) in self.dirs
@@ -62,6 +64,16 @@ class FakeSystem:
 
     def uid(self, user):
         return self.users.get(user)
+
+    def probe(self, argv):
+        """Ask a question that may have a negative answer. Returns (exit status, output); never raises for a non-zero exit status."""
+        if not isinstance(argv, list) or not all(isinstance(a, str) for a in argv):
+            raise SystemError_("A command must be a list of strings.")
+        if argv[:2] == ["systemctl", "is-active"]:
+            state = self.service_state.get(argv[2], "inactive")
+            return (0 if state == "active" else 3), state
+        out = self.probes.get(tuple(argv))
+        return (0, out) if out is not None else (127, "")
 
     def run(self, argv, input=None):
         if not isinstance(argv, list) or not all(isinstance(a, str) for a in argv):
@@ -132,6 +144,15 @@ class RealSystem:
             return pwd.getpwnam(user).pw_uid
         except KeyError:
             return None
+
+    def probe(self, argv):
+        if not isinstance(argv, list) or not all(isinstance(a, str) for a in argv):
+            raise SystemError_("A command must be a list of strings.")
+        try:
+            done = subprocess.run(argv, shell=False, capture_output=True, text=True, timeout=30, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            return 127, ""
+        return done.returncode, done.stdout.strip()
 
     def run(self, argv, input=None):
         """``input`` goes to the program's standard input (used for passwords, which must never be on a command line)."""

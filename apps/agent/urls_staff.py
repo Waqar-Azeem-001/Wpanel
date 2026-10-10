@@ -7,6 +7,7 @@ urlpatterns = [
     path("", views.nodes, name="nodes"),
     path("add/", views.node_add, name="add"),
     path("backups/", views.backups, name="backups"),
+    path("monitoring/", views.monitoring_page, name="monitoring"),
     path("<int:pk>/backup-save/", views.backup_save, name="backup_save"),
     path("<int:pk>/backup-apply/", views.backup_apply, name="backup_apply"),
     path("<int:pk>/backup-config/", views.backup_node_config, name="backup_node_config"),

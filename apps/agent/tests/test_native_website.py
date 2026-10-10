@@ -312,7 +312,7 @@ def test_the_native_server_type_reports_its_agent_state(world):
     manager, client, product = world
     server, agent = make_node(manager)
     info = hosting.get_adapter(server).check_connection()
-    assert info["version"] == "0.1.0" and info["state"] in ("healthy", "offline")
+    assert info["version"] == "0.1.0" and info["state"] in ("healthy", "warning", "offline")
 
 
 # --- choosing a node ------------------------------------------------------------------------------------------------------------------------

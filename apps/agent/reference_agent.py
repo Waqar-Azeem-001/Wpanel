@@ -5,6 +5,9 @@ Go agent (``agent/``) a behaviour to match. It changes nothing on the computer i
 from . import envelope
 
 
+import json
+
+
 class FakeMachine:
     def __init__(self):
         self.sites, self.databases, self.backups = {}, {}, {}
@@ -55,7 +58,7 @@ class NativeMachine(FakeMachine):
     SFTP = ("SFTP_LIST", "SFTP_CREATE", "SFTP_SET_PASSWORD", "SFTP_DELETE")
     MAIL_EXTRA = ("CREATE_MAILBOX",)  # an older name for a mail command
 
-    def __init__(self, system=None, files_dir=None, mail_dir=None, bucket_dir=None, cgroup_dir=None):
+    def __init__(self, system=None, files_dir=None, mail_dir=None, bucket_dir=None, cgroup_dir=None, capabilities=("web", "database")):
         from .node.system import FakeSystem
         from .node.website import Websites
 
@@ -103,6 +106,19 @@ class NativeMachine(FakeMachine):
         self.usage = Usage(self.system, root_for, self.engine, self.websites, log_for=lambda account: (self.files_dir / account / "access.log") if self.files_dir else None,
                            cgroup_root=self.cgroup_dir, now=lambda: self.clock())
         self.isolation = Isolation(self.system, self.websites)
+        from .node.metrics import Metrics
+        from .node.servicectl import ServiceControl
+
+        def cert_days():
+            days = []
+            for path in (p for p in self.system.list("/var/lib/whp/accounts/") if p.endswith(".json") and ".cpu" not in p):
+                state = json.loads(self.system.read(path))
+                if state.get("ssl"):
+                    days.append(self.ssl._status_row(path.rsplit("/", 1)[1][:-5], state)["days_left"])
+            return min(days) if days else None
+
+        self.metrics = Metrics(self.system, capabilities, disk_usage=lambda path: (100 * 1073741824, 40 * 1073741824, 60 * 1073741824), cert_days=cert_days)
+        self.servicectl = ServiceControl(self.system, sleep=lambda seconds: None)
         self.acme = FakeAcme()
         self.ssl = Ssl(self.system, self.acme)
 
@@ -110,6 +126,9 @@ class NativeMachine(FakeMachine):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command == "SERVICE_RESTART":
+            self.executed.append(command)
+            return self.servicectl.run(command, p)
         if command == "USAGE_REPORT":
             self.executed.append(command)
             return self.usage.run(command, p)
@@ -147,6 +166,10 @@ class ReferenceAgent:
     def _post(self, url, body=None):
         return self.client.post(url, data=body or {}, content_type="application/json", HTTP_AUTHORIZATION="Agent " + self.token,
                                 HTTP_X_AGENT_VERSION=self.version)
+
+    def heartbeat_once(self):
+        """Report the node's own figures, the way the real agent does every half minute or so."""
+        return self._post("/api/agent/v1/heartbeat/", self.machine.metrics.collect())
 
     def poll_once(self):
         """Fetch one job, check it, do it, report. Returns the job id handled, or None."""

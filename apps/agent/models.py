@@ -39,6 +39,13 @@ class AgentNode(TimeStampedModel):
     cert_expires_at = models.DateTimeField(null=True, blank=True)
     enrolled_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
+    # monitoring (N10): the state WHPanel has settled on, and what it is waiting to confirm
+    monitor_state = models.CharField(max_length=10, default="healthy")
+    monitor_since = models.DateTimeField(null=True, blank=True)
+    monitor_reasons = models.JSONField(default=list, blank=True)
+    monitor_pending = models.CharField(max_length=10, blank=True)
+    monitor_pending_count = models.PositiveSmallIntegerField(default=0)
+    monitor_alerted_at = models.DateTimeField(null=True, blank=True)
     reputation = models.JSONField(default=dict, blank=True, help_text="The latest mail reputation check (blacklists, queue). Only mail nodes have one.")
     reputation_at = models.DateTimeField(null=True, blank=True)
 
@@ -75,6 +82,33 @@ class BackupRepository(TimeStampedModel):
         from apps.core import crypto
 
         self.access_key_encrypted, self.secret_key_encrypted, self.password_encrypted = crypto.encrypt(access_key), crypto.encrypt(secret_key), crypto.encrypt(password)
+
+
+class NodeStateChange(models.Model):
+    """One settled change of a node's monitoring state, so the history of what happened and when is kept."""
+
+    node = models.ForeignKey(AgentNode, on_delete=models.CASCADE, related_name="state_changes")
+    state = models.CharField(max_length=10)
+    previous = models.CharField(max_length=10)
+    reasons = models.JSONField(default=list)
+    at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-at", "-id"]
+
+
+class HealingAction(models.Model):
+    """One automatic repair WHPanel started (N10): what, where, why and how it ended. The record is also the limit on how often a repair may be tried."""
+
+    node = models.ForeignKey(AgentNode, on_delete=models.CASCADE, related_name="healing_actions")
+    service = models.CharField(max_length=20)
+    reason = models.CharField(max_length=300, blank=True)
+    status = models.CharField(max_length=10, default="started")  # started, ok, failed or gave_up
+    detail = models.CharField(max_length=300, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
 
 
 class EnrollmentToken(TimeStampedModel):

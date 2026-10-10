@@ -9,8 +9,8 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.products.models import Server, ServerKind
 
-from . import backup_repo, enrollment, reputation, services
-from .models import AgentNode, BackupRepository, NodeStatus
+from . import backup_repo, catalog, enrollment, monitoring, reputation, services
+from .models import AgentNode, BackupRepository, HealingAction, NodeStateChange, NodeStatus
 
 
 class NewNodeForm(forms.Form):
@@ -95,6 +95,21 @@ def backup_node_config(request, pk):
     except ServiceError as exc:
         messages.error(request, exc.message)
     return redirect("agent_staff:backups")
+
+
+@portal_permission_required(perm("view_hosting"))
+def monitoring_page(request):
+    from django.conf import settings
+
+    rows = []
+    for node in AgentNode.objects.select_related("server").filter(status=NodeStatus.ENROLLED).order_by("server__name"):
+        result = monitoring.evaluate(node)
+        rows.append({"node": node, "state": result["state"], "settled": node.monitor_state, "problems": [c for c in result["checks"] if c["state"] != "healthy"], "checks": result["checks"]})
+    counts = {s: sum(1 for r in rows if r["state"] == s) for s in ("healthy", "warning", "critical", "offline")}
+    return render(request, "agent/staff/monitoring.html", {
+        "rows": rows, "counts": counts, "platform": monitoring.platform_checks(), "changes": NodeStateChange.objects.select_related("node__server")[:15],
+        "actions": HealingAction.objects.select_related("node__server")[:15], "healing_on": getattr(settings, "SELF_HEALING_ENABLED", False), "allowed": catalog.HEAL_SERVICES,
+        "alerts_to": getattr(settings, "MONITORING_ALERT_EMAILS", "")})
 
 
 @portal_permission_required(perm("view_hosting"))

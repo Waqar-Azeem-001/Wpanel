@@ -137,12 +137,18 @@ def heartbeat(node, data):
     if not isinstance(data, dict):
         raise ServiceError("Send an object.", status_code=400)
     health = {}
-    for key, high in (("load_1m", 100000), ("cpu_percent", 100), ("memory_used_mb", 16 * 1024 * 1024), ("disk_used_gb", 1024 * 1024), ("sites", 1000000), ("mail_queue", 10_000_000)):
+    for key, high in (("load_1m", 100000), ("cpu_percent", 100), ("memory_used_mb", 16 * 1024 * 1024), ("disk_used_gb", 1024 * 1024), ("sites", 1000000), ("mail_queue", 10_000_000),
+                      ("memory_total_mb", 16 * 1024 * 1024), ("disk_total_gb", 1024 * 1024), ("net_errors", 10 ** 12)):
         value = data.get(key)
         if value is not None:
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= high:
                 raise ServiceError(f"{key} is not a sensible number.", status_code=400)
             health[key] = value
+    days = data.get("certs_min_days")  # the soonest certificate expiry on the node, in days (negative once expired)
+    if days is not None:
+        if isinstance(days, bool) or not isinstance(days, int) or not -3650 <= days <= 3650:
+            raise ServiceError("certs_min_days is not a sensible number.", status_code=400)
+        health["certs_min_days"] = days
     services = data.get("services", {})
     if not isinstance(services, dict) or len(services) > 20 or any(not isinstance(k, str) or len(k) > 30 or v not in SERVICE_STATES for k, v in services.items()):
         raise ServiceError(f"services must map names to one of: {', '.join(SERVICE_STATES)}.", status_code=400)
@@ -167,15 +173,7 @@ def revoke(user, node, request=None):
 
 
 def health_state(node, now=None):
-    """healthy / degraded / down / offline / pending / revoked, from what the node last reported and when."""
-    now = now or timezone.now()
-    if node.status != NodeStatus.ENROLLED:
-        return node.status
-    if node.last_seen_at is None or now - node.last_seen_at > OFFLINE_AFTER:
-        return "offline"
-    states = list((node.health or {}).get("services", {}).values())
-    if "down" in states:
-        return "down"
-    if "degraded" in states:
-        return "degraded"
-    return "healthy"
+    """healthy / warning / critical / offline (or pending / revoked). Decided in one place: ``monitoring.evaluate``."""
+    from . import monitoring
+
+    return monitoring.state_of(node, now)

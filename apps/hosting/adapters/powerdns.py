@@ -38,6 +38,11 @@ class PowerDnsClient:
             raise HostingError(f"The DNS servers refused that: {detail[:200] or reply.status_code}")
         return reply.json() if reply.content else {}
 
+    def ping(self):
+        """Is the DNS server answering? Raises HostingError if not."""
+        if self._call("GET", "") is None:
+            raise HostingError("The DNS server did not know its own server id.")
+
     def zone_exists(self, zone):
         return self._call("GET", f"/zones/{zone}.") is not None
 
@@ -81,6 +86,10 @@ class FakePowerDns:
         if zone not in self.zones:
             raise HostingError("That domain has no DNS zone yet.")
         return self.zones[zone]
+
+    def ping(self):
+        if self.down:
+            raise HostingError("The DNS servers could not be reached. Try again in a moment.")
 
     def zone_exists(self, zone):
         if self.down:

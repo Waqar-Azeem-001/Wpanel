@@ -5,6 +5,8 @@ from apps.hosting.models import LIVE_STATUSES
 from apps.products.models import ServerKind, ServerStatus
 
 from . import enrollment
+
+PLACEABLE = ("healthy", "warning")  # a node that is struggling a little still takes new sites; a critical or offline one does not
 from .models import AgentNode, NodeStatus
 
 
@@ -16,7 +18,7 @@ def pick_node(region="", among=None):
         nodes = nodes.filter(server__in=among)
     best, best_load = None, None
     for node in nodes:
-        if "web" not in node.capabilities or enrollment.health_state(node) != "healthy":
+        if "web" not in node.capabilities or enrollment.health_state(node) not in PLACEABLE:
             continue
         if region and node.server.region.lower() != region.lower():
             continue
@@ -45,6 +47,6 @@ def pick_mail_node():
     """The Server to hold a new account's mail: enrolled, active, able to do mail, healthy, with the fewest accounts."""
     best = None
     for node in _mail_nodes():
-        if "mail" in node.capabilities and enrollment.health_state(node) == "healthy" and (best is None or node.boxes < best.boxes):
+        if "mail" in node.capabilities and enrollment.health_state(node) in PLACEABLE and (best is None or node.boxes < best.boxes):
             best = node
     return best.server if best else None
