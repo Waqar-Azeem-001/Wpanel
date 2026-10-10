@@ -441,6 +441,15 @@ def _refresh_usage(account):
     account.last_synced_at = timezone.now()
     account.save(update_fields=["disk_used_mb", "disk_limit_mb", "bandwidth_used_mb", "bandwidth_limit_mb",
                                 "last_synced_at", "updated_at"])
+    if account.server.kind == "native":  # native accounts have measured, node-enforced limits: warn at 90 percent, say so when over, act on bandwidth
+        from . import limits
+
+        try:
+            limits.check(account)
+        except Exception:  # noqa: BLE001 - telling the customer must never break the usage sync
+            import logging
+
+            logging.getLogger(__name__).exception("Limit check failed for account %s", account.pk)
     return account
 
 

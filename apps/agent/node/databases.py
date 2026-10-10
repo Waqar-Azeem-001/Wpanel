@@ -14,6 +14,7 @@ from .system import SystemError_
 from .website import HandlerError
 
 MAX_CELL = 500
+DB_CONNECTIONS = 20  # simultaneous connections one database user may hold
 
 
 class Databases:
@@ -90,7 +91,7 @@ class Databases:
         self._own(p["account"], p["name"], "user")
         if p["name"] in self.db.users_with(p["account"] + "_"):
             raise HandlerError("exists", "That database user already exists.")
-        self.db.create_user(p["name"], native_hash(p["password"]))
+        self.db.create_user(p["name"], native_hash(p["password"]), max_connections=DB_CONNECTIONS)  # one tenant cannot use every connection the server has
         return "created", {}
 
     def set_password(self, p):

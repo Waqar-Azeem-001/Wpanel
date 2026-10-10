@@ -49,6 +49,7 @@ class HostingAccount(TimeStampedModel):
     # Snapshot of the product's WHM package at creation/last change, so a later
     # rename or reconfiguration of the product doesn't retroactively rewrite history.
     package_name = models.CharField(max_length=100, blank=True)
+    limit_alerts = models.JSONField(default=dict, blank=True, help_text="Which usage warnings have already been sent this month, so each is sent once (native hosting).")
     mail_server = models.ForeignKey("products.Server", null=True, blank=True, on_delete=models.SET_NULL, related_name="mail_accounts",
                                     help_text="Native hosting only: the separate mail node that holds this account's mailboxes (chosen when mail is first used).")
     suspend_reason = models.CharField(max_length=500, blank=True)

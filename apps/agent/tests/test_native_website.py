@@ -37,14 +37,14 @@ def test_creating_a_website_makes_the_user_folders_pool_unit_slice_and_vhost(mac
     assert system.users == {"abcd1234": 2000}
     assert "/home/abcd1234/sites/acme.com/public_html/index.html" in system.files
     vhost = system.files["/etc/httpd/conf.d/whp/abcd1234-acme.com.conf"]
-    assert "ServerName acme.com" in vhost and "proxy:unix:/run/whp/php/abcd1234.sock" in vhost and "Options -Indexes" in vhost
+    assert "ServerName acme.com" in vhost and "proxy:unix:/run/whp-php/abcd1234/php.sock" in vhost and "Options -Indexes" in vhost
     pool = system.files["/etc/whp/php/abcd1234.conf"]
-    assert "user = abcd1234" in pool and "open_basedir] = /home/abcd1234" in pool and "disable_functions" in pool and "pm.max_children = 10" in pool
+    assert "user =" not in pool and "listen.acl_users = apache" in pool and "open_basedir] = /home/abcd1234" in pool and "disable_functions" in pool and "pm.max_children = 10" in pool
     unit = system.files["/etc/systemd/system/whp-php-abcd1234.service"]
-    assert "Slice=whp-abcd1234.slice" in unit and "/opt/remi/php83/root/usr/sbin/php-fpm" in unit and "NoNewPrivileges=yes" in unit
+    assert "Slice=whp-abcd1234.slice" in unit and "User=abcd1234" in unit and "/opt/remi/php83/root/usr/sbin/php-fpm" in unit and "NoNewPrivileges=yes" in unit and "ProtectHome=tmpfs" in unit
     limits = system.files["/etc/systemd/system/whp-abcd1234.slice"]
     assert "MemoryMax=512M" in limits and "CPUQuota=50%" in limits and "TasksMax=40" in limits
-    assert ["xfs_quota", "-x", "-c", "limit -p bsoft=1843m bhard=2048m 2000", "/home"] in system.commands
+    assert ["xfs_quota", "-x", "-c", "limit -p bsoft=1843m bhard=2048m isoft=225000 ihard=250000 2000", "/home"] in system.commands
     assert json.loads(system.files["/var/lib/whp/accounts/abcd1234.json"])["limits"]["disk_mb"] == 2048
 
 

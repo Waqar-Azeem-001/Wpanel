@@ -130,13 +130,15 @@ LIMIT_FIELDS = {
 MAIL_LIMITS = {"max_mailboxes": Field("int", low=0, high=100_000, required=False), "max_forwarders": Field("int", low=0, high=100_000, required=False),
                "max_quota_mb": Field("int", low=1, high=1_000_000, required=False), "emails_per_hour": Field("int", low=1, high=100_000, required=False)}
 DATABASES_FIELD = Field("int", low=0, high=100_000, required=False)  # how many databases the account may have
+INODES_FIELD = Field("int", low=1000, high=50_000_000, required=False)  # how many files and folders the account may own
+IO_FIELD = Field("int", low=1, high=10_000, required=False)  # disk I/O share against other accounts (systemd IOWeight)
 SFTP_FIELD = Field("int", low=0, high=10_000, required=False)  # how many extra SFTP logins
 
 
 COMMANDS = {c.name: c for c in [
-    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS), **LIMIT_FIELDS, "databases": DATABASES_FIELD, "sftp_accounts": SFTP_FIELD}, 180,
+    Command("CREATE_WEBSITE", {"account": _f("account"), "domain": _f("domain"), "php_version": _f("enum", choices=PHP_VERSIONS), **LIMIT_FIELDS, "databases": DATABASES_FIELD, "sftp_accounts": SFTP_FIELD, "inodes": INODES_FIELD, "io_weight": IO_FIELD}, 180,
             description="Make the isolated hosting environment: user, folders, web and PHP-FPM configuration, resource limits."),
-    Command("SET_LIMITS", {"account": _f("account"), **{k: Field(f.kind, low=f.low, high=f.high) for k, f in LIMIT_FIELDS.items()}, "databases": DATABASES_FIELD, "sftp_accounts": SFTP_FIELD}, 60,
+    Command("SET_LIMITS", {"account": _f("account"), **{k: Field(f.kind, low=f.low, high=f.high) for k, f in LIMIT_FIELDS.items()}, "databases": DATABASES_FIELD, "sftp_accounts": SFTP_FIELD, "inodes": INODES_FIELD, "io_weight": IO_FIELD}, 60,
             description="Change an account's disk quota and CPU, memory and process limits."),
     Command("SUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Stop serving the account's sites (a suspended page is shown) and stop its PHP."),
     Command("UNSUSPEND_WEBSITE", {"account": _f("account")}, 60, description="Undo SUSPEND_WEBSITE."),
@@ -216,6 +218,8 @@ COMMANDS = {c.name: c for c in [
     Command("BACKUP_TEST_RESTORE", {"account": _f("account"), "snapshot_id": _f("snapshot")}, 3600,
             description="Restore a backup into a scratch folder, compare every file with the list made at backup time, and throw the copy away. Touches nothing live."),
     Command("BACKUP_NODE_CONFIG", {}, 600, idempotent=False, max_attempts=1, description="Back up this node's own configuration (what is needed to rebuild it), never its backup keys."),
+    Command("USAGE_REPORT", {"account": _f("account"), "days": _f("int", low=1, high=90)}, 60, description="What the account uses now, its recent daily history, and its live CPU, memory, process and I/O figures."),
+    Command("ISOLATION_CHECK", {}, 120, description="Check this node against the isolation baseline and every account's installed limits against what the plan says."),
     Command("REMOVE_SSL", {"account": _f("account"), "domain": _f("domain")}, 60, description="Remove the certificate; the site is served without HTTPS."),
     Command("SSL_STATUS", {"account": _f("account")}, 30, description="Read the account's certificate (issuer, dates, renewal and redirect settings)."),
     Command("SET_SSL_OPTIONS", {"account": _f("account"), "domain": _f("domain"), "auto_renew": _f("enum", choices=("yes", "no")),

@@ -38,6 +38,7 @@
       <span class="site-pill {% if r.state == 'healthy' %}is-ok{% elif r.state == 'degraded' or r.state == 'pending' %}is-warn{% else %}is-danger{% endif %} ms-1">{{ r.state|title }}</span></h2>
     {% if can_manage %}<div class="d-flex gap-2">
       {% if r.node.status != 'enrolled' %}<form method="post" action="{% url 'agent_staff:invite' r.node.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">New enrolment token</button></form>{% endif %}
+      {% if r.node.status == 'enrolled' %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'agent_staff:isolation' r.node.pk %}">Isolation check</a>{% endif %}
       {% if r.node.status == 'enrolled' %}<form method="post" action="{% url 'agent_staff:revoke' r.node.pk %}" data-confirm="Revoke this node? It will stop working immediately.">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Revoke</button></form>{% endif %}
     </div>{% endif %}
   </div>

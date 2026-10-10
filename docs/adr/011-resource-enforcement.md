@@ -25,3 +25,6 @@ The 'what the plan allows' numbers the gateway already shows (H11) become real l
 
 ## Open questions
 Per-plan numbers and what happens when a limit is hit (throttle, suspend, notify).
+
+## Follow-up (N9)
+Built (see `docs/n9-resource-isolation.md`). The 'what happens when a limit is hit' question is answered for now as: disk is refused by the quota, CPU/memory/processes are held by the slice, bandwidth is measured and the customer is warned at 90% and 100%, with `NATIVE_BANDWIDTH_OVER_ACTION` choosing notify (default) or suspend. The load test the ADR asks for exists but **has not been run**.

@@ -8,7 +8,7 @@ import re
 SECURE = "https"  # written separately: the site-wide check forbids a hand-typed address in code
 SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
 
-DEFAULTS = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100, "databases": 10, "sftp_accounts": 5}
+DEFAULTS = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100, "databases": 10, "sftp_accounts": 5, "inodes": 250000, "io_weight": 100}
 PHP_BINARY = "/opt/remi/php{nodot}/root/usr/sbin/php-fpm"
 
 
@@ -28,7 +28,7 @@ def limits_of(params):
 
 def paths(account, domain=None):
     home = f"/home/{account}"
-    out = {"home": home, "logs": f"{home}/logs", "tmp": f"{home}/tmp", "sock": f"/run/whp/php/{account}.sock", "fpm_conf": f"/etc/whp/php/{account}.conf",
+    out = {"home": home, "logs": f"{home}/logs", "tmp": f"{home}/tmp", "rundir": f"/run/whp-php/{account}", "sock": f"/run/whp-php/{account}/php.sock", "fpm_conf": f"/etc/whp/php/{account}.conf",
            "unit": f"/etc/systemd/system/whp-php-{account}.service", "slice": f"/etc/systemd/system/whp-{account}.slice", "state": f"/var/lib/whp/accounts/{account}.json"}
     if domain:
         out.update({"docroot": f"{home}/sites/{domain}/public_html", "site": f"{home}/sites/{domain}", "vhost": f"/etc/httpd/conf.d/whp/{account}-{domain}.conf"})
@@ -56,28 +56,41 @@ def vhost(account, domain, suspended=False, ssl=None):
 
 
 def fpm_conf(account, limits):
+    """One PHP-FPM master for one account, started by systemd as that account's own user (never as root), so it needs no ``user`` line: it can only ever act as the account."""
     _safe(account)
     p = paths(account)
     children = max(2, min(limits["processes"] // 4, 50))
-    return (f"; managed by WH Agent - do not edit by hand\n[global]\npid = /run/whp/php/{account}.pid\nerror_log = {p['logs']}/php-fpm.log\ndaemonize = no\n\n"
-            f"[{account}]\nuser = {account}\ngroup = {account}\nlisten = {p['sock']}\nlisten.owner = apache\nlisten.group = apache\nlisten.mode = 0660\n"
-            f"pm = ondemand\npm.max_children = {children}\npm.process_idle_timeout = 20s\npm.max_requests = 500\n"
+    return (f"; managed by WH Agent - do not edit by hand\n[global]\npid = {p['rundir']}/php-fpm.pid\nerror_log = {p['logs']}/php-fpm.log\ndaemonize = no\nrlimit_files = 4096\n\n"
+            f"[{account}]\nlisten = {p['sock']}\nlisten.acl_users = apache\nlisten.mode = 0660\n"
+            f"pm = ondemand\npm.max_children = {children}\npm.process_idle_timeout = 20s\npm.max_requests = 500\nrequest_terminate_timeout = 120s\nsecurity.limit_extensions = .php\n"
             f"php_admin_value[open_basedir] = {p['home']}:{p['tmp']}:/usr/share/php\nphp_admin_value[upload_tmp_dir] = {p['tmp']}\n"
             f"php_admin_value[session.save_path] = {p['tmp']}\nphp_admin_value[sys_temp_dir] = {p['tmp']}\n"
             f"php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec\nphp_admin_flag[expose_php] = off\n"
             f"php_admin_value[memory_limit] = {min(limits['memory_mb'], 512)}M\n")
 
 
+# What every account's PHP service must carry. ``isolation.check_account`` compares an installed unit against this list, so a unit that was changed by hand is noticed.
+UNIT_HARDENING = ("NoNewPrivileges=yes", "PrivateTmp=yes", "PrivateDevices=yes", "ProtectSystem=strict", "ProtectHome=tmpfs", "ProtectKernelTunables=yes", "ProtectKernelModules=yes",
+                  "ProtectKernelLogs=yes", "ProtectControlGroups=yes", "ProtectClock=yes", "ProtectHostname=yes", "RestrictNamespaces=yes", "RestrictRealtime=yes",
+                  "RestrictSUIDSGID=yes", "LockPersonality=yes", "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6", "CapabilityBoundingSet=", "SystemCallFilter=@system-service",
+                  "SystemCallFilter=~@privileged", "UMask=0027", "LimitNOFILE=4096")
+
+
 def unit(account, php_version):
     _safe(account, php_version)
     p = paths(account)
-    return (f"# managed by WH Agent - do not edit by hand\n[Unit]\nDescription=PHP {php_version} for hosting account {account}\nAfter=network.target\n\n[Service]\n"
-            f"Type=simple\nSlice=whp-{account}.slice\nExecStart={PHP_BINARY.format(nodot=nodot(php_version))} --nodaemonize --fpm-config {p['fpm_conf']}\n"
-            f"RuntimeDirectory=whp/php\nRuntimeDirectoryPreserve=yes\nNoNewPrivileges=yes\nProtectSystem=full\nPrivateDevices=yes\nProtectKernelTunables=yes\n"
-            f"Restart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n")
+    lines = ["# managed by WH Agent - do not edit by hand", "[Unit]", f"Description=PHP {php_version} for hosting account {account}", "After=network.target", "", "[Service]", "Type=simple",
+             f"User={account}", f"Group={account}", f"Slice=whp-{account}.slice",
+             f"ExecStart={PHP_BINARY.format(nodot=nodot(php_version))} --nodaemonize --fpm-config {p['fpm_conf']}",
+             f"RuntimeDirectory=whp-php/{account}", "RuntimeDirectoryMode=0755",
+             f"ReadWritePaths={p['home']}", f"BindPaths={p['home']}",  # ProtectHome=tmpfs hides every other account's folder: this account sees only its own
+             *UNIT_HARDENING, "Restart=on-failure", "", "[Install]", "WantedBy=multi-user.target", ""]
+    return "\n".join(lines)
 
 
 def slice_unit(account, limits):
     _safe(account)
+    high = max(64, int(limits["memory_mb"] * 0.9))
     return (f"# managed by WH Agent - do not edit by hand\n[Unit]\nDescription=Resource limits for hosting account {account}\n\n[Slice]\n"
-            f"MemoryMax={limits['memory_mb']}M\nMemorySwapMax=0\nCPUQuota={limits['cpu_percent']}%\nTasksMax={limits['processes']}\nIOWeight=100\n")
+            f"CPUAccounting=yes\nMemoryAccounting=yes\nTasksAccounting=yes\nIOAccounting=yes\n"
+            f"MemoryHigh={high}M\nMemoryMax={limits['memory_mb']}M\nMemorySwapMax=0\nCPUQuota={limits['cpu_percent']}%\nTasksMax={limits['processes']}\nIOWeight={limits['io_weight']}\n")

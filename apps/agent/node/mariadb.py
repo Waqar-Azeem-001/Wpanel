@@ -49,8 +49,10 @@ class FakeMariadb:
     def users_with(self, prefix):
         return sorted(u for u in self.users if u.startswith(prefix))
 
-    def create_user(self, name, password_hash):
+    def create_user(self, name, password_hash, max_connections=None):
         self.users[ident(name)] = password_hash
+        self.max_connections = getattr(self, "max_connections", {})
+        self.max_connections[name] = max_connections
 
     def set_hash(self, name, password_hash):
         self.users[ident(name)] = password_hash
@@ -122,10 +124,11 @@ class RealMariadb:
     def users_with(self, prefix):
         return [r[0] for r in self._sql(f"SELECT user FROM mysql.user WHERE user LIKE '{ident(prefix.rstrip('_'))}\\_%' AND host='localhost' ORDER BY 1;")]
 
-    def create_user(self, name, password_hash):
+    def create_user(self, name, password_hash, max_connections=None):
         if not re.fullmatch(r"\*[0-9A-F]{40}", password_hash):
             raise SystemError_("Not a password hash.")
-        self._sql(f"CREATE USER '{ident(name)}'@'localhost' IDENTIFIED BY PASSWORD '{password_hash}';")
+        limit = f" WITH MAX_USER_CONNECTIONS {int(max_connections)}" if max_connections else ""
+        self._sql(f"CREATE USER '{ident(name)}'@'localhost' IDENTIFIED BY PASSWORD '{password_hash}'{limit};")
 
     def set_hash(self, name, password_hash):
         if not re.fullmatch(r"\*[0-9A-F]{40}", password_hash):

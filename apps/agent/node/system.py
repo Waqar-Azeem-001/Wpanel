@@ -10,6 +10,7 @@ import os
 import posixpath
 import subprocess
 
+READ_ONLY_ROOTS = ("/proc/", "/sys/fs/cgroup/")  # the agent may read these (to check isolation and measure use), never write them
 ALLOWED_ROOTS = ("/home/", "/etc/", "/var/lib/whp/", "/var/log/whp/", "/var/backups/whp/", "/run/whp/", "/srv/whp/", "/var/mail/")
 
 
@@ -17,11 +18,11 @@ class SystemError_(Exception):
     """A step failed on the machine."""
 
 
-def check_path(path):
+def check_path(path, read_only=False):
     clean = posixpath.normpath(path)
     if not clean.startswith("/") or clean != path.rstrip("/") or ".." in path.split("/") or "\x00" in path:
         raise SystemError_(f"Refused path {path!r}.")
-    if not any((clean + "/").startswith(root) for root in ALLOWED_ROOTS):
+    if not any((clean + "/").startswith(root) for root in ALLOWED_ROOTS + (READ_ONLY_ROOTS if read_only else ())):
         raise SystemError_(f"Path {path!r} is outside the places the agent may touch.")
     return clean
 
@@ -38,19 +39,19 @@ class FakeSystem:
         return check_path(path) in self.files or check_path(path) in self.dirs
 
     def read(self, path):
-        return self.files.get(check_path(path))
+        return self.files.get(check_path(path, read_only=True))
 
     def list(self, prefix):
         """Paths of the files under a folder."""
         return sorted(p for p in self.files if p.startswith(check_path(prefix.rstrip('/')) + '/'))
 
-    def write(self, path, content, mode=0o644, owner="root"):
+    def write(self, path, content, mode=0o644, owner="root", group=None):
         self.files[check_path(path)] = content
-        self.commands.append(["write", path, oct(mode), owner])
+        self.commands.append(["write", path, oct(mode), owner] + ([group] if group else []))
 
-    def mkdir(self, path, mode=0o755, owner="root"):
+    def mkdir(self, path, mode=0o755, owner="root", group=None):
         self.dirs.add(check_path(path))
-        self.commands.append(["mkdir", path, oct(mode), owner])
+        self.commands.append(["mkdir", path, oct(mode), owner] + ([group] if group else []))
 
     def remove(self, path):
         clean = check_path(path)
@@ -95,27 +96,28 @@ class RealSystem:
 
     def read(self, path):
         try:
-            with open(check_path(path), encoding="utf-8") as handle:
+            with open(check_path(path, read_only=True), encoding="utf-8") as handle:
                 return handle.read()
         except FileNotFoundError:
             return None
 
-    def write(self, path, content, mode=0o644, owner="root"):
+    def write(self, path, content, mode=0o644, owner="root", group=None):
         clean = check_path(path)
         os.makedirs(posixpath.dirname(clean), exist_ok=True)
         temp = clean + ".whp-tmp"
         with open(os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode), "w", encoding="utf-8") as handle:
             handle.write(content)
-        if owner != "root":
-            self.run(["chown", owner + ":" + owner, temp])
+        if owner != "root" or group:
+            self.run(["chown", f"{owner}:{group or owner}", temp])
         os.replace(temp, clean)  # a half-written file is never visible
 
-    def mkdir(self, path, mode=0o755, owner="root"):
+    def mkdir(self, path, mode=0o755, owner="root", group=None):
         clean = check_path(path)
         os.makedirs(clean, mode=mode, exist_ok=True)
         os.chmod(clean, mode)
-        if owner != "root":
-            self.run(["chown", owner + ":" + owner, clean])
+        if owner != "root" or group:
+            self.run(["chown", f"{owner}:{group or owner}", clean])
+            os.chmod(clean, mode)  # chown clears the setgid bit on some systems: set the mode again afterwards
 
     def remove(self, path):
         clean = check_path(path)

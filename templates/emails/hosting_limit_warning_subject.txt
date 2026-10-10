@@ -1,0 +1,1 @@
+{{ account.domain }} is {% if state == "over" %}over{% else %}close to{% endif %} its {{ resource }} limit - {{ site_name }}

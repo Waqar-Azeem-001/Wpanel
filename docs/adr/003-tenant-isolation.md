@@ -29,3 +29,6 @@ No licence cost; the hardening baseline and its test become permanent maintenanc
 
 ## Open questions
 Is the business willing to carry this hardening work, or should native nodes also use CloudLinux until the roadmap's later stages?
+
+## Follow-up (N9)
+The hardening baseline and the cross-tenant probe exist (`docs/n9-resource-isolation.md`, `apps/agent/node/probe.py`) but **the probe has never been run on a node**, so the property this ADR depends on is not yet demonstrated. CloudLinux stays the fallback.

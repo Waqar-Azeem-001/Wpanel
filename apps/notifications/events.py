@@ -84,6 +84,7 @@ EVENTS = _events(
           sensitive=True),
     Event("hosting.suspended", "A hosting account was suspended", C.SERVICES, "hosting_suspended", essential=True),
     Event("hosting.terminated", "A hosting account was terminated", C.SERVICES, "hosting_terminated", essential=True),
+    Event("hosting.limit_warning", "A hosting account is close to or over a limit", C.SERVICES, "hosting_limit_warning", essential=True),
     Event("hosting.unsuspended", "A hosting account was reactivated", C.SERVICES, "hosting_unsuspended"),
     Event("cancellation.requested", "We received your cancellation request", C.SERVICES,
           "cancellation_requested", essential=True),

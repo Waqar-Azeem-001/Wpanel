@@ -382,6 +382,8 @@ AGENT_SIGNING_KEY = env("AGENT_SIGNING_KEY", default="")
 # N2: set True once the reverse proxy does mutual TLS and passes the verified client certificate fingerprint in AGENT_CERT_HEADER (it must strip any copy sent by clients)
 # N8: where `manage.py backup_panel` writes the panel's own encrypted database backups (copy them away from this server)
 PANEL_BACKUP_DIR = env("PANEL_BACKUP_DIR", default=str(BASE_DIR / "panel_backups"))
+# N9: what to do when a native account uses more than its monthly bandwidth: "notify" (tell the customer) or "suspend" (take the site offline until next month or until staff reactivate it)
+NATIVE_BANDWIDTH_OVER_ACTION = env("NATIVE_BANDWIDTH_OVER_ACTION", default="notify")
 AGENT_REQUIRE_CLIENT_CERT = env.bool("AGENT_REQUIRE_CLIENT_CERT", default=False)
 AGENT_CERT_HEADER = "X-Client-Cert-Fingerprint"
 # N5: the PowerDNS API that serves native hosting zones (ADR 07). Blank means native DNS is not offered.

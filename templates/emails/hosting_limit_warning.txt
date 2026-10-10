@@ -1,0 +1,14 @@
+{% autoescape off %}Hello,
+
+Your hosting account for {{ account.domain }} is {% if state == "over" %}over{% else %}close to{% endif %} its {{ resource }} limit: {{ used }} MB used of {{ limit }} MB ({{ percent }}%).
+{% if action %}
+{{ action }}
+{% elif state == "over" %}{% if resource == "disk space" %}
+Your website cannot save new files until you free up space or upgrade your plan.{% else %}
+Please upgrade your plan to avoid interruptions.{% endif %}{% else %}
+Free up some space or upgrade your plan before it runs out.{% endif %}
+
+See your usage: {{ site_url }}{{ link }}
+
+{{ site_name }}
+{% endautoescape %}

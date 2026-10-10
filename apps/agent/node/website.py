@@ -50,10 +50,11 @@ class Websites:
         self.s.run(["httpd", "-t"])  # a bad config is caught before it can take every site down
         self.s.run(["systemctl", "reload", "httpd"])
 
-    def _quota(self, account, disk_mb):
+    def _quota(self, account, disk_mb, inodes=render.DEFAULTS["inodes"]):
+        """Disk space and number of files for the whole account, in one project quota. The file limit stops a tenant filling the disk with millions of tiny files."""
         uid = self.s.uid(account)
         self.s.run(["xfs_quota", "-x", "-c", f"project -s -p /home/{account} {uid}", "/home"])
-        self.s.run(["xfs_quota", "-x", "-c", f"limit -p bsoft={int(disk_mb * 0.9)}m bhard={disk_mb}m {uid}", "/home"])
+        self.s.run(["xfs_quota", "-x", "-c", f"limit -p bsoft={int(disk_mb * 0.9)}m bhard={disk_mb}m isoft={int(inodes * 0.9)} ihard={inodes} {uid}", "/home"])
 
     # --- commands ---------------------------------------------------------------------------------------------------------------------
     def run(self, command, params):
@@ -83,11 +84,15 @@ class Websites:
             self.s.run(["useradd", "--create-home", "--home-dir", paths["home"], "--shell", "/sbin/nologin", "--user-group", account])
             undo.append(lambda: self.s.run(["userdel", "--remove", account]))
             uid = self.s.uid(account)
-            self.s.mkdir(paths["home"], 0o755)  # root-owned: OpenSSH only chroots into folders root owns; the account's own folders below it are its own
-            for folder, mode in ((f"{paths['home']}/sites", 0o755), (paths["site"], 0o755), (paths["docroot"], 0o755), (paths["logs"], 0o750), (paths["tmp"], 0o700)):
-                self.s.mkdir(folder, mode, account)
-            self.s.write(f"{paths['docroot']}/index.html", INDEX.format(domain=domain), 0o644, account)
-            self._quota(account, limits["disk_mb"])
+            # Isolation (N9): the home folder is root's (OpenSSH needs that to chroot) and only the web server's group may pass through it, so no other tenant can look inside. The
+            # account's own folders are group "apache" with the setgid bit: whatever PHP creates inherits that group, so the web server can read it and nobody else can.
+            self.s.mkdir(paths["home"], 0o710, "root", "apache")
+            for folder, mode in ((f"{paths['home']}/sites", 0o2750), (paths["site"], 0o2750), (paths["docroot"], 0o2750)):
+                self.s.mkdir(folder, mode, account, "apache")
+            self.s.mkdir(paths["logs"], 0o750, account)
+            self.s.mkdir(paths["tmp"], 0o700, account)
+            self.s.write(f"{paths['docroot']}/index.html", INDEX.format(domain=domain), 0o640, account, "apache")
+            self._quota(account, limits["disk_mb"], limits["inodes"])
             undo.append(lambda: self.s.run(["xfs_quota", "-x", "-c", f"limit -p bsoft=0 bhard=0 {uid}", "/home"]))
             self.s.write(paths["slice"], render.slice_unit(account, limits))
             self.s.write(paths["fpm_conf"], render.fpm_conf(account, limits))
@@ -155,7 +160,7 @@ class Websites:
         if limits == state["limits"]:
             return "unchanged", {}
         paths = render.paths(p["account"])
-        self._quota(p["account"], limits["disk_mb"])
+        self._quota(p["account"], limits["disk_mb"], limits["inodes"])
         self.s.write(paths["slice"], render.slice_unit(p["account"], limits))
         self.s.write(paths["fpm_conf"], render.fpm_conf(p["account"], limits))
         self.s.run(["systemctl", "daemon-reload"])

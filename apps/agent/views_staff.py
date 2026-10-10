@@ -9,7 +9,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.products.models import Server, ServerKind
 
-from . import backup_repo, enrollment, reputation
+from . import backup_repo, enrollment, reputation, services
 from .models import AgentNode, BackupRepository, NodeStatus
 
 
@@ -144,6 +144,18 @@ def node_reputation(request, pk):
     result = reputation.check_node(node)
     messages.success(request, "No problems found." if result["ok"] else "There is a problem: see the mail reputation line.")
     return redirect("agent_staff:nodes")
+
+
+@portal_permission_required(perm("view_hosting"))
+def node_isolation(request, pk):
+    """Ask the node to check itself against the isolation baseline and every account's installed limits. Read-only on the node."""
+    node = get_object_or_404(AgentNode.objects.select_related("server"), pk=pk, status=NodeStatus.ENROLLED)
+    try:
+        report = services.call(node.server, "ISOLATION_CHECK", {}, wait=60, user=request.user)
+        error = ""
+    except ServiceError as exc:
+        report, error = None, exc.message
+    return render(request, "agent/staff/isolation.html", {"node": node, "report": report, "error": error})
 
 
 @require_POST

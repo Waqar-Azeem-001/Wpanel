@@ -932,11 +932,11 @@ controls and disaster-recovery procedures.
 ------------------------------------------------------------------------
 
 ## N9 --- Resource Isolation & Limits
-
+                                                                  
 Production shared hosting must enforce:
 
 -   CPU
--   RAM
+-   RAM                 
 -   disk
 -   processes
 -   I/O
@@ -950,7 +950,7 @@ One compromised/noisy tenant must not materially affect unrelated
 tenants.
 
 This is a production-security milestone.
-
+                                                            
 ------------------------------------------------------------------------
 
 ## N10 --- Monitoring & Controlled Self-Healing

@@ -13,6 +13,7 @@ from . import native_dns
 from .native_backups import NativeBackups
 from .native_dns import NativeDns
 from .native_files import NativeFiles, NativeFtp
+from .native_insights import NativeInsights
 from .native_mail import NativeEmail
 from .native_ssl import NativeSsl
 
@@ -22,7 +23,7 @@ COUNT_KEYS = {"databases": "databases", "ftp_accounts": "sftp_accounts"}  # the 
 UNLIMITED = 1000
 
 
-class NativeAdapter(NativeBackups, NativeEmail, NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
+class NativeAdapter(NativeInsights, NativeBackups, NativeEmail, NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
     server = None  # set by the registry
     read_cache_seconds = 20  # every read is a trip to the node; the gateway remembers answers briefly and forgets them after any change
 
@@ -54,6 +55,12 @@ class NativeAdapter(NativeBackups, NativeEmail, NativeFiles, NativeFtp, NativeDa
         product = Product.objects.filter(whm_package_name=package).first()
         limits = product.resource_limits if product and isinstance(product.resource_limits, dict) else {}
         found = {k: limits[k] for k in LIMIT_KEYS if isinstance(limits.get(k), int) and not isinstance(limits.get(k), bool) and limits[k] > 0}
+        for plan_key, node_key, ceiling in (("inodes", "inodes", 50_000_000), ("io_weight", "io_weight", None)):
+            value = limits.get(plan_key)
+            if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+                found[node_key] = value
+            elif plan_key in limits and value is None and ceiling:
+                found[node_key] = ceiling  # a plan that says "no limit on files" still gets the largest the node accepts
         for plan_key, node_key in COUNT_KEYS.items():
             if plan_key in limits:  # the plan says how many: a number (0 means none), or blank for unlimited
                 value = limits[plan_key]
@@ -126,6 +133,20 @@ class NativeAdapter(NativeBackups, NativeEmail, NativeFiles, NativeFtp, NativeDa
         return {"suspended": bool(account and account.status == HostingStatus.SUSPENDED), "domain": account.domain if account else ""}
 
     def get_usage(self, username):
-        return {"disk_used_mb": None, "disk_limit_mb": None, "bandwidth_used_mb": None, "bandwidth_limit_mb": None}  # N3 has no usage command yet: not reported, not zero
+        from apps.agent import services as agent
+        from apps.core.exceptions import ServiceError
+        from apps.products.models import Product
+
+        account = self._account(username)
+        try:
+            data = agent.call(self.server, "USAGE_REPORT", {"account": username, "days": 1}, wait=60)
+        except ServiceError as exc:
+            raise HostingError(exc.message) from exc
+        product = Product.objects.filter(whm_package_name=account.package_name).first() if account else None
+        plan = product.resource_limits if product and isinstance(product.resource_limits, dict) else {}
+        bandwidth_limit = plan.get("bandwidth_mb")
+        return {"disk_used_mb": round(data["now"]["disk_mb"] + data["now"]["db_mb"]), "disk_limit_mb": data["limits"]["disk_mb"],  # database data counts against the disk allowance too
+                "bandwidth_used_mb": round(data["now"]["bandwidth_month_mb"]),
+                "bandwidth_limit_mb": bandwidth_limit if isinstance(bandwidth_limit, int) and not isinstance(bandwidth_limit, bool) and bandwidth_limit > 0 else None}
 
 

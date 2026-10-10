@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Isolation check · {{ node.server.name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Isolation check: {{ node.server.name }}</h1>
+  <p class="page-sub">Is this node set up so one tenant cannot harm another, and does every account still have the limits its plan says? This only reads. <strong>It is necessary but not enough:</strong> the cross-tenant probe and the noisy-neighbour load test
+    (see docs/n9-resource-isolation.md) must also have been run on this node before it takes customers; nothing here can tell whether they were.</p>
+  <a href="{% url 'agent_staff:nodes' %}">&larr; Native nodes</a>
+</div>
+{% if error %}<div class="alert alert-danger">The node did not answer: {{ error }}</div>{% endif %}
+{% if report %}
+<p><span class="site-pill {% if report.ok %}is-ok{% else %}is-danger{% endif %}">{% if report.ok %}No problems found{% else %}Problems found{% endif %}</span></p>
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">The node</h2></div>
+  <table class="table mb-0"><tbody>
+  {% for c in report.baseline %}<tr><td style="width:2rem">{% if c.ok %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+    <td><strong>{{ c.name }}</strong><br><small class="text-secondary">{{ c.why }}</small></td><td><small>{{ c.detail }}</small></td></tr>{% endfor %}
+  </tbody></table></section>
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">Accounts that differ from their plan</h2></div>
+  <div class="card-body">{% for account, issues in report.accounts.items %}<p class="mb-1"><strong>{{ account }}</strong></p><ul>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% empty %}<p class="mb-0 text-secondary">Every account matches.</p>{% endfor %}</div></section>
+{% endif %}
+{% endblock %}

@@ -55,7 +55,7 @@ class NativeMachine(FakeMachine):
     SFTP = ("SFTP_LIST", "SFTP_CREATE", "SFTP_SET_PASSWORD", "SFTP_DELETE")
     MAIL_EXTRA = ("CREATE_MAILBOX",)  # an older name for a mail command
 
-    def __init__(self, system=None, files_dir=None, mail_dir=None, bucket_dir=None):
+    def __init__(self, system=None, files_dir=None, mail_dir=None, bucket_dir=None, cgroup_dir=None):
         from .node.system import FakeSystem
         from .node.website import Websites
 
@@ -96,6 +96,13 @@ class NativeMachine(FakeMachine):
             return FakeRestic(self.bucket_dir / match.group(1) / match.group(2), env["RESTIC_PASSWORD"])
 
         self.backups = Backups(self.system, restic_for, root_for, self.engine, self.files_dir / "_stage" if self.files_dir else _P("."), mail=self.mail, websites=self.websites)
+        from .node.isolation import Isolation
+        from .node.usage import Usage
+
+        self.cgroup_dir = cgroup_dir or "/nonexistent"
+        self.usage = Usage(self.system, root_for, self.engine, self.websites, log_for=lambda account: (self.files_dir / account / "access.log") if self.files_dir else None,
+                           cgroup_root=self.cgroup_dir, now=lambda: self.clock())
+        self.isolation = Isolation(self.system, self.websites)
         self.acme = FakeAcme()
         self.ssl = Ssl(self.system, self.acme)
 
@@ -103,6 +110,12 @@ class NativeMachine(FakeMachine):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command == "USAGE_REPORT":
+            self.executed.append(command)
+            return self.usage.run(command, p)
+        if command == "ISOLATION_CHECK":
+            self.executed.append(command)
+            return self.isolation.run(command, p)
         if command.startswith("BACKUP_"):
             self.executed.append(command)
             return self.backups.run(command, p)
