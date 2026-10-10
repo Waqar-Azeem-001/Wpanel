@@ -167,6 +167,13 @@ class ReferenceAgent:
         return self.client.post(url, data=body or {}, content_type="application/json", HTTP_AUTHORIZATION="Agent " + self.token,
                                 HTTP_X_AGENT_VERSION=self.version)
 
+    def maintenance_once(self, log_lines=None):
+        """The agent's recurring jobs (usage record, certificate renewal, mail abuse scan, node-configuration backup), each only when it is due."""
+        from .node.scheduler import Scheduler, standard_jobs
+
+        accounts = lambda: [p.rsplit("/", 1)[1][:-5] for p in self.machine.system.list("/var/lib/whp/accounts/") if p.endswith(".json") and ".cpu" not in p]  # noqa: E731
+        return Scheduler(self.machine.system, standard_jobs(self.machine, accounts, log_lines), now=lambda: self.machine.clock()).run_due()
+
     def heartbeat_once(self):
         """Report the node's own figures, the way the real agent does every half minute or so."""
         return self._post("/api/agent/v1/heartbeat/", self.machine.metrics.collect())

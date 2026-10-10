@@ -1,0 +1,107 @@
+{
+ "cases": [
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9",
+    "signature": "iFWWp5vxgPmhthtFk9kTNnL76Gh319Dg3+bVOgpvAwhSyle0V6n+7mBrBxjTdNMuBG41TYwNN9W2Juc/NnnJCg=="
+   },
+   "name": "good",
+   "ok": true
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjogIkNSRUFURV9EQVRBQkFTRSIsICJjb3JyZWxhdGlvbl9pZCI6ICJjIiwgImV4cGlyZXNfYXQiOiAxODAwMDAwMzAwLCAiaWRlbXBvdGVuY3lfa2V5IjogImsiLCAiaXNzdWVkX2F0IjogMTgwMDAwMDAwMCwgImpvYiI6IDEsICJub2RlIjogNywgIm5vbmNlIjogIm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwgInBhcmFtcyI6IHsiYWNjb3VudCI6ICJhYmNkMTIzNCIsICJuYW1lIjogIm90aGVyX2RiIn0sICJ2IjogMX0=",
+    "signature": "iFWWp5vxgPmhthtFk9kTNnL76Gh319Dg3+bVOgpvAwhSyle0V6n+7mBrBxjTdNMuBG41TYwNN9W2Juc/NnnJCg=="
+   },
+   "name": "tampered payload",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9",
+    "signature": "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA=="
+   },
+   "name": "bad signature",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9"
+   },
+   "name": "missing signature",
+   "ok": false
+  },
+  {
+   "envelope": {},
+   "name": "empty",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo4LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9",
+    "signature": "kuRCxz5vQNVtFe4pEcoatiEiUX1PgVN6axqCBcHY/MH64Zd0nWbolHO1GsYFWYcliXeNPy2i3TQqASC0hur1Bg=="
+   },
+   "name": "another node",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjJ9",
+    "signature": "AC2Y51SRC3uEX0SKvj4hWro6wnunye12kVQqeX6h8WZbl8L6s9FILDvMlmcrUqFvq4s/3KXPaGjyCUhW2TsyBw=="
+   },
+   "name": "wrong protocol",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6InNob3J0IiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9",
+    "signature": "pgThP7xWDpLzOjFo9S5npU0J7V5eddDBxr/IY7emwQWyYvQhCQf8iIwszb9v1Zp5HFafDeWzIcbuLonG4VpTBw=="
+   },
+   "name": "short nonce",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiUlVOX1NIRUxMIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9",
+    "signature": "oZLdRIDN4NHtvJy41vBfOLaGeQkkfq8mW/VfV23A8gHKlM6nE4cELX6aK6zn1DEn+hmaMM+mxvp5P9VdT0AVDA=="
+   },
+   "name": "unknown command",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJ4O3kifSwidiI6MX0=",
+    "signature": "tyJER/7VlSJz+6WYfye6AxYgu7ZjPFwynFpIenfOYwc9qnt1GyOO+Ekv6feNZg94PBhBQidAq9vX2JQeAM+XBA=="
+   },
+   "name": "bad parameter",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTc5OTk5OTQwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTc5OTk5OTEwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9",
+    "signature": "6AxTohFyTJM/BDP1p428o+Of8bDqGWcZku80fNrNxapvFcv+cH/5a4T0IudRTM6bODbpyHhNCYAO5wuHwMVhAg=="
+   },
+   "name": "expired",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwNDAwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMzYwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIn0sInYiOjF9",
+    "signature": "77rOGazcio4TPzd/StID7znMA9DZSC/Wd7UtgnBXvz2luoSqfWJlkRmEfconAH9v42fjl/hllX6iQ/G4XfBYAw=="
+   },
+   "name": "dated in the future",
+   "ok": false
+  },
+  {
+   "envelope": {
+    "payload": "eyJjb21tYW5kIjoiQ1JFQVRFX0RBVEFCQVNFIiwiY29ycmVsYXRpb25faWQiOiJjIiwiZXhwaXJlc19hdCI6MTgwMDAwMDMwMCwiaWRlbXBvdGVuY3lfa2V5IjoiayIsImlzc3VlZF9hdCI6MTgwMDAwMDAwMCwiam9iIjoxLCJub2RlIjo3LCJub25jZSI6Im5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5uIiwicGFyYW1zIjp7ImFjY291bnQiOiJhYmNkMTIzNCIsIm5hbWUiOiJzaG9wX2RiIiwieCI6MX0sInYiOjF9",
+    "signature": "drGO1hMGzJgT/jqN9wPT3fKCuFd4nwtnUO8Z//k6F79wLRfdaV6orEVx6eIAVdsmJ1O0rLjSThaQbFV1WIXJDw=="
+   },
+   "name": "extra parameter",
+   "ok": false
+  }
+ ],
+ "node": 7,
+ "now": 1800000000,
+ "public_key": "iFwpReAXy71RlxLfL4M5XpGmdq/J2oij4dpVmQuWLTk="
+}

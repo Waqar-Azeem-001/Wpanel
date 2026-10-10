@@ -11,7 +11,7 @@ through the native provider.
 | Node handlers for create/drop database, create/drop user, password change, grants, inventory with sizes, table list/columns/paged rows, backup, restore (`apps/agent/node/databases.py`) | Built in Python, tested against `FakeMariadb` |
 | Waiting for the node (`agent.call`, long-polling) so screens get an answer now | Built, tested with an in-process agent |
 | **`RealMariadb`** (the `mariadb` client, `mariadb-dump`, `zstd`) | **Written, never run against a real MariaDB.** Known gap: `grants_of` does not yet report which privileges each grant holds |
-| Go agent | Still has none of this |
+| Go agent | Written in Go (`agent/`) for every command of this stage, checked against the Python reference by golden scenarios and against live Django end to end on a pretend machine. **The real-machine paths have never run on a real node** (see agent/README.md) |
 | Editing rows, free SQL (`run_query`, `insert_row`, `update_row`, `delete_row`) | **Not offered on native nodes.** They answer "not available yet". They would need a free-text command, which the agent deliberately does not have |
 | Backup/restore screens for a single database | Node commands and adapter methods exist (`backup_database`, `restore_database`); no screen calls them until the backup platform (N8) |
 | Per-account database disk usage in the usage page | Sizes are shown per database; not yet summed into the usage page |

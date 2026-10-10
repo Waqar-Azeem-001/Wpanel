@@ -49,6 +49,9 @@ def run_probes(attacker, victim, attempt, domain="victim.test", victim_pid=None)
         except Exception as exc:  # noqa: BLE001 - an attempt that blows up did not succeed
             results.append(ProbeResult(name, True, f"refused ({type(exc).__name__})"))
             continue
+        if succeeded is None:  # the attempt could not be made at all (for example no database login was supplied): that is not a pass
+            results.append(ProbeResult(name, False, "could not be tested"))
+            continue
         results.append(ProbeResult(name, not succeeded, "the attacker got in" if succeeded else "refused"))
     return results
 
@@ -76,14 +79,27 @@ SNIPPET = (
 
 
 class RealAttempt:
-    """UNTESTED. Makes each attempt as the attacker's own Linux user. ``users`` maps account name to (uid, gid)."""
+    """
+    UNTESTED on a node. Makes each attempt as the attacker's own Linux user. ``users`` maps account name to (uid, gid); ``db_logins`` maps account name to a (database user, password) the
+    attacker legitimately owns: with it the database probe lists every database that login can see and succeeds (badly) if any belongs to the victim. Without it the probe says "could not be tested".
+    """
 
-    def __init__(self, users):
-        self.users = users
+    def __init__(self, users, db_logins=None):
+        self.users, self.db_logins = users, db_logins or {}
+
+    def _database(self, attacker, name_prefix):
+        login = self.db_logins.get(attacker)
+        if login is None:
+            return None
+        done = subprocess.run(["mariadb", "--batch", "--skip-column-names", f"--user={login[0]}", "-e", "SHOW DATABASES"], shell=False, capture_output=True, text=True, timeout=30, check=False,
+                              env={"MYSQL_PWD": login[1], "PATH": "/usr/bin:/bin"})  # the password goes in the environment, never on the command line
+        if done.returncode != 0:
+            return False  # it could not even log in: nothing was reached
+        return any(line.startswith(name_prefix) for line in done.stdout.splitlines())
 
     def __call__(self, attacker, action, **args):
         if action == "database":
-            return False  # needs a database login of the attacker; the database probe is not built, so this probe reports "refused" without trying: do not trust it
+            return self._database(attacker, args["name_prefix"])
         uid, gid = self.users[attacker]
         if action == "see_process":
             args["uid"] = self.users[args.pop("user")][0]

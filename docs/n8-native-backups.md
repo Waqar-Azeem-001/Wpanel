@@ -18,7 +18,7 @@ and disaster-recovery procedures.
 | WHPanel's own database backup (`manage.py backup_panel`) | Built, SQLite tested (encrypted, verifiable, pruned). PostgreSQL path (`pg_dump`) **untested**. Copying the file off the server is not done by the command |
 | Restoring a whole node from backup (rebuild) | A runbook (below), **never practised**. The node-configuration snapshot is for reference and rebuilding; there is no automatic rebuild |
 | Restore of configuration (virtual hosts, units, state) | **Not automatic.** A "full" backup holds it for inspection; a restore puts back files and databases only |
-| Go agent | Has none of this |
+| Go agent | Written in Go (`agent/`) for every command of this stage, checked against the Python reference by golden scenarios and against live Django end to end on a pretend machine. **The real-machine paths have never run on a real node** (see agent/README.md) |
 
 ## How it works
 

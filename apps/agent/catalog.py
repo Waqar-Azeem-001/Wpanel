@@ -35,6 +35,8 @@ BACKUP_ID = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$")
 PHP_VERSIONS = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
 
 
+# The pattern of every kind that is "a value that must look like this". The Go agent is generated from this table (manage.py export_agent_spec), so the two cannot drift apart.
+PATTERNS = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}
 _B64 = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
 
 
@@ -100,7 +102,7 @@ class Field:
             if not 12 <= len(value) <= 128 or any(ord(c) < 32 or ord(c) == 127 for c in value):
                 raise InvalidCommand(f"{name} must be 12 to 128 printable characters.")
             return value
-        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
+        pattern = PATTERNS[self.kind]
         if not pattern.fullmatch(value):
             raise InvalidCommand(f"{name} is not a valid {self.kind.replace('_', ' ')}.")
         return value

@@ -11,7 +11,7 @@ commands in a fixed catalogue, each with typed parameters, and the agent refuses
 | Signed envelopes, replay guard (`envelope.py`) | Built, tested |
 | Job queue, leases, retries, timeouts, results, audit (`models.py`, `services.py`, `views.py`) | Built, tested |
 | Python reference agent against a fake machine (`reference_agent.py`) | Built, tested (the "machine" is a dictionary; nothing real is touched) |
-| Go agent (`agent/main.go`) | **Skeleton only. Not compiled, run or tested** (no Go on the development machine). Handlers are stubs. |
+| Go agent (`agent/main.go`) | Written in Go (`agent/`) for every command of this stage, checked against the Python reference by golden scenarios and against live Django end to end on a pretend machine. **The real-machine paths have never run on a real node** (see agent/README.md) |
 | Real work on a node (users, web server, PHP-FPM, databases) | Not started: N3 and N4 |
 | Per-node certificate / mutual TLS, one-time enrolment | Not started: N2. Until then a node is identified by a long random token (only its hash is stored). |
 | Staff screens for jobs | Not started |

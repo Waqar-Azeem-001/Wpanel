@@ -58,6 +58,7 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:access_action": "POST-only in practice; reached from the IP blocking screen forms (test_tools.py)",
     "hosting_customer:backups": "linked only for an account whose provider supports backups (the demo provider); tested in apps/hosting/tests/test_backups.py",
     "hosting_customer:backup_action": "POST-only in practice; reached from the Backups screen forms (test_backups.py)",
+    "agent_staff:isolation": "opened from a native node's row on the Native nodes screen; the crawl world has no enrolled node (tested in apps/agent/tests/test_native_isolation.py)",
     "hosting_customer:security": "linked only for an account whose provider supports the security tools (the demo provider); tested in apps/hosting/tests/test_security.py",
     "hosting_customer:security_action": "POST-only in practice; reached from the Security screen forms (test_security.py)",
     "hosting_customer:section": "the fallback page for a menu section without its own screen; every section has one now, so it is only reached by a future section (apps/hosting/tests/test_demo.py)",

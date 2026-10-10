@@ -9,7 +9,7 @@ Goal: WHPanel provisions and manages a website on a native node **without cPanel
 | WHPanel side: `NativeAdapter`, queued signed commands, outcome hook, placement, welcome email without a password | Built and tested |
 | Node side: the logic that makes, suspends, changes and deletes a hosting account (`apps/agent/node/`) | Built in **Python** and tested against `FakeSystem` (a pretend Linux machine) |
 | **Running on a real AlmaLinux node** | **Never done.** `RealSystem` and every generated config file (Apache, PHP-FPM, systemd, XFS quota commands) are untested on real hardware. Expect fixes on first contact: package paths, SELinux contexts, the Apache include line, the XFS project setup |
-| Go agent | Still an uncompiled skeleton. It does **not** implement these handlers; the Python code in `apps/agent/node/` is the specification to port |
+| Go agent | Written in Go (`agent/`) for every command of this stage, checked against the Python reference by golden scenarios and against live Django end to end on a pretend machine. **The real-machine paths have never run on a real node** (see agent/README.md) |
 | SSL, DNS, mail, databases, backups, file transfer on the node | Not part of N3 (N4+ and later) |
 
 So the milestone "WHPanel can provision a website on a native node" is met **in the control plane and in simulation**, not yet on a server.

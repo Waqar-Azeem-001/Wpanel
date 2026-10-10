@@ -14,7 +14,7 @@ proven-safe operations may repair anything automatically.
 | Backups, certificates, queues, mail reputation, DNS in the verdict | Built (backup failures/staleness/restore test, certificate days, waiting commands, blacklist, PowerDNS reachability) |
 | Staff **Monitoring** screen | Built, tested |
 | Self-healing: restart a failed service from a short list, within strict limits | Built, tested against a pretend machine. **Switched off by default** (`SELF_HEALING_ENABLED`) because it has never run on a real node |
-| Go agent sending these figures | **Not built**; the Python reference agent sends them (`heartbeat_once`) |
+| Go agent sending these figures | Built in Go (`internal/handlers/metrics.go`) and tested on a pretend machine; never run on a real node |
 | Metric history and graphs (Prometheus, trends) | **Not built.** Only state changes are kept. ADR 13 says to add Prometheus when there are more than a handful of nodes |
 | An external uptime check | **Not built** (ADR 13 recommends one: WHPanel cannot notice that WHPanel itself is down) |
 | Alert channels other than email (Telegram, WhatsApp, a pager) and an on-call rota | **Not built**; a business decision (ADR 13 open question) |

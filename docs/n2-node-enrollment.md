@@ -9,7 +9,7 @@ How a fresh Linux server becomes a trusted WHPanel node (ADR 16): **one-time tok
 | Internal CA, certificate signing, one-time tokens, inventory, heartbeat, renewal, revocation (`pki.py`, `enrollment.py`) | Built, tested (73 tests in `apps/agent`) |
 | Staff screen `/staff/nodes/` (add node, show the command once, status, capacity, revoke) | Built, tested |
 | Server type **Native node** (`ServerKind.NATIVE`) | Added. It uses the manual adapter, so nothing is provisioned on it until N3 |
-| Enrol / heartbeat / renew in the agent | Python reference agent has the CSR helper only; **the Go agent does not implement `enroll`, `heartbeat` or `renew` yet** (untested skeleton) |
+| Enrol / heartbeat / renew in the agent | Implemented in Go (`enroll`, heartbeat, certificate renewal); tested against live Django with a pretend machine only |
 | Mutual TLS on the wire | **Not exercised.** WHPanel checks the certificate fingerprint a reverse proxy passes (`X-Client-Cert-Fingerprint`) when `AGENT_REQUIRE_CLIENT_CERT=True`. The proxy configuration (nginx/Apache `ssl_verify_client` with our CA) is deployment work and has not been tried against a real proxy |
 | Certificate revocation list | Not built: revoking a node stops its token and fingerprint being accepted by WHPanel; a proxy that only checks the CA would still let the TLS handshake finish |
 | Rate limiting of failed enrolments | Not built (tokens are 256-bit random, so guessing is not realistic, but add limits at the proxy) |

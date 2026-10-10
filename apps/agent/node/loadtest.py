@@ -49,14 +49,50 @@ def run_all(measure_quiet, start_noisy, stop_noisy, noisy_limited, scenarios=Non
     return out
 
 
+def was_limited(scenario, limits, observed):
+    """
+    Did the noisy tenant hit its own wall? ``limits`` is the account's limits (disk_mb, inodes, processes, memory_mb, cpu_percent, db_connections) and ``observed`` what the driver saw:
+    cpu_percent_peak, memory_killed (bool) or memory_mb_peak, processes_peak, bytes_written_mb, write_failed, files_created, create_failed, connections_opened, connections_refused.
+    """
+    if scenario == "cpu_burn":
+        return observed.get("cpu_percent_peak", 10 ** 9) <= limits["cpu_percent"] * 1.15  # a little over is normal measurement noise
+    if scenario == "memory_hog":
+        return bool(observed.get("memory_killed")) or observed.get("memory_mb_peak", 10 ** 9) <= limits["memory_mb"]
+    if scenario == "fork_bomb":
+        return observed.get("processes_peak", 10 ** 9) <= limits["processes"]
+    if scenario == "disk_fill":
+        return bool(observed.get("write_failed")) and observed.get("bytes_written_mb", 10 ** 9) <= limits["disk_mb"] * 1.05
+    if scenario == "inode_flood":
+        return bool(observed.get("create_failed")) and observed.get("files_created", 10 ** 9) <= limits["inodes"] * 1.05
+    if scenario == "connection_flood":
+        return observed.get("connections_refused", 0) > 0 and observed.get("connections_opened", 10 ** 9) - observed.get("connections_refused", 0) <= limits.get("db_connections", 20)
+    if scenario == "io_flood":
+        return True  # I/O is a share, not a cap: it is judged only by what the quiet tenant experiences
+    raise KeyError(scenario)
+
+
+FORK = "import os, time\nwhile True:\n    try:\n        if os.fork() == 0:\n            time.sleep(60)\n            os._exit(0)\n    except OSError:\n        time.sleep(0.2)"
+INODES = "import os\nfor i in range({count}):\n    try:\n        open('/home/{account}/tmp/f%d' % i, 'w').close()\n    except OSError:\n        break"
+CONNECTIONS = ("import subprocess, os\nenv = dict(os.environ, MYSQL_PWD={password!r})\nps = [subprocess.Popen(['mariadb', '--user={db_user}', '-e', 'SELECT SLEEP(30)'], env=env, "
+               "stdout=subprocess.DEVNULL, stderr=subprocess.PIPE) for _ in range({count})]\nfor p in ps: p.wait()")
+
+
 class RealLoad:
-    """UNTESTED. Starts the noisy load inside the noisy tenant's own slice with ``systemd-run`` so exactly the plan's limits apply. Only three scenarios have a driver here."""
+    """
+    UNTESTED. Starts the noisy load inside the noisy tenant's own slice with ``systemd-run`` so exactly the plan's limits apply. Every scenario has a driver; none has been run. ``limits`` is the
+    account's limits plus ``db_user`` and ``password`` for the connection flood.
+    """
 
     COMMANDS = {"cpu_burn": ["python3", "-c", "while True: pass"], "memory_hog": ["python3", "-c", "x=[]\nwhile True: x.append(bytearray(10**7))"],
-                "io_flood": ["dd", "if=/dev/zero", "of=/home/{account}/tmp/flood", "bs=1M", "oflag=direct"]}
+                "io_flood": ["dd", "if=/dev/zero", "of=/home/{account}/tmp/flood", "bs=1M", "oflag=direct"], "fork_bomb": ["python3", "-c", FORK],
+                "disk_fill": ["dd", "if=/dev/zero", "of=/home/{account}/tmp/fill", "bs=1M", "count={double_disk}"], "inode_flood": ["python3", "-c", INODES],
+                "connection_flood": ["python3", "-c", CONNECTIONS]}
 
-    def start(self, account, scenario):
+    def start(self, account, scenario, limits=None):
         argv = self.COMMANDS.get(scenario)
         if argv is None:
-            raise NotImplementedError(f"{scenario} has no driver yet")
-        return subprocess.Popen(["systemd-run", f"--slice=whp-{account}.slice", f"--uid={account}", "--collect", "--pipe", *[a.format(account=account) for a in argv]], shell=False)
+            raise KeyError(scenario)
+        limits = limits or {}
+        values = {"account": account, "double_disk": int(limits.get("disk_mb", 1024)) * 2, "count": int(limits.get("inodes", 250000)) * 2 if scenario == "inode_flood" else int(limits.get("db_connections", 20)) * 3,
+                  "db_user": limits.get("db_user", ""), "password": limits.get("password", "")}
+        return subprocess.Popen(["systemd-run", f"--slice=whp-{account}.slice", f"--uid={account}", "--collect", "--pipe", *[a.format(**values) for a in argv]], shell=False)

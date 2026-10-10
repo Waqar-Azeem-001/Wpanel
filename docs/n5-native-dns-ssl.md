@@ -14,7 +14,7 @@ Goal: `Domain -> DNS -> Validation -> Certificate -> HTTPS -> Auto renewal`, wit
 | **DNS-01 / wildcard certificates** | **Not built.** The command accepts `dns-01` but the node answers "not available"; the adapter always uses HTTP-01 |
 | Who runs the daily renewal | `Ssl.renew_due(accounts)` exists and is tested. **Nothing calls it yet**: the Go agent (or a timer on the node) must run it every day. Until then certificates are not renewed automatically |
 | ZeroSSL fallback, customer-uploaded certificates, DNSSEC, second nameserver | Not built (open questions in ADR 07/08) |
-| Go agent | Has none of this |
+| Go agent | Written in Go (`agent/`) for every command of this stage, checked against the Python reference by golden scenarios and against live Django end to end on a pretend machine. **The real-machine paths have never run on a real node** (see agent/README.md) |
 
 ## DNS
 

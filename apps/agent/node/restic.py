@@ -192,8 +192,11 @@ class RealRestic:
         return next(s for s in self.snapshots() if s["id"].startswith(snapshot_id[:8]))
 
     def restore(self, snapshot_id, target):
-        self._run(["restore", snapshot_id, "--target", str(target)])
-        return Path(target) / "data"
+        """restic keeps the staged folder's absolute path; the ``snapshot:folder`` form restores just that folder's contents into ``target/data``."""
+        listing = json.loads(self._run(["snapshots", "--json", snapshot_id]))
+        out = Path(target) / "data"
+        self._run(["restore", f"{listing[0]['id']}:{listing[0]['paths'][0]}", "--target", str(out)])
+        return out
 
     def check(self, snapshot_id):
         try:

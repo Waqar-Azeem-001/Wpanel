@@ -28,7 +28,7 @@ new IP builds reputation (not built).
 | IMAP/SMTP access for mail clients | The mail node's Dovecot and Postfix would serve it; **nothing configures TLS certificates for the mail host** (use N5's certificate for the mail host name, not yet wired) |
 | Aliases beyond forwarders, catch-all, mailing lists, greylisting, per-domain outbound relay | Not built |
 | Migration of mailboxes from cPanel | Not built (ADR 19) |
-| Go agent | Has none of this |
+| Go agent | Written in Go (`agent/`) for every command of this stage, checked against the Python reference by golden scenarios and against live Django end to end on a pretend machine. **The real-machine paths have never run on a real node** (see agent/README.md) |
 
 ## Rules worth knowing
 

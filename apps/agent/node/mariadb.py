@@ -139,17 +139,22 @@ class RealMariadb:
         self._sql(f"DROP USER IF EXISTS '{ident(name)}'@'localhost';")
 
     def set_grants(self, db, user, privileges):
-        self._sql(f"REVOKE ALL PRIVILEGES ON `{ident(db)}`.* FROM '{ident(user)}'@'localhost';")
+        try:
+            self._sql(f"REVOKE ALL PRIVILEGES ON `{ident(db)}`.* FROM '{ident(user)}'@'localhost';")
+        except SystemError_ as exc:
+            if "no such grant" not in str(exc):  # revoking what was never granted is not a failure
+                raise
         if privileges:
             self._sql(f"GRANT {', '.join(PRIV_SQL[p] for p in privileges)} ON `{ident(db)}`.* TO '{ident(user)}'@'localhost';")
 
     def grants_of(self, prefix):
-        rows = self._sql(f"SELECT table_schema, grantee FROM information_schema.schema_privileges WHERE table_schema LIKE '{ident(prefix.rstrip('_'))}\\_%';")
+        rows = self._sql(f"SELECT table_schema, grantee, privilege_type FROM information_schema.schema_privileges WHERE table_schema LIKE '{ident(prefix.rstrip('_'))}\\_%';")
+        back = {v: k for k, v in PRIV_SQL.items()}
         found = {}
-        for schema, grantee in rows:
-            user = grantee.split("'")[1]
-            found.setdefault((schema, user), set())
-        return [(d, u, []) for (d, u) in sorted(found)]  # TODO: map each privilege back (SELECT privilege_type ... GROUP BY)
+        for schema, grantee, privilege in rows:
+            if privilege.upper() in back:
+                found.setdefault((schema.replace("\\_", "_"), grantee.split("'")[1]), set()).add(back[privilege.upper()])
+        return [(d, u, sorted(p)) for (d, u), p in sorted(found.items())]
 
     def size_mb(self, db):
         row = self._sql(f"SELECT ROUND(IFNULL(SUM(data_length+index_length),0)/1048576,2) FROM information_schema.tables WHERE table_schema='{ident(db)}';")

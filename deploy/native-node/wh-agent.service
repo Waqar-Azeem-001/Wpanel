@@ -1,0 +1,16 @@
+# UNTESTED on a real node.
+[Unit]
+Description=WHPanel node agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/wh-agent run --config /etc/whp/agent.json
+Restart=always
+RestartSec=5
+User=root
+NoNewPrivileges=false
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target

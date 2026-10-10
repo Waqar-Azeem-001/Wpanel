@@ -15,7 +15,7 @@ Goal: the customer's File Manager (H2) and FTP screen (H8) work unchanged on a n
 | Login for the main account itself | **Not built.** Customers use the extra SFTP logins from the FTP screen |
 | Plain FTP | **Not offered** (the screen shows SFTP, port 22) |
 | SSH keys for SFTP logins | Not built (passwords only) |
-| Go agent | Has none of this |
+| Go agent | Written in Go (`agent/`) for every command of this stage, checked against the Python reference by golden scenarios and against live Django end to end on a pretend machine. **The real-machine paths have never run on a real node** (see agent/README.md) |
 
 ## Rules worth knowing
 
