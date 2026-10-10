@@ -194,10 +194,10 @@ def world(staff):
     return manager, client, product
 
 
-def make_node(manager, name="native-1", capabilities=("web", "php", "database"), region="EU"):
+def make_node(manager, name="native-1", capabilities=("web", "php", "database"), region="EU", ips=None):
     server = Server.objects.create(name=name, hostname=f"{name}.example.com", kind=ServerKind.NATIVE, region=region)
     node, token = enrollment.invite(manager, server)
-    reply = enrollment.enroll(token, reference_agent.make_csr()[1], {**reference_agent.INVENTORY, "capabilities": list(capabilities)}, "0.1.0")
+    reply = enrollment.enroll(token, reference_agent.make_csr()[1], {**reference_agent.INVENTORY, "capabilities": list(capabilities), **({"ip_addresses": ips} if ips else {})}, "0.1.0")
     from django.test import Client
 
     agent = reference_agent.ReferenceAgent(Client(), reply["token"], server.pk, envelope.public_key_b64(), machine=reference_agent.NativeMachine())

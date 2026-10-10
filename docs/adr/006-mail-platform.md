@@ -27,3 +27,6 @@ Native web hosting can launch (N3) without mail, which keeps the first milestone
 
 ## Open questions
 Does the business want to run mail itself at all, or use a hosted provider long term? This is a business decision as much as a technical one.
+
+## Follow-up (N7)
+Built as separate mail nodes (see `docs/n7-native-mail.md`). The open business question remains: run own mail or use a hosted provider long term. The Email tool sits behind the same capability either way.

@@ -10,7 +10,7 @@ import os
 import posixpath
 import subprocess
 
-ALLOWED_ROOTS = ("/home/", "/etc/", "/var/lib/whp/", "/var/log/whp/", "/var/backups/whp/", "/run/whp/", "/srv/whp/")
+ALLOWED_ROOTS = ("/home/", "/etc/", "/var/lib/whp/", "/var/log/whp/", "/var/backups/whp/", "/run/whp/", "/srv/whp/", "/var/mail/")
 
 
 class SystemError_(Exception):
@@ -39,6 +39,10 @@ class FakeSystem:
 
     def read(self, path):
         return self.files.get(check_path(path))
+
+    def list(self, prefix):
+        """Paths of the files under a folder."""
+        return sorted(p for p in self.files if p.startswith(check_path(prefix.rstrip('/')) + '/'))
 
     def write(self, path, content, mode=0o644, owner="root"):
         self.files[check_path(path)] = content
@@ -81,6 +85,13 @@ class RealSystem:
 
     def exists(self, path):
         return os.path.exists(check_path(path))
+
+    def list(self, prefix):
+        base = check_path(prefix.rstrip('/'))
+        try:
+            return sorted(os.path.join(base, name) for name in os.listdir(base))
+        except FileNotFoundError:
+            return []
 
     def read(self, path):
         try:

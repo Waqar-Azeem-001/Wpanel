@@ -9,7 +9,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.products.models import Server, ServerKind
 
-from . import enrollment
+from . import enrollment, reputation
 from .models import AgentNode
 
 
@@ -68,6 +68,15 @@ def node_invite(request, pk):
 def node_revoke(request, pk):
     enrollment.revoke(request.user, get_object_or_404(AgentNode, pk=pk), request)
     messages.success(request, "The node was revoked. Its certificate and token no longer work.")
+    return redirect("agent_staff:nodes")
+
+
+@require_POST
+@portal_permission_required(perm("manage_hosting"))
+def node_reputation(request, pk):
+    node = get_object_or_404(AgentNode.objects.select_related("server"), pk=pk, status="enrolled")
+    result = reputation.check_node(node)
+    messages.success(request, "No problems found." if result["ok"] else "There is a problem: see the mail reputation line.")
     return redirect("agent_staff:nodes")
 
 

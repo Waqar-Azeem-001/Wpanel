@@ -5,6 +5,7 @@ website is created and removes it when the website is deleted.
 Without ``POWERDNS_URL`` and ``POWERDNS_API_KEY`` configured the DNS tool is simply not offered on native accounts.
 """
 import hashlib
+import re
 
 from django.conf import settings
 
@@ -28,8 +29,9 @@ def to_content(kind, value, priority):
         return value.rstrip(".") + "."
     if kind == "MX":
         return f"{priority} {value.rstrip('.')}."
-    if kind == "TXT":
-        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    if kind == "TXT":  # a TXT string is at most 255 characters: longer text (a DKIM key) is sent as several quoted pieces
+        pieces = [value[i:i + 255] for i in range(0, len(value), 255)] or [""]
+        return " ".join('"' + piece.replace("\\", "\\\\").replace('"', '\\"') + '"' for piece in pieces)
     if kind == "SRV":
         weight, port, target = value.split()
         return f"{priority} {weight} {port} {target.rstrip('.')}."
@@ -44,7 +46,8 @@ def from_content(kind, content):
         priority, host = content.split(" ", 1)
         return host.rstrip("."), int(priority)
     if kind == "TXT":
-        text = content[1:-1] if content.startswith('"') and content.endswith('"') else content
+        pieces = re.findall(r'"((?:[^"\\]|\\.)*)"', content)
+        text = "".join(pieces) if pieces else content
         return text.replace('\\"', '"').replace("\\\\", "\\"), None
     if kind == "SRV":
         priority, weight, port, target = content.split(" ", 3)

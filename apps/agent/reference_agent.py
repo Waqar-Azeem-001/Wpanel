@@ -53,8 +53,9 @@ class NativeMachine(FakeMachine):
 
     SSL = ("ISSUE_SSL", "REMOVE_SSL", "SSL_STATUS", "SET_SSL_OPTIONS")
     SFTP = ("SFTP_LIST", "SFTP_CREATE", "SFTP_SET_PASSWORD", "SFTP_DELETE")
+    MAIL_EXTRA = ("CREATE_MAILBOX",)  # an older name for a mail command
 
-    def __init__(self, system=None, files_dir=None):
+    def __init__(self, system=None, files_dir=None, mail_dir=None):
         from .node.system import FakeSystem
         from .node.website import Websites
 
@@ -78,6 +79,10 @@ class NativeMachine(FakeMachine):
         root_for = lambda account: (self.files_dir / account / "sites") if self.files_dir and self.websites._state(account) else None  # noqa: E731
         self.files = Files(root_for, meta_for=lambda account: (self.files_dir / f"{account}.perms.json") if self.files_dir else None)  # real chmod on Linux; a side file where the OS cannot
         self.sftp = Sftp(self.system, root_for)
+        from .node.mail import Mail
+
+        self.mail = Mail(self.system, mail_dir or (self.files_dir / "_mail" if self.files_dir else "."), now=lambda: self.clock())
+        self.clock = __import__("time").time
         self.acme = FakeAcme()
         self.ssl = Ssl(self.system, self.acme)
 
@@ -85,6 +90,9 @@ class NativeMachine(FakeMachine):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command.startswith("MAIL_") or command in self.MAIL_EXTRA:
+            self.executed.append(command)
+            return self.mail.run(command, p)
         if command.startswith("FILE_"):
             self.executed.append(command)
             return self.files.run(command, p)

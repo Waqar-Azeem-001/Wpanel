@@ -12,6 +12,7 @@ from .native_db import NativeDatabases
 from . import native_dns
 from .native_dns import NativeDns
 from .native_files import NativeFiles, NativeFtp
+from .native_mail import NativeEmail
 from .native_ssl import NativeSsl
 
 DEFAULT_PHP = "8.3"
@@ -20,7 +21,7 @@ COUNT_KEYS = {"databases": "databases", "ftp_accounts": "sftp_accounts"}  # the 
 UNLIMITED = 1000
 
 
-class NativeAdapter(NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
+class NativeAdapter(NativeEmail, NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSsl, HostingAdapter):
     server = None  # set by the registry
     read_cache_seconds = 20  # every read is a trip to the node; the gateway remembers answers briefly and forgets them after any change
 
@@ -32,6 +33,10 @@ class NativeAdapter(NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSs
         have = {c for c, contract in CONTRACTS.items() if isinstance(self, contract)}
         if native_dns.get_dns() is None:
             have.discard(Capability.DNS)
+        from apps.agent.placement import has_mail_nodes
+
+        if not has_mail_nodes():
+            have.discard(Capability.EMAIL)  # nobody could hold the mailboxes
         return have
 
     # --- helpers ---------------------------------------------------------------------------------------------------------------------
@@ -109,6 +114,9 @@ class NativeAdapter(NativeFiles, NativeFtp, NativeDatabases, NativeDns, NativeSs
         defaults = {"disk_mb": 5120, "memory_mb": 1024, "processes": 100, "cpu_percent": 100}
         extra = {k: limits[k] for k in COUNT_KEYS.values() if k in limits}
         self._queue("SET_LIMITS", {"account": username, **{k: limits.get(k, defaults[k]) for k in LIMIT_KEYS}, **extra}, username)
+        account = self._account(username)
+        if account and account.mail_server_id:
+            self.sync_mail_limits(username, package)  # the mail node's limits follow the plan too
 
     def get_status(self, username):
         from apps.hosting.models import HostingStatus

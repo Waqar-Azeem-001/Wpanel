@@ -18,6 +18,9 @@ LOCAL_PART = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 DB_USER = re.compile(r"^[a-z][a-z0-9_]{2,31}$")
 TABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 DB_PRIVILEGES = ("select", "insert", "update", "delete", "create", "alter", "drop", "index")
+EMAIL = re.compile(r"^[a-z0-9][a-z0-9._+-]{0,63}@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
+MSG_ID = re.compile(r"^[A-Za-z0-9._,=-]{1,120}$")
+MAIL_FOLDER_NAMES = ("inbox", "drafts", "sent", "archive", "spam", "trash", "starred")
 SFTP_NAME = re.compile(r"^[a-z][a-z0-9]{1,14}$")
 TRASH_ID = re.compile(r"^([a-f0-9]{12}|ALL)$")
 MODE = re.compile(r"^[0-7]{3,4}$")
@@ -46,7 +49,7 @@ class InvalidCommand(ValueError):
 
 @dataclass(frozen=True)
 class Field:
-    kind: str  # relpath | path_list | b64 | query | mode | trash_id | sftp_name | domain | account | db_name | db_user | table | local_part | backup_id | enum | enum_list | int | secret
+    kind: str  # email | email_any | msgid | text | relpath | path_list | b64 | query | mode | trash_id | sftp_name | domain | account | db_name | db_user | table | local_part | backup_id | enum | enum_list | int | secret
     choices: tuple = ()
     low: int = 0
     high: int = 0
@@ -57,6 +60,10 @@ class Field:
         if self.kind == "int":
             if isinstance(value, bool) or not isinstance(value, int) or not self.low <= value <= self.high:
                 raise InvalidCommand(f"{name} must be a whole number from {self.low} to {self.high}.")
+            return value
+        if self.kind == "text":  # message text: any printable characters and line breaks, up to ``high`` characters; may be empty
+            if not isinstance(value, str) or len(value) > self.high or any((ord(c) < 32 and c not in "\n\r\t") or ord(c) == 127 for c in value):
+                raise InvalidCommand(f"{name} must be text of at most {self.high} characters.")
             return value
         if self.kind == "relpath":
             return _relpath(name, value)
@@ -87,7 +94,7 @@ class Field:
             if not 12 <= len(value) <= 128 or any(ord(c) < 32 or ord(c) == 127 for c in value):
                 raise InvalidCommand(f"{name} must be 12 to 128 printable characters.")
             return value
-        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
+        pattern = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}[self.kind]
         if not pattern.fullmatch(value):
             raise InvalidCommand(f"{name} is not a valid {self.kind.replace('_', ' ')}.")
         return value
@@ -116,6 +123,8 @@ LIMIT_FIELDS = {
     "processes": Field("int", low=5, high=10_000, required=False),
     "cpu_percent": Field("int", low=5, high=6400, required=False),
 }
+MAIL_LIMITS = {"max_mailboxes": Field("int", low=0, high=100_000, required=False), "max_forwarders": Field("int", low=0, high=100_000, required=False),
+               "max_quota_mb": Field("int", low=1, high=1_000_000, required=False), "emails_per_hour": Field("int", low=1, high=100_000, required=False)}
 DATABASES_FIELD = Field("int", low=0, high=100_000, required=False)  # how many databases the account may have
 SFTP_FIELD = Field("int", low=0, high=10_000, required=False)  # how many extra SFTP logins
 
@@ -159,6 +168,38 @@ COMMANDS = {c.name: c for c in [
             description="Make an SFTP login limited to one folder of the account."),
     Command("SFTP_SET_PASSWORD", {"account": _f("account"), "name": _f("sftp_name"), "password": _f("secret", sensitive=True)}, 60, description="Change an SFTP login's password."),
     Command("SFTP_DELETE", {"account": _f("account"), "name": _f("sftp_name")}, 60, description="Remove an SFTP login."),
+    Command("MAIL_DOMAIN_ADD", {"account": _f("account"), "domain": _f("domain"), **MAIL_LIMITS}, 120,
+            description="Set up mail for the account's domain on a mail node: DKIM key, limits. Safe to repeat: it updates the limits."),
+    Command("MAIL_DOMAIN_REMOVE", {"account": _f("account"), "domain": _f("domain")}, 120, idempotent=True, description="Remove the domain's mail, mailboxes and DKIM key."),
+    Command("MAIL_LIST", {"account": _f("account"), "domain": _f("domain")}, 30, ephemeral=True, description="Mailboxes, forwarders, auto-replies, spam settings, routing, DKIM."),
+    Command("MAIL_BOX_DELETE", {"account": _f("account"), "address": _f("email")}, 120, description="Delete a mailbox and its mail."),
+    Command("MAIL_BOX_PASSWORD", {"account": _f("account"), "address": _f("email"), "password": _f("secret", sensitive=True)}, 60, description="Change a mailbox password."),
+    Command("MAIL_BOX_QUOTA", {"account": _f("account"), "address": _f("email"), "quota_mb": _f("int", low=0, high=1_000_000)}, 60, description="Set a mailbox quota (0 = the plan maximum)."),
+    Command("MAIL_FORWARD_ADD", {"account": _f("account"), "source": _f("email"), "destination": _f("email_any")}, 60, description="Forward an address."),
+    Command("MAIL_FORWARD_DELETE", {"account": _f("account"), "source": _f("email"), "destination": _f("email_any")}, 60, description="Stop a forward."),
+    Command("MAIL_AUTOREPLY_SET", {"account": _f("account"), "address": _f("email"), "subject": Field("text", high=200), "body": Field("text", high=5000),
+                                   "enabled": _f("enum", choices=("yes", "no"))}, 60, description="Set a mailbox's automatic reply."),
+    Command("MAIL_AUTOREPLY_DELETE", {"account": _f("account"), "address": _f("email")}, 60, description="Remove the automatic reply."),
+    Command("MAIL_SPAM_SET", {"account": _f("account"), "domain": _f("domain"), "enabled": _f("enum", choices=("yes", "no")),
+                              "level": _f("enum", choices=("low", "medium", "high")), "delete_spam": _f("enum", choices=("yes", "no"))}, 60, description="Spam filter settings."),
+    Command("MAIL_ROUTING_SET", {"account": _f("account"), "domain": _f("domain"), "mode": _f("enum", choices=("local", "remote"))}, 60, description="Receive the domain's mail here, or elsewhere."),
+    Command("MAIL_FOLDERS", {"account": _f("account"), "address": _f("email")}, 30, ephemeral=True, description="Message counts per folder."),
+    Command("MAIL_MESSAGES", {"account": _f("account"), "address": _f("email"), "folder": _f("enum", choices=MAIL_FOLDER_NAMES)}, 30, ephemeral=True, description="List a folder's messages."),
+    Command("MAIL_READ", {"account": _f("account"), "address": _f("email"), "message_id": _f("msgid")}, 30, ephemeral=True, description="Read one message (marks it read)."),
+    Command("MAIL_MOVE", {"account": _f("account"), "address": _f("email"), "message_id": _f("msgid"), "folder": _f("enum", choices=("inbox", "archive", "spam", "trash"))}, 30,
+            idempotent=False, max_attempts=1, description="Move a message."),
+    Command("MAIL_TRASH", {"account": _f("account"), "address": _f("email"), "message_id": _f("msgid")}, 30, idempotent=False, max_attempts=1,
+            description="Delete a message: to the trash, or for good when it is already there or is a draft."),
+    Command("MAIL_STAR", {"account": _f("account"), "address": _f("email"), "message_id": _f("msgid"), "starred": _f("enum", choices=("yes", "no"))}, 30, description="Star or unstar."),
+    Command("MAIL_DRAFT", {"account": _f("account"), "address": _f("email"), "to": Field("text", high=1000), "subject": Field("text", high=200), "body": Field("text", high=100000),
+                           "html": Field("text", high=200000), "draft_id": Field("text", high=120)}, 60, idempotent=False, max_attempts=1, description="Keep an unsent message."),
+    Command("MAIL_PROFILE", {"account": _f("account"), "address": _f("email")}, 30, ephemeral=True, description="A mailbox's display name, reply-to and signature."),
+    Command("MAIL_PROFILE_SET", {"account": _f("account"), "address": _f("email"), "display_name": Field("text", high=100), "reply_to": Field("text", high=200),
+                                 "signature_html": Field("text", high=20000), "signature_text": Field("text", high=5000),
+                                 "signature_new": _f("enum", choices=("yes", "no")), "signature_reply": _f("enum", choices=("yes", "no"))}, 60, description="Save them."),
+    Command("MAIL_SEND", {"account": _f("account"), "address": _f("email"), "to": Field("text", high=1000), "subject": Field("text", high=200), "body": Field("text", high=100000),
+                          "html": Field("text", high=200000), "draft_id": Field("text", high=120)}, 120, idempotent=False, max_attempts=1,
+            description="Send a message from a mailbox. Counts against the hourly sending limit; a second run would send twice."),
     Command("REMOVE_SSL", {"account": _f("account"), "domain": _f("domain")}, 60, description="Remove the certificate; the site is served without HTTPS."),
     Command("SSL_STATUS", {"account": _f("account")}, 30, description="Read the account's certificate (issuer, dates, renewal and redirect settings)."),
     Command("SET_SSL_OPTIONS", {"account": _f("account"), "domain": _f("domain"), "auto_renew": _f("enum", choices=("yes", "no")),

@@ -39,6 +39,8 @@ class AgentNode(TimeStampedModel):
     cert_expires_at = models.DateTimeField(null=True, blank=True)
     enrolled_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
+    reputation = models.JSONField(default=dict, blank=True, help_text="The latest mail reputation check (blacklists, queue). Only mail nodes have one.")
+    reputation_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Agent on {self.server}"

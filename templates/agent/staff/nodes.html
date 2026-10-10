@@ -51,6 +51,15 @@
       <dt class="col-sm-3">Services</dt><dd class="col-sm-9">{% for name, state in r.services.items %}<span class="site-pill {% if state == 'up' %}is-ok{% elif state == 'degraded' %}is-warn{% else %}is-danger{% endif %}">{{ name }}: {{ state }}</span> {% empty %}<span class="text-secondary">not reported yet</span>{% endfor %}</dd>
       <dt class="col-sm-3">Load</dt><dd class="col-sm-9">{% if r.node.health %}CPU {{ r.node.health.cpu_percent|default:"?" }}% · memory {{ r.node.health.memory_used_mb|default:"?" }} MB · disk {{ r.node.health.disk_used_gb|default:"?" }} GB · {{ r.node.health.sites|default:"0" }} sites{% else %}<span class="text-secondary">not reported yet</span>{% endif %}</dd>
     </dl>
+    {% if 'mail' in r.node.capabilities %}<p class="mb-2"><strong>Mail reputation:</strong>
+      {% if r.node.reputation_at %}
+        {% if r.node.reputation.ok %}<span class="site-pill is-ok">No problems</span>{% else %}<span class="site-pill is-danger">Problem</span>{% endif %}
+        {% for ip, zones in r.node.reputation.listed.items %}<span class="text-danger">{{ ip }} is on {{ zones|join:", " }}.</span> {% endfor %}
+        {% if r.node.reputation.queue_high %}<span class="text-danger">{{ r.node.reputation.queue }} messages are waiting in the queue.</span>{% endif %}
+        {% if r.node.reputation.unchecked %}<span class="text-secondary">Could not ask: {{ r.node.reputation.unchecked|join:", " }}.</span>{% endif %}
+        <small class="text-secondary">Checked {{ r.node.reputation_at|timesince }} ago.</small>
+      {% else %}<span class="text-secondary">not checked yet</span>{% endif %}
+      {% if can_manage %}<form method="post" action="{% url 'agent_staff:reputation' r.node.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Check now</button></form>{% endif %}</p>{% endif %}
     {% if can_manage %}<form method="post" action="{% url 'agent_staff:capacity' r.node.pk %}" class="d-flex gap-2 align-items-center">{% csrf_token %}
       <label class="form-label mb-0">Allowed websites</label>
       <input name="capacity_sites" class="form-control form-control-sm w-auto" value="{{ r.node.capacity_sites|default_if_none:'' }}" inputmode="numeric">

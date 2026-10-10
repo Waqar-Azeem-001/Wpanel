@@ -26,6 +26,7 @@ def job_finished(job):
             _zone(account, create=True)
     elif job.command == "DELETE_WEBSITE" and ok:
         _zone(account, create=False)
+        _mail_cleanup(account)
     elif not ok:
         account.last_error = f"{job.command} did not complete on the node: {job.result_message or job.get_status_display()}"
         account.save(update_fields=["last_error", "updated_at"])
@@ -46,3 +47,17 @@ def _zone(account, *, create):
             audit.record("hosting.dns_zone_deleted", target=account, metadata={"domain": account.domain.lower()})
     except HostingError as exc:
         audit.record("hosting.dns_zone_failed", target=account, metadata={"error": str(exc), "create": create})
+
+
+def _mail_cleanup(account):
+    """Terminating the website removes its mail domain from the mail node too (queued: the mailboxes and their mail are deleted there)."""
+    from apps.agent import services as agent
+    from apps.core.exceptions import ServiceError
+
+    if not account.mail_server_id:
+        return
+    try:
+        agent.dispatch(None, account.mail_server, "MAIL_DOMAIN_REMOVE", {"account": account.username, "domain": account.domain.lower()}, subject=f"hosting:{account.pk}")
+        audit.record("hosting.mail_removal_queued", target=account, metadata={"mail_server": account.mail_server.name})
+    except ServiceError as exc:
+        audit.record("hosting.mail_removal_failed", target=account, metadata={"error": exc.message})

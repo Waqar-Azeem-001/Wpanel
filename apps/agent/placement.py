@@ -29,3 +29,22 @@ def pick_node(region="", among=None):
     return best
 
 
+
+
+def _mail_nodes():
+    return (AgentNode.objects.select_related("server").filter(status=NodeStatus.ENROLLED, server__kind=ServerKind.NATIVE, server__status=ServerStatus.ACTIVE)
+            .annotate(boxes=Count("server__mail_accounts")))
+
+
+def has_mail_nodes():
+    """Is any enrolled mail node set up at all? (Without one the Email tool is not offered on native accounts.)"""
+    return any("mail" in n.capabilities for n in _mail_nodes())
+
+
+def pick_mail_node():
+    """The Server to hold a new account's mail: enrolled, active, able to do mail, healthy, with the fewest accounts."""
+    best = None
+    for node in _mail_nodes():
+        if "mail" in node.capabilities and enrollment.health_state(node) == "healthy" and (best is None or node.boxes < best.boxes):
+            best = node
+    return best.server if best else None

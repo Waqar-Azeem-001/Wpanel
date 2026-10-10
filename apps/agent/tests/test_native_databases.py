@@ -278,6 +278,6 @@ def test_long_polling_waits_for_work_and_gives_up_politely(live, client):
 def test_the_catalog_knows_which_answers_hold_customer_data():
     ephemeral = {n for n, c in catalog.COMMANDS.items() if c.ephemeral}
     assert {"DB_INVENTORY", "DB_TABLES", "DB_DESCRIBE", "DB_BROWSE"} <= ephemeral
-    assert ephemeral - {"DB_INVENTORY", "DB_TABLES", "DB_DESCRIBE", "DB_BROWSE"} <= {c for c in catalog.COMMANDS if c.startswith("FILE_")}  # the others are file listings and contents
+    assert ephemeral - {"DB_INVENTORY", "DB_TABLES", "DB_DESCRIBE", "DB_BROWSE"} <= {c for c in catalog.COMMANDS if c.startswith(("FILE_", "MAIL_"))}  # the others are file listings/contents and mail lists/messages
     assert not catalog.COMMANDS["BACKUP_DATABASE"].idempotent and not catalog.COMMANDS["RESTORE_DATABASE"].idempotent
     _ = timedelta

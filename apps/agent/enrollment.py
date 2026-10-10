@@ -137,7 +137,7 @@ def heartbeat(node, data):
     if not isinstance(data, dict):
         raise ServiceError("Send an object.", status_code=400)
     health = {}
-    for key, high in (("load_1m", 100000), ("cpu_percent", 100), ("memory_used_mb", 16 * 1024 * 1024), ("disk_used_gb", 1024 * 1024), ("sites", 1000000)):
+    for key, high in (("load_1m", 100000), ("cpu_percent", 100), ("memory_used_mb", 16 * 1024 * 1024), ("disk_used_gb", 1024 * 1024), ("sites", 1000000), ("mail_queue", 10_000_000)):
         value = data.get(key)
         if value is not None:
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= high:
