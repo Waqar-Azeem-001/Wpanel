@@ -83,13 +83,15 @@ def test_a_migration_goes_from_cpanel_to_the_node_and_back(moved):
     settle(web_agent, mail_agent)
     m.refresh_from_db()
     assert m.state == S.VALIDATED, (m.state, m.last_error, list(m.events.values_list("message", flat=True)))
-    assert m.parts_done == ["site", "files", "databases", "maildomain", "mail", "validate"]
+    assert m.parts_done == ["site", "files", "databases", "cron", "maildomain", "mail", "validate"]
     machine = web_agent.machine
     docroot = tmp / "web" / account.username / "sites" / "acme.com" / "public_html"
     assert (docroot / "wp-content" / "uploads" / "a.jpg").exists()
     assert machine.engine.dbs[f"{account.username}_shop"]["orders"]["rows"][0] == [1, "Ann"]
     assert mail_agent.machine.mail._state("acme.com")["mailboxes"]["info"]["hash"].startswith("$6$")
     assert m.validation["ok"] and m.validation["files_missing"] == 0
+    jobs = web_agent.machine.cron.run("CRON_LIST", {"account": account.username})[1]["jobs"]
+    assert sorted(j["command"] for j in jobs) == ["php public_html/cron.php", "php scripts/clean.php --days=7"]  # the plain php jobs came across; the others are in the report
     account.refresh_from_db()
     assert account.server.name == "cp-1"  # nothing has moved for the customer yet
 
@@ -492,7 +494,7 @@ def test_the_timeline_shows_files_database_and_email_as_their_own_steps(moved, c
     settle(web_agent, mail_agent)
     m.refresh_from_db()
     s = statuses(m)
-    assert all(s[k] == "done" for k in ("Website created on the node", "Files transfer", "Database transfer", "Email transfer", "Validation")) and s["DNS cutover"] == "pending"
+    assert all(s[k] == "done" for k in ("Website created on the node", "Files transfer", "Database transfer", "Scheduled jobs", "Email transfer", "Validation")) and s["DNS cutover"] == "pending"
     services.cutover(manager, m)
     m.refresh_from_db()
     rows = {r["label"]: r for r in services.timeline(m)}

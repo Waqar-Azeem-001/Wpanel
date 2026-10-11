@@ -513,11 +513,7 @@ func discover(a *archive, account string) map[string]any {
 	cron := []string{}
 	if user != "" {
 		if t, ok := a.text("cron/" + user); ok {
-			for _, l := range splitLines(t) {
-				if strings.TrimSpace(l) != "" && !strings.HasPrefix(strings.TrimLeft(l, " \t"), "#") {
-					cron = append(cron, l)
-				}
-			}
+			cron = cronJobsOf(t)
 		}
 	}
 	var zones []string
@@ -588,7 +584,7 @@ func discover(a *archive, account string) map[string]any {
 		blockers = append(blockers, "The account has "+strings.Join(bits, ", ")+" domain(s). A native account serves one domain, so these need a manual decision (give each its own account, or leave them out).")
 	}
 	if len(cron) > 0 {
-		warnings = append(warnings, fmt.Sprintf("%d scheduled job(s) (cron) are not moved automatically; they are listed so they can be recreated by hand.", len(cron)))
+		warnings = append(warnings, fmt.Sprintf("%d scheduled job(s) (cron): plain php scripts inside the account are recreated, anything else is listed so it can be recreated by hand.", len(cron)))
 	}
 	if len(unsupported) > 0 {
 		warnings = append(warnings, "Some database privileges have no equivalent here and were left out: "+strings.Join(unsupported, ", ")+".")
@@ -659,6 +655,8 @@ func (a *Agent) migrateImport(p map[string]any) (Result, error) {
 		return a.migrateFiles(account, ar, str(p, "replace") == "yes")
 	case "databases":
 		return a.migrateDatabases(account, ar, report)
+	case "cron":
+		return a.migrateCron(account, ar, report)
 	}
 	return a.migrateMail(account, ar, report)
 }
@@ -941,6 +939,109 @@ func (a *Agent) migrateDiscard(p map[string]any) (Result, error) {
 		return Result{}, err
 	}
 	return Result{"discarded", map[string]any{}}, nil
+}
+
+// --- cron jobs --------------------------------------------------------------------------------------------------------------------------------
+
+var (
+	cronEnvLine   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*\s*=`)
+	cronPHPWord   = regexp.MustCompile(`^(?:/[A-Za-z0-9_./-]*/)?php[0-9.]*$`)
+	cronShell     = regexp.MustCompile("[;|&<>$`()" + `\\` + "]") // any shell symbol, including a backslash
+	cronRedirect  = regexp.MustCompile(`\s*(?:>>?\s*/dev/null)?(?:\s*2>&1)?\s*$`)
+	cronMacroList = map[string]string{"@hourly": "0 * * * *", "@daily": "0 0 * * *", "@midnight": "0 0 * * *", "@weekly": "0 0 * * 0", "@monthly": "0 0 1 * *"}
+)
+
+// cronJobsOf are the job lines of a crontab: comments, blank lines and NAME=value settings are not jobs.
+func cronJobsOf(text string) []string {
+	out := []string{}
+	for _, l := range splitLines(text) {
+		t := strings.TrimSpace(l)
+		if t != "" && !strings.HasPrefix(strings.TrimLeft(l, " 	"), "#") && !cronEnvLine.MatchString(t) {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// convertCronLine turns a cPanel crontab line into (schedule, "php script args"), or says why it cannot become a native job (only php scripts inside the account can).
+func convertCronLine(line, user string) (string, string, error) {
+	line = strings.TrimSpace(line)
+	var schedule, command string
+	if strings.HasPrefix(line, "@") {
+		macro, rest, _ := strings.Cut(line, " ")
+		s, ok := cronMacroList[macro]
+		if !ok {
+			return "", "", fmt.Errorf("%s is not supported", macro)
+		}
+		schedule, command = s, rest
+	} else {
+		parts := strings.Fields(line)
+		if len(parts) < 6 {
+			return "", "", fmt.Errorf("not a schedule and a command")
+		}
+		schedule = strings.Join(parts[:5], " ")
+		// the command is the rest of the line after the fifth field, exactly as written
+		rest := line
+		for i := 0; i < 5; i++ {
+			rest = strings.TrimLeft(rest, " 	")
+			rest = rest[strings.IndexAny(rest, " 	"):]
+		}
+		command = rest
+	}
+	command = cronRedirect.ReplaceAllString(strings.TrimSpace(command), "")
+	if cronShell.MatchString(command) {
+		return "", "", fmt.Errorf("uses shell features (pipes, redirects, variables)")
+	}
+	tokens := strings.Fields(command)
+	if len(tokens) == 0 || !cronPHPWord.MatchString(tokens[0]) {
+		return "", "", fmt.Errorf("is not a php script")
+	}
+	if len(tokens) < 2 || strings.HasPrefix(tokens[1], "-") {
+		return "", "", fmt.Errorf("php options are not supported")
+	}
+	script := tokens[1]
+	home := "/home/" + user + "/"
+	switch {
+	case strings.HasPrefix(script, home):
+		script = script[len(home):]
+	case strings.HasPrefix(script, "/"):
+		return "", "", fmt.Errorf("runs a script outside the account")
+	}
+	script = strings.TrimPrefix(script, "./")
+	return schedule, strings.Join(append([]string{"php", script}, tokens[2:]...), " "), nil
+}
+
+func (a *Agent) migrateCron(account string, ar *archive, report map[string]any) (Result, error) {
+	user, _ := report["user"].(string)
+	text, _ := ar.text("cron/" + user)
+	created, exists := 0, 0
+	skipped := []map[string]any{}
+	add := func(line, reason string) {
+		if len(skipped) < 30 {
+			skipped = append(skipped, map[string]any{"line": clip(line, 120), "reason": reason})
+		}
+	}
+	for _, line := range cronJobsOf(text) {
+		schedule, command, err := convertCronLine(line, user)
+		if err != nil {
+			add(line, err.Error())
+			continue
+		}
+		res, err := a.cronCreate(map[string]any{"account": account, "schedule": schedule, "command": command})
+		if err != nil {
+			if he, ok := err.(*Error); ok {
+				add(line, clip(he.Message, 120)) // the node's own rules (every five minutes at most, ten jobs) have the last word
+				continue
+			}
+			return Result{}, err
+		}
+		if res.Code == "created" {
+			created++
+		} else {
+			exists++
+		}
+	}
+	return Result{"imported", map[string]any{"created": created, "already_there": exists, "skipped": skipped}}, nil
 }
 
 // --- loading SQL ------------------------------------------------------------------------------------------------------------------------------

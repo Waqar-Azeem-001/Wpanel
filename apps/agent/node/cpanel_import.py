@@ -30,6 +30,46 @@ MIGRATION_DIR = "migrations"
 SKIP_TOP = {".cpanel", ".cagefs", ".trash", ".cphorde", ".softaculous", ".cpan", ".spamassassin", ".razor", ".contactemail", ".lastlogin", "logs", "tmp", "access-logs",
             "mail", "etc", "ssl", "perl5", "lscache", ".bash_history", ".bash_logout", ".bash_profile", ".bashrc", ".cl.selector", ".htpasswds"}
 MAX_MEMBERS = 2_000_000
+ENV_LINE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\s*=")
+PHP_WORD = re.compile(r"^(?:/[A-Za-z0-9_./-]*/)?php[0-9.]*$")
+SHELL_SYMBOLS = re.compile(r"[;|&<>$`()\\]")
+REDIRECT_TAIL = re.compile(r"\s*(?:>>?\s*/dev/null)?(?:\s*2>&1)?\s*$")
+CRON_MACROS = {"@hourly": "0 * * * *", "@daily": "0 0 * * *", "@midnight": "0 0 * * *", "@weekly": "0 0 * * 0", "@monthly": "0 0 1 * *"}
+
+
+def cron_jobs_of(text):
+    """The job lines of a crontab: comments, blank lines and NAME=value settings are not jobs."""
+    return [l for l in (text or "").splitlines() if l.strip() and not l.lstrip().startswith("#") and not ENV_LINE.match(l.strip())]
+
+
+def convert_cron_line(line, user):
+    """A cPanel crontab line as (schedule, "php script args"), or ValueError with the reason it cannot become a native job (only php scripts inside the account can)."""
+    line = line.strip()
+    if line.startswith("@"):
+        macro, _, command = line.partition(" ")
+        if macro not in CRON_MACROS:
+            raise ValueError(f"{macro} is not supported")
+        schedule = CRON_MACROS[macro]
+    else:
+        parts = line.split(None, 5)
+        if len(parts) < 6:
+            raise ValueError("not a schedule and a command")
+        schedule, command = " ".join(parts[:5]), parts[5]
+    command = REDIRECT_TAIL.sub("", command.strip())
+    if SHELL_SYMBOLS.search(command):
+        raise ValueError("uses shell features (pipes, redirects, variables)")
+    tokens = command.split()
+    if not tokens or not PHP_WORD.match(tokens[0]):
+        raise ValueError("is not a php script")
+    if len(tokens) < 2 or tokens[1].startswith("-"):
+        raise ValueError("php options are not supported")
+    script = tokens[1]
+    if script.startswith(f"/home/{user}/"):
+        script = script[len(f"/home/{user}/"):]
+    elif script.startswith("/"):
+        raise ValueError("runs a script outside the account")
+    script = script[2:] if script.startswith("./") else script
+    return schedule, " ".join(["php", script, *tokens[2:]])
 PHP_MAP = {"ea-php74": "8.1", "ea-php80": "8.1", "ea-php81": "8.1", "ea-php82": "8.2", "ea-php83": "8.3", "ea-php84": "8.4"}  # an older PHP moves up to the oldest one this platform offers
 
 
@@ -224,7 +264,7 @@ def discover(archive, account=None):
         if len(parts) >= 4 and parts[0] == "homedir" and parts[1] == "mail" and parts[2] not in ("cur", "new", "tmp") and not parts[2].startswith("."):
             mail.setdefault(parts[2], {}).setdefault(parts[3], 0)
             mail[parts[2]][parts[3]] += archive.files[n]
-    cron = [l for l in (archive.text(f"cron/{user}") or "").splitlines() if l.strip() and not l.lstrip().startswith("#")] if user else []
+    cron = cron_jobs_of(archive.text(f"cron/{user}")) if user else []
     zones = sorted(n.split("/", 1)[1][:-3] for n in names if n.startswith("dnszones/") and n.endswith(".db"))
     certs = sorted(n for n in names if n.startswith("sslcerts/") or n.startswith("ssl/"))
     home_files = [n for n in names if n.startswith("homedir/") and not _skipped(n[len("homedir/"):])]
@@ -250,7 +290,7 @@ def discover(archive, account=None):
         blockers.append("The account has " + ", ".join(x for x in (f"{len(addon)} addon" if addon else "", f"{len(subs)} sub" if subs else "", f"{len(parked)} parked" if parked else "") if x)
                         + " domain(s). A native account serves one domain, so these need a manual decision (give each its own account, or leave them out).")
     if cron:
-        warnings.append(f"{len(cron)} scheduled job(s) (cron) are not moved automatically; they are listed so they can be recreated by hand.")
+        warnings.append(f"{len(cron)} scheduled job(s) (cron): plain php scripts inside the account are recreated, anything else is listed so it can be recreated by hand.")
     if unsupported:
         warnings.append("Some database privileges have no equivalent here and were left out: " + ", ".join(unsupported) + ".")
     if report["certificates"]:
@@ -275,8 +315,8 @@ def _skipped(rel):
 # --- the node -----------------------------------------------------------------------------------------------------------------------------
 
 class Migrator:
-    def __init__(self, system, stage_root, root_for, engine, websites=None, mail=None):
-        self.s, self.stage_root, self.root_for, self.engine, self.web, self.mail = system, Path(stage_root), root_for, engine, websites, mail
+    def __init__(self, system, stage_root, root_for, engine, websites=None, mail=None, cron=None):
+        self.s, self.stage_root, self.root_for, self.engine, self.web, self.mail, self.cron = system, Path(stage_root), root_for, engine, websites, mail, cron
 
     def _archive(self, name):
         return Archive(self.stage_root / MIGRATION_DIR / name)
@@ -309,7 +349,25 @@ class Migrator:
             return self._files(account, archive, report, p.get("replace") == "yes")
         if part == "databases":
             return self._databases(account, archive, report)
+        if part == "cron":
+            return self._cron(account, archive, report)
         return self._mail(account, archive, report)
+
+    def _cron(self, account, archive, report):
+        if self.cron is None:
+            raise HandlerError("not_applicable", "This node does not run scheduled jobs.")
+        created = exists = 0
+        skipped = []
+        for line in cron_jobs_of(archive.text(f"cron/{report['user']}")):
+            try:
+                schedule, command = convert_cron_line(line, report["user"])
+                code, _ = self.cron.create({"account": account, "schedule": schedule, "command": command})
+                created, exists = created + (code == "created"), exists + (code == "exists")
+            except ValueError as exc:
+                skipped.append({"line": line[:120], "reason": str(exc)})
+            except HandlerError as exc:  # the node's own rules (every five minutes at most, ten jobs) have the last word
+                skipped.append({"line": line[:120], "reason": exc.message[:120]})
+        return "imported", {"created": created, "already_there": exists, "skipped": skipped[:30]}
 
     def _files(self, account, archive, report, replace):
         state = self.web._state(account) if self.web else None

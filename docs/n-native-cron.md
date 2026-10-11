@@ -9,4 +9,4 @@ The customer's Cron screen (`CronCapability`) now works on native nodes, through
 | Suspended website: its jobs do not run; deleting the website removes its jobs | Built, tested |
 | Panel adapter `NativeCron`, customer screen | Built, tested through the real adapter |
 
-Not built: any command other than `php script`; shell scripts, Python, Node (the platform's rule since the cPanel era); email of job output; run history beyond the last run; importing cPanel's crontab automatically.
+Not built: any command other than `php script`; shell scripts, Python, Node (the platform rule since the cPanel era); email of job output; run history beyond the last run. cPanel crontabs are imported by the migration where the line is a plain php script (docs/m-cpanel-migration.md).

@@ -107,12 +107,16 @@
     "data": {
      "addon_domains": [],
      "archive_mb": 0.0,
-     "archive_sha256": "15c309a162db447299a071b50b27af8f09283f92ad7d285bfc2d70fa967c5efa",
+     "archive_sha256": "f956a65b4be4848b4d80a167e565a4ef66f062a000982d0e37850720ea79d376",
      "blockers": [],
      "certificates": 0,
      "contact_email": "owner@gmail.example.com",
      "cron": [
-      "*/5 * * * * php /home/x/cron.php"
+      "*/5 * * * * /usr/local/bin/php /home/acmeuser/public_html/cron.php >/dev/null 2>&1",
+      "@daily php /home/acmeuser/scripts/clean.php --days=7",
+      "* * * * * php /home/acmeuser/public_html/every-minute.php",
+      "0 3 * * * wget -q -O - https://example.com/cron >/dev/null",
+      "0 4 * * * mysqldump shop | gzip > /home/acmeuser/backup.gz"
      ],
      "databases": [
       {
@@ -149,7 +153,7 @@
      "user": "acmeuser",
      "warnings": [
       "The cPanel account is called acmeuser; on this platform it is abcd1234. Database names starting with acmeuser_ are renamed to abcd1234_.",
-      "1 scheduled job(s) (cron) are not moved automatically; they are listed so they can be recreated by hand.",
+      "5 scheduled job(s) (cron): plain php scripts inside the account are recreated, anything else is listed so it can be recreated by hand.",
       "Mail is imported on the mail node; mailbox passwords keep working only if the archive holds their hashes.",
       "The site ran ea-php74, which is no longer offered; it will run on PHP 8.1. Test it before the cutover.",
       "1 link(s) in the archive were ignored for safety."
@@ -167,12 +171,16 @@
     "data": {
      "addon_domains": [],
      "archive_mb": 0.0,
-     "archive_sha256": "15c309a162db447299a071b50b27af8f09283f92ad7d285bfc2d70fa967c5efa",
+     "archive_sha256": "f956a65b4be4848b4d80a167e565a4ef66f062a000982d0e37850720ea79d376",
      "blockers": [],
      "certificates": 0,
      "contact_email": "owner@gmail.example.com",
      "cron": [
-      "*/5 * * * * php /home/x/cron.php"
+      "*/5 * * * * /usr/local/bin/php /home/acmeuser/public_html/cron.php >/dev/null 2>&1",
+      "@daily php /home/acmeuser/scripts/clean.php --days=7",
+      "* * * * * php /home/acmeuser/public_html/every-minute.php",
+      "0 3 * * * wget -q -O - https://example.com/cron >/dev/null",
+      "0 4 * * * mysqldump shop | gzip > /home/acmeuser/backup.gz"
      ],
      "databases": [
       {
@@ -209,7 +217,7 @@
      "user": "acmeuser",
      "warnings": [
       "The cPanel account is called acmeuser; on this platform it is abcd1234. Database names starting with acmeuser_ are renamed to abcd1234_.",
-      "1 scheduled job(s) (cron) are not moved automatically; they are listed so they can be recreated by hand.",
+      "5 scheduled job(s) (cron): plain php scripts inside the account are recreated, anything else is listed so it can be recreated by hand.",
       "Mail is imported on the mail node; mailbox passwords keep working only if the archive holds their hashes.",
       "The site ran ea-php74, which is no longer offered; it will run on PHP 8.1. Test it before the cutover.",
       "1 link(s) in the archive were ignored for safety."
@@ -293,6 +301,104 @@
      ],
      "databases": [],
      "users": []
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "already_there": 0,
+     "created": 2,
+     "skipped": [
+      {
+       "line": "* * * * * php /home/acmeuser/public_html/every-minute.php",
+       "reason": "A job may not run more often than every 5 minutes."
+      },
+      {
+       "line": "0 3 * * * wget -q -O - https://example.com/cron >/dev/null",
+       "reason": "is not a php script"
+      },
+      {
+       "line": "0 4 * * * mysqldump shop | gzip > /home/acmeuser/backup.gz",
+       "reason": "uses shell features (pipes, redirects, variables)"
+      }
+     ]
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "already_there": 2,
+     "created": 0,
+     "skipped": [
+      {
+       "line": "* * * * * php /home/acmeuser/public_html/every-minute.php",
+       "reason": "A job may not run more often than every 5 minutes."
+      },
+      {
+       "line": "0 3 * * * wget -q -O - https://example.com/cron >/dev/null",
+       "reason": "is not a php script"
+      },
+      {
+       "line": "0 4 * * * mysqldump shop | gzip > /home/acmeuser/backup.gz",
+       "reason": "uses shell features (pipes, redirects, variables)"
+      }
+     ]
+    },
+    "ok": true
+   },
+   {
+    "code": "listed",
+    "data": {
+     "jobs": [
+      {
+       "command": "php public_html/cron.php",
+       "enabled": true,
+       "job_id": "bed68241e8",
+       "last_output": "",
+       "last_run_at": null,
+       "last_status": "",
+       "schedule": "*/5 * * * *"
+      },
+      {
+       "command": "php scripts/clean.php --days=7",
+       "enabled": true,
+       "job_id": "ee0b44b203",
+       "last_output": "",
+       "last_run_at": null,
+       "last_status": "",
+       "schedule": "0 0 * * *"
+      }
+     ],
+     "max_jobs": 10,
+     "min_interval_minutes": 5,
+     "presets": [
+      [
+       "Every 5 minutes",
+       "*/5 * * * *"
+      ],
+      [
+       "Every 15 minutes",
+       "*/15 * * * *"
+      ],
+      [
+       "Every hour",
+       "0 * * * *"
+      ],
+      [
+       "Every day at 02:00",
+       "0 2 * * *"
+      ],
+      [
+       "Every Sunday at 03:00",
+       "0 3 * * 0"
+      ],
+      [
+       "First day of the month",
+       "0 4 1 * *"
+      ]
+     ]
     },
     "ok": true
    },
@@ -410,7 +516,7 @@
    "params": {
     "account": "abcd1234",
     "archive": "cpmove-acmeuser.tar.gz",
-    "expected_sha256": "15C309A162DB447299A071B50B27AF8F09283F92AD7D285BFC2D70FA967C5EFA"
+    "expected_sha256": "F956A65B4BE4848B4D80A167E565A4EF66F062A000982D0E37850720EA79D376"
    }
   },
   {
@@ -466,6 +572,28 @@
     "account": "abcd1234",
     "archive": "cpmove-acmeuser.tar.gz",
     "part": "databases"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "cron"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "cron"
+   }
+  },
+  {
+   "command": "CRON_LIST",
+   "params": {
+    "account": "abcd1234"
    }
   },
   {

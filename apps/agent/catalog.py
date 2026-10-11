@@ -260,7 +260,7 @@ COMMANDS = {c.name: c for c in [
             description="Run one scheduled job now, in the account's own limits, and report how it ended."),
     Command("MIGRATE_ANALYZE", {"account": _f("account"), "archive": _f("archive_name"), "expected_sha256": Field("sha256", required=False)}, 1800, ephemeral=True,
             description="Read a cPanel account backup that has arrived on this node and report what it holds and what cannot move by itself. Changes nothing."),
-    Command("MIGRATE_IMPORT", {"account": _f("account"), "archive": _f("archive_name"), "part": _f("enum", choices=("files", "databases", "mail")),
+    Command("MIGRATE_IMPORT", {"account": _f("account"), "archive": _f("archive_name"), "part": _f("enum", choices=("files", "databases", "mail", "cron")),
                                "replace": Field("enum", choices=("no", "yes"), required=False)}, 7200, max_attempts=2,
             description="Copy one part of a cPanel backup (website files, databases, or mailboxes) into the account's place on this node. Never replaces a database."),
     Command("MIGRATE_VALIDATE", {"account": _f("account"), "archive": _f("archive_name")}, 1800, ephemeral=True,

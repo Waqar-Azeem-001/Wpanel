@@ -170,3 +170,27 @@ def test_archive_class_ignores_links_and_reads_small_files(node):
     archive = Archive(path)
     assert archive.skipped_links == 1 and "homedir/public_html/passwd-link" not in archive.files and archive.text("cp/acmeuser").startswith("DNS=")
     assert discover(archive)["main_domain"] == "acme.com"
+
+
+def test_plain_php_cron_jobs_are_recreated_and_the_rest_listed(node):
+    machine, path, root = node
+    code, data = run(machine, "MIGRATE_IMPORT", part="cron")
+    assert code == "imported" and data["created"] == 2 and data["already_there"] == 0
+    reasons = {s["line"].split()[1] if s["line"].startswith("*") else s["line"][:12]: s["reason"] for s in data["skipped"]}
+    assert len(data["skipped"]) == 3
+    assert any("every" in s["reason"] for s in data["skipped"]) and any("not a php script" in s["reason"] for s in data["skipped"]) and any("shell" in s["reason"] for s in data["skipped"])
+    jobs = machine.cron.run("CRON_LIST", {"account": "acmeuser"})[1]["jobs"]
+    assert sorted((j["schedule"], j["command"]) for j in jobs) == [("*/5 * * * *", "php public_html/cron.php"), ("0 0 * * *", "php scripts/clean.php --days=7")]
+    again = run(machine, "MIGRATE_IMPORT", part="cron")[1]
+    assert again["created"] == 0 and again["already_there"] == 2  # repeating it adds nothing
+    assert reasons
+
+
+def test_cron_line_conversion():
+    from apps.agent.node.cpanel_import import convert_cron_line
+
+    assert convert_cron_line("0 2 * * * /opt/cpanel/ea-php81/root/usr/bin/php /home/bob/public_html/a.php x=1 > /dev/null 2>&1", "bob") == ("0 2 * * *", "php public_html/a.php x=1")
+    assert convert_cron_line("@hourly php ./job.php", "bob") == ("0 * * * *", "php job.php")
+    for bad in ("0 2 * * * php /etc/x.php", "0 2 * * * php -q a.php", "0 2 * * * curl http://x", "0 2 * * * php a.php; id", "@reboot php a.php", "short line", "0 2 * * * php a.php $HOME"):
+        with pytest.raises(ValueError):
+            convert_cron_line(bad, "bob")

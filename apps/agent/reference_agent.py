@@ -126,7 +126,7 @@ class NativeMachine(FakeMachine):
         from .node.cron import Cron
 
         self.cron = Cron(self.system, self.websites, now=lambda: self.clock())
-        self.migrator = Migrator(self.system, self.files_dir / "_stage" if self.files_dir else _P("."), root_for, self.engine, websites=self.websites, mail=self.mail)
+        self.migrator = Migrator(self.system, self.files_dir / "_stage" if self.files_dir else _P("."), root_for, self.engine, websites=self.websites, mail=self.mail, cron=self.cron)
 
     def run(self, command, p):
         if command in self.WEBSITE:

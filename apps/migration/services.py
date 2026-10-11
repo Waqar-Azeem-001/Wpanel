@@ -155,6 +155,8 @@ def _plan(m):
     steps = ["site", "files"]
     if m.report.get("databases"):
         steps.append("databases")
+    if m.report.get("cron"):
+        steps.append("cron")
     if m.report.get("mail") and m.mail_target is not None:
         steps += ["maildomain", "mail"]
     return steps + ["validate"]
@@ -177,6 +179,8 @@ def _advance(m):
             _dispatch(m, m.target, "MIGRATE_IMPORT", {**base, "part": "files"}, "files")
         elif step == "databases":
             _dispatch(m, m.target, "MIGRATE_IMPORT", {**base, "part": "databases"}, "databases")
+        elif step == "cron":
+            _dispatch(m, m.target, "MIGRATE_IMPORT", {**base, "part": "cron"}, "cron")
         elif step == "maildomain":
             _dispatch(m, m.mail_target, "MAIL_DOMAIN_ADD", {"account": username, "domain": domain}, "maildomain")
         elif step == "mail":
@@ -407,7 +411,7 @@ def timeline(m):
     blockers = report.get("blockers") or []
     add("Compatibility check", "problem" if blockers else ("done" if analysed else "pending"), "; ".join(blockers) if blockers else f"{len(report.get('warnings', []))} warning(s)" if analysed else "")
     for key, label, needed in (("site", "Website created on the node", True), ("files", "Files transfer", True), ("databases", "Database transfer", bool(report.get("databases"))),
-                               ("mail", "Email transfer", bool(report.get("mail")) and m.mail_target is not None)):
+                               ("cron", "Scheduled jobs", bool(report.get("cron"))), ("mail", "Email transfer", bool(report.get("mail")) and m.mail_target is not None)):
         if analysed and not needed:
             add(label, "skipped", "Nothing to move." if key != "mail" else "No mail in the backup, or no mail node chosen.")
         elif key in m.parts_done:

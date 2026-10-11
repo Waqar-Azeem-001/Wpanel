@@ -2659,7 +2659,8 @@
      "choices": [
       "files",
       "databases",
-      "mail"
+      "mail",
+      "cron"
      ],
      "high": 0,
      "kind": "enum",

@@ -32,7 +32,10 @@ def build(path, user="acmeuser", domain="acme.com", php="ea-php74", addon=False,
         f"dnszones/{domain}.db": f"$TTL 14400\n{domain}. IN SOA ns1.{domain}. root.{domain}. (1 3600 600 86400 3600)\n",
     }
     if cron:
-        members[f"cron/{user}"] = "# comment\n*/5 * * * * php /home/x/cron.php\n"
+        members[f"cron/{user}"] = (
+            "# comment\nMAILTO=\"\"\n*/5 * * * * /usr/local/bin/php /home/{u}/public_html/cron.php >/dev/null 2>&1\n@daily php /home/{u}/scripts/clean.php --days=7\n"
+            "* * * * * php /home/{u}/public_html/every-minute.php\n0 3 * * * wget -q -O - https://example.com/cron >/dev/null\n"
+            "0 4 * * * mysqldump shop | gzip > /home/{u}/backup.gz\n").replace("{u}", user)
     if mail:
         members.update({
             f"homedir/mail/{domain}/info/cur/1.msg": "From: a@b.example.com\nSubject: Hello\n\nbody",

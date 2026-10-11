@@ -190,6 +190,7 @@ def migrate_steps(sha):
             step("MIGRATE_ANALYZE", {**a, "expected_sha256": sha.upper()}), step("MIGRATE_ANALYZE", {**a, "archive": "cpmove-nobody.tar.gz"}),
             step("MIGRATE_VALIDATE", a), step("MIGRATE_IMPORT", {**a, "part": "files"}), step("MIGRATE_IMPORT", {**a, "part": "files"}), step("MIGRATE_IMPORT", {**a, "part": "files", "replace": "yes"}),
             step("MIGRATE_IMPORT", {**a, "part": "databases"}), step("MIGRATE_IMPORT", {**a, "part": "databases"}),
+            step("MIGRATE_IMPORT", {**a, "part": "cron"}), step("MIGRATE_IMPORT", {**a, "part": "cron"}), step("CRON_LIST", {"account": "abcd1234"}),
             step("MIGRATE_IMPORT", {**a, "part": "mail"}), step("MAIL_DOMAIN_ADD", {"account": "abcd1234", "domain": "acme.com"}, quiet=True),
             step("MIGRATE_IMPORT", {**a, "part": "mail"}), step("MIGRATE_IMPORT", {**a, "part": "mail"}), step("MIGRATE_VALIDATE", a),
             step("MIGRATE_IMPORT", {"account": "nobody123", "archive": MIGRATE_ARCHIVE, "part": "files"}),
