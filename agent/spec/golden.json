@@ -294,6 +294,14 @@
     ],
     [
      "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
+    ],
+    [
+     "remove",
      "/var/lib/whp/accounts/abcd1234.json"
     ]
    ],
@@ -706,6 +714,14 @@
      "userdel",
      "--remove",
      "abcd1234"
+    ],
+    [
+     "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
     ],
     [
      "remove",
@@ -6842,6 +6858,14 @@
     ],
     [
      "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
+    ],
+    [
+     "remove",
      "/var/lib/whp/accounts/abcd1234.json"
     ]
    ],
@@ -7066,6 +7090,14 @@
      "userdel",
      "--remove",
      "abcd1234"
+    ],
+    [
+     "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
     ],
     [
      "remove",
@@ -7296,6 +7328,14 @@
     ],
     [
      "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
+    ],
+    [
+     "remove",
      "/var/lib/whp/accounts/abcd1234.json"
     ]
    ],
@@ -7520,6 +7560,14 @@
      "userdel",
      "--remove",
      "abcd1234"
+    ],
+    [
+     "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
     ],
     [
      "remove",
@@ -8940,6 +8988,14 @@
     ],
     [
      "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
+    ],
+    [
+     "remove",
      "/var/lib/whp/accounts/abcd1234.json"
     ]
    ],
@@ -9773,6 +9829,14 @@
     ],
     [
      "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
+    ],
+    [
+     "remove",
      "/var/lib/whp/accounts/abcd1234.json"
     ]
    ],
@@ -10330,6 +10394,859 @@
      "directory": "",
      "name": "dev",
      "password": "Kq7vRt2mXzLp"
+    }
+   }
+  ]
+ },
+ {
+  "expected": {
+   "commands": [
+    [
+     "useradd",
+     "--create-home",
+     "--home-dir",
+     "/home/abcd1234",
+     "--shell",
+     "/sbin/nologin",
+     "--user-group",
+     "abcd1234"
+    ],
+    [
+     "mkdir",
+     "/home/abcd1234",
+     "0o710",
+     "root",
+     "apache"
+    ],
+    [
+     "mkdir",
+     "/home/abcd1234/sites",
+     "0o2750",
+     "abcd1234",
+     "apache"
+    ],
+    [
+     "mkdir",
+     "/home/abcd1234/sites/acme.com",
+     "0o2750",
+     "abcd1234",
+     "apache"
+    ],
+    [
+     "mkdir",
+     "/home/abcd1234/sites/acme.com/public_html",
+     "0o2750",
+     "abcd1234",
+     "apache"
+    ],
+    [
+     "mkdir",
+     "/home/abcd1234/logs",
+     "0o750",
+     "abcd1234"
+    ],
+    [
+     "mkdir",
+     "/home/abcd1234/tmp",
+     "0o700",
+     "abcd1234"
+    ],
+    [
+     "write",
+     "/home/abcd1234/sites/acme.com/public_html/index.html",
+     "0o640",
+     "abcd1234",
+     "apache"
+    ],
+    [
+     "xfs_quota",
+     "-x",
+     "-c",
+     "project -s -p /home/abcd1234 2000",
+     "/home"
+    ],
+    [
+     "xfs_quota",
+     "-x",
+     "-c",
+     "limit -p bsoft=4608m bhard=5120m isoft=225000 ihard=250000 2000",
+     "/home"
+    ],
+    [
+     "write",
+     "/etc/systemd/system/whp-abcd1234.slice",
+     "0o644",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/whp/php/abcd1234.conf",
+     "0o644",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/systemd/system/whp-php-abcd1234.service",
+     "0o644",
+     "root"
+    ],
+    [
+     "systemctl",
+     "daemon-reload"
+    ],
+    [
+     "systemctl",
+     "enable",
+     "--now",
+     "whp-php-abcd1234.service"
+    ],
+    [
+     "write",
+     "/etc/httpd/conf.d/whp/abcd1234-acme.com.conf",
+     "0o644",
+     "root"
+    ],
+    [
+     "httpd",
+     "-t"
+    ],
+    [
+     "systemctl",
+     "reload",
+     "httpd"
+    ],
+    [
+     "write",
+     "/var/lib/whp/accounts/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/cron.d/whp-abcd1234",
+     "0o644",
+     "root"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/cron.d/whp-abcd1234",
+     "0o644",
+     "root"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/cron.d/whp-abcd1234",
+     "0o644",
+     "root"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/cron.d/whp-abcd1234",
+     "0o644",
+     "root"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/cron.d/whp-abcd1234",
+     "0o644",
+     "root"
+    ],
+    [
+     "systemd-run",
+     "--quiet",
+     "--collect",
+     "--wait",
+     "--pipe",
+     "--uid",
+     "abcd1234",
+     "--gid",
+     "abcd1234",
+     "--slice",
+     "whp-abcd1234.slice",
+     "--property=NoNewPrivileges=yes",
+     "--property=PrivateTmp=yes",
+     "--property=ProtectSystem=strict",
+     "--property=ProtectHome=tmpfs",
+     "--property=BindPaths=/home/abcd1234",
+     "--property=RuntimeMaxSec=3600",
+     "--working-directory=/home/abcd1234/sites/acme.com",
+     "/opt/remi/php83/root/usr/bin/php",
+     "public_html/cron.php",
+     "--quiet"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "FAILED",
+     "systemd-run",
+     "--quiet",
+     "--collect",
+     "--wait",
+     "--pipe",
+     "--uid",
+     "abcd1234",
+     "--gid",
+     "abcd1234",
+     "--slice",
+     "whp-abcd1234.slice",
+     "--property=NoNewPrivileges=yes",
+     "--property=PrivateTmp=yes",
+     "--property=ProtectSystem=strict",
+     "--property=ProtectHome=tmpfs",
+     "--property=BindPaths=/home/abcd1234",
+     "--property=RuntimeMaxSec=3600",
+     "--working-directory=/home/abcd1234/sites/acme.com",
+     "/opt/remi/php83/root/usr/bin/php",
+     "public_html/cron.php",
+     "--quiet"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/httpd/conf.d/whp/abcd1234-acme.com.conf",
+     "0o644",
+     "root"
+    ],
+    [
+     "systemctl",
+     "stop",
+     "whp-php-abcd1234.service"
+    ],
+    [
+     "httpd",
+     "-t"
+    ],
+    [
+     "systemctl",
+     "reload",
+     "httpd"
+    ],
+    [
+     "write",
+     "/var/lib/whp/accounts/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "systemctl",
+     "start",
+     "whp-php-abcd1234.service"
+    ],
+    [
+     "write",
+     "/etc/httpd/conf.d/whp/abcd1234-acme.com.conf",
+     "0o644",
+     "root"
+    ],
+    [
+     "httpd",
+     "-t"
+    ],
+    [
+     "systemctl",
+     "reload",
+     "httpd"
+    ],
+    [
+     "write",
+     "/var/lib/whp/accounts/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/var/lib/whp/cron/abcd1234.json",
+     "0o600",
+     "root"
+    ],
+    [
+     "write",
+     "/etc/cron.d/whp-abcd1234",
+     "0o644",
+     "root"
+    ],
+    [
+     "systemctl",
+     "disable",
+     "--now",
+     "whp-php-abcd1234.service"
+    ],
+    [
+     "remove",
+     "/etc/httpd/conf.d/whp/abcd1234-acme.com.conf"
+    ],
+    [
+     "remove",
+     "/etc/systemd/system/whp-php-abcd1234.service"
+    ],
+    [
+     "remove",
+     "/etc/systemd/system/whp-abcd1234.slice"
+    ],
+    [
+     "remove",
+     "/etc/whp/php/abcd1234.conf"
+    ],
+    [
+     "systemctl",
+     "daemon-reload"
+    ],
+    [
+     "httpd",
+     "-t"
+    ],
+    [
+     "systemctl",
+     "reload",
+     "httpd"
+    ],
+    [
+     "xfs_quota",
+     "-x",
+     "-c",
+     "limit -p bsoft=0 bhard=0 2000",
+     "/home"
+    ],
+    [
+     "userdel",
+     "--remove",
+     "abcd1234"
+    ],
+    [
+     "remove",
+     "/etc/cron.d/whp-abcd1234"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/cron/abcd1234.json"
+    ],
+    [
+     "remove",
+     "/var/lib/whp/accounts/abcd1234.json"
+    ]
+   ],
+   "dirs": [],
+   "files": {},
+   "results": [
+    {
+     "code": "not_found",
+     "message": "No such account on this node.",
+     "ok": false
+    },
+    {
+     "code": "created",
+     "data": {
+      "root": "/home/abcd1234/sites/acme.com/public_html",
+      "uid": 2000
+     },
+     "ok": true
+    },
+    {
+     "code": "listed",
+     "data": {
+      "jobs": [],
+      "max_jobs": 10,
+      "min_interval_minutes": 5,
+      "presets": [
+       [
+        "Every 5 minutes",
+        "*/5 * * * *"
+       ],
+       [
+        "Every 15 minutes",
+        "*/15 * * * *"
+       ],
+       [
+        "Every hour",
+        "0 * * * *"
+       ],
+       [
+        "Every day at 02:00",
+        "0 2 * * *"
+       ],
+       [
+        "Every Sunday at 03:00",
+        "0 3 * * 0"
+       ],
+       [
+        "First day of the month",
+        "0 4 1 * *"
+       ]
+      ]
+     },
+     "ok": true
+    },
+    {
+     "code": "created",
+     "data": {
+      "job_id": "295272422e"
+     },
+     "ok": true
+    },
+    {
+     "code": "exists",
+     "data": {
+      "job_id": "295272422e"
+     },
+     "ok": true
+    },
+    {
+     "code": "invalid",
+     "message": "A job may not run more often than every 5 minutes.",
+     "ok": false
+    },
+    {
+     "code": "invalid",
+     "message": "The minute part of the schedule must be between 0 and 59.",
+     "ok": false
+    },
+    {
+     "code": "invalid",
+     "message": "The hour part of the schedule must be between 0 and 23.",
+     "ok": false
+    },
+    {
+     "code": "invalid",
+     "message": "command is not a valid cron command.",
+     "ok": false
+    },
+    {
+     "code": "invalid",
+     "message": "command is not a valid cron command.",
+     "ok": false
+    },
+    {
+     "code": "invalid",
+     "message": "command is not a valid cron command.",
+     "ok": false
+    },
+    {
+     "code": "created",
+     "data": {
+      "job_id": "701074a4bf"
+     },
+     "ok": true
+    },
+    {
+     "code": "updated",
+     "data": {
+      "job_id": "2a42034022"
+     },
+     "ok": true
+    },
+    {
+     "code": "not_found",
+     "message": "That scheduled job no longer exists.",
+     "ok": false
+    },
+    {
+     "code": "updated",
+     "data": {
+      "job_id": "2a42034022"
+     },
+     "ok": true
+    },
+    {
+     "code": "listed",
+     "data": {
+      "jobs": [
+       {
+        "command": "php public_html/cron.php --quiet",
+        "enabled": false,
+        "job_id": "2a42034022",
+        "last_output": "",
+        "last_run_at": null,
+        "last_status": "",
+        "schedule": "0 2 * * *"
+       },
+       {
+        "command": "php public_html/b.php a=1 b=2",
+        "enabled": true,
+        "job_id": "701074a4bf",
+        "last_output": "",
+        "last_run_at": null,
+        "last_status": "",
+        "schedule": "*/10 * * * *"
+       }
+      ],
+      "max_jobs": 10,
+      "min_interval_minutes": 5,
+      "presets": [
+       [
+        "Every 5 minutes",
+        "*/5 * * * *"
+       ],
+       [
+        "Every 15 minutes",
+        "*/15 * * * *"
+       ],
+       [
+        "Every hour",
+        "0 * * * *"
+       ],
+       [
+        "Every day at 02:00",
+        "0 2 * * *"
+       ],
+       [
+        "Every Sunday at 03:00",
+        "0 3 * * 0"
+       ],
+       [
+        "First day of the month",
+        "0 4 1 * *"
+       ]
+      ]
+     },
+     "ok": true
+    },
+    {
+     "code": "updated",
+     "data": {
+      "job_id": "2a42034022"
+     },
+     "ok": true
+    },
+    {
+     "code": "ran",
+     "data": {
+      "job": {
+       "command": "php public_html/cron.php --quiet",
+       "enabled": true,
+       "job_id": "2a42034022",
+       "last_output": "",
+       "last_run_at": "2027-01-15T08:00:00+00:00",
+       "last_status": "ok",
+       "schedule": "0 2 * * *"
+      }
+     },
+     "ok": true
+    },
+    {
+     "code": "ran",
+     "data": {
+      "job": {
+       "command": "php public_html/cron.php --quiet",
+       "enabled": true,
+       "job_id": "2a42034022",
+       "last_output": "systemd-run failed",
+       "last_run_at": "2027-01-15T08:00:00+00:00",
+       "last_status": "failed",
+       "schedule": "0 2 * * *"
+      }
+     },
+     "ok": true
+    },
+    {
+     "code": "suspended",
+     "data": {},
+     "ok": true
+    },
+    {
+     "code": "suspended",
+     "message": "This website is suspended, so its scheduled jobs do not run.",
+     "ok": false
+    },
+    {
+     "code": "active",
+     "data": {},
+     "ok": true
+    },
+    {
+     "code": "deleted",
+     "data": {},
+     "ok": true
+    },
+    {
+     "code": "not_found",
+     "message": "That scheduled job no longer exists.",
+     "ok": false
+    },
+    {
+     "code": "listed",
+     "data": {
+      "jobs": [
+       {
+        "command": "php public_html/b.php a=1 b=2",
+        "enabled": true,
+        "job_id": "701074a4bf",
+        "last_output": "",
+        "last_run_at": null,
+        "last_status": "",
+        "schedule": "*/10 * * * *"
+       }
+      ],
+      "max_jobs": 10,
+      "min_interval_minutes": 5,
+      "presets": [
+       [
+        "Every 5 minutes",
+        "*/5 * * * *"
+       ],
+       [
+        "Every 15 minutes",
+        "*/15 * * * *"
+       ],
+       [
+        "Every hour",
+        "0 * * * *"
+       ],
+       [
+        "Every day at 02:00",
+        "0 2 * * *"
+       ],
+       [
+        "Every Sunday at 03:00",
+        "0 3 * * 0"
+       ],
+       [
+        "First day of the month",
+        "0 4 1 * *"
+       ]
+      ]
+     },
+     "ok": true
+    },
+    {
+     "code": "deleted",
+     "data": {},
+     "ok": true
+    }
+   ],
+   "users": {}
+  },
+  "folders": [],
+  "name": "cron jobs",
+  "steps": [
+   {
+    "command": "CRON_LIST",
+    "params": {
+     "account": "nobody123"
+    }
+   },
+   {
+    "command": "CREATE_WEBSITE",
+    "params": {
+     "account": "abcd1234",
+     "domain": "acme.com",
+     "php_version": "8.3"
+    }
+   },
+   {
+    "command": "CRON_LIST",
+    "params": {
+     "account": "abcd1234"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php public_html/cron.php --quiet",
+     "schedule": "*/10 * * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php public_html/cron.php --quiet",
+     "schedule": "*/10 * * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php public_html/cron.php --quiet",
+     "schedule": "*/4 * * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php public_html/cron.php --quiet",
+     "schedule": "61 * * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php public_html/cron.php --quiet",
+     "schedule": "0 25 * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php ../x.php",
+     "schedule": "*/10 * * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php a.php; id",
+     "schedule": "*/10 * * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "sh -c id",
+     "schedule": "*/10 * * * *"
+    }
+   },
+   {
+    "command": "CRON_CREATE",
+    "params": {
+     "account": "abcd1234",
+     "command": "php public_html/b.php a=1 b=2",
+     "schedule": "*/10 * * * *"
+    }
+   },
+   {
+    "command": "CRON_UPDATE",
+    "params": {
+     "account": "abcd1234",
+     "job_id": "295272422e",
+     "schedule": "0 2 * * *"
+    }
+   },
+   {
+    "command": "CRON_UPDATE",
+    "params": {
+     "account": "abcd1234",
+     "job_id": "295272422e",
+     "schedule": "0 2 * * *"
+    }
+   },
+   {
+    "command": "CRON_UPDATE",
+    "params": {
+     "account": "abcd1234",
+     "enabled": "no",
+     "job_id": "2a42034022"
+    }
+   },
+   {
+    "command": "CRON_LIST",
+    "params": {
+     "account": "abcd1234"
+    }
+   },
+   {
+    "command": "CRON_UPDATE",
+    "params": {
+     "account": "abcd1234",
+     "enabled": "yes",
+     "job_id": "2a42034022"
+    }
+   },
+   {
+    "command": "CRON_RUN",
+    "params": {
+     "account": "abcd1234",
+     "job_id": "2a42034022"
+    }
+   },
+   {
+    "command": "CRON_RUN",
+    "fail_offset": 0,
+    "params": {
+     "account": "abcd1234",
+     "job_id": "2a42034022"
+    }
+   },
+   {
+    "command": "SUSPEND_WEBSITE",
+    "params": {
+     "account": "abcd1234"
+    }
+   },
+   {
+    "command": "CRON_RUN",
+    "params": {
+     "account": "abcd1234",
+     "job_id": "2a42034022"
+    }
+   },
+   {
+    "command": "UNSUSPEND_WEBSITE",
+    "params": {
+     "account": "abcd1234"
+    }
+   },
+   {
+    "command": "CRON_DELETE",
+    "params": {
+     "account": "abcd1234",
+     "job_id": "2a42034022"
+    }
+   },
+   {
+    "command": "CRON_DELETE",
+    "params": {
+     "account": "abcd1234",
+     "job_id": "2a42034022"
+    }
+   },
+   {
+    "command": "CRON_LIST",
+    "params": {
+     "account": "abcd1234"
+    }
+   },
+   {
+    "command": "DELETE_WEBSITE",
+    "params": {
+     "account": "abcd1234",
+     "domain": "acme.com",
+     "keep_archive": "no"
     }
    }
   ]

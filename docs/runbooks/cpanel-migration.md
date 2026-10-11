@@ -26,7 +26,7 @@ For mail, copy the same file to the mail node's `/var/lib/whp/stage/migrations/`
 2. Read the warnings (cron jobs to recreate by hand, old PHP, certificates, links ignored), tick that you accept them, **Approve and import**.
 3. Wait for *Imported and checked*. If a step failed, read the message, fix the cause, **Retry**.
 4. Test the site before DNS changes: **Check that the site answers**, and (better) open it with a hosts-file entry pointing the domain at the node.
-5. Recreate the listed cron jobs by hand on the new node (no scheduled-jobs feature yet).
+5. Recreate the listed cron jobs on the new node: the customer's Cron screen now works on native nodes (php scripts only, every 5 minutes at most), but the jobs are not imported automatically.
 6. **Cut over.** Confirm. If the DNS note says WHPanel does not host the zone, set the A record (and www) to the address shown.
 7. Watch the site, the mail and the node's Monitoring page for the rollback window.
 

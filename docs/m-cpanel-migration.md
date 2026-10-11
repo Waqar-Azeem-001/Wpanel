@@ -14,7 +14,7 @@ Roadmap: operate cPanel and native side by side (M0), make new orders native-fir
 | **M3** staff dashboard: totals (total, migrated, in progress, pending, failed, manual review), per-account stage tracker, history, actions | Built, tested |
 | **M4** retirement checklist: measured conditions plus named sign-offs, nothing ticked for things only a real node can show | Built, tested. **Nothing is removed from the code**: the cPanel provider, "open cPanel" link and WHM credentials stay until every line is green and a person removes them |
 | Making the cPanel backup and copying it to the node | **Manual** (two commands, `docs/runbooks/cpanel-migration.md`). The WHM API has no way to make a `pkgacct` archive, and the cPanel server is not an agent node |
-| Cron jobs | **Not imported.** They are listed in the report to be recreated by hand (the platform has no scheduled-jobs feature yet) |
+| Cron jobs | **Not imported.** They are listed in the report to be recreated in the Cron screen (native cron exists now: `php` scripts inside the website only, every 5 minutes at most, ten jobs; other commands cannot be scheduled) |
 | Addon, sub and parked domains | **Blocked for a person**: a native account serves one domain. Give each its own account, or leave it out |
 | Certificates | Not copied; a new one is issued after the cutover |
 | DNS | Changed at cutover **only when WHPanel hosts the zone** (the A record is set to the node, and the old value saved for rollback). Otherwise the new address is shown for someone to set. cPanel's zone file is listed in the report but not imported |

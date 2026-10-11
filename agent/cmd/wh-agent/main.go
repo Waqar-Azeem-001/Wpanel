@@ -4,6 +4,7 @@
 //	wh-agent enroll --panel URL --token TOKEN [--capabilities web,php,database] [--acme-email ADDRESS]
 //	wh-agent run                     (the service: poll, heartbeat, recurring jobs, certificate renewal)
 //	wh-agent once                    (handle at most one command and exit: for checking a node by hand)
+//	wh-agent cron-run ACCOUNT JOB    (called by /etc/cron.d/whp-<account>: runs one scheduled job)
 //	wh-agent file-worker             (internal: runs ONE file command as the account's own user)
 //	wh-agent check                   (is the catalogue and the saved configuration sound?)
 //	wh-agent version
@@ -47,6 +48,8 @@ func main() {
 		err = run(os.Args[2:], false)
 	case "once":
 		err = run(os.Args[2:], true)
+	case "cron-run":
+		err = cronRun(os.Args[2:])
 	case "file-worker":
 		err = fileWorker(os.Stdin, os.Stdout)
 	case "check":
@@ -209,6 +212,20 @@ func run(args []string, once bool) error {
 	go func() { <-signals; close(stop) }()
 	svc.Run(stop)
 	return nil
+}
+
+// cronRun is what a line of /etc/cron.d/whp-<account> calls: run one scheduled job, if the account, the job and the website allow it.
+func cronRun(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: wh-agent cron-run ACCOUNT JOB")
+	}
+	spec, err := catalog.Load()
+	if err != nil {
+		return err
+	}
+	agent := handlers.New(spec, system.Real{})
+	_, err = agent.CronRun(args[0], args[1])
+	return err
 }
 
 func fileWorker(in io.Reader, out io.Writer) error {

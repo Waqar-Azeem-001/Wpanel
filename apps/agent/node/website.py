@@ -190,5 +190,7 @@ class Websites:
         self._sftp().remove_all(account, state)
         self.s.run(["xfs_quota", "-x", "-c", f"limit -p bsoft=0 bhard=0 {state['uid']}", "/home"])
         self.s.run(["userdel", "--remove", account])
+        self.s.remove(f"/etc/cron.d/whp-{account}")  # its scheduled jobs go with it
+        self.s.remove(f"/var/lib/whp/cron/{account}.json")
         self.s.remove(paths["state"])
         return "deleted", data

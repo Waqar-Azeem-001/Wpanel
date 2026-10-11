@@ -10,6 +10,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from .node.cron import Cron
 from .node.databases import Databases
 from .node.mariadb import FakeMariadb
 from .node.servicectl import ServiceControl
@@ -67,6 +68,21 @@ def scenarios():
                                                                             step("SFTP_CREATE", {"account": "abcd1234", "name": "dev", "password": GOOD_PASSWORD, "directory": ""}, fail_offset=5),
                                                                             step("SFTP_CREATE", {"account": "abcd1234", "name": "dev", "password": GOOD_PASSWORD, "directory": ""}, fail_offset=8)]})
 
+    from .node.cron import job_id
+
+    a = {"account": "abcd1234"}
+    add = {**a, "schedule": "*/10 * * * *", "command": "php public_html/cron.php --quiet"}
+    first = job_id("*/10 * * * *", "php public_html/cron.php --quiet")
+    moved = job_id("0 2 * * *", "php public_html/cron.php --quiet")
+    cron = [step("CRON_LIST", {"account": "nobody123"}), step("CREATE_WEBSITE", SITE), step("CRON_LIST", a), step("CRON_CREATE", add), step("CRON_CREATE", add),
+            step("CRON_CREATE", {**add, "schedule": "*/4 * * * *"}), step("CRON_CREATE", {**add, "schedule": "61 * * * *"}), step("CRON_CREATE", {**add, "schedule": "0 25 * * *"}),
+            step("CRON_CREATE", {**add, "command": "php ../x.php"}), step("CRON_CREATE", {**add, "command": "php a.php; id"}), step("CRON_CREATE", {**add, "command": "sh -c id"}),
+            step("CRON_CREATE", {**add, "command": "php public_html/b.php a=1 b=2"}), step("CRON_UPDATE", {**a, "job_id": first, "schedule": "0 2 * * *"}),
+            step("CRON_UPDATE", {**a, "job_id": first, "schedule": "0 2 * * *"}), step("CRON_UPDATE", {**a, "job_id": moved, "enabled": "no"}), step("CRON_LIST", a),
+            step("CRON_UPDATE", {**a, "job_id": moved, "enabled": "yes"}), step("CRON_RUN", {**a, "job_id": moved}), step("CRON_RUN", {**a, "job_id": moved}, fail_offset=0),
+            step("SUSPEND_WEBSITE", a), step("CRON_RUN", {**a, "job_id": moved}), step("UNSUSPEND_WEBSITE", a), step("CRON_DELETE", {**a, "job_id": moved}),
+            step("CRON_DELETE", {**a, "job_id": moved}), step("CRON_LIST", a), step("DELETE_WEBSITE", {**DEL, "keep_archive": "no"})]
+    out.append({"name": "cron jobs", "folders": [], "steps": cron})
     p = "abcd1234_"
     db = [step("CREATE_WEBSITE", {**SITE, "databases": 2}), step("DB_INVENTORY", {"account": "abcd1234"}), step("CREATE_DATABASE", {"account": "abcd1234", "name": p + "shop"}),
           step("CREATE_DATABASE", {"account": "abcd1234", "name": p + "shop"}), step("CREATE_DATABASE", {"account": "abcd1234", "name": p + "blog"}),
@@ -126,6 +142,7 @@ def run(scenario):
         web = Websites(system)
         sftp = Sftp(system, lambda account: (folder / account / "sites") if (folder / account / "sites").is_dir() else None)
         databases = Databases(system, engine)
+        cron_jobs = Cron(system, web, now=lambda: 1_800_000_000)
         service = ServiceControl(system, sleep=lambda seconds: None)
         results = []
         for item in scenario["steps"]:
@@ -141,6 +158,8 @@ def run(scenario):
                     code, data = web.run(command, item["params"])
                 elif command in SFTP:
                     code, data = sftp.run(command, item["params"])
+                elif command.startswith("CRON_"):
+                    code, data = cron_jobs.run(command, item["params"])
                 elif command == "SERVICE_RESTART":
                     code, data = service.run(command, item["params"])
                 else:

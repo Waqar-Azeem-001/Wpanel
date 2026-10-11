@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from apps.accounts.roles import Role
-from apps.agent import enrollment, services
+from apps.agent import catalog, enrollment, services
 from apps.agent.management.commands.export_agent_spec import files, render
 from apps.agent.models import AgentJob, AgentNode, JobStatus, NodeStatus
 from apps.products.models import Server, ServerKind
@@ -135,7 +135,7 @@ def test_a_revoked_go_agent_is_turned_away(enrolled):
 
 def test_the_agent_checks_its_own_catalogue(binary, tmp_path):
     done = run(binary, "check", "--config", str(tmp_path / "none.json"))
-    assert done.returncode == 0 and "80 commands" in done.stdout and "not enrolled" in done.stdout
+    assert done.returncode == 0 and f"{len(catalog.COMMANDS)} commands" in done.stdout and "not enrolled" in done.stdout
     assert run(binary, "version").stdout.strip() == "wh-agent 0.1.0"
     assert run(binary, "bogus").returncode == 2
     assert sys.version  # (keeps the import used)

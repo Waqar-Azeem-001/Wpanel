@@ -313,8 +313,10 @@ func (a *Agent) deleteWebsite(p map[string]any) (Result, error) {
 	if _, err := a.Sys.Run([]string{"userdel", "--remove", account}, ""); err != nil {
 		return Result{}, err
 	}
-	if err := a.Sys.Remove(paths.State); err != nil {
-		return Result{}, err
+	for _, path := range []string{cronDPath(account), cronStatePath(account), paths.State} { // its scheduled jobs go with it
+		if err := a.Sys.Remove(path); err != nil {
+			return Result{}, err
+		}
 	}
 	return Result{"deleted", data}, nil
 }

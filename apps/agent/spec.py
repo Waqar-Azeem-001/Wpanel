@@ -16,7 +16,7 @@ SAMPLES = {
     "account": "abcd1234", "domain": "acme.com", "db_name": "abcd1234_shop", "db_user": "abcd1234_bob", "table": "orders", "local_part": "info", "backup_id": "20261010T000000Z-deadbeef",
     "email": "info@acme.com", "email_any": "boss@gmail.example.com", "msgid": "1791.abc.mail", "sftp_name": "dev", "trash_id": "abcdefabcdef", "mode": "644",
     "https_url": "https" + "://s3.example.net", "bucket": "whp-backups", "s3path": "node-1", "snapshot": "deadbeefdeadbeef", "secret": "Kq7vRt2mXzLp", "relpath": "a/b.txt",
-    "path_list": ["a", "b/c"], "b64": "aGVsbG8=", "query": "x", "text": "hello\nworld", "archive_name": "cpmove-abcd1234.tar.gz", "sha256": "a" * 64,
+    "path_list": ["a", "b/c"], "b64": "aGVsbG8=", "query": "x", "text": "hello\nworld", "archive_name": "cpmove-abcd1234.tar.gz", "sha256": "a" * 64, "cron_schedule": "*/5 * * * *", "cron_command": "php public_html/cron.php --quiet", "job_id": "0123456789",
 }
 BAD = {
     "account": ["AB", "abcd 1234", "../x", "a" * 17, "1abcdefg", "ABCD1234", "abcd1234\n"], "domain": ["a.com\n", "-a.com", "a.c", "a_b.com", "x" * 254 + ".com", "acme", ".com", "a..com"],
@@ -26,7 +26,7 @@ BAD = {
     "https_url": ["http" + "://x.example.net", "https" + "://", "https" + "://a b", "ftp" + "://x.net", "https" + "://X.net"], "bucket": ["UPPER", "ab", "a_b", "-ab"], "s3path": ["../x", "A", "a b", ""],
     "snapshot": ["../x", "XYZ", "abc", "g" * 8], "secret": ["short", "x" * 129, "ab\x01" * 6, "tab\there123456"],
     "relpath": ["../x", "/abs", "a\\b", "a:b", "a\x00b", "x" * 1025, "a/../b", "a" * 256], "path_list": [[], "a", ["../x"], ["a"] * 201, [1]], "b64": ["not base64!!", "a b", 5],
-    "query": ["", "x" * 101, "a\x00b"], "archive_name": ["../x.tar.gz", "a.tar", "a/b.tar.gz", ".tar.gz", "x" * 101 + ".tar.gz"], "sha256": ["g" * 64, "a" * 63, "a" * 65], "text": ["a\x00b", 5, "\x7f"],
+    "query": ["", "x" * 101, "a\x00b"], "archive_name": ["../x.tar.gz", "a.tar", "a/b.tar.gz", ".tar.gz", "x" * 101 + ".tar.gz"], "sha256": ["g" * 64, "a" * 63, "a" * 65], "cron_schedule": ["* * * *", "a b c d e", "*/5 * * * * *", "; * * * *"], "cron_command": ["sh -c id", "php /etc/x.php", "php a.php; id", "php a.php " + "x" * 101, "php a.txt", "php"], "job_id": ["../x", "ABCDEF0123", "0123", "01234567890"], "text": ["a\x00b", 5, "\x7f"],
 }
 GENERIC_BAD = [None, 5, True, 1.5, [], {}, False]
 

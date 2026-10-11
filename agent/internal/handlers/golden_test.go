@@ -119,6 +119,7 @@ func TestGoAgentDoesWhatThePythonAgentDoes(t *testing.T) {
 			fake, engine := system.NewFake(), NewFakeEngine()
 			agent := New(spec, fake)
 			agent.Engine = engine
+			agent.Now = func() time.Time { return time.Unix(1_800_000_000, 0) }
 			agent.RootFor = func(account string) string {
 				p := filepath.Join(tmp, account, "sites")
 				if info, err := os.Stat(p); err == nil && info.IsDir() {

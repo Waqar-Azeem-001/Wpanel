@@ -34,11 +34,14 @@ MAX_INLINE_BYTES = 3_000_000  # file content that travels inside a command; bigg
 BACKUP_ID = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$")
 ARCHIVE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.tar\.gz$")
 SHA256 = re.compile(r"^[A-Fa-f0-9]{64}$")
+CRON_SCHEDULE = re.compile(r"^[0-9*/,-]+( [0-9*/,-]+){4}$")
+CRON_COMMAND = re.compile(r"^php [A-Za-z0-9_][A-Za-z0-9_./-]*\.php( [A-Za-z0-9_.=:/-]{1,100}){0,10}$")
+JOB_ID = re.compile(r"^[a-f0-9]{10}$")
 PHP_VERSIONS = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
 
 
 # The pattern of every kind that is "a value that must look like this". The Go agent is generated from this table (manage.py export_agent_spec), so the two cannot drift apart.
-PATTERNS = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID, "archive_name": ARCHIVE_NAME, "sha256": SHA256}
+PATTERNS = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID, "archive_name": ARCHIVE_NAME, "sha256": SHA256, "cron_schedule": CRON_SCHEDULE, "cron_command": CRON_COMMAND, "job_id": JOB_ID}
 _B64 = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
 
 
@@ -247,6 +250,14 @@ COMMANDS = {c.name: c for c in [
     Command("CREATE_MAILBOX", {"account": _f("account"), "domain": _f("domain"), "local_part": _f("local_part"), "quota_mb": _f("int", low=1, high=102400),
                                "password": _f("secret", sensitive=True)}, 60,
             description="Create a mailbox (needs a mail node; native mail is decided at N7)."),
+    Command("CRON_LIST", {"account": _f("account")}, 30, description="List the account's scheduled jobs with the plan's rules."),
+    Command("CRON_CREATE", {"account": _f("account"), "schedule": _f("cron_schedule"), "command": _f("cron_command")}, 60,
+            description="Add a scheduled job: only php and a script inside the website folder, never more often than every five minutes."),
+    Command("CRON_UPDATE", {"account": _f("account"), "job_id": _f("job_id"), "schedule": Field("cron_schedule", required=False), "command": Field("cron_command", required=False),
+                            "enabled": Field("enum", choices=("yes", "no"), required=False)}, 60, description="Change, switch on or switch off one scheduled job."),
+    Command("CRON_DELETE", {"account": _f("account"), "job_id": _f("job_id")}, 60, description="Delete one scheduled job."),
+    Command("CRON_RUN", {"account": _f("account"), "job_id": _f("job_id")}, 3700, idempotent=False, max_attempts=1,
+            description="Run one scheduled job now, in the account's own limits, and report how it ended."),
     Command("MIGRATE_ANALYZE", {"account": _f("account"), "archive": _f("archive_name"), "expected_sha256": Field("sha256", required=False)}, 1800, ephemeral=True,
             description="Read a cPanel account backup that has arrived on this node and report what it holds and what cannot move by itself. Changes nothing."),
     Command("MIGRATE_IMPORT", {"account": _f("account"), "archive": _f("archive_name"), "part": _f("enum", choices=("files", "databases", "mail")),

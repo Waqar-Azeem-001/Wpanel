@@ -35210,6 +35210,1774 @@
   }
  },
  {
+  "command": "CRON_LIST",
+  "ok": true,
+  "params": {
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": true,
+  "params": {
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "extra": 1
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {}
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": null
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": 5
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": true
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": 1.5
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": []
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": {}
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": false
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "AB"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "../x"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n"
+  }
+ },
+ {
+  "command": "CRON_LIST",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "extra": 1,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": null,
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": true,
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": [],
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": {},
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": false,
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": null
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": 5
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": true
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": 1.5
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": []
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": {}
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": false
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "* * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "a b c d e"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "*/5 * * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "schedule": "; * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": null,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": 5,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": true,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": 1.5,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": [],
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": {},
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": false,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "sh -c id",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php /etc/x.php",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php a.php; id",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php a.php xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php a.txt",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_CREATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "extra": 1,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": null,
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": true,
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": [],
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": {},
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": false,
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": null,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": 5,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": true,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": 1.5,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": [],
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": {},
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": false,
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "../x",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "ABCDEF0123",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "01234567890",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": null
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": 5
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": true
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": 1.5
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": []
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": {}
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": false
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "* * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "a b c d e"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "; * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": null,
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": 5,
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": true,
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": 1.5,
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": [],
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": {},
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": false,
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "sh -c id",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php /etc/x.php",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php a.php; id",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php a.php xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php a.txt",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php",
+   "enabled": "yes",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": null,
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": 5,
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": true,
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": 1.5,
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": [],
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": {},
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": false,
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "not-a-choice",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_UPDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "command": "php public_html/cron.php --quiet",
+   "enabled": "yesx",
+   "job_id": "0123456789",
+   "schedule": "*/5 * * * *"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "extra": 1,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": null,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": true,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": [],
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": {},
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": false,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": null
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": 5
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": true
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": 1.5
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": []
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": {}
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": false
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "../x"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "ABCDEF0123"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "0123"
+  }
+ },
+ {
+  "command": "CRON_DELETE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "01234567890"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "extra": 1,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": null,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": true,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": [],
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": {},
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": false,
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "job_id": "0123456789"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": null
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": 5
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": true
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": 1.5
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": []
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": {}
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": false
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "../x"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "ABCDEF0123"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "0123"
+  }
+ },
+ {
+  "command": "CRON_RUN",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "job_id": "01234567890"
+  }
+ },
+ {
   "command": "MIGRATE_ANALYZE",
   "ok": true,
   "params": {
