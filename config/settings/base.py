@@ -399,3 +399,7 @@ POWERDNS_API_KEY = env("POWERDNS_API_KEY", default="")
 POWERDNS_NAMESERVERS = env("POWERDNS_NAMESERVERS", default="")  # comma separated, for example ns1.example.net,ns2.example.net
 # M1: when true, a new hosting account can only be made on a native node (never on cPanel). Turn on once native hosting is trusted.
 NEW_ACCOUNTS_NATIVE_ONLY = env.bool("NEW_ACCOUNTS_NATIVE_ONLY", default=False)
+# Agent endpoints (apps/agent/throttle.py): turned-away requests per source address before it is locked out for the window, and requests per node per minute.
+AGENT_FAIL_LIMIT = env.int("AGENT_FAIL_LIMIT", default=20)
+AGENT_FAIL_WINDOW = env.int("AGENT_FAIL_WINDOW", default=600)
+AGENT_NODE_RATE = env.int("AGENT_NODE_RATE", default=600)

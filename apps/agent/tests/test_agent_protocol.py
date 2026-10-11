@@ -270,3 +270,51 @@ def test_a_forged_envelope_is_dropped_by_the_agent_and_never_reported(manager, n
                                                                       fromlist=["x"]).Ed25519PrivateKey.generate())
     assert agent.poll_once() is None and agent.machine.executed == []
     assert AgentJob.objects.get().status == JobStatus.LEASED  # nothing was reported; the lease will time out
+
+
+# --- rate limiting (security non-negotiable) ---------------------------------------------------------------------------------------------
+
+def _post(path, token="", **headers):
+    from django.test import Client
+
+    extra = {"HTTP_AUTHORIZATION": "Agent " + token} if token else {}
+    return Client().post(path, data="{}", content_type="application/json", **extra, **headers)
+
+
+@pytest.mark.django_db
+def test_guessing_tokens_locks_the_address_out_and_nothing_else_is_looked_at(settings):
+    settings.AGENT_FAIL_LIMIT, settings.AGENT_FAIL_WINDOW = 5, 600
+    for _ in range(5):
+        assert _post("/api/agent/v1/poll/", "wrong-token").status_code == 401
+    locked = _post("/api/agent/v1/poll/", "wrong-token")
+    assert locked.status_code == 429 and int(locked["Retry-After"]) > 0
+    assert _post("/api/agent/v1/heartbeat/", "another-guess").status_code == 429  # every endpoint, not just the one that was hit
+    assert _post("/api/agent/v1/enroll/").status_code == 429
+    other = _post("/api/agent/v1/poll/", "wrong-token", HTTP_X_FORWARDED_FOR="203.0.113.9")
+    assert other.status_code == 401  # a different address is not punished
+
+
+@pytest.mark.django_db
+def test_bad_enrolment_tokens_count_too(settings):
+    settings.AGENT_FAIL_LIMIT = 3
+    from django.test import Client
+
+    for _ in range(3):
+        reply = Client().post("/api/agent/v1/enroll/", data=json.dumps({"token": "whe_not-real", "csr": "x", "node": {}}), content_type="application/json")
+        assert reply.status_code in (400, 401, 403, 404, 410)
+    assert _post("/api/agent/v1/enroll/").status_code == 429
+
+
+@pytest.mark.django_db
+def test_a_good_agent_is_not_locked_out_by_its_own_successes_and_a_runaway_one_is_slowed(settings):
+    settings.AGENT_FAIL_LIMIT, settings.AGENT_NODE_RATE = 3, 4
+    server = Server.objects.create(name="n", hostname="n.example.com", kind=ServerKind.NATIVE)
+    _, token = services.issue_token(server)
+    codes = [_post("/api/agent/v1/heartbeat/", token).status_code for _ in range(6)]
+    assert codes[:4] == [200] * 4 and codes[4:] == [429, 429]  # over its minute: told to back off
+
+
+def test_the_limits_are_settings():
+    from django.conf import settings
+
+    assert settings.AGENT_FAIL_LIMIT >= 1 and settings.AGENT_FAIL_WINDOW >= 60 and settings.AGENT_NODE_RATE >= 60

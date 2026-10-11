@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core.exceptions import ServiceError
 
-from . import enrollment, services
+from . import enrollment, services, throttle
 
 
 MAX_LONG_POLL = 25
@@ -17,7 +17,10 @@ MAX_LONG_POLL = 25
 
 def _node(request):
     header = request.headers.get("Authorization", "")
-    return services.authenticate(header[6:].strip() if header.startswith("Agent ") else "", request.headers.get(settings.AGENT_CERT_HEADER, ""))
+    node = services.authenticate(header[6:].strip() if header.startswith("Agent ") else "", request.headers.get(settings.AGENT_CERT_HEADER, ""))
+    if node is not None:
+        throttle.node_hit(node.pk)  # raises RateLimited when this node is over its minute; the guard turns it into 429
+    return node
 
 
 def _body(request):
@@ -34,6 +37,7 @@ def _fail(error):
 
 @csrf_exempt
 @require_POST
+@throttle.guarded_enrolment
 def enroll(request):
     """The only call that needs no identity yet: it carries the one-time token."""
     body = _body(request)
@@ -48,6 +52,7 @@ def enroll(request):
 
 @csrf_exempt
 @require_POST
+@throttle.guarded
 def renew(request):
     node = _node(request)
     body = _body(request)
@@ -63,6 +68,7 @@ def renew(request):
 
 @csrf_exempt
 @require_POST
+@throttle.guarded
 def heartbeat(request):
     node = _node(request)
     body = _body(request)
@@ -79,6 +85,7 @@ def heartbeat(request):
 
 @csrf_exempt
 @require_POST
+@throttle.guarded
 def poll(request):
     node = _node(request)
     if node is None:
@@ -97,6 +104,7 @@ def poll(request):
 
 @csrf_exempt
 @require_POST
+@throttle.guarded
 def result(request, job_id):
     node = _node(request)
     if node is None:

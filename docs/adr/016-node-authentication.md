@@ -27,3 +27,6 @@ WHPanel needs a small internal CA and a job queue the agent polls. Commands are 
 
 ## Open questions
 Long-polling or WebSocket for near-instant jobs.
+
+## Follow-up (rate limiting)
+`apps/agent/throttle.py`: after `AGENT_FAIL_LIMIT` (20) turned-away requests from one source address within `AGENT_FAIL_WINDOW` (600 s) every agent endpoint answers that address 429 without looking at the request; an enrolled node over `AGENT_NODE_RATE` (600) requests a minute gets 429 with `Retry-After`. Counters are in the Django cache (Redis in production). The address is the one the proxy reports in `X-Forwarded-For`.

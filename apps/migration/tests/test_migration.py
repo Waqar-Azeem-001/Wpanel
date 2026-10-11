@@ -378,3 +378,80 @@ def test_the_site_check_uses_the_nodes_address(moved):
 
     assert not services.check_site(m, fetch=boom) and "refused" in m.validation["site"]["note"]
     _ = agent
+
+
+# --- who may do what (authorization) ---------------------------------------------------------------------------------------------------
+
+VIEW_ONLY = (Role.SUPPORT_AGENT,)
+MAY_MANAGE = (Role.TECHNICAL, Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN)
+ACTIONS_POST = ("check", "approve", "retry", "cancel", "site", "cutover", "rollback", "finish")
+
+
+def as_role(client, staff, make_user, role, existing_manager=None):
+    """Sign in as the role. The world fixture already made the manager, so that one is reused instead of made twice."""
+    if role == Role.CUSTOMER:
+        user = make_user("customer-x@example.com")
+    elif role == Role.MANAGER and existing_manager is not None:
+        user = existing_manager
+    else:
+        user = staff(role)
+    client.force_login(user)
+    return user
+
+
+@pytest.mark.parametrize("role", [Role.CUSTOMER, Role.SUPPORT_AGENT, Role.TECHNICAL, Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN])
+def test_every_screen_follows_the_role(moved, client, staff, make_user, role):
+    manager, account, web, web_agent, *_ = moved
+    m = services.start(manager, account, web)
+    as_role(client, staff, make_user, role, manager)
+    for name, args in (("dashboard", ()), ("retirement", ()), ("detail", (m.pk,))):
+        status = client.get(reverse(f"migration_staff:{name}", args=args)).status_code
+        if role == Role.CUSTOMER:
+            assert status in (302, 403), (name, status)  # never a 200
+        else:
+            assert status == 200, (role, name, status)
+
+
+@pytest.mark.parametrize("role", [Role.CUSTOMER, Role.SUPPORT_AGENT])
+def test_people_who_may_only_look_cannot_change_anything(moved, client, staff, make_user, role):
+    manager, account, web, web_agent, *_ = moved
+    m = to_ready(moved)
+    before = Migration.objects.get(pk=m.pk).state
+    as_role(client, staff, make_user, role)
+    for action in ACTIONS_POST:
+        reply = client.post(reverse("migration_staff:act", args=(m.pk, action)), {"accept": "1", "force": "1"})
+        assert reply.status_code in (302, 403), (role, action)
+    assert client.post(reverse("migration_staff:start"), {"account": account.pk, "target": web.pk}).status_code in (302, 403)
+    assert client.post(reverse("migration_staff:signoff", args=("isolation",)), {"note": "I looked at it on a real node"}).status_code in (302, 403)
+    assert Migration.objects.get(pk=m.pk).state == before and not readiness.checks()[2]["ok"]
+    assert Migration.objects.count() == 1 and not AgentJob.objects.filter(command="CREATE_WEBSITE").exists()
+
+
+@pytest.mark.parametrize("role", MAY_MANAGE)
+def test_staff_who_manage_hosting_can_act_and_it_is_audited(moved, client, staff, make_user, role):
+    manager, account, web, web_agent, *_ = moved
+    m = to_ready(moved)
+    user = as_role(client, staff, make_user, role, manager)
+    client.post(reverse("migration_staff:act", args=(m.pk, "approve")), {"accept": "1"})
+    m.refresh_from_db()
+    assert m.state == S.IMPORTING
+    event = AuditEvent.objects.filter(action="migration.approved").latest("id")
+    assert event.actor_id == user.pk
+
+
+def test_a_signed_out_visitor_is_sent_to_sign_in(moved, client):
+    manager, account, web, *_ = moved
+    m = services.start(manager, account, web)
+    for url in (reverse("migration_staff:dashboard"), reverse("migration_staff:detail", args=(m.pk,)), reverse("migration_staff:retirement")):
+        reply = client.get(url)
+        assert reply.status_code == 302 and "login" in reply["Location"]
+    assert client.post(reverse("migration_staff:act", args=(m.pk, "cutover"))).status_code in (302, 403)
+    assert Migration.objects.get(pk=m.pk).state == S.AWAITING_ARCHIVE
+
+
+def test_the_actions_refuse_get_requests(moved, client, staff, make_user):
+    manager, account, web, *_ = moved
+    m = services.start(manager, account, web)
+    as_role(client, staff, make_user, Role.MANAGER, manager)
+    for action in ACTIONS_POST:
+        assert client.get(reverse("migration_staff:act", args=(m.pk, action))).status_code == 405
