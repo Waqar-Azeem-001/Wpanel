@@ -18,7 +18,7 @@
 
 {% if can_manage %}
 <section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">Start a migration</h2></div><div class="card-body">
-  <form method="post" action="{% url 'migration_staff:start' %}" class="row g-2 align-items-end">{% csrf_token %}
+  <form method="post" action="{% url 'migration_staff:start' %}" class="row g-2 align-items-end" data-loading="Starting…">{% csrf_token %}
     {% for f in form %}<div class="col-md-4"><label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}{% if f.help_text %}<div class="form-text">{{ f.help_text }}</div>{% endif %}</div>{% endfor %}
     <div class="col-12"><button class="btn btn-primary">Start</button></div>
   </form>
@@ -40,7 +40,7 @@
     <td>{% for name, mark in m.marks %}<span class="site-pill {% if mark == 'done' %}is-ok{% elif mark == 'problem' %}is-danger{% elif mark == 'now' %}is-warn{% endif %} me-1" title="{{ name }}">{{ name }}</span>{% endfor %}</td>
     <td><a href="{% url 'migration_staff:detail' m.pk %}">Open</a></td>
   </tr>
-  {% empty %}<tr><td colspan="5" class="text-secondary">No migrations yet.</td></tr>{% endfor %}
+  {% empty %}<tr><td colspan="5" class="text-secondary"><strong>No migrations{% if state %} in this state{% endif %}.</strong> {% if not state %}Pick a cPanel account and a native node above to move a website. Nothing changes on the cPanel account until you cut over.{% else %}Choose another state, or <a href="{% url 'migration_staff:dashboard' %}">show all</a>.{% endif %}</td></tr>{% endfor %}
   </tbody>
 </table></div>
 {% endblock %}

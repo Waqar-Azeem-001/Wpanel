@@ -42,3 +42,17 @@ document.addEventListener("change", function (event) {
   if (!box.matches || !box.matches("[data-select-all]") || !box.form) { return; }
   box.form.querySelectorAll("input[name=ids]").forEach(function (row) { row.checked = box.checked; });
 });
+
+/* Long actions give feedback at once: a form marked data-loading="Doing it..." disables its buttons and says so after it is submitted (after any confirmation). */
+document.addEventListener("submit", function (event) {
+  var form = event.target;
+  if (event.defaultPrevented || !form.matches || !form.matches("[data-loading]")) { return; }
+  var text = form.getAttribute("data-loading") || "Working\u2026";
+  window.setTimeout(function () {
+    form.setAttribute("aria-busy", "true");
+    form.querySelectorAll("button[type=submit], button:not([type]), input[type=submit]").forEach(function (button) {
+      button.disabled = true;
+      if (button.tagName === "BUTTON") { button.textContent = text; }
+    });
+  }, 0);
+});

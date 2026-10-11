@@ -69,5 +69,5 @@
     {% else %}<p class="mb-0 text-secondary">Revoked {{ r.node.revoked_at|date:"Y-m-d H:i" }}. Its certificate and token are no longer accepted.</p>{% endif %}
   </div>
 </section>
-{% empty %}<p class="text-secondary">No native nodes yet.</p>{% endfor %}
+{% empty %}<p class="text-secondary"><strong>No native nodes yet.</strong> Add one above: you get a one-time command to run on a fresh AlmaLinux server, and the node appears here when its agent has enrolled.</p>{% endfor %}
 {% endblock %}

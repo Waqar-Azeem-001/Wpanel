@@ -512,3 +512,15 @@ def test_a_blocker_and_a_failed_step_are_marked_as_problems(moved):
     manager, account, web, web_agent, *_ = moved
     m = to_ready(moved, addon=True)
     assert statuses(m)["Compatibility check"] == "problem" and "addon" in services.timeline(m)[2]["note"]
+
+
+def test_empty_and_busy_states_explain_themselves(moved, client):
+    manager, account, web, *_ = moved
+    client.force_login(manager)
+    page = client.get(reverse("migration_staff:dashboard")).content.decode()
+    assert "No migrations" in page and "Nothing changes on the cPanel account until you cut over" in page and 'data-loading="Starting' in page
+    m = services.start(manager, account, web)
+    detail = client.get(reverse("migration_staff:detail", args=(m.pk,))).content.decode()
+    assert 'data-loading="Reading the backup' in detail
+    filtered = client.get(reverse("migration_staff:dashboard") + "?state=complete").content.decode()
+    assert "No migrations in this state" in filtered

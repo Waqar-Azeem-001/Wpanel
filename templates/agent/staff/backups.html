@@ -43,5 +43,5 @@
     {% endif %}
   </div>
 </section>
-{% empty %}<p class="text-secondary">No enrolled native nodes.</p>{% endfor %}
+{% empty %}<p class="text-secondary"><strong>No enrolled native nodes.</strong> Backups are set up per node: <a href="{% url 'agent_staff:nodes' %}">add a node</a> first, then come back to give it a storage bucket.</p>{% endfor %}
 {% endblock %}

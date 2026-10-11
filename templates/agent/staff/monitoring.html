@@ -33,7 +33,7 @@
     {% empty %}<p class="mb-0 text-secondary">Everything reported is fine ({{ r.checks|length }} checks).</p>{% endfor %}
   </div>
 </section>
-{% empty %}<p class="text-secondary">No enrolled native nodes.</p>{% endfor %}
+{% empty %}<p class="text-secondary"><strong>No enrolled native nodes.</strong> Nodes report here once their agent has enrolled. <a href="{% url 'agent_staff:nodes' %}">Add a node</a>.</p>{% endfor %}
 
 <div class="row">
   <div class="col-lg-6"><section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">Recent changes</h2></div><ul class="list-group list-group-flush">
