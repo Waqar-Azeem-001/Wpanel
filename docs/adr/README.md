@@ -33,6 +33,7 @@ customers' sites came from cPanel and depend on `.htaccess`; the roadmap wants n
 | 18 | [Disaster recovery](018-disaster-recovery.md) | Accepted 2026-10-10 (the business asked for all records to be completed; accepted as proposed) | Backup-and-rebuild recovery with written targets and a yearly drill, WHPanel's database and secrets backed up separately from node backups, break-glas |
 | 19 | [cPanel migration compatibility](019-cpanel-migration.md) | Accepted 2026-10-10 (the business asked for all records to be completed; accepted as proposed) | Build the importer around `pkgacct` backups, keep Apache for ` |
 | 20 | [Supported Linux distributions](020-linux-distributions.md) | Accepted 2026-10-10 (chosen by the business, as recommended) | One distribution at launch: AlmaLinux 9 for all native nodes, so staff already know its tools and the migration path from cPanel (AlmaLinux-family) is |
+| 21 | [Agent updates](021-agent-updates.md) | **Proposed** 2026-10-12 | A signed package from the team's own repository, one node first, previous version kept for rollback; needs a business decision |
 
 ## How a record becomes Accepted
 1. The business reads the record, especially *Open questions*.
