@@ -107,6 +107,8 @@ A broken link is a failed build, not a cosmetic issue.
 
 ## Rule 6 — WHMCS Parity, Own Implementation
 
+> **Naming (next-generation roadmap, section 09):** new documents call this target the **WHPanel Product Standard**. This rule keeps its number and its old name here because other sections refer to "Rule 6" and "WHMCS parity"; nothing is rebuilt to rename it, and the WHMCS name still does not appear in the customer UI.
+
 The portal must feel like WHMCS: the same information architecture, menu names, screen layouts, list/filter/action patterns and workflows that hosting staff and customers already know.
 
 - **Copy the experience, not the product.** Do not copy WHMCS source code, templates, CSS, images, icons or logos, and do not use the name "WHMCS" anywhere in the UI. WHMCS is licensed commercial software and a trademark. Write our own templates and styles.
