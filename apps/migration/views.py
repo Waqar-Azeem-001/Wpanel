@@ -69,7 +69,7 @@ def start(request):
 @portal_permission_required(perm("view_hosting"))
 def detail(request, pk):
     m = get_object_or_404(Migration.objects.select_related("account", "source", "target", "mail_target"), pk=pk)
-    return render(request, "migration/staff/detail.html", {"m": m, "marks": services.stage_marks(m), "events": m.events.all(), "how": services.instructions(m),
+    return render(request, "migration/staff/detail.html", {"m": m, "marks": services.stage_marks(m), "timeline": services.timeline(m), "events": m.events.all(), "how": services.instructions(m),
                                                           "can_manage": request.user.has_perm(perm("manage_hosting")), "S": S})
 
 

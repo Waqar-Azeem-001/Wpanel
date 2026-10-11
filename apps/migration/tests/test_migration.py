@@ -455,3 +455,60 @@ def test_the_actions_refuse_get_requests(moved, client, staff, make_user):
     as_role(client, staff, make_user, Role.MANAGER, manager)
     for action in ACTIONS_POST:
         assert client.get(reverse("migration_staff:act", args=(m.pk, action))).status_code == 405
+
+
+def test_confirm_dialogs_name_the_account_and_the_nodes(moved, client):
+    manager, account, web, web_agent, *_ = moved
+    m = to_ready(moved)
+    services.approve(manager, m, accept_warnings=True)
+    settle(web_agent)
+    m.refresh_from_db()
+    client.force_login(manager)
+    page = client.get(reverse("migration_staff:detail", args=(m.pk,))).content.decode()
+    assert f"Switch {account.domain} from cp-1 to web-1 now?" in page
+    services.cutover(manager, m)
+    page = client.get(reverse("migration_staff:detail", args=(m.pk,))).content.decode()
+    assert f"Put {account.domain} back on cp-1?" in page and f"Complete the migration of {account.domain}?" in page
+    assert "Are you sure" not in page
+
+
+def statuses(m):
+    return {r["label"]: r["status"] for r in services.timeline(m)}
+
+
+def test_the_timeline_shows_files_database_and_email_as_their_own_steps(moved, client):
+    manager, account, web, web_agent, mail, mail_agent, tmp = moved
+    drop_archive(tmp, account, where=("web", "mail"))
+    m = services.start(manager, account, web, mail_target=mail)
+    assert statuses(m)["Backup arrived on the node"] == "now" and statuses(m)["Complete"] == "pending"
+    services.check_archive(manager, m)
+    settle(web_agent, mail_agent)
+    m.refresh_from_db()
+    s = statuses(m)
+    assert s["Discovery"] == "done" and s["Compatibility check"] == "done" and s["Files transfer"] == "pending"
+    services.approve(manager, m, accept_warnings=True)
+    m.refresh_from_db()
+    assert statuses(m)["Website created on the node"] == "now"
+    settle(web_agent, mail_agent)
+    m.refresh_from_db()
+    s = statuses(m)
+    assert all(s[k] == "done" for k in ("Website created on the node", "Files transfer", "Database transfer", "Email transfer", "Validation")) and s["DNS cutover"] == "pending"
+    services.cutover(manager, m)
+    m.refresh_from_db()
+    rows = {r["label"]: r for r in services.timeline(m)}
+    assert rows["DNS cutover"]["status"] == "done" and rows["Rollback window"]["status"] == "now" and "Open until" in rows["Rollback window"]["note"]
+    client.force_login(manager)
+    page = client.get(reverse("migration_staff:detail", args=(m.pk,))).content.decode()
+    assert "Files transfer" in page and "Email transfer" in page and "In progress" in page
+
+
+def test_a_step_that_does_not_apply_is_shown_as_not_needed(moved):
+    manager, account, web, web_agent, *_ = moved
+    m = to_ready(moved, mail=False)
+    assert statuses(m)["Email transfer"] == "skipped"
+
+
+def test_a_blocker_and_a_failed_step_are_marked_as_problems(moved):
+    manager, account, web, web_agent, *_ = moved
+    m = to_ready(moved, addon=True)
+    assert statuses(m)["Compatibility check"] == "problem" and "addon" in services.timeline(m)[2]["note"]

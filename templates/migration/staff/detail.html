@@ -7,7 +7,15 @@
   <p class="page-sub">{{ m.source.name }} &rarr; {{ m.target.name }}{% if m.mail_target %} (mail on {{ m.mail_target.name }}){% endif %} &middot; <strong>{{ m.get_state_display }}</strong></p>
   <a href="{% url 'migration_staff:dashboard' %}">&larr; All migrations</a>
 </div>
-<p>{% for name, mark in marks %}<span class="site-pill {% if mark == 'done' %}is-ok{% elif mark == 'problem' %}is-danger{% elif mark == 'now' %}is-warn{% endif %} me-1">{{ name }}</span>{% endfor %}</p>
+<ol class="list-unstyled mb-3" aria-label="Migration progress">
+  {% for row in timeline %}
+  <li class="d-flex gap-2 py-1 {% if row.status == 'problem' %}text-danger{% elif row.status == 'pending' or row.status == 'skipped' %}text-secondary{% endif %}">
+    <span aria-hidden="true" style="width:1.25rem">{% if row.status == 'done' %}&#10003;{% elif row.status == 'now' %}&#9679;{% elif row.status == 'problem' %}&#10007;{% elif row.status == 'skipped' %}&ndash;{% else %}&#9675;{% endif %}</span>
+    <span><strong>{{ row.label }}</strong> <small class="text-secondary">&middot; {% if row.status == 'done' %}Done{% elif row.status == 'now' %}In progress{% elif row.status == 'problem' %}Needs attention{% elif row.status == 'skipped' %}Not needed{% else %}Not started{% endif %}</small>
+      {% if row.note %}<br><small>{{ row.note }}</small>{% endif %}</span>
+  </li>
+  {% endfor %}
+</ol>
 {% if m.last_error %}<p class="text-danger"><strong>Problem:</strong> {{ m.last_error }}</p>{% endif %}
 {% if m.dns_note %}<p><strong>DNS:</strong> {{ m.dns_note }}</p>{% endif %}
 
@@ -49,14 +57,14 @@
 
 {% if can_manage %}
 <section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">Actions</h2></div><div class="card-body d-flex flex-wrap gap-2">
-  {% if m.state == S.VALIDATED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'cutover' %}" data-confirm="Switch this account to the new node now?">{% csrf_token %}<button class="btn btn-danger">Cut over</button></form>{% endif %}
+  {% if m.state == S.VALIDATED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'cutover' %}" data-confirm="Switch {{ m.account.domain }} from {{ m.source.name }} to {{ m.target.name }} now? Visitors will start reaching the new node. You can roll back until {{ m.window_days }} day(s) after the switch.">{% csrf_token %}<button class="btn btn-danger">Cut over</button></form>{% endif %}
   {% if m.state == S.WINDOW %}
-    <form method="post" action="{% url 'migration_staff:act' m.pk 'rollback' %}" data-confirm="Put the account back on cPanel?">{% csrf_token %}<button class="btn btn-outline-danger">Roll back</button></form>
-    <form method="post" action="{% url 'migration_staff:act' m.pk 'finish' %}">{% csrf_token %}<button class="btn btn-primary">Complete (window ends {{ m.rollback_until|date:"Y-m-d H:i" }})</button>
+    <form method="post" action="{% url 'migration_staff:act' m.pk 'rollback' %}" data-confirm="Put {{ m.account.domain }} back on {{ m.source.name }}? Anything the customer changed on {{ m.target.name }} since the switch stays there and is not copied back.">{% csrf_token %}<button class="btn btn-outline-danger">Roll back</button></form>
+    <form method="post" action="{% url 'migration_staff:act' m.pk 'finish' %}" data-confirm="Complete the migration of {{ m.account.domain }}? The staged backup is deleted from the node and rolling back is no longer offered.">{% csrf_token %}<button class="btn btn-primary">Complete (window ends {{ m.rollback_until|date:"Y-m-d H:i" }})</button>
       <label class="ms-2"><input type="checkbox" name="force" value="1"> end the window early</label></form>
   {% endif %}
   {% if m.state == S.FAILED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'retry' %}">{% csrf_token %}<button class="btn btn-primary">Retry</button></form>{% endif %}
-  {% if m.state != S.WINDOW and m.state != S.COMPLETE and m.state != S.ROLLED_BACK and m.state != S.CANCELLED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'cancel' %}" data-confirm="Cancel this migration? The cPanel account is not touched.">{% csrf_token %}<button class="btn btn-outline-secondary">Cancel</button></form>{% endif %}
+  {% if m.state != S.WINDOW and m.state != S.COMPLETE and m.state != S.ROLLED_BACK and m.state != S.CANCELLED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'cancel' %}" data-confirm="Cancel the migration of {{ m.account.domain }}? The cPanel account is not touched; imported data stays on {{ m.target.name }}.">{% csrf_token %}<button class="btn btn-outline-secondary">Cancel</button></form>{% endif %}
 </div></section>
 {% endif %}
 

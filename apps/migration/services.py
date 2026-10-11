@@ -388,3 +388,56 @@ def summary():
     failed = states[S.FAILED]
     return {"total": remaining + migrated, "migrated": migrated, "in_progress": busy, "pending": max(remaining - busy - attention - failed, 0), "failed": failed, "manual_review": attention,
             "rolled_back": states[S.ROLLED_BACK], "remaining_on_cpanel": remaining}
+
+
+def timeline(m):
+    """The account's migration as the detail screen shows it: one line per thing that happens, each with a status of done, now, problem, pending or skipped, and a short note."""
+    report, state = m.report or {}, m.state
+    analysed = bool(report)
+    plan = _plan(m) if analysed else []
+    rows = []
+
+    def add(label, status, note=""):
+        rows.append({"label": label, "status": status, "note": note})
+
+    waiting = state in (S.AWAITING_ARCHIVE, S.ANALYSING)
+    add("Backup arrived on the node", "done" if analysed else ("now" if waiting else "pending"), "" if analysed else "Waiting for the cPanel backup to be copied to the node.")
+    add("Discovery", "done" if analysed else ("now" if state == S.ANALYSING else "pending"),
+        f"{report.get('files', 0)} files, {len(report.get('databases', []))} database(s), {len(report.get('mail', []))} mail domain(s)" if analysed else "")
+    blockers = report.get("blockers") or []
+    add("Compatibility check", "problem" if blockers else ("done" if analysed else "pending"), "; ".join(blockers) if blockers else f"{len(report.get('warnings', []))} warning(s)" if analysed else "")
+    for key, label, needed in (("site", "Website created on the node", True), ("files", "Files transfer", True), ("databases", "Database transfer", bool(report.get("databases"))),
+                               ("mail", "Email transfer", bool(report.get("mail")) and m.mail_target is not None)):
+        if analysed and not needed:
+            add(label, "skipped", "Nothing to move." if key != "mail" else "No mail in the backup, or no mail node chosen.")
+        elif key in m.parts_done:
+            add(label, "done")
+        elif state == S.IMPORTING and m.step in (key, "maildomain" if key == "mail" else key):
+            add(label, "now")
+        elif state == S.FAILED and m.step in (key, "maildomain" if key == "mail" else key):
+            add(label, "problem", m.last_error)
+        else:
+            add(label, "pending")
+    if "validate" in m.parts_done:
+        add("Validation", "done", f"{m.validation.get('files_expected', 0)} files checked")
+    elif state == S.MANUAL_REVIEW and m.validation:
+        add("Validation", "problem", m.last_error)
+    elif state == S.IMPORTING and m.step == "validate":
+        add("Validation", "now")
+    else:
+        add("Validation", "pending")
+    add("DNS cutover", "done" if m.cutover_at else "pending", m.dns_note if m.cutover_at else "")
+    if state == S.ROLLED_BACK:
+        add("Rollback window", "problem", "Rolled back to cPanel.")
+    elif state == S.COMPLETE:
+        add("Rollback window", "done", "Closed.")
+    elif state == S.WINDOW:
+        add("Rollback window", "now", f"Open until {m.rollback_until:%Y-%m-%d %H:%M}: the account can still be put back on {m.source.name}.")
+    else:
+        add("Rollback window", "pending")
+    add("Complete", "done" if state == S.COMPLETE else "pending")
+    if state == S.CANCELLED:
+        for row in rows:
+            if row["status"] in ("now", "pending"):
+                row["status"], row["note"] = "pending", "Cancelled." if row["label"] == "Complete" else row["note"]
+    return rows
