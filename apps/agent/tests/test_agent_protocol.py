@@ -59,7 +59,7 @@ def test_a_valid_command_passes_and_secrets_are_hidden_when_stored():
 
 
 def test_the_catalog_has_no_free_form_text_field():
-    typed = ("domain", "account", "db_name", "db_user", "table", "local_part", "backup_id", "enum", "enum_list", "int", "secret", "sftp_name", "trash_id", "mode", "email", "email_any", "msgid", "https_url", "bucket", "s3path", "snapshot")
+    typed = ("domain", "account", "db_name", "db_user", "table", "local_part", "backup_id", "enum", "enum_list", "int", "secret", "sftp_name", "trash_id", "mode", "email", "email_any", "msgid", "https_url", "bucket", "s3path", "snapshot", "archive_name", "sha256")
     sandboxed = ("relpath", "path_list", "b64", "query", "text")  # names inside the account's own file area, file content and message text: only the file, SFTP and mail commands may carry them
     for name, spec in catalog.COMMANDS.items():
         for rule in spec.fields.values():

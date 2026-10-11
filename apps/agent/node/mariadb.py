@@ -101,6 +101,57 @@ class FakeMariadb:
                 data = json.load(handle)
         self.dbs[ident(db)] = {t: {"columns": list(v["columns"]), "rows": [list(r) for r in v["rows"]]} for t, v in data.items()}
 
+    def load_sql(self, db, archive, member):
+        """Load a plain ``mysqldump`` file from inside a cPanel archive. The stand-in understands CREATE TABLE and INSERT INTO ... VALUES, which is what a dump holds."""
+        text = archive.text(member, limit=64 << 20) or ""
+        tables = self.dbs[ident(db)]
+        for match in re.finditer(r"CREATE TABLE `(\w+)` \((.*?)\n\)[^;]*;", text, re.S):
+            columns = []
+            for line in match.group(2).splitlines():
+                line = line.strip().rstrip(",")
+                column = re.match(r"`(\w+)` (\S+)(.*)", line)
+                if column:
+                    columns.append((column.group(1), column.group(2), "NOT NULL" not in column.group(3), False, None))
+            tables[match.group(1)] = {"columns": columns, "rows": []}
+        for match in re.finditer(r"INSERT INTO `(\w+)` VALUES (.*?);\n", text, re.S):
+            if match.group(1) in tables:
+                tables[match.group(1)]["rows"] += _sql_rows(match.group(2))
+
+
+def _sql_rows(text):
+    """The ``(1,'a'),(2,'b')`` part of an INSERT, as lists of Python values."""
+    rows, row, i, n = [], None, 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == "(" and row is None:
+            row, i = [], i + 1
+            continue
+        if row is not None:
+            if c == ")":
+                rows.append(row)
+                row, i = None, i + 1
+            elif c in ", ":
+                i += 1
+            elif c == "'":
+                j, out = i + 1, []
+                while j < n and text[j] != "'":
+                    if text[j] == "\\" and j + 1 < n:
+                        j += 1
+                    out.append(text[j])
+                    j += 1
+                row.append("".join(out))
+                i = j + 1
+            else:
+                j = i
+                while j < n and text[j] not in ",)":
+                    j += 1
+                token = text[i:j].strip()
+                row.append(None if token.upper() == "NULL" else (int(token) if re.fullmatch(r"-?\d+", token) else float(token) if re.fullmatch(r"-?\d+\.\d+", token) else token))
+                i = j
+        else:
+            i += 1
+    return rows
+
 
 class RealMariadb:
     """UNTESTED against a real server. Talks to MariaDB as root over the local socket through the ``mariadb`` client."""
@@ -189,3 +240,20 @@ class RealMariadb:
         unpack.wait()
         if unpack.returncode != 0 or done.returncode != 0:
             raise SystemError_("Restoring the database failed.")
+
+    def load_sql(self, db, archive, member):
+        """Stream one plain SQL file out of the archive into the client. The file comes from a customer's backup: it can only act inside this one database."""
+        import tarfile
+
+        done = subprocess.Popen(["mariadb", "--max-allowed-packet=256M", ident(db)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+        with tarfile.open(archive.path, "r:*") as tar:
+            for entry in tar:
+                if entry.isfile() and entry.name.split("/", 1)[-1] == member:
+                    handle = tar.extractfile(entry)
+                    for chunk in iter(lambda: handle.read(1 << 20), b""):
+                        done.stdin.write(chunk)
+                    break
+        done.stdin.close()
+        err = done.stderr.read().decode(errors="replace")
+        if done.wait() != 0:
+            raise SystemError_(f"Loading the database failed: {err.strip()[:200]}")

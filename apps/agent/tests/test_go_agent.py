@@ -36,6 +36,9 @@ def find_go():
 def test_the_files_the_go_agent_is_built_from_match_the_python_catalogue():
     for name, data in files().items():
         assert (AGENT / "spec" / name).read_text(encoding="utf-8") == render(data), f"{name} is out of date: run `python manage.py export_agent_spec`"
+    from apps.agent import golden
+
+    assert (AGENT / "spec" / golden.MIGRATE_ARCHIVE).read_bytes() == golden.build_migrate_golden()[0], "the test archive is out of date: run `python manage.py export_agent_spec`"
 
 
 # --- the Go agent against Django ---------------------------------------------------------------------------------------------------------------
@@ -132,7 +135,7 @@ def test_a_revoked_go_agent_is_turned_away(enrolled):
 
 def test_the_agent_checks_its_own_catalogue(binary, tmp_path):
     done = run(binary, "check", "--config", str(tmp_path / "none.json"))
-    assert done.returncode == 0 and "76 commands" in done.stdout and "not enrolled" in done.stdout
+    assert done.returncode == 0 and "80 commands" in done.stdout and "not enrolled" in done.stdout
     assert run(binary, "version").stdout.strip() == "wh-agent 0.1.0"
     assert run(binary, "bogus").returncode == 2
     assert sys.version  # (keeps the import used)

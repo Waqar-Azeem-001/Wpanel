@@ -23,3 +23,7 @@ These choices were made partly to keep migration cheap; changing the web server 
 
 ## Open questions
 Which accounts go first (the quietest ones) and how a rollback is communicated to the customer.
+
+## Follow-up (M0-M4)
+Built as recommended (`docs/m-cpanel-migration.md`): `pkgacct` archive importer on the node, dry-run report first, reversible cutover with a rollback window. **Different from the plan:** the backup is made and copied by an operator (the WHM API cannot make a `pkgacct` archive); addon domains are a manual
+decision because a native account serves one domain; cron and certificates are not moved. Never tried against a real archive.

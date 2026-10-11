@@ -17,6 +17,7 @@ report for how it was found.
 import secrets
 import string
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.db.models import Q
@@ -120,6 +121,12 @@ def request_hosting(actor, client, product, domain, *, server=None, request=None
         raise ServiceError("This product has no WHM package configured.", code="no_package_configured")
 
     mapped_servers = list(product.servers.all())
+    if getattr(settings, "NEW_ACCOUNTS_NATIVE_ONLY", False):  # M1: once native hosting is trusted, no new account is made on cPanel
+        native = [s for s in mapped_servers if s.kind == "native"]
+        if server is not None and server.kind == "whm_api" or (server is None and not native):
+            raise ServiceError("New accounts are made on native nodes only. Map a native node to this product.", code="native_only")
+        if server is None:
+            mapped_servers = native
     if server is None and len(mapped_servers) == 1:
         server = mapped_servers[0]
     elif server is None and len(mapped_servers) > 1 and all(s.kind == "native" for s in mapped_servers):

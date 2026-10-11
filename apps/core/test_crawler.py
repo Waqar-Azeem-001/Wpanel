@@ -17,6 +17,7 @@ NOT_CLICKABLE = {
     "affiliates_public:referral": "the referral link /r/<code>/ is shared outside the site, not linked from it",
 }
 NOT_CLICKABLE_EXACT = {
+    "migration_staff:detail": "linked from each row of the migration dashboard; the crawl world has no migration (tested in apps/migration)",
     "billing_customer:test_gateway": "the simulated gateway's page, reached from a redirect after starting a test payment",
     "email_open_pixel": "the tracking pixel inside emails (tested with the email links)",
     "email_click": "the counting redirect behind links inside emails (tested in test_owner_tools)",

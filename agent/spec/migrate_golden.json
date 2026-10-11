@@ -1,0 +1,538 @@
+{
+ "archive": "cpmove-acmeuser.tar.gz",
+ "expected": {
+  "commands": [
+   [
+    "chown",
+    "-R",
+    "abcd1234:apache",
+    "<ROOT>/abcd1234/sites/acme.com"
+   ],
+   [
+    "chmod",
+    "-R",
+    "u+rwX,g+rX,o-rwx",
+    "<ROOT>/abcd1234/sites/acme.com"
+   ],
+   [
+    "chown",
+    "-R",
+    "abcd1234:apache",
+    "<ROOT>/abcd1234/sites/acme.com"
+   ],
+   [
+    "chmod",
+    "-R",
+    "u+rwX,g+rX,o-rwx",
+    "<ROOT>/abcd1234/sites/acme.com"
+   ],
+   [
+    "chown",
+    "-R",
+    "abcd1234:apache",
+    "<ROOT>/abcd1234/sites/acme.com"
+   ],
+   [
+    "chmod",
+    "-R",
+    "u+rwX,g+rX,o-rwx",
+    "<ROOT>/abcd1234/sites/acme.com"
+   ],
+   [
+    "chown",
+    "-R",
+    "5000:5000",
+    "<ROOT>/_mail/acme.com"
+   ],
+   [
+    "chown",
+    "-R",
+    "5000:5000",
+    "<ROOT>/_mail/acme.com"
+   ]
+  ],
+  "databases": {
+   "abcd1234_shop": {
+    "orders": [
+     [
+      1,
+      "Ann"
+     ],
+     [
+      2,
+      "O'Neil"
+     ],
+     [
+      3,
+      null
+     ]
+    ]
+   }
+  },
+  "grants": [
+   [
+    "abcd1234_shop",
+    "abcd1234_shop",
+    [
+     "alter",
+     "create",
+     "delete",
+     "drop",
+     "index",
+     "insert",
+     "select",
+     "update"
+    ]
+   ]
+  ],
+  "mail": {
+   "forwarders": [
+    "sales@acme.com>info@acme.com"
+   ],
+   "mailboxes": {
+    "info": "$6$salt$hashhashhash"
+   }
+  },
+  "results": [
+   {
+    "code": "created",
+    "data": {
+     "root": "/home/abcd1234/sites/acme.com/public_html",
+     "uid": 2000
+    },
+    "ok": true
+   },
+   {
+    "code": "analyzed",
+    "data": {
+     "addon_domains": [],
+     "archive_mb": 0.0,
+     "archive_sha256": "15c309a162db447299a071b50b27af8f09283f92ad7d285bfc2d70fa967c5efa",
+     "blockers": [],
+     "certificates": 0,
+     "contact_email": "owner@gmail.example.com",
+     "cron": [
+      "*/5 * * * * php /home/x/cron.php"
+     ],
+     "databases": [
+      {
+       "bytes": 202,
+       "name": "acmeuser_shop"
+      }
+     ],
+     "db_grants": 1,
+     "db_users": [
+      "acmeuser_shop"
+     ],
+     "dns_zones": [
+      "acme.com"
+     ],
+     "files": 3,
+     "files_mb": 0.0,
+     "forwarders": 1,
+     "mail": [
+      {
+       "bytes": 85,
+       "domain": "acme.com",
+       "mailboxes": [
+        "info"
+       ]
+      }
+     ],
+     "main_domain": "acme.com",
+     "parked_domains": [],
+     "php_cpanel": "ea-php74",
+     "php_target": "8.1",
+     "plan": "Basic",
+     "skipped_links": 1,
+     "sub_domains": [],
+     "user": "acmeuser",
+     "warnings": [
+      "The cPanel account is called acmeuser; on this platform it is abcd1234. Database names starting with acmeuser_ are renamed to abcd1234_.",
+      "1 scheduled job(s) (cron) are not moved automatically; they are listed so they can be recreated by hand.",
+      "Mail is imported on the mail node; mailbox passwords keep working only if the archive holds their hashes.",
+      "The site ran ea-php74, which is no longer offered; it will run on PHP 8.1. Test it before the cutover.",
+      "1 link(s) in the archive were ignored for safety."
+     ]
+    },
+    "ok": true
+   },
+   {
+    "code": "checksum_mismatch",
+    "message": "The archive that arrived is not the one that was made (its checksum differs): copy it again.",
+    "ok": false
+   },
+   {
+    "code": "analyzed",
+    "data": {
+     "addon_domains": [],
+     "archive_mb": 0.0,
+     "archive_sha256": "15c309a162db447299a071b50b27af8f09283f92ad7d285bfc2d70fa967c5efa",
+     "blockers": [],
+     "certificates": 0,
+     "contact_email": "owner@gmail.example.com",
+     "cron": [
+      "*/5 * * * * php /home/x/cron.php"
+     ],
+     "databases": [
+      {
+       "bytes": 202,
+       "name": "acmeuser_shop"
+      }
+     ],
+     "db_grants": 1,
+     "db_users": [
+      "acmeuser_shop"
+     ],
+     "dns_zones": [
+      "acme.com"
+     ],
+     "files": 3,
+     "files_mb": 0.0,
+     "forwarders": 1,
+     "mail": [
+      {
+       "bytes": 85,
+       "domain": "acme.com",
+       "mailboxes": [
+        "info"
+       ]
+      }
+     ],
+     "main_domain": "acme.com",
+     "parked_domains": [],
+     "php_cpanel": "ea-php74",
+     "php_target": "8.1",
+     "plan": "Basic",
+     "skipped_links": 1,
+     "sub_domains": [],
+     "user": "acmeuser",
+     "warnings": [
+      "The cPanel account is called acmeuser; on this platform it is abcd1234. Database names starting with acmeuser_ are renamed to abcd1234_.",
+      "1 scheduled job(s) (cron) are not moved automatically; they are listed so they can be recreated by hand.",
+      "Mail is imported on the mail node; mailbox passwords keep working only if the archive holds their hashes.",
+      "The site ran ea-php74, which is no longer offered; it will run on PHP 8.1. Test it before the cutover.",
+      "1 link(s) in the archive were ignored for safety."
+     ]
+    },
+    "ok": true
+   },
+   {
+    "code": "not_found",
+    "message": "That archive has not arrived on this node.",
+    "ok": false
+   },
+   {
+    "code": "differences",
+    "data": {
+     "databases": [
+      {
+       "name": "abcd1234_shop",
+       "present": false,
+       "tables": 0
+      }
+     ],
+     "files_expected": 3,
+     "files_missing": 3,
+     "index": "",
+     "missing_sample": [
+      "private/config.ini",
+      "public_html/index.php",
+      "public_html/wp-content/uploads/a.jpg"
+     ],
+     "ok": false,
+     "php": "8.3"
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "files": 3,
+     "kept_existing": 0,
+     "outside_public_html": 1
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "files": 0,
+     "kept_existing": 3,
+     "outside_public_html": 0
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "files": 3,
+     "kept_existing": 0,
+     "outside_public_html": 1
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "already_there": [],
+     "databases": [
+      "abcd1234_shop"
+     ],
+     "users": [
+      "abcd1234_shop"
+     ]
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "already_there": [
+      "abcd1234_shop"
+     ],
+     "databases": [],
+     "users": []
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "forwarders": 0,
+     "mailboxes": 0,
+     "messages": 0,
+     "skipped": [
+      "acme.com"
+     ]
+    },
+    "ok": true
+   },
+   null,
+   {
+    "code": "imported",
+    "data": {
+     "forwarders": 1,
+     "mailboxes": 1,
+     "messages": 2,
+     "skipped": []
+    },
+    "ok": true
+   },
+   {
+    "code": "imported",
+    "data": {
+     "forwarders": 0,
+     "mailboxes": 0,
+     "messages": 0,
+     "skipped": []
+    },
+    "ok": true
+   },
+   {
+    "code": "validated",
+    "data": {
+     "databases": [
+      {
+       "name": "abcd1234_shop",
+       "present": true,
+       "tables": 1
+      }
+     ],
+     "files_expected": 3,
+     "files_missing": 0,
+     "index": "index.php",
+     "missing_sample": [],
+     "ok": true,
+     "php": "8.3"
+    },
+    "ok": true
+   },
+   {
+    "code": "not_found",
+    "message": "Make the website on this node first.",
+    "ok": false
+   },
+   {
+    "code": "discarded",
+    "data": {},
+    "ok": true
+   },
+   {
+    "code": "absent",
+    "data": {},
+    "ok": true
+   },
+   {
+    "code": "not_found",
+    "message": "That archive has not arrived on this node.",
+    "ok": false
+   }
+  ],
+  "tree": {
+   "<ROOT>/_mail/acme.com/info/cur/1.msg": "From: a@b.example.com\nSubject: Hello\n\nbody",
+   "<ROOT>/_mail/acme.com/info/new/2.msg": "From: c@d.example.com\nSubject: Second\n\nbody",
+   "<ROOT>/abcd1234/sites/acme.com/private/config.ini": "secret=1",
+   "<ROOT>/abcd1234/sites/acme.com/public_html/index.php": "<?php echo 'hi';",
+   "<ROOT>/abcd1234/sites/acme.com/public_html/wp-content/uploads/a.jpg": "JPEGDATA"
+  },
+  "users": {
+   "abcd1234_shop": "*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19"
+  }
+ },
+ "steps": [
+  {
+   "command": "CREATE_WEBSITE",
+   "params": {
+    "account": "abcd1234",
+    "databases": 5,
+    "domain": "acme.com",
+    "php_version": "8.3"
+   }
+  },
+  {
+   "command": "MIGRATE_ANALYZE",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz"
+   }
+  },
+  {
+   "command": "MIGRATE_ANALYZE",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   }
+  },
+  {
+   "command": "MIGRATE_ANALYZE",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "expected_sha256": "15C309A162DB447299A071B50B27AF8F09283F92AD7D285BFC2D70FA967C5EFA"
+   }
+  },
+  {
+   "command": "MIGRATE_ANALYZE",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-nobody.tar.gz"
+   }
+  },
+  {
+   "command": "MIGRATE_VALIDATE",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "files"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "files"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "files",
+    "replace": "yes"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "databases"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "databases"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "mail"
+   }
+  },
+  {
+   "command": "MAIL_DOMAIN_ADD",
+   "params": {
+    "account": "abcd1234",
+    "domain": "acme.com"
+   },
+   "quiet": true
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "mail"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "mail"
+   }
+  },
+  {
+   "command": "MIGRATE_VALIDATE",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz"
+   }
+  },
+  {
+   "command": "MIGRATE_IMPORT",
+   "params": {
+    "account": "nobody123",
+    "archive": "cpmove-acmeuser.tar.gz",
+    "part": "files"
+   }
+  },
+  {
+   "command": "MIGRATE_DISCARD",
+   "params": {
+    "archive": "cpmove-acmeuser.tar.gz"
+   }
+  },
+  {
+   "command": "MIGRATE_DISCARD",
+   "params": {
+    "archive": "cpmove-acmeuser.tar.gz"
+   }
+  },
+  {
+   "command": "MIGRATE_ANALYZE",
+   "params": {
+    "account": "abcd1234",
+    "archive": "cpmove-acmeuser.tar.gz"
+   }
+  }
+ ]
+}

@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "apps.domains",
     "apps.hosting",
     "apps.agent",
+    "apps.migration",
     "apps.billing",
     "apps.orders",
     "apps.renewals",
@@ -396,3 +397,5 @@ AGENT_CERT_HEADER = "X-Client-Cert-Fingerprint"
 POWERDNS_URL = env("POWERDNS_URL", default="")
 POWERDNS_API_KEY = env("POWERDNS_API_KEY", default="")
 POWERDNS_NAMESERVERS = env("POWERDNS_NAMESERVERS", default="")  # comma separated, for example ns1.example.net,ns2.example.net
+# M1: when true, a new hosting account can only be made on a native node (never on cPanel). Turn on once native hosting is trusted.
+NEW_ACCOUNTS_NATIVE_ONLY = env.bool("NEW_ACCOUNTS_NATIVE_ONLY", default=False)

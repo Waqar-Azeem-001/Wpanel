@@ -35210,6 +35210,1286 @@
   }
  },
  {
+  "command": "MIGRATE_ANALYZE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "extra": 1
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": null,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": true,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": [],
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": {},
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": false,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": null,
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": 5,
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": true,
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": 1.5,
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": [],
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": {},
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": false,
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "../x.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "a.tar",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "a/b.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": ".tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": null
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": 5
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": true
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": 1.5
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": []
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": {}
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": false
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_ANALYZE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "extra": 1,
+   "part": "files"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": null,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": true,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": [],
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": {},
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": false,
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "part": "files"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": null,
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": 5,
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": true,
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": 1.5,
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": [],
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": {},
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": false,
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "../x.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "a.tar",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "a/b.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": ".tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.tar.gz",
+   "part": "files",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": null,
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": 5,
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": true,
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": 1.5,
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": [],
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": {},
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": false,
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "not-a-choice",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "filesx",
+   "replace": "no"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": null
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": 5
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": true
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": 1.5
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": []
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": {}
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": false
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "not-a-choice"
+  }
+ },
+ {
+  "command": "MIGRATE_IMPORT",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "part": "files",
+   "replace": "nox"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz",
+   "extra": 1
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": null,
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": true,
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": [],
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": {},
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": false,
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": null
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": 5
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": true
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": 1.5
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": []
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": {}
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": false
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "../x.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "a.tar"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": "a/b.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "archive": ".tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_VALIDATE",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "archive": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": true,
+  "params": {
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": true,
+  "params": {
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": "cpmove-abcd1234.tar.gz",
+   "extra": 1
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "": 1,
+   "archive": "cpmove-abcd1234.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {}
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": null
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": 5
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": true
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": 1.5
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": []
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": {}
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": false
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": "../x.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": "a.tar"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": "a/b.tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": false,
+  "params": {
+   "archive": ".tar.gz"
+  }
+ },
+ {
+  "command": "MIGRATE_DISCARD",
+  "ok": true,
+  "params": {
+   "archive": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.tar.gz"
+  }
+ },
+ {
   "command": "CREATE_BACKUP",
   "ok": true,
   "params": {

@@ -12,7 +12,7 @@ def files():
     sign, public = spec.fixed_signer()
     return {"catalog.json": spec.build_spec(), "validation_cases.json": spec.build_cases(),
             "envelopes.json": {"public_key": public, "node": 7, "now": 1_800_000_000, "cases": spec.build_envelopes(sign)},
-            "golden.json": golden.build_golden()}
+            "golden.json": golden.build_golden(), "migrate_golden.json": golden.build_migrate_golden()[1]}
 
 
 def render(data):
@@ -28,3 +28,5 @@ class Command(BaseCommand):
         for name, data in files().items():
             (folder / name).write_text(render(data), encoding="utf-8", newline="\n")
             self.stdout.write(f"wrote {folder / name}")
+        (folder / golden.MIGRATE_ARCHIVE).write_bytes(golden.build_migrate_golden()[0])
+        self.stdout.write(f"wrote {folder / golden.MIGRATE_ARCHIVE}")

@@ -39,7 +39,7 @@ Per account (ADR 01, 02, 03, 11):
 Safe to repeat (a state file records what is done), and if a step fails part-way the earlier steps are **undone**. Deleting makes the archive first; if the archive fails nothing is removed.
 Every program is run from an argument list, never a shell; paths must be inside `/home`, `/etc`, `/var/lib|log|backups/whp`, `/run/whp`; every value is validated again on the node.
 
-Prerequisites on a node that the installer (N2/N10) must still provide: Apache with `IncludeOptional conf.d/whp/*.conf` and `mod_proxy_fcgi`; `/var/www/whp-suspended/index.html`;
+Prerequisites on a node (provided by the untested `deploy/native-node/install-node.sh`): Apache with `IncludeOptional conf.d/whp/*.conf` and `mod_proxy_fcgi`; `/var/www/whp-suspended/index.html`;
 Remi PHP packages for each offered version; `/home` on XFS mounted with `prjquota`; `/etc/whp/php`, `/var/lib/whp/accounts`, `/var/backups/whp` folders.
 
 ## Choosing a node

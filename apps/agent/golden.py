@@ -158,3 +158,72 @@ def run(scenario):
 
 def build_golden():
     return [{**{k: v for k, v in s.items()}, "expected": run(s)} for s in scenarios()]
+
+
+# --- taking over a cPanel account (M2) ------------------------------------------------------------------------------------------------------
+
+MIGRATE_ARCHIVE = "cpmove-acmeuser.tar.gz"
+
+
+def migrate_steps(sha):
+    a = {"account": "abcd1234", "archive": MIGRATE_ARCHIVE}
+    return [step("CREATE_WEBSITE", {**SITE, "databases": 5}), step("MIGRATE_ANALYZE", a), step("MIGRATE_ANALYZE", {**a, "expected_sha256": "0" * 64}),
+            step("MIGRATE_ANALYZE", {**a, "expected_sha256": sha.upper()}), step("MIGRATE_ANALYZE", {**a, "archive": "cpmove-nobody.tar.gz"}),
+            step("MIGRATE_VALIDATE", a), step("MIGRATE_IMPORT", {**a, "part": "files"}), step("MIGRATE_IMPORT", {**a, "part": "files"}), step("MIGRATE_IMPORT", {**a, "part": "files", "replace": "yes"}),
+            step("MIGRATE_IMPORT", {**a, "part": "databases"}), step("MIGRATE_IMPORT", {**a, "part": "databases"}),
+            step("MIGRATE_IMPORT", {**a, "part": "mail"}), step("MAIL_DOMAIN_ADD", {"account": "abcd1234", "domain": "acme.com"}, quiet=True),
+            step("MIGRATE_IMPORT", {**a, "part": "mail"}), step("MIGRATE_IMPORT", {**a, "part": "mail"}), step("MIGRATE_VALIDATE", a),
+            step("MIGRATE_IMPORT", {"account": "nobody123", "archive": MIGRATE_ARCHIVE, "part": "files"}),
+            step("MIGRATE_DISCARD", {"archive": MIGRATE_ARCHIVE}), step("MIGRATE_DISCARD", {"archive": MIGRATE_ARCHIVE}), step("MIGRATE_ANALYZE", a)]
+
+
+def run_migrate(archive_bytes):
+    """The migration steps through the Python node on a pretend machine; everything observable is recorded, with the temporary folder replaced by <ROOT>."""
+    import hashlib
+
+    from .node.mail import Mail  # noqa: F401
+    from .reference_agent import NativeMachine
+
+    folder = Path(tempfile.mkdtemp(prefix="whp-migrate-"))
+    root = str(folder).replace("\\", "/")
+
+    def clean(text):
+        return str(text).replace("\\", "/").replace(root, "<ROOT>")
+
+    try:
+        machine = NativeMachine(files_dir=folder, capabilities=("web", "database", "mail"))
+        stage = folder / "_stage" / "migrations"
+        stage.mkdir(parents=True)
+        (stage / MIGRATE_ARCHIVE).write_bytes(archive_bytes)
+        (folder / "abcd1234" / "sites").mkdir(parents=True)
+        results = []
+        for item in migrate_steps(hashlib.sha256(archive_bytes).hexdigest()):
+            try:
+                code, data = machine.run(item["command"], item["params"])
+                results.append(None if item.get("quiet") else {"ok": True, "code": code, "data": json.loads(json.dumps(data))})
+            except HandlerError as exc:
+                results.append({"ok": False, "code": exc.code, "message": exc.message})
+        tree = {}
+        for base in (folder / "abcd1234", folder / "_mail"):
+            for path in sorted(base.rglob("*")):
+                if path.is_file() and path.suffix != ".json":
+                    tree[clean(path)] = path.read_text(encoding="utf-8", errors="replace")
+        mail = machine.mail._state("acme.com") or {}
+        state = {"mailboxes": {k: v["hash"] for k, v in mail.get("mailboxes", {}).items()}, "forwarders": sorted(f"{f['source']}>{f['destination']}" for f in mail.get("forwarders", []))}
+        databases = {db: {t: v["rows"] for t, v in tables.items()} for db, tables in machine.engine.dbs.items()}
+        return {"results": results, "tree": tree, "mail": state, "databases": databases, "users": dict(sorted(machine.engine.users.items())),
+                "grants": sorted([db, user, sorted(p)] for (db, user), p in machine.engine.grants.items()),
+                "commands": [[clean(a) for a in c] for c in machine.system.commands if c and c[0] in ("chown", "chmod")]}
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def build_migrate_golden():
+    import tempfile as _t
+
+    from apps.agent.tests.cpanel_archive import build
+
+    with _t.TemporaryDirectory() as tmp:
+        path = build(Path(tmp) / MIGRATE_ARCHIVE, user="acmeuser", domain="acme.com")
+        data = path.read_bytes()
+    return data, {"archive": MIGRATE_ARCHIVE, "steps": migrate_steps(__import__("hashlib").sha256(data).hexdigest()), "expected": run_migrate(data)}

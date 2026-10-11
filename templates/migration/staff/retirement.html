@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Retiring cPanel · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Is cPanel ready to be retired?</h1>
+  <p class="page-sub">Every condition must be green before the cPanel provider, the "open cPanel" link and the WHM credentials are removed. Some lines are measured here; the rest need a named person to say what they saw on a real node. WHPanel does not tick those itself.</p>
+  <a href="{% url 'migration_staff:dashboard' %}">&larr; cPanel migration</a>
+</div>
+<p><strong>{{ summary.remaining_on_cpanel }}</strong> live account(s) are still on a cPanel server.</p>
+<div class="list-group mb-3">
+{% for c in checks %}
+  <div class="list-group-item">
+    <div class="d-flex justify-content-between"><strong>{{ c.label }}</strong><span class="site-pill {% if c.ok %}is-ok{% else %}is-danger{% endif %}">{% if c.ok %}Done{% else %}Open{% endif %}</span></div>
+    {% if c.hint %}<small class="text-secondary d-block">{{ c.hint }}</small>{% endif %}
+    {% if c.evidence %}<small class="text-secondary d-block">{{ c.evidence }}</small>{% endif %}
+    <small class="d-block">{{ c.detail }}</small>
+    {% if c.kind == 'signoff' %}
+    <form method="post" action="{% url 'migration_staff:signoff' c.key %}" class="d-flex gap-2 mt-2">{% csrf_token %}
+      <input class="form-control form-control-sm" name="note" maxlength="500" placeholder="What did you see, and where?">
+      <button class="btn btn-sm btn-primary">Sign off</button>
+      {% if c.ok %}<button class="btn btn-sm btn-outline-secondary" name="withdraw" value="1">Withdraw</button>{% endif %}
+    </form>
+    {% endif %}
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

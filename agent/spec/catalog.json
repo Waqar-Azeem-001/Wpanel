@@ -2406,6 +2406,145 @@
    ],
    "timeout": 30
   },
+  "MIGRATE_ANALYZE": {
+   "ephemeral": true,
+   "fields": {
+    "account": {
+     "choices": [],
+     "high": 0,
+     "kind": "account",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "archive": {
+     "choices": [],
+     "high": 0,
+     "kind": "archive_name",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "expected_sha256": {
+     "choices": [],
+     "high": 0,
+     "kind": "sha256",
+     "low": 0,
+     "required": false,
+     "sensitive": false
+    }
+   },
+   "idempotent": true,
+   "max_attempts": 3,
+   "min_agent_version": [
+    0,
+    1,
+    0
+   ],
+   "timeout": 1800
+  },
+  "MIGRATE_DISCARD": {
+   "ephemeral": false,
+   "fields": {
+    "archive": {
+     "choices": [],
+     "high": 0,
+     "kind": "archive_name",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    }
+   },
+   "idempotent": true,
+   "max_attempts": 3,
+   "min_agent_version": [
+    0,
+    1,
+    0
+   ],
+   "timeout": 60
+  },
+  "MIGRATE_IMPORT": {
+   "ephemeral": false,
+   "fields": {
+    "account": {
+     "choices": [],
+     "high": 0,
+     "kind": "account",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "archive": {
+     "choices": [],
+     "high": 0,
+     "kind": "archive_name",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "part": {
+     "choices": [
+      "files",
+      "databases",
+      "mail"
+     ],
+     "high": 0,
+     "kind": "enum",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "replace": {
+     "choices": [
+      "no",
+      "yes"
+     ],
+     "high": 0,
+     "kind": "enum",
+     "low": 0,
+     "required": false,
+     "sensitive": false
+    }
+   },
+   "idempotent": true,
+   "max_attempts": 2,
+   "min_agent_version": [
+    0,
+    1,
+    0
+   ],
+   "timeout": 7200
+  },
+  "MIGRATE_VALIDATE": {
+   "ephemeral": true,
+   "fields": {
+    "account": {
+     "choices": [],
+     "high": 0,
+     "kind": "account",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "archive": {
+     "choices": [],
+     "high": 0,
+     "kind": "archive_name",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    }
+   },
+   "idempotent": true,
+   "max_attempts": 3,
+   "min_agent_version": [
+    0,
+    1,
+    0
+   ],
+   "timeout": 1800
+  },
   "REMOVE_SSL": {
    "ephemeral": false,
    "fields": {
@@ -2958,6 +3097,10 @@
    "max_len": 0,
    "regex": "^[a-z][a-z0-9]{2,15}$"
   },
+  "archive_name": {
+   "max_len": 0,
+   "regex": "^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\\.tar\\.gz$"
+  },
   "backup_id": {
    "max_len": 0,
    "regex": "^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$"
@@ -3009,6 +3152,10 @@
   "sftp_name": {
    "max_len": 0,
    "regex": "^[a-z][a-z0-9]{1,14}$"
+  },
+  "sha256": {
+   "max_len": 0,
+   "regex": "^[A-Fa-f0-9]{64}$"
   },
   "snapshot": {
    "max_len": 0,

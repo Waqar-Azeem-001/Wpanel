@@ -121,11 +121,17 @@ class NativeMachine(FakeMachine):
         self.servicectl = ServiceControl(self.system, sleep=lambda seconds: None)
         self.acme = FakeAcme()
         self.ssl = Ssl(self.system, self.acme)
+        from .node.cpanel_import import Migrator
+
+        self.migrator = Migrator(self.system, self.files_dir / "_stage" if self.files_dir else _P("."), root_for, self.engine, websites=self.websites, mail=self.mail)
 
     def run(self, command, p):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command.startswith("MIGRATE_"):
+            self.executed.append(command)
+            return self.migrator.run(command, p)
         if command == "SERVICE_RESTART":
             self.executed.append(command)
             return self.servicectl.run(command, p)

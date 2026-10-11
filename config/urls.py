@@ -39,6 +39,7 @@ urlpatterns = [
     path("account/hosting/", include("apps.hosting.urls_customer")),
     path("staff/hosting/", include("apps.hosting.urls_staff")),
     path("staff/nodes/", include("apps.agent.urls_staff")),
+    path("staff/migration/", include("apps.migration.urls")),
     path("staff/orders/", include("apps.orders.urls_staff")),
     path("staff/billing/", include("apps.billing.urls_staff")),
     path("account/billing/", include("apps.billing.urls_customer")),

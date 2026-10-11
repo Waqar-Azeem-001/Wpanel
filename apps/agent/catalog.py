@@ -32,11 +32,13 @@ TRASH_ID = re.compile(r"^([a-f0-9]{12}|ALL)$")
 MODE = re.compile(r"^[0-7]{3,4}$")
 MAX_INLINE_BYTES = 3_000_000  # file content that travels inside a command; bigger files go by SFTP
 BACKUP_ID = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$")
+ARCHIVE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.tar\.gz$")
+SHA256 = re.compile(r"^[A-Fa-f0-9]{64}$")
 PHP_VERSIONS = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
 
 
 # The pattern of every kind that is "a value that must look like this". The Go agent is generated from this table (manage.py export_agent_spec), so the two cannot drift apart.
-PATTERNS = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID}
+PATTERNS = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID, "archive_name": ARCHIVE_NAME, "sha256": SHA256}
 _B64 = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
 
 
@@ -245,6 +247,14 @@ COMMANDS = {c.name: c for c in [
     Command("CREATE_MAILBOX", {"account": _f("account"), "domain": _f("domain"), "local_part": _f("local_part"), "quota_mb": _f("int", low=1, high=102400),
                                "password": _f("secret", sensitive=True)}, 60,
             description="Create a mailbox (needs a mail node; native mail is decided at N7)."),
+    Command("MIGRATE_ANALYZE", {"account": _f("account"), "archive": _f("archive_name"), "expected_sha256": Field("sha256", required=False)}, 1800, ephemeral=True,
+            description="Read a cPanel account backup that has arrived on this node and report what it holds and what cannot move by itself. Changes nothing."),
+    Command("MIGRATE_IMPORT", {"account": _f("account"), "archive": _f("archive_name"), "part": _f("enum", choices=("files", "databases", "mail")),
+                               "replace": Field("enum", choices=("no", "yes"), required=False)}, 7200, max_attempts=2,
+            description="Copy one part of a cPanel backup (website files, databases, or mailboxes) into the account's place on this node. Never replaces a database."),
+    Command("MIGRATE_VALIDATE", {"account": _f("account"), "archive": _f("archive_name")}, 1800, ephemeral=True,
+            description="Compare what is on this node with what the backup held: files present, databases and tables present."),
+    Command("MIGRATE_DISCARD", {"archive": _f("archive_name")}, 60, description="Delete a staged cPanel backup (it holds password hashes)."),
     Command("CREATE_BACKUP", {"account": _f("account"), "scope": _f("enum", choices=("full", "files", "databases"))}, 3600, idempotent=False, max_attempts=1,
             description="Make a backup now. Not idempotent: a second run would make a second backup."),
     Command("RESTORE_BACKUP", {"account": _f("account"), "backup_id": _f("backup_id"), "scope": _f("enum", choices=("full", "files", "databases"))}, 3600,

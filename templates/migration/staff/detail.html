@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Migration {{ m.account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ m.account.domain }} <small class="text-secondary">{{ m.account.username }}</small></h1>
+  <p class="page-sub">{{ m.source.name }} &rarr; {{ m.target.name }}{% if m.mail_target %} (mail on {{ m.mail_target.name }}){% endif %} &middot; <strong>{{ m.get_state_display }}</strong></p>
+  <a href="{% url 'migration_staff:dashboard' %}">&larr; All migrations</a>
+</div>
+<p>{% for name, mark in marks %}<span class="site-pill {% if mark == 'done' %}is-ok{% elif mark == 'problem' %}is-danger{% elif mark == 'now' %}is-warn{% endif %} me-1">{{ name }}</span>{% endfor %}</p>
+{% if m.last_error %}<p class="text-danger"><strong>Problem:</strong> {{ m.last_error }}</p>{% endif %}
+{% if m.dns_note %}<p><strong>DNS:</strong> {{ m.dns_note }}</p>{% endif %}
+
+{% if m.state == S.AWAITING_ARCHIVE or m.state == S.MANUAL_REVIEW %}
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">1. Make the backup and copy it to the node</h2></div><div class="card-body">
+  <p class="mb-1">On the cPanel server, as root:</p>
+  <pre class="mb-2">{{ how.make }}
+{{ how.check }}
+{{ how.copy }}</pre>
+  <p class="text-secondary mb-2">The backup is a normal cPanel account backup. Nothing on the cPanel account changes. It holds password hashes: it is deleted from the node when the migration is finished.{% if m.mail_target %} For mail, copy the same file to the mail node too.{% endif %}</p>
+  {% if can_manage %}<form method="post" action="{% url 'migration_staff:act' m.pk 'check' %}">{% csrf_token %}<button class="btn btn-primary">Check backup</button></form>{% endif %}
+</div></section>
+{% endif %}
+
+{% if m.report %}
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">What the backup holds</h2></div><div class="card-body">
+  <p class="mb-1">cPanel account <strong>{{ m.report.user }}</strong>, main domain <strong>{{ m.report.main_domain }}</strong>, PHP {{ m.report.php_cpanel|default:"?" }} &rarr; {{ m.report.php_target }}. {{ m.report.files }} files ({{ m.report.files_mb }} MB),
+    {{ m.report.databases|length }} database(s), {{ m.report.mail|length }} mail domain(s), {{ m.report.cron|length }} scheduled job(s). Backup {{ m.report.archive_mb }} MB, SHA-256 <code>{{ m.report.archive_sha256 }}</code>.</p>
+  {% for b in m.report.blockers %}<p class="text-danger mb-1"><strong>Needs a person:</strong> {{ b }}</p>{% endfor %}
+  {% for w in m.report.warnings %}<p class="text-warning mb-1">{{ w }}</p>{% endfor %}
+  {% if m.report.cron %}<details class="mt-2"><summary>Scheduled jobs to recreate by hand</summary><pre>{% for c in m.report.cron %}{{ c }}
+{% endfor %}</pre></details>{% endif %}
+  {% if m.state == S.READY and can_manage %}
+  <form method="post" action="{% url 'migration_staff:act' m.pk 'approve' %}" class="mt-2">{% csrf_token %}
+    {% if m.report.warnings %}<label class="d-block mb-2"><input type="checkbox" name="accept" value="1"> I have read the warnings and accept them.</label>{% endif %}
+    <button class="btn btn-primary">Approve and import</button></form>
+  {% endif %}
+</div></section>
+{% endif %}
+
+{% if m.validation %}
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">Check after import</h2></div><div class="card-body">
+  {% if m.validation.files_expected is not None %}<p class="mb-1">{{ m.validation.files_expected }} files expected, {{ m.validation.files_missing }} missing{% if m.validation.missing_sample %} (for example {{ m.validation.missing_sample|join:", " }}){% endif %}.</p>{% endif %}
+  {% for d in m.validation.databases %}<p class="mb-1">Database {{ d.name }}: {% if d.present %}present, {{ d.tables }} table(s){% else %}<span class="text-danger">missing</span>{% endif %}</p>{% endfor %}
+  {% if m.validation.site %}<p class="mb-1">Site answer from the new node: {{ m.validation.site.status }} {% if m.validation.site.ok %}(ok){% else %}<span class="text-danger">(not ok {{ m.validation.site.note }})</span>{% endif %}</p>{% endif %}
+  {% if can_manage and m.state == S.VALIDATED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'site' %}" class="d-inline">{% csrf_token %}<button class="btn btn-outline-secondary btn-sm">Check that the site answers</button></form>{% endif %}
+</div></section>
+{% endif %}
+
+{% if can_manage %}
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">Actions</h2></div><div class="card-body d-flex flex-wrap gap-2">
+  {% if m.state == S.VALIDATED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'cutover' %}" data-confirm="Switch this account to the new node now?">{% csrf_token %}<button class="btn btn-danger">Cut over</button></form>{% endif %}
+  {% if m.state == S.WINDOW %}
+    <form method="post" action="{% url 'migration_staff:act' m.pk 'rollback' %}" data-confirm="Put the account back on cPanel?">{% csrf_token %}<button class="btn btn-outline-danger">Roll back</button></form>
+    <form method="post" action="{% url 'migration_staff:act' m.pk 'finish' %}">{% csrf_token %}<button class="btn btn-primary">Complete (window ends {{ m.rollback_until|date:"Y-m-d H:i" }})</button>
+      <label class="ms-2"><input type="checkbox" name="force" value="1"> end the window early</label></form>
+  {% endif %}
+  {% if m.state == S.FAILED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'retry' %}">{% csrf_token %}<button class="btn btn-primary">Retry</button></form>{% endif %}
+  {% if m.state != S.WINDOW and m.state != S.COMPLETE and m.state != S.ROLLED_BACK and m.state != S.CANCELLED %}<form method="post" action="{% url 'migration_staff:act' m.pk 'cancel' %}" data-confirm="Cancel this migration? The cPanel account is not touched.">{% csrf_token %}<button class="btn btn-outline-secondary">Cancel</button></form>{% endif %}
+</div></section>
+{% endif %}
+
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">History</h2></div><ul class="list-group list-group-flush">
+  {% for e in events %}<li class="list-group-item {% if not e.ok %}text-danger{% endif %}"><small class="text-secondary">{{ e.at|date:"Y-m-d H:i" }} &middot; {{ e.stage }}</small><br>{{ e.message }}</li>{% endfor %}
+</ul></section>
+{% endblock %}

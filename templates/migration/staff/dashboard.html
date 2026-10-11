@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}cPanel migration · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>cPanel migration</h1>
+  <p class="page-sub">Move accounts from cPanel servers to native nodes one at a time. Every step is a check or a command the node carries out; you approve the import and the cutover. The cPanel account is never changed or deleted by this screen.</p>
+  <a href="{% url 'agent_staff:nodes' %}">Native nodes</a> &middot; <a href="{% url 'migration_staff:retirement' %}">Is cPanel ready to retire?</a>
+</div>
+<div class="sec-summary mb-3">
+  <div class="sec-tile"><span class="sec-label">Total accounts</span><strong>{{ summary.total }}</strong></div>
+  <div class="sec-tile {% if summary.migrated %}is-ok{% endif %}"><span class="sec-label">Migrated</span><strong>{{ summary.migrated }}</strong></div>
+  <div class="sec-tile"><span class="sec-label">In progress</span><strong>{{ summary.in_progress }}</strong></div>
+  <div class="sec-tile"><span class="sec-label">Pending</span><strong>{{ summary.pending }}</strong></div>
+  <div class="sec-tile {% if summary.failed %}is-danger{% endif %}"><span class="sec-label">Failed</span><strong>{{ summary.failed }}</strong></div>
+  <div class="sec-tile {% if summary.manual_review %}is-warn{% endif %}"><span class="sec-label">Manual review</span><strong>{{ summary.manual_review }}</strong></div>
+</div>
+
+{% if can_manage %}
+<section class="card mb-3"><div class="card-header"><h2 class="h5 mb-0">Start a migration</h2></div><div class="card-body">
+  <form method="post" action="{% url 'migration_staff:start' %}" class="row g-2 align-items-end">{% csrf_token %}
+    {% for f in form %}<div class="col-md-4"><label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}{% if f.help_text %}<div class="form-text">{{ f.help_text }}</div>{% endif %}</div>{% endfor %}
+    <div class="col-12"><button class="btn btn-primary">Start</button></div>
+  </form>
+</div></section>
+{% endif %}
+
+<div class="mb-2">
+  <a class="btn btn-sm {% if not state %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'migration_staff:dashboard' %}">All</a>
+  {% for value, label in states %}<a class="btn btn-sm {% if state == value %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?state={{ value }}">{{ label }}</a>{% endfor %}
+</div>
+<div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Account</th><th>From &rarr; to</th><th>State</th><th>Stages</th><th></th></tr></thead>
+  <tbody>
+  {% for m in rows %}
+  <tr>
+    <td><strong>{{ m.account.domain }}</strong><br><small class="text-secondary">{{ m.account.username }}</small></td>
+    <td>{{ m.source.name }} &rarr; {{ m.target.name }}</td>
+    <td>{{ m.get_state_display }}{% if m.last_error %}<br><small class="text-danger">{{ m.last_error|truncatechars:90 }}</small>{% endif %}</td>
+    <td>{% for name, mark in m.marks %}<span class="site-pill {% if mark == 'done' %}is-ok{% elif mark == 'problem' %}is-danger{% elif mark == 'now' %}is-warn{% endif %} me-1" title="{{ name }}">{{ name }}</span>{% endfor %}</td>
+    <td><a href="{% url 'migration_staff:detail' m.pk %}">Open</a></td>
+  </tr>
+  {% empty %}<tr><td colspan="5" class="text-secondary">No migrations yet.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -64,6 +65,7 @@ type Engine interface {
 	Rows(db, table string, offset, limit int) ([][]any, int64, error)
 	Dump(db, path string) error
 	Load(db, path string) error
+	LoadSQL(db string, r io.Reader) error
 }
 
 // NativeHash is the mysql_native_password hash, so the clear password never has to be written into SQL.
