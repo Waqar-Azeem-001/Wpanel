@@ -50,7 +50,7 @@ awaiting_archive -> analysing -> ready -> importing -> validated -> window -> co
 
 * The archive layout follows the documented `pkgacct` format and **has not been tried against a real archive**; cPanel versions differ. Try the report on a few real archives before trusting it.
 * MariaDB loading of large dumps, restic, certbot, `chown`/`chmod` on a real node: never run.
-* The mail import relies on the N7 mail platform, which has never run for real (including file ownership of new mailboxes, which N7 does not set either).
+* The mail import relies on the N7 mail platform, which has never run for real (new mailboxes are now handed to the mail user with chown, also never run for real).
 * `userdata` is read with a small purpose-built reader, not a YAML library: unusual layouts will show up as "needs a person", not as a wrong import.
 
 See the runbook: `docs/runbooks/cpanel-migration.md`.

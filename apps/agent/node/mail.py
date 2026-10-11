@@ -215,6 +215,7 @@ class Mail:
         for folder in ("", ".Drafts", ".Sent", ".Archive", ".Junk", ".Trash"):
             for sub in ("cur", "new", "tmp"):
                 (self._maildir(st["domain"], local) / folder / sub).mkdir(parents=True, exist_ok=True)
+        self.s.run(["chown", "-R", f"{VMAIL_UID}:{VMAIL_UID}", str(self._maildir(st["domain"], local))])  # the agent runs as root; Dovecot runs as the mail user and must be able to write here
         return "created", {"address": f"{local}@{st['domain']}"}
 
     def box_delete(self, p):
@@ -353,6 +354,7 @@ class Mail:
         message_id = f"{int(self.now())}.{uuid.uuid4().hex[:12]}.mail"
         target = base / ("cur" if seen else "new") / (message_id + (FLAG_SEP + "S" if seen else ""))
         target.write_bytes(raw if isinstance(raw, bytes) else raw.encode())
+        self.s.run(["chown", "-R", f"{VMAIL_UID}:{VMAIL_UID}", str(self._maildir(domain, local))])
         return message_id
 
     def _find(self, domain, local, message_id):

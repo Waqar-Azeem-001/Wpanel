@@ -439,6 +439,9 @@ func (a *Agent) mailBoxCreate(p map[string]any) (Result, error) {
 			}
 		}
 	}
+	if _, err := a.Sys.Run([]string{"chown", "-R", "5000:5000", a.maildir(st.Domain, local)}, ""); err != nil {
+		return Result{}, err
+	}
 	return Result{"created", map[string]any{"address": local + "@" + st.Domain}}, nil
 }
 
@@ -656,7 +659,14 @@ func (a *Agent) Deliver(domain, local string, raw []byte, folder string, seen bo
 	if seen {
 		dir, name = "cur", id+flagSep()+"S"
 	}
-	return id, os.WriteFile(filepath.Join(base, dir, name), raw, 0o644)
+	if err := os.WriteFile(filepath.Join(base, dir, name), raw, 0o644); err != nil {
+		return "", err
+	}
+	// the agent runs as root; Dovecot runs as the mail user and must be able to write here
+	if _, err := a.Sys.Run([]string{"chown", "-R", "5000:5000", a.maildir(domain, local)}, ""); err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 type mailFile struct{ folder, path string }

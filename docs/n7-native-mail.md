@@ -50,3 +50,6 @@ Enrol a server with capability `mail` (N2), give it a stable IPv4 address and a 
 `apps/agent/tests/test_native_mail.py` (30): hash vectors; first use and node choice; DNS records; no DNS zone; no healthy node; tool offered only with a mail node; mailbox life cycle and rules; forwarders; escaped Sieve
 auto-replies; spam and routing; rollback; inbox reading; star/move/trash/delete; sending, copy in Sent, draft cleanup; header injection and bad recipients; hourly limit; log scanning and blocking; account isolation (also at the node);
 plan change and termination; no content or passwords kept; the real Email page; typed commands; blacklist logic; reputation saving, display, once-only alert and the command.
+
+## Follow-up
+New mailboxes and delivered messages are now handed to the mail user (`chown -R 5000:5000`) in both the Python and Go agent, because the agent runs as root and Dovecot as `vmail`. Never run on a real node.
