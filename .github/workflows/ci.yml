@@ -33,6 +33,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the secret scan below reads the whole history
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: false  # the agent has no third-party modules to cache
+      - name: Go agent, vet and unit tests
+        working-directory: agent
+        run: |
+          go vet ./...
+          go test ./...
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"

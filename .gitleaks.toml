@@ -1,0 +1,19 @@
+# Secret scan configuration (used by the CI step). Test fixtures contain made-up keys and one fixed signing seed
+# for reproducible fixtures; they are not secrets. Real files are still scanned.
+title = "WHPanel"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Made-up values in tests, fixtures and documentation"
+paths = [
+  '''(^|/)tests?/''',
+  '''(^|/)test_[^/]*\.py$''',
+  '''(^|/)conftest\.py$''',
+  '''^agent/spec/''',
+  '''^apps/agent/spec\.py$''',
+  '''^apps/agent/golden\.py$''',
+  '''^docs/''',
+  '''\.md$''',
+]
