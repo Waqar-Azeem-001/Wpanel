@@ -285,6 +285,7 @@ CELERY_BEAT_SCHEDULE = {
     "panel-database-backup": {"task": "apps.agent.tasks.panel_backup_task", "schedule": crontab(hour=1, minute=30)},
     "native-monitoring-sweep": {"task": "apps.agent.tasks.monitor_sweep_task", "schedule": crontab(minute="*")},
     "native-scheduled-backups": {"task": "apps.hosting.tasks.run_native_backups_task", "schedule": crontab(hour=2, minute=30)},
+    "website-care": {"task": "apps.hosting.tasks.run_site_care_task", "schedule": crontab(hour=3, minute=15)},
     "native-restore-test": {"task": "apps.hosting.tasks.native_restore_test_task", "schedule": crontab(day_of_month=1, hour=4, minute=0)},
     "generate-renewal-invoices": {
         "task": "apps.renewals.tasks.generate_renewal_invoices_task",

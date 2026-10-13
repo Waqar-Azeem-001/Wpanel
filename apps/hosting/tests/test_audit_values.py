@@ -132,8 +132,9 @@ def test_the_clients_services_tab_has_a_manage_hosting_link_only_for_live_accoun
 
 def test_the_website_card_offers_the_tools_people_use_most(client, owner, account):
     client.force_login(owner)
-    page = client.get("/account/hosting/").content.decode()
+    listing = client.get("/account/hosting/").content.decode()
+    page = client.get(f"/account/hosting/{account.pk}/").content.decode()  # the tools are on the website's own dashboard; the list just opens it
     for label in ("File manager", "Email accounts", "MySQL databases", "DNS records", "Backups"):
-        assert f"{label}</a>" in page, label
+        assert f'class="tool-label">{label}<' in page, label
     pending = HostingAccount.objects.get(domain="demo-new.example.com")
-    assert f"/account/hosting/{pending.pk}/manage/files/" not in page
+    assert f"/account/hosting/{pending.pk}/manage/files/" not in listing and f"/account/hosting/{account.pk}/" in listing

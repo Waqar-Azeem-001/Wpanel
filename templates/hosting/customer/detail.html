@@ -43,46 +43,40 @@
 </section>
 {% endif %}
 
-<div class="row g-3">
-  <div class="col-xl-7">
-    {% if essentials %}
-    <section class="card mb-3" aria-labelledby="ess-title">
-      <div class="card-header"><h2 class="h6 mb-0" id="ess-title">{% trans "Essentials" %}</h2></div>
-      <ul class="list-group list-group-flush ws-essentials">
-        {% for row in essentials %}
-        <li class="list-group-item">
-          <span class="ws-ess-icon" aria-hidden="true"><i class="bi {{ row.icon }}"></i></span>
-          <span class="ws-ess-text"><strong>{{ row.label }}</strong><small>{{ row.about }}</small></span>
-          <a class="btn btn-sm btn-outline-secondary" href="{{ row.url }}">{{ row.action }}</a>
-        </li>
-        {% endfor %}
-        <li class="list-group-item">
-          <span class="ws-ess-icon" aria-hidden="true"><i class="bi bi-hdd-rack"></i></span>
-          <span class="ws-ess-text"><strong>{% trans "Hosting plan" %}</strong><small>{{ account.product.name }}{% if account.expires_at %} &middot; {% trans "renews" %} {{ account.expires_at|fdate }}{% endif %}</small></span>
-          <a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_customer:information' account.pk %}">{% trans "Details" %}</a>
-        </li>
-      </ul>
-    </section>
-    {% endif %}
+{% if care_rows %}
+<section class="ws-block" aria-labelledby="care-title">
+  <div class="ws-block-head"><h2 id="care-title">{% trans "Website care" %}</h2><a href="{% url 'hosting_customer:care' account.pk %}">{% trans "Open" %}</a></div>
+  <ul class="care-tiles">
+    {% for row in care_rows %}
+    <li><a class="care-tile is-{{ row.tone }}" href="{% url 'hosting_customer:care' account.pk %}#care-{{ row.key }}">
+      <span class="care-tile-icon" aria-hidden="true"><i class="bi {{ row.icon }}"></i></span>
+      <span class="care-tile-label">{{ row.title }}</span>
+      <strong class="care-tile-value">{{ row.value }}</strong>
+      <span class="care-tile-note">{{ row.note }}</span>
+    </a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
-    {% if tiles %}
-    <section class="mb-3" aria-labelledby="tools-title">
-      <h2 class="h6 ws-section-title" id="tools-title">{% trans "All tools" %}</h2>
-      <ul class="ws-tiles">
-        {% for tile in tiles %}
-        <li><a class="ws-tile" href="{{ tile.url }}">
-          <span class="ws-tile-icon" aria-hidden="true"><i class="bi {{ tile.icon }}"></i></span>
-          <span class="ws-tile-text"><strong>{{ tile.label }}</strong><small>{{ tile.about }}</small></span>
-        </a></li>
-        {% endfor %}
-      </ul>
-    </section>
-    {% endif %}
-  </div>
+{% if tiles %}
+<section class="ws-block" aria-labelledby="tools-title">
+  <div class="ws-block-head"><h2 id="tools-title">{% trans "Tools" %}</h2></div>
+  <ul class="tool-grid">
+    {% for tile in tiles %}
+    <li><a class="tool" href="{{ tile.url }}" title="{{ tile.about }}">
+      <span class="tool-icon" aria-hidden="true"><i class="bi {{ tile.icon }}"></i></span>
+      <span class="tool-label">{{ tile.label }}</span>
+    </a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
-  <div class="col-xl-5">
-    {% if card.show_usage %}
-    <section class="card mb-3" aria-labelledby="use-title">
+<div class="row g-4 mb-4">
+  {% if card.show_usage %}
+  <div class="col-lg-6">
+    <section class="card h-100" aria-labelledby="use-title">
       <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h6 mb-0" id="use-title">{% trans "Plan resource usage" %}</h2>
         {% if usage_url %}<a class="small" href="{{ usage_url }}">{% trans "See details" %}</a>{% endif %}</div>
       <div class="card-body">
@@ -98,9 +92,9 @@
         </dl>
       </div>
     </section>
-    {% endif %}
-    {% include "renewals/_term_card.html" %}
   </div>
+  {% endif %}
+  <div class="col-lg-6">{% include "renewals/_term_card.html" %}</div>
 </div>
 {% lifecycle_card account %}
 {% endblock %}

@@ -15,7 +15,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.orders.models import ItemKind, OrderItem
 
-from . import admin_access, dashboard, forms, services
+from . import admin_access, care, dashboard, forms, services
 from .models import HostingAccount, HostingStatus
 
 
@@ -70,7 +70,8 @@ def my_hosting_detail(request, pk):
     account = _own_account(request, pk)
     tiles = dashboard.workspace_tiles(account)
     return render(request, "hosting/customer/detail.html", {
-        "account": account, "card": dashboard.website_card(request.user, account), "tiles": tiles, "essentials": dashboard.workspace_essentials(tiles),
+        "account": account, "card": dashboard.website_card(request.user, account), "tiles": tiles,
+        "care_rows": care.summary(request.user, account) if account.status == "active" else [],
         "usage_url": reverse("hosting_customer:usage", args=[account.pk]) if any(t["key"] == "usage" for t in tiles) else "",
         "sidebar": portal.service_sidebar(request, account)})
 

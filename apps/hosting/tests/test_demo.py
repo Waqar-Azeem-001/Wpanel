@@ -82,11 +82,10 @@ def test_the_websites_page_shows_every_state_with_the_sample_data(client, owner,
     for domain in ("demo-shop.example.com", "demo-blog.example.com", "demo-agency.example.com",
                    "demo-club.example.com", "demo-new.example.com"):
         assert domain in page
-    # storage + bandwidth for shop, blog and club, storage only for agency (its bandwidth has no limit to draw against)
-    assert page.count("<progress") == 7
-    assert "unlimited" in page and "Being set up" in page
-    assert "is-warning" in page and "is-danger" in page
-    assert "SSL active" in page and "PHP 8" in page and ">Manage<" in page  # the demo provider reports both for live accounts
+    # one storage meter for each live website that has a limit to draw against
+    assert page.count("<progress") == 4
+    assert "Being set up" in page and "is-warning" in page and "is-danger" in page
+    assert "Visit" in page and 'class="site-card-link"' in page
 
 
 # --- The website workspace (grouped Manage menu, section pages) ----------------------------------------------

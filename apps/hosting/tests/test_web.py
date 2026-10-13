@@ -179,13 +179,11 @@ def test_the_websites_page_shows_a_card_per_account_with_plan_usage_and_actions(
     response = client.get("/account/hosting/")
     page = response.content.decode()
     assert response.status_code == 200 and len(response.context["cards"]) == 1
-    assert "shop.example.com" in page and "Starter" in page and "<strong>4.8 GB</strong>" in page and "/ 20 GB" in page
+    assert "shop.example.com" in page and "Starter" in page and "4.8 GB of 20 GB used" in page
     assert "<progress" in page and 'value="24"' in page
-    assert "<strong>38 MB</strong>" in page and "/ unlimited" in page
-    assert f'href="/account/hosting/{account.pk}/"' in page and "Upgrade" in page
+    assert f'href="/account/hosting/{account.pk}/"' in page and "Set up website" in page
     # the provider reports neither SSL nor PHP yet: nothing is shown for them (never invented values)
     assert "SSL active" not in page and "SSL not active" not in page and "PHP 8" not in page
-    assert ">Manage<" in page and "Hosting information" in page
 
 
 def test_a_pending_account_shows_a_setup_note_instead_of_usage(client, manager, owner, client_obj, product):
@@ -231,11 +229,11 @@ def test_ssl_and_php_appear_when_the_provider_reports_them(client, manager, owne
 
         def set_php_settings(self, username, domain, settings): ...
 
-    services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product, "rich.example.com"))
+    account = services.complete_provisioning(manager, services.request_hosting(manager, client_obj, product, "rich.example.com"))
     monkeypatch.setattr(control, "get_adapter", lambda server: RichProvider(host="h", port=1, credentials={}))
     client.force_login(owner)
-    page = client.get("/account/hosting/").content.decode()
-    assert "SSL active" in page and "PHP 8.3" in page
+    page = client.get(f"/account/hosting/{account.pk}/").content.decode()  # on the website's own dashboard
+    assert "Active" in page and "8.3" in page
 
 
 # --- Test connection from the staff server pages -----------------------------------------------------------------

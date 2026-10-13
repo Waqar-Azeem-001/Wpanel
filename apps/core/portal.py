@@ -128,7 +128,8 @@ def service_sidebar(request, account):
     from apps.hosting import dashboard  # the hosting workspace menu lives with hosting; imported here to keep core light
 
     overview = link(request, "Overview", "hosting_customer:detail", account.pk, icon="bi-speedometer2")
-    return WorkspaceMenu([Panel("Website", [overview, *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
+    care = link(request, "Website care", "hosting_customer:care", account.pk, icon="bi-heart-pulse") if account.status == "active" else None
+    return WorkspaceMenu([Panel("Website", [overview, *([care] if care else []), *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
 
 
 def domain_sidebar(request, domain):

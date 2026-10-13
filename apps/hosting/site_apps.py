@@ -212,7 +212,7 @@ def _public(host):
     return bool(infos)
 
 
-def reach(account, path, token):
+def reach(account, path, token, purpose="to finish the installation"):
     """
     Call the installer once. Tries the website's own address first, then its server's address with the right Host header (the domain may not point there yet).
     Returns the installer's answer as a dict if it came back within the wait, or None if it is still working (read the result file later).
@@ -243,7 +243,7 @@ def reach(account, path, token):
                 continue
             return data if isinstance(data, dict) else None
         last = f"status {reply.status_code}"
-    raise ServiceError("WHPanel could not reach your website to finish the installation (" + last + "). Check that the domain points to your hosting, then try again.",
+    raise ServiceError(f"WHPanel could not reach your website {purpose} (" + last + "). Check that the domain points to your hosting, then try again.",
                        code="unreachable")
 
 

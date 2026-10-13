@@ -166,3 +166,77 @@ class WebsiteApp(TimeStampedModel):
 
     def __str__(self):
         return f"{self.get_kind_display()} on {self.account.domain}"
+
+
+class SiteCare(TimeStampedModel):
+    """
+    What the customer chose for looking after one website (the Care page): how WordPress keeps itself up to date, how often the site is scanned for malware, and,
+    on servers that cannot schedule backups themselves, how often WHPanel takes one. One row per hosting account; no row means nothing is switched on.
+    """
+
+    CORE_CHOICES = [("off", "Do not update"), ("minor", "Security and bug-fix releases"), ("all", "Every release")]
+    SCAN_CHOICES = [("off", "Only when I ask"), ("weekly", "Every week"), ("daily", "Every day")]
+    BACKUP_CHOICES = [("off", "Off"), ("weekly", "Every week"), ("daily", "Every day")]
+
+    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="care")
+    wp_core = models.CharField(max_length=8, choices=CORE_CHOICES, default="minor")
+    wp_plugins = models.BooleanField(default=False)
+    wp_themes = models.BooleanField(default=False)
+    updates_written_at = models.DateTimeField(null=True, blank=True)  # when the rule file was last put on the website
+    scan_schedule = models.CharField(max_length=8, choices=SCAN_CHOICES, default="off")
+    backup_schedule = models.CharField(max_length=8, choices=BACKUP_CHOICES, default="off")  # used only where the server cannot schedule backups itself
+    last_backup_at = models.DateTimeField(null=True, blank=True)
+    backup_note = models.CharField(max_length=300, blank=True)
+
+    def __str__(self):
+        return f"Care of {self.account.domain}"
+
+
+class SiteScan(TimeStampedModel):
+    """One malware scan of a website: running, then done (with what was found) or failed. Only paths and rule names are kept, never file contents."""
+
+    STATES = [("running", "Running"), ("done", "Done"), ("failed", "Failed")]
+
+    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="scans")
+    state = models.CharField(max_length=8, choices=STATES, default="running")
+    trigger = models.CharField(max_length=10, default="manual")  # "manual" or "scheduled"
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    files_scanned = models.PositiveIntegerField(default=0)
+    findings = models.JSONField(default=list, blank=True)  # [{"path", "rule", "severity", "detail"}], most severe first
+    wp_version = models.CharField(max_length=30, blank=True)
+    wp_checked = models.PositiveIntegerField(default=0)  # WordPress system files compared with the official release
+    error = models.CharField(max_length=300, blank=True)
+    result_ref = models.CharField(max_length=80, blank=True)  # the result file the scanner leaves, until it is read and removed
+    script_ref = models.CharField(max_length=80, blank=True)
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
+
+    def __str__(self):
+        return f"Scan of {self.account.domain} ({self.state})"
+
+
+class SpeedTest(TimeStampedModel):
+    """One speed test of a website's home page, measured from the panel. Figures only."""
+
+    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="speed_tests")
+    url = models.CharField(max_length=300)
+    ok = models.BooleanField(default=False)
+    status_code = models.PositiveSmallIntegerField(default=0)
+    first_byte_ms = models.PositiveIntegerField(default=0)
+    total_ms = models.PositiveIntegerField(default=0)
+    size_bytes = models.PositiveIntegerField(default=0)
+    redirects = models.PositiveSmallIntegerField(default=0)
+    https = models.BooleanField(default=False)
+    compressed = models.BooleanField(default=False)
+    cached = models.BooleanField(default=False)  # the page says browsers may keep it for a while
+    score = models.PositiveSmallIntegerField(default=0)
+    advice = models.JSONField(default=list, blank=True)  # short plain-language notes
+    error = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"Speed of {self.url}: {self.score}"

@@ -23,26 +23,18 @@ from pathlib import Path
 
 from django.contrib.auth.hashers import make_password
 
+from .. import scan_rules
 from .base import HostingError
 from .capabilities import (IntegrityResult, ProtectedDir, QuarantineItem, ScanFinding, ScanResult, SshKey, SshStatus)
 
-MAX_SCAN_FILES = 5000
-MAX_SCAN_BYTES = 1_000_000
 MAX_KEYS = 5
 MAX_PROTECTED = 10
 SKIP = {".trash"}
-WEB_EXTENSIONS = {".php", ".phtml", ".php5", ".js", ".html", ".htm", ".htaccess"}
-SHELL_NAMES = {"c99.php", "r57.php", "wso.php", "b374k.php", "shell.php", "webshell.php", "alfa.php", "indoxploit.php"}
-UPLOAD_DIRS = {"uploads", "upload", "images", "img", "files", "cache", "tmp"}
-PATTERNS = [
-    ("obfuscated-code", "high", re.compile(rb"eval\s*\(\s*(base64_decode|gzinflate|str_rot13|gzuncompress)\s*\(", re.I),
-     "Code hidden with an encoding trick and then run. Legitimate software rarely does this."),
-    ("runs-visitor-input", "high", re.compile(rb"\b(system|shell_exec|passthru|exec|popen|proc_open|assert|eval)\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)", re.I),
-     "Runs what a visitor sends it, which lets anyone take control of the website."),
-    ("hidden-script", "medium", re.compile(rb"document\.write\s*\(\s*unescape\s*\(", re.I),
-     "A script that writes hidden content into the page. It is often used to inject spam or redirects."),
-]
-SEVERITY_ORDER = {"high": 0, "medium": 1}
+WEB_EXTENSIONS = set(scan_rules.WEB_EXTENSIONS)
+SHELL_NAMES = set(scan_rules.SHELL_NAMES)
+UPLOAD_DIRS = set(scan_rules.UPLOAD_DIRS)
+MAX_SCAN_FILES, MAX_SCAN_BYTES = scan_rules.MAX_SCAN_FILES, scan_rules.MAX_SCAN_BYTES
+PATTERNS, SEVERITY_ORDER = scan_rules.PATTERNS, scan_rules.SEVERITY_ORDER
 KEY_TYPES = {"ssh-ed25519": 0, "ssh-rsa": 2048, "ecdsa-sha2-nistp256": 0, "ecdsa-sha2-nistp384": 0, "ecdsa-sha2-nistp521": 0}
 
 

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_native, views_php, views_security, views_ssl, views_tools, views_usage
+from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_native, views_php, views_security, views_care, views_ssl, views_tools, views_usage
 
 app_name = "hosting_customer"
 
@@ -50,6 +50,8 @@ urlpatterns = [
     path("<int:pk>/manage/security/", views_security.my_hosting_security, name="security"),
     path("<int:pk>/manage/security/do/", views_security.my_hosting_security_action, name="security_action"),
     path("<int:pk>/manage/usage/", views_usage.my_hosting_usage, name="usage"),
+    path("<int:pk>/care/", views_care.my_hosting_care, name="care"),
+    path("<int:pk>/care/do/", views_care.my_hosting_care_action, name="care_action"),
     path("<int:pk>/manage/native/", views_native.my_hosting_native, name="native"),
     path("<int:pk>/manage/native/open/", views_native.my_hosting_native_open, name="native_open"),
     path("<int:pk>/manage/native/sample/", views_native.my_hosting_native_demo, name="native_demo"),
