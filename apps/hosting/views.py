@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import Http404
+from urllib.parse import urlencode
+
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -15,7 +17,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.orders.models import ItemKind, OrderItem
 
-from . import admin_access, care, dashboard, forms, services
+from . import admin_access, care, dashboard, domain_check, forms, services
 from .models import HostingAccount, HostingStatus
 
 
@@ -69,9 +71,12 @@ def _service_page(request, pk, template, **extra):
 def my_hosting_detail(request, pk):
     account = _own_account(request, pk)
     tiles = dashboard.workspace_tiles(account)
+    card = dashboard.website_card(request.user, account)
     return render(request, "hosting/customer/detail.html", {
-        "account": account, "card": dashboard.website_card(request.user, account), "tiles": tiles,
+        "account": account, "card": card, "tiles": tiles,
         "care_rows": care.summary(request.user, account) if account.status == "active" else [],
+        "domain_state": domain_check.check(account) if account.status == "active" and card["app"] is not None else None,
+        "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": account.domain}),
         "usage_url": reverse("hosting_customer:usage", args=[account.pk]) if any(t["key"] == "usage" for t in tiles) else "",
         "sidebar": portal.service_sidebar(request, account)})
 

@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% load ui i18n %}
-{% block title %}{% trans "Websites" %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% trans "Hosting" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
 <div class="page-head page-head-split">
   <div>
-    <h1>{% trans "Websites" %}</h1>
-    <p class="page-sub">{% trans "Choose a website to open its dashboard." %}</p>
+    <h1>{% trans "Hosting" %}</h1>
+    <p class="page-sub">{% trans "Open a hosting plan to manage it and to create its website." %}</p>
   </div>
   <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-primary" href="{% url 'hosting_customer:create' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Create website" %}</a>
+    <a class="btn btn-primary" href="{% url 'hosting_customer:new' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Get a hosting plan" %}</a>
   </div>
 </div>
 {% if cards %}
@@ -34,7 +34,6 @@
       {% endif %}
     </a>
     <div class="site-card-actions">
-      {% if card.needs_setup %}<a class="btn btn-primary btn-sm" href="{{ card.setup_url }}">{% trans "Set up website" %}</a>{% endif %}
       <a class="btn btn-outline-secondary btn-sm" href="{{ card.account.site_url }}" target="_blank" rel="noopener noreferrer" aria-label="{% trans 'Visit' %} {{ card.account.domain }}">{% trans "Visit" %} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
       {% if card.app and card.app.kind == "wordpress" and card.app.state == "ready" and card.app.admin_url %}
       <a class="btn btn-outline-secondary btn-sm" href="{{ card.app.admin_url }}" target="_blank" rel="noopener noreferrer">WP Admin</a>
@@ -45,8 +44,8 @@
   <li class="site-card site-card-new">
     <a class="site-card-link" href="{% url 'hosting_customer:new' %}">
       <span class="site-card-plus" aria-hidden="true"><i class="bi bi-plus-lg"></i></span>
-      <span class="site-card-name">{% trans "Add a website" %}</span>
-      <span class="site-card-sub">{% trans "Get another hosting plan" %}</span>
+      <span class="site-card-name">{% trans "Get another hosting plan" %}</span>
+      <span class="site-card-sub">{% trans "Each plan hosts its own website." %}</span>
     </a>
   </li>
 </ul>

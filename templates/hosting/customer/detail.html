@@ -43,6 +43,8 @@
 </section>
 {% endif %}
 
+{% include "hosting/customer/_domain_note.html" %}
+
 {% if care_rows %}
 <section class="ws-block" aria-labelledby="care-title">
   <div class="ws-block-head"><h2 id="care-title">{% trans "Website care" %}</h2><a href="{% url 'hosting_customer:care' account.pk %}">{% trans "Open" %}</a></div>

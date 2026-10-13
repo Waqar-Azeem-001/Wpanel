@@ -88,5 +88,6 @@
   <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:detail' account.pk %}">{% trans "Go to the dashboard" %}</a>
   {% endif %}
 </div></section>
+{% if app.state == "ready" %}<div class="mt-4">{% include "hosting/customer/_domain_note.html" %}</div>{% endif %}
 {% endif %}
 {% endblock %}

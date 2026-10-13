@@ -22,7 +22,7 @@ def test_a_plan_without_a_website_invites_the_customer_to_create_one(world, owne
     page = client.get(reverse("hosting_customer:detail", args=[demo_account.pk])).content.decode()
     assert "Create your website" in page and reverse("hosting_customer:setup", args=[demo_account.pk]) in page
     listing = client.get(reverse("hosting_customer:list")).content.decode()
-    assert "Set up website" in listing and reverse("hosting_customer:create") in listing
+    assert "Set up website" not in listing and reverse("hosting_customer:detail", args=[demo_account.pk]) in listing  # the list opens a plan; setting up is inside it
 
 
 def test_the_type_step_offers_wordpress_and_a_custom_website(world, owner, demo_account):

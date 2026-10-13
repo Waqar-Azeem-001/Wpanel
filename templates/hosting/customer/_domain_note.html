@@ -1,0 +1,31 @@
+{% load i18n %}
+{% if domain_state and domain_state.state != "ready" %}
+<section class="ws-block domain-note" aria-labelledby="domain-note-title">
+  <div class="care-card">
+    <div class="care-head">
+      <span class="care-icon" aria-hidden="true"><i class="bi bi-globe2"></i></span>
+      <div class="care-title">
+        <h2 id="domain-note-title">{{ domain_state.domain }}</h2>
+        <p>
+          {% if domain_state.state == "transferring" %}{% trans "Your domain is being transferred to us. Your website is already installed; it goes live on this address when the transfer completes and DNS points here." %}
+          {% elif domain_state.state == "ours_not_pointing" %}{% trans "This domain is with us, but its address does not lead to this hosting yet." %}
+          {% elif domain_state.state == "pointed_elsewhere_registrar" %}{% trans "This domain already leads to this hosting, but it is registered elsewhere. Transfer it to us to manage the domain, DNS and renewals in one place." %}
+          {% else %}{% trans "This domain is not registered with us. Your website is installed and ready: transfer the domain to us, or point it at this hosting, to make it live." %}{% endif %}
+        </p>
+      </div>
+      {% if domain_state.state != "transferring" and domain_state.state != "ours_not_pointing" %}
+      <a class="btn btn-primary" href="{{ transfer_url }}">{% trans "Transfer domain to us" %}</a>
+      {% endif %}
+    </div>
+    {% if domain_state.ip and not domain_state.points_here %}
+    <div class="domain-steps">
+      <p class="care-foot"><strong>{% trans "To make it live" %}</strong> &mdash; {% trans "set the domain's A record to this hosting's address:" %} <code>{{ domain_state.ip }}</code>.</p>
+      <p class="care-foot"><strong>{% trans "To preview it first" %}</strong> &mdash; {% trans "add this line to the hosts file on your computer, then open the website in your browser. Remove the line when the domain is live:" %}</p>
+      <pre class="domain-hosts"><code>{{ domain_state.hosts_line }}</code></pre>
+      <p class="care-foot"><a href="{{ domain_state.preview_url }}" target="_blank" rel="noopener noreferrer">{% trans "Open the preview" %} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+        &middot; {% trans "Windows: C:\Windows\System32\drivers\etc\hosts. Mac and Linux: /etc/hosts." %}</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

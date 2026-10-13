@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.exceptions import ServiceError
 
-from . import services, site_apps
+from . import domain_check, services, site_apps
 from .models import AppState, HostingStatus
 
 STEPS = (("type", "Type"), ("details", "Details"), ("install", "Install"))
@@ -124,4 +124,11 @@ def setup_status(request, pk):
     app = site_apps.poll(request.user, account)
     if app is None:
         return redirect("hosting_customer:setup", pk=account.pk)
-    return _page(request, account, step="install", done=["type", "details"] if app.kind == "wordpress" else ["type", "details", "install"], app=app)
+    extra = {}
+    if app.state == AppState.READY:
+        from urllib.parse import urlencode
+
+        from django.urls import reverse
+
+        extra = {"domain_state": domain_check.check(account), "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": account.domain})}
+    return _page(request, account, step="install", done=["type", "details"] if app.kind == "wordpress" else ["type", "details", "install"], app=app, **extra)

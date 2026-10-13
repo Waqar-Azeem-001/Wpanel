@@ -311,4 +311,52 @@ def test_someone_else_cannot_use_the_care_page_of_this_website(world, account, s
 
 def test_the_websites_list_links_each_card_to_its_dashboard(world, owner, account):  # noqa: F811
     page = browser(owner).get(reverse("hosting_customer:list")).content.decode()
-    assert 'class="site-card-link"' in page and reverse("hosting_customer:detail", args=[account.pk]) in page and "Choose a website to open its dashboard" in page
+    assert 'class="site-card-link"' in page and reverse("hosting_customer:detail", args=[account.pk]) in page and "Open a hosting plan to manage it" in page
+
+
+# --- the domain of a new website -----------------------------------------------------------------------------------------
+
+def _server_ip(account, ip="203.0.113.10"):
+    from apps.products.models import Server
+
+    Server.objects.filter(pk=account.server_id).update(ip_address=ip)
+    account.refresh_from_db()
+    account.server.refresh_from_db()
+
+
+def test_a_domain_that_is_not_with_us_is_flagged_and_given_a_preview_line(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import domain_check
+
+    _server_ip(account)
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: {"198.51.100.7"})
+    state = domain_check.check(account)
+    assert state["state"] == "not_ours" and not state["ours"] and not state["points_here"]
+    assert state["hosts_line"] == f"203.0.113.10 {account.domain.lower()} www.{account.domain.lower()}"
+    _wordpress(account)
+    page = browser(owner).get(reverse("hosting_customer:detail", args=[account.pk])).content.decode()
+    assert "not registered with us" in page and "Transfer domain to us" in page and state["hosts_line"] in page and "203.0.113.10" in page
+
+
+def test_a_domain_that_points_here_and_is_ours_shows_no_note(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.domains.models import Domain, DomainStatus
+    from apps.hosting import domain_check
+
+    _server_ip(account)
+    Domain.objects.create(client=account.client, name=account.domain.lower(), status=DomainStatus.ACTIVE)
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: {"203.0.113.10"})
+    assert domain_check.check(account)["state"] == "ready"
+    _wordpress(account)
+    page = browser(owner).get(reverse("hosting_customer:detail", args=[account.pk])).content.decode()
+    assert "not registered with us" not in page and "domain-note" not in page
+
+
+def test_our_domain_that_does_not_point_here_yet_is_told_so(world, account, monkeypatch):  # noqa: F811
+    from apps.domains.models import Domain, DomainStatus
+    from apps.hosting import domain_check
+
+    _server_ip(account)
+    Domain.objects.create(client=account.client, name=account.domain.lower(), status=DomainStatus.ACTIVE)
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: set())
+    assert domain_check.check(account)["state"] == "ours_not_pointing"
+    Domain.objects.update(status=DomainStatus.PENDING_TRANSFER_IN)
+    assert domain_check.check(account)["state"] == "transferring"

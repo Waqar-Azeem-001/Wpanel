@@ -181,7 +181,7 @@ def test_the_websites_page_shows_a_card_per_account_with_plan_usage_and_actions(
     assert response.status_code == 200 and len(response.context["cards"]) == 1
     assert "shop.example.com" in page and "Starter" in page and "4.8 GB of 20 GB used" in page
     assert "<progress" in page and 'value="24"' in page
-    assert f'href="/account/hosting/{account.pk}/"' in page and "Set up website" in page
+    assert f'href="/account/hosting/{account.pk}/"' in page and "Set up website" not in page
     # the provider reports neither SSL nor PHP yet: nothing is shown for them (never invented values)
     assert "SSL active" not in page and "SSL not active" not in page and "PHP 8" not in page
 

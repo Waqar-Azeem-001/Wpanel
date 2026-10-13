@@ -17,6 +17,7 @@ NOT_CLICKABLE = {
     "affiliates_public:referral": "the referral link /r/<code>/ is shared outside the site, not linked from it",
 }
 NOT_CLICKABLE_EXACT = {
+    "hosting_customer:create": "a shortcut address for choosing which plan to create a website for; the button now lives inside each hosting plan (tested in apps/core/test_site_setup.py)",
     "hosting_customer:setup_status": "reached after a website is set up (the progress page); the crawl world has no installation running (tested in apps/hosting)",
     "migration_staff:detail": "linked from each row of the migration dashboard; the crawl world has no migration (tested in apps/migration)",
     "billing_customer:test_gateway": "the simulated gateway's page, reached from a redirect after starting a test payment",
