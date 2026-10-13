@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load ui i18n %}
 {% block title %}{% trans "Websites" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>{% trans "Websites" %}</h1>
@@ -47,7 +48,7 @@
       {% if card.app and card.app.kind == "wordpress" and card.app.state == "ready" and card.app.admin_url %}
       <a class="btn btn-outline-secondary btn-sm" href="{{ card.app.admin_url }}" target="_blank" rel="noopener noreferrer">{% trans "WP Admin" %} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
       {% endif %}
-      <a class="btn btn-primary btn-sm" href="{{ card.manage_url }}">{% trans "Manage" %}</a>
+      <a class="btn {% if card.needs_setup %}btn-outline-secondary{% else %}btn-primary{% endif %} btn-sm" href="{{ card.manage_url }}">{% trans "Manage" %}</a>
     </div>
     {% if card.show_usage %}
     <div class="site-r-usage">

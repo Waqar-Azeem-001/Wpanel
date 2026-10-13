@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load ui i18n static %}
 {% block title %}{% trans "Domains" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
 {% block content %}
 {% include "hosting/customer/_header.html" with tab="" %}
 {% if not limits %}

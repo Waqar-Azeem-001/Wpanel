@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% block title %}cPanel (sample) · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
 {% block content %}
 {% if valid %}
 <div class="alert alert-info" role="note"><i class="bi bi-info-circle" aria-hidden="true"></i> {% trans "This is a sample page standing in for cPanel, because this is a demo server. On a real cPanel server this button opens the real cPanel." %}</div>

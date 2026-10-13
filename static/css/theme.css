@@ -621,3 +621,114 @@ a.use-item:hover { border-color: var(--border-strong); }
   .site-r-actions { grid-column: 1 / -1; justify-content: flex-start; }
   .site-r-usage, .site-r-note { grid-column: 1 / -1; grid-template-columns: 1fr; }
 }
+
+/* =================================================================================================================================================================
+   The website workspace, quiet and clean (the "ws-apple" scope): generous space, one accent, soft surfaces without borders, rounded pill buttons, calm type.
+   Only the hosting pages carry this class; everything else in the portal keeps the shared look.
+   ================================================================================================================================================================= */
+.ws-apple {
+  --ap-text: #1d1d1f; --ap-muted: #6e6e73; --ap-faint: #86868b; --ap-card: #ffffff; --ap-wash: rgba(0, 0, 0, .045); --ap-wash-2: rgba(0, 0, 0, .075);
+  --ap-line: rgba(0, 0, 0, .08); --ap-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 10px 30px rgba(0, 0, 0, .05); --ap-radius: 20px;
+  color: var(--ap-text); letter-spacing: -.011em; font-feature-settings: "ss01", "cv11";
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+}
+[data-bs-theme="dark"] .ws-apple {
+  --ap-text: #f5f5f7; --ap-muted: #a1a1a6; --ap-faint: #86868b; --ap-card: #1c1c1e; --ap-wash: rgba(255, 255, 255, .07); --ap-wash-2: rgba(255, 255, 255, .12);
+  --ap-line: rgba(255, 255, 255, .1); --ap-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .35);
+}
+
+/* Titles and breathing room */
+.ws-apple .page-head h1, .ws-apple .ws-title h1 { font-size: clamp(1.75rem, 2.4vw + 1rem, 2.4rem); font-weight: 650; letter-spacing: -.028em; line-height: 1.12; color: var(--ap-text); }
+.ws-apple .page-sub { color: var(--ap-muted); font-size: 1.05rem; max-width: 40rem; margin-top: .5rem; }
+.ws-apple .page-head { margin-bottom: 2rem; }
+.ws-apple h2.h5, .ws-apple h2.h6, .ws-apple .card-header h2 { font-weight: 650; letter-spacing: -.02em; color: var(--ap-text); }
+.ws-apple .text-secondary, .ws-apple .site-plan, .ws-apple .site-r-sub, .ws-apple .form-text { color: var(--ap-muted) !important; }
+.ws-apple .ws-crumbs { margin-bottom: 1rem; }
+.ws-apple .ws-crumbs a { color: var(--accent-ink); font-weight: 500; }
+.ws-apple .ws-head { margin-bottom: 2rem; gap: 1.1rem; }
+.ws-apple .ws-avatar { width: 4rem; height: 4rem; border-radius: 50%; background: var(--ap-wash); color: var(--ap-text); font-size: 1.6rem; box-shadow: none; }
+.ws-apple .ws-title h1 { font-size: 2rem; }
+.ws-apple .site-plan { font-size: .98rem; margin-top: .25rem; }
+
+/* Surfaces: no borders, a whisper of shadow */
+.ws-apple .card, .ws-apple .panel, .ws-apple .site-rows, .ws-apple .ws-tile, .ws-apple .wiz-plan, .ws-apple .site-tile, .ws-apple .ws-stat {
+  background: var(--ap-card); border: 0; border-radius: var(--ap-radius); box-shadow: var(--ap-shadow);
+}
+.ws-apple .card-header { background: transparent; border: 0; padding: 1.35rem 1.6rem .25rem; }
+.ws-apple .card-body { padding: 1.35rem 1.6rem 1.6rem; }
+.ws-apple .card-header + .card-body { padding-top: .75rem; }
+.ws-apple .list-group-item { background: transparent; border-color: var(--ap-line); }
+.ws-apple .table { --bs-table-bg: transparent; }
+.ws-apple .table > :not(caption) > * > * { border-color: var(--ap-line); }
+
+/* Buttons: soft pills, one clear primary */
+.ws-apple .btn { border-radius: 980px; font-weight: 500; letter-spacing: -.01em; padding: .5rem 1.15rem; border: 0; box-shadow: none; }
+.ws-apple .btn-sm { padding: .36rem .9rem; font-size: .88rem; }
+.ws-apple .btn-primary { background: var(--accent); color: var(--accent-text); }
+.ws-apple .btn-primary:hover, .ws-apple .btn-primary:focus-visible { filter: brightness(1.08); }
+.ws-apple .btn-outline-secondary, .ws-apple .btn-outline-primary, .ws-apple .btn-light { background: var(--ap-wash); color: var(--ap-text); }
+.ws-apple .btn-outline-secondary:hover, .ws-apple .btn-outline-primary:hover, .ws-apple .btn-light:hover { background: var(--ap-wash-2); color: var(--ap-text); }
+.ws-apple .btn-link { color: var(--accent-ink); }
+.ws-apple .btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+
+/* Forms */
+.ws-apple .form-control, .ws-apple .form-select { border: 0; background: var(--ap-wash); border-radius: 12px; padding: .7rem .9rem; color: var(--ap-text); }
+.ws-apple .form-control:focus, .ws-apple .form-select:focus { background: var(--ap-card); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.ws-apple .form-label { font-weight: 550; font-size: .9rem; margin-bottom: .4rem; }
+
+/* The menu: a quiet list, the current page a soft highlight */
+.ws-apple aside .sidebar-panel { background: transparent; border: 0; box-shadow: none; margin-bottom: .75rem !important; }
+.ws-apple aside .sidebar-panel .card-header { padding: .25rem .75rem .5rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ap-faint); font-weight: 600; }
+.ws-apple aside .sidebar-group { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ap-faint); padding: 1rem .75rem .35rem; list-style: none; border: 0; }
+.ws-apple aside .list-group { gap: 2px; }
+.ws-apple aside .list-group-item { border: 0; padding: 0; }
+.ws-apple aside .list-group-item > a, .ws-apple aside .list-group-item > span { border-radius: 10px; padding: .55rem .75rem !important; color: var(--ap-text); font-weight: 450; text-decoration: none; }
+.ws-apple aside .list-group-item > a:hover { background: var(--ap-wash); }
+.ws-apple aside .list-group-item > a.active { background: var(--ap-wash-2); color: var(--ap-text); font-weight: 600; box-shadow: none; border: 0; }
+.ws-apple aside .list-group-item i { color: var(--ap-muted); width: 1.25rem; display: inline-block; }
+
+/* Websites: rows on one soft surface */
+.ws-apple .site-rows { overflow: hidden; }
+.ws-apple .site-r { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--ap-line); gap: .75rem 1.25rem; }
+.ws-apple .site-r-avatar { width: 3rem; height: 3rem; border-radius: 50%; background: var(--ap-wash); color: var(--ap-text); box-shadow: none; font-size: 1.15rem; }
+.ws-apple .site-r-main h2 { font-size: 1.12rem; font-weight: 600; letter-spacing: -.02em; }
+.ws-apple .site-r-main h2 a { color: var(--ap-text); }
+.ws-apple .site-r-sub { font-size: .9rem; }
+.ws-apple .site-meter-label { color: var(--ap-muted); }
+.ws-apple .site-r-usage { margin-top: .25rem; }
+.ws-apple progress { height: .35rem; border-radius: 99px; }
+
+/* Dashboard: callout, essentials, tiles */
+.ws-apple .ws-callout { background: var(--ap-card); border: 0; box-shadow: var(--ap-shadow); border-radius: var(--ap-radius); padding: 1.6rem 1.75rem; }
+.ws-apple .ws-callout-icon, .ws-apple .ws-ess-icon, .ws-apple .ws-tile-icon { background: var(--ap-wash); color: var(--ap-text); border-radius: 50%; }
+.ws-apple .ws-callout-icon { width: 3.25rem; height: 3.25rem; }
+.ws-apple .ws-callout-text h2 { font-size: 1.25rem; font-weight: 650; letter-spacing: -.02em; }
+.ws-apple .ws-essentials .list-group-item { padding: 1rem 1.6rem; }
+.ws-apple .ws-ess-text strong { font-weight: 600; }
+.ws-apple .ws-tiles { gap: 1rem; }
+.ws-apple .ws-tile { padding: 1.15rem 1.25rem; transition: transform .18s ease, box-shadow .18s ease; }
+.ws-apple .ws-tile:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0, 0, 0, .05), 0 16px 36px rgba(0, 0, 0, .09); border: 0; }
+.ws-apple .ws-section-title { letter-spacing: .08em; color: var(--ap-faint); font-weight: 600; }
+.ws-apple .ws-stat { padding: 1.1rem 1.25rem; }
+
+/* Steps: small, quiet */
+.ws-apple .wiz-steps { gap: .5rem 2rem; margin-bottom: 2rem; }
+.ws-apple .wiz-dot { width: 1.6rem; height: 1.6rem; background: var(--ap-wash); border: 0; font-size: .8rem; color: var(--ap-muted); }
+.ws-apple .wiz-steps .is-now .wiz-dot { background: var(--accent); color: var(--accent-text); }
+.ws-apple .wiz-steps .is-done .wiz-dot { background: var(--ap-wash-2); color: var(--ap-text); }
+.ws-apple .wiz-plans { gap: 1.25rem; }
+.ws-apple .wiz-plan { padding: 1.6rem 1.7rem; gap: .6rem; }
+.ws-apple .wiz-plan h3 { font-size: 1.2rem; font-weight: 650; letter-spacing: -.02em; }
+
+/* Notes and pills */
+.ws-apple .site-note { border-radius: 14px; background: var(--ap-wash); color: var(--ap-text); }
+.ws-apple .site-note.is-danger { background: var(--danger-bg); color: var(--danger); }
+.ws-apple .site-pill, .ws-apple .badge { border-radius: 99px; }
+
+@media (max-width: 767.98px) {
+  .ws-apple .page-head { margin-bottom: 1.5rem; }
+  .ws-apple .card-header { padding: 1.1rem 1.15rem .15rem; }
+  .ws-apple .card-body { padding: 1.1rem 1.15rem 1.25rem; }
+  .ws-apple .site-r { padding: 1.1rem 1.1rem; }
+}
+@media (prefers-reduced-motion: reduce) { .ws-apple .ws-tile { transition: none; } .ws-apple .ws-tile:hover { transform: none; } }

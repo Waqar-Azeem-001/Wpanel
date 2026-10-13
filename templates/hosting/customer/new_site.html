@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load ui i18n %}
 {% block title %}{% trans "Add website" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
 {% block content %}
 <nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a></nav>
 <div class="page-head"><h1>{% trans "Add a website" %}</h1>
