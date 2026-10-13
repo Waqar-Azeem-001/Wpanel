@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Create website" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% if step == "install" and app.state == "installing" %}<meta http-equiv="refresh" content="6">{% endif %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="page-head"><h1>{% trans "Create your website" %}</h1>
+  <p class="page-sub">{% blocktrans with domain=account.domain %}Set up <strong>{{ domain }}</strong>. This takes a couple of minutes and everything else is done for you.{% endblocktrans %}</p></div>
+
+<ol class="wiz-steps" aria-label="{% trans 'Progress' %}">
+  {% for key, label in steps %}
+  <li class="{% if key == step %}is-now{% elif key in done %}is-done{% endif %}"{% if key == step %} aria-current="step"{% endif %}>
+    <span class="wiz-dot" aria-hidden="true">{% if key in done %}<i class="bi bi-check-lg"></i>{% else %}{{ forloop.counter }}{% endif %}</span>
+    <span class="wiz-label">{{ label }}</span>
+  </li>
+  {% endfor %}
+</ol>
+
+{% if step == "type" %}
+{% if error %}<p class="site-note is-danger mb-3"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ error }}</p>{% endif %}
+<section aria-labelledby="type-title">
+  <h2 class="h5" id="type-title">{% trans "What do you want to create?" %}</h2>
+  <ul class="wiz-plans">
+    <li class="wiz-plan{% if not can_wordpress %} is-disabled{% endif %}">
+      <h3><i class="bi bi-wordpress" aria-hidden="true"></i> WordPress</h3>
+      <p class="text-secondary">{% trans "A blog, business site or online shop. We install WordPress, create its database and sign-in for you." %}</p>
+      {% if can_wordpress %}<a class="btn btn-primary" href="?type=wordpress">{% trans "Create a WordPress website" %}</a>
+      {% else %}<p class="site-note mb-0"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{% trans "Not available on your server yet. Choose a custom website for now." %}</p>{% endif %}
+    </li>
+    <li class="wiz-plan">
+      <h3><i class="bi bi-code-slash" aria-hidden="true"></i> {% trans "Custom website" %}</h3>
+      <p class="text-secondary">{% trans "Start with an empty website and upload your own HTML or PHP files, or bring an application you already have." %}</p>
+      <form method="post" class="mt-auto">{% csrf_token %}<input type="hidden" name="type" value="custom"><button class="btn btn-outline-primary" type="submit">{% trans "Create a custom website" %}</button></form>
+    </li>
+  </ul>
+</section>
+
+{% elif step == "details" %}
+<section class="card" aria-labelledby="det-title"><div class="card-body">
+  <h2 class="h5" id="det-title"><i class="bi bi-wordpress" aria-hidden="true"></i> {% trans "WordPress details" %}</h2>
+  <form method="post" class="row g-3" data-loading="{% trans 'Starting the installation...' %}" autocomplete="off">{% csrf_token %}
+    <input type="hidden" name="type" value="wordpress">
+    {% if form.non_field_errors %}<div class="col-12"><div class="alert alert-danger mb-0">{{ form.non_field_errors|join:" " }}</div></div>{% endif %}
+    {% for field in form %}
+    <div class="col-12 col-lg-6">
+      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:" " }}</div>{% endif %}
+      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <div class="col-12"><p class="text-secondary mb-0">{% trans "We will create a database and database user, download WordPress, check it, and set up your administrator account." %}</p></div>
+    <div class="col-12 d-flex flex-wrap gap-2">
+      <button class="btn btn-primary" type="submit">{% trans "Install WordPress" %}</button>
+      <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:setup' account.pk %}">{% trans "Back" %}</a>
+    </div>
+  </form>
+</div></section>
+
+{% else %}
+<section class="card" aria-labelledby="inst-title"><div class="card-body">
+  {% if app.state == "installing" %}
+  <h2 class="h5" id="inst-title"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {% trans "Installing WordPress..." %}</h2>
+  <p class="text-secondary">{% trans "This page refreshes by itself. You can also leave: we will have it ready and you will find it on your website's dashboard." %}</p>
+  <ul class="list-unstyled mb-0">
+    <li><i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% trans "Request sent to your server" %}</li>
+    <li class="text-secondary"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {% trans "Creating the database, installing and signing in the administrator" %}</li>
+  </ul>
+  {% elif app.state == "failed" %}
+  <h2 class="h5 text-danger" id="inst-title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "WordPress could not be installed" %}</h2>
+  <p>{{ app.error }}</p>
+  <p class="text-secondary">{% trans "Nothing was left half-done. You can try again, or open a ticket and we will look at it." %}</p>
+  <a class="btn btn-primary" href="{% url 'hosting_customer:setup' account.pk %}?type=wordpress">{% trans "Try again" %}</a>
+  <a class="btn btn-outline-secondary" href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a>
+  {% else %}
+  <h2 class="h5 text-success" id="inst-title"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {% trans "Your website is ready" %}</h2>
+  {% if app.kind == "wordpress" %}
+  <dl class="row mb-3">
+    <dt class="col-sm-4">{% trans "Website" %}</dt><dd class="col-sm-8">{{ app.title }}</dd>
+    <dt class="col-sm-4">{% trans "Administrator" %}</dt><dd class="col-sm-8"><code>{{ app.admin_user }}</code> ({{ app.admin_email }})</dd>
+    {% if app.version %}<dt class="col-sm-4">WordPress</dt><dd class="col-sm-8">{{ app.version }}</dd>{% endif %}
+  </dl>
+  <p class="text-secondary">{% trans "Sign in with the username and password you chose. We do not keep the password." %}</p>
+  {% if app.admin_url %}<a class="btn btn-primary" href="{{ app.admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open WordPress admin" %}</a>{% endif %}
+  {% endif %}
+  <a class="btn btn-outline-secondary" href="{{ account.site_url }}" target="_blank" rel="noopener noreferrer">{% trans "Visit website" %}</a>
+  <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:detail' account.pk %}">{% trans "Go to the dashboard" %}</a>
+  {% endif %}
+</div></section>
+{% endif %}
+{% endblock %}

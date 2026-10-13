@@ -33,6 +33,13 @@ def job_finished(job):
             services.job_finished(job)
         except Exception:  # noqa: BLE001
             logger.exception("Could not apply the outcome of agent job %s", job.pk)
+    elif job.subject.startswith("app:"):
+        try:
+            from apps.hosting import site_apps
+
+            site_apps.job_finished(job)
+        except Exception:  # noqa: BLE001
+            logger.exception("Could not apply the outcome of agent job %s", job.pk)
     elif job.subject.startswith("hosting:"):
         try:
             from apps.hosting import native

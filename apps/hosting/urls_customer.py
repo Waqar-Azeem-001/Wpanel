@@ -1,12 +1,15 @@
 from django.urls import path
 
-from . import views, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_native, views_php, views_security, views_ssl, views_tools, views_usage
+from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_native, views_php, views_security, views_ssl, views_tools, views_usage
 
 app_name = "hosting_customer"
 
 urlpatterns = [
     path("", views.my_hosting_list, name="list"),
     path("new/", views_wizard.new_website, name="new"),
+    path("create/", views_setup.create, name="create"),
+    path("<int:pk>/setup/", views_setup.setup, name="setup"),
+    path("<int:pk>/setup/status/", views_setup.setup_status, name="setup_status"),
     path("<int:pk>/", views.my_hosting_detail, name="detail"),
     path("<int:pk>/information/", views.my_hosting_information, name="information"),
     path("<int:pk>/password/", views.my_hosting_password, name="password"),

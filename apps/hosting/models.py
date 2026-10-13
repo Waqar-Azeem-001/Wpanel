@@ -133,3 +133,31 @@ class NativeBackupSettings(models.Model):
     account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="native_backup_settings")
     schedule = models.CharField(max_length=8, default="off")  # off, daily or weekly
     last_scheduled_at = models.DateTimeField(null=True, blank=True)
+
+
+class AppState(models.TextChoices):
+    INSTALLING = "installing", "Installing"
+    READY = "ready", "Ready"
+    FAILED = "failed", "Failed"
+
+
+class WebsiteApp(TimeStampedModel):
+    """
+    What the website was set up as (the "Create website" step): WordPress, or a custom website the customer fills with their own files.
+    One per hosting account for now. The administrator's password is never stored here; only what is needed to show the screen and the link to sign in.
+    """
+
+    KIND_CHOICES = [("wordpress", "WordPress"), ("custom", "Custom website")]
+
+    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="site_app")
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES)
+    state = models.CharField(max_length=12, choices=AppState.choices, default=AppState.READY)
+    title = models.CharField(max_length=100, blank=True)
+    admin_user = models.CharField(max_length=30, blank=True)
+    admin_email = models.EmailField(blank=True)
+    admin_url = models.CharField(max_length=300, blank=True)
+    version = models.CharField(max_length=30, blank=True)
+    error = models.CharField(max_length=500, blank=True)
+
+    def __str__(self):
+        return f"{self.get_kind_display()} on {self.account.domain}"

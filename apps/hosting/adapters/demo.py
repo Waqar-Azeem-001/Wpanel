@@ -14,7 +14,7 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           AccessCapability, BackupsCapability, InsightsCapability, NativePanelCapability, NativePanelSession, NodeCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
+                           AccessCapability, AppsCapability, BackupsCapability, InsightsCapability, NativePanelCapability, NativePanelSession, NodeCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
 from .demo_backups import DemoBackups
 from .demo_cron import DemoCron
@@ -179,7 +179,7 @@ def sandbox_for(username):
     return box
 
 
-class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
+class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
                   PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, InsightsCapability, NativePanelCapability, NodeCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
@@ -187,6 +187,12 @@ class DemoAdapter(DomainsCapability, DnsCapability, EmailCapability, DatabasesCa
         bandwidth_limit = 102400
         return {"disk_used_mb": (seed * 37) % disk_limit, "disk_limit_mb": disk_limit,
                 "bandwidth_used_mb": (seed * 91) % bandwidth_limit, "bandwidth_limit_mb": bandwidth_limit}
+
+    # --- Apps (sample) -------------------------------------------------------------------------------------------------
+
+    def install_wordpress(self, username, domain, title, admin_user, admin_password, admin_email):
+        """Nothing is downloaded or installed here: the demo provider answers as a real one would when the installation has finished."""
+        return {"state": "ready", "version": "6.7.1 (sample)", "admin_url": "https" + f"://{domain}/wp-admin/"}
 
     # --- Files (real, sandboxed) ---------------------------------------------------------------------------------
 

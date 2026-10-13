@@ -47,6 +47,7 @@ class Capability(str, Enum):
     NATIVE_PANEL = "native_panel"
     BACKUPS = "backups"
     USAGE = "usage"
+    APPS = "apps"
 
 
 class CapabilityNotSupported(Exception):
@@ -828,6 +829,17 @@ class CronCapability(ABC):
     def delete_cron_job(self, username: str, job_id: str) -> None: ...
 
 
+class AppsCapability(ABC):
+    """
+    Installing a ready-made application into the website. Only WordPress for now. The provider makes the database and its user, fetches the software, writes its
+    configuration and creates the administrator: the customer names the site and the administrator and nothing else.
+    """
+
+    @abstractmethod
+    def install_wordpress(self, username: str, domain: str, title: str, admin_user: str, admin_password: str, admin_email: str) -> dict:
+        """Returns ``{"state": "ready" | "installing", ...}``. "installing" means the server is still working and WHPanel will be told when it ends."""
+
+
 class LogsCapability(ABC):
     """Read-only views of the website's own logs. Never another account's, never a server log."""
 
@@ -1052,6 +1064,7 @@ CONTRACTS = {
     Capability.INSIGHTS: InsightsCapability,
     Capability.NATIVE_PANEL: NativePanelCapability,
     Capability.BACKUPS: BackupsCapability,
+    Capability.APPS: AppsCapability,
 }
 
 # Capability -> the operations the service gateway may call through a provider. Anything not listed is refused, so
@@ -1091,6 +1104,7 @@ OPERATIONS = {
                                     "set_ssh_enabled", "add_ssh_key", "delete_ssh_key", "integrity_status",
                                     "create_integrity_baseline", "check_integrity"}),
     Capability.INSIGHTS: frozenset({"usage_history", "performance_stats"}),
+    Capability.APPS: frozenset({"install_wordpress"}),
     Capability.NATIVE_PANEL: frozenset({"open_native_panel"}),
     Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
                                    "delete_backup", "set_backup_schedule", "set_backup_offsite"}),

@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import Http404
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -67,8 +68,10 @@ def _service_page(request, pk, template, **extra):
 @login_required
 def my_hosting_detail(request, pk):
     account = _own_account(request, pk)
+    tiles = dashboard.workspace_tiles(account)
     return render(request, "hosting/customer/detail.html", {
-        "account": account, "card": dashboard.website_card(request.user, account), "tiles": dashboard.workspace_tiles(account),
+        "account": account, "card": dashboard.website_card(request.user, account), "tiles": tiles, "essentials": dashboard.workspace_essentials(tiles),
+        "usage_url": reverse("hosting_customer:usage", args=[account.pk]) if any(t["key"] == "usage" for t in tiles) else "",
         "sidebar": portal.service_sidebar(request, account)})
 
 

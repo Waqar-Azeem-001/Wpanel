@@ -25,3 +25,7 @@ Screenshots of the customer screens at 1366 and 390 px wide with the demo provid
 | **Domains** | The same workspace shape as a website: menu *Domain* (Overview, DNS records, Nameservers, Auto renew, Registrar lock) and *Registration* (Renew, Request cancellation, Open a ticket); a Menu drawer on a phone; breadcrumb and header instead of the row of tabs |
 
 Checked with screenshots at 1366 and 390 px (no overflow, no console errors). Not checked: dark mode, keyboard use, a real payment through checkout.
+
+## Create website and the website dashboard
+See `docs/p4-wordpress.md`. The dashboard (`detail.html`) now has: the website's identity and **WP Admin**, a setup callout when nothing is set up, **Essentials** (databases, backups, file manager, email, SSL, hosting plan), **Plan resource usage**, billing term and all tools. The Websites page is a list of rows with Set up website / Tools / WP Admin / Manage.
+The earlier plan-purchase steps (plan, domain, confirm) are now **Get a hosting plan**.

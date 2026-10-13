@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Create website" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a></nav>
+<div class="page-head"><h1>{% trans "Create a website" %}</h1></div>
+{% if waiting %}
+<p class="page-sub">{% trans "Which of your hosting plans is it for?" %}</p>
+<ul class="wiz-plans">
+  {% for account in waiting %}
+  <li class="wiz-plan"><h3>{{ account.domain }}</h3><p class="text-secondary">{{ account.product.name }}</p>
+    <a class="btn btn-primary" href="{% url 'hosting_customer:setup' account.pk %}">{% trans "Create website" %}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<section class="card"><div class="card-body">
+  <h2 class="h5">{% trans "Every hosting plan you have is already set up" %}</h2>
+  <p class="text-secondary">{% trans "To host another website, get another hosting plan. It is set up here in two quick steps afterwards." %}</p>
+  <a class="btn btn-primary" href="{% url 'hosting_customer:new' %}">{% trans "Get a hosting plan" %}</a>
+</div></section>
+{% endif %}
+{% endblock %}

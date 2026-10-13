@@ -5,12 +5,61 @@
 <div class="page-head">
   <h1>{% trans "Websites" %}</h1>
   <p class="page-sub">{% trans "Every website you host with us. Open one to manage its files, email, domains and more." %}</p>
-  <a class="btn btn-primary" href="{% url 'hosting_customer:new' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add website" %}</a>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{% url 'hosting_customer:create' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Create website" %}</a>
+    <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:new' %}">{% trans "Get a hosting plan" %}</a>
+  </div>
 </div>
 {% if cards %}
-<ul class="site-grid" data-websites>
+<ul class="site-rows" data-websites>
   {% for card in cards %}
-  {% include "hosting/customer/_site_tile.html" %}
+  <li class="site-r is-{{ card.account.status }}">
+    <span class="site-avatar site-r-avatar tone-{{ card.tone }}" aria-hidden="true">{% if card.app and card.app.kind == "wordpress" %}<i class="bi bi-wordpress"></i>{% else %}{{ card.account.domain|slice:":1"|upper }}{% endif %}</span>
+    <div class="site-r-main">
+      <h2 id="site-{{ card.account.pk }}"><a href="{{ card.manage_url }}">{{ card.account.domain }}</a>
+        <a class="site-r-ext" href="{{ card.account.site_url }}" target="_blank" rel="noopener noreferrer" aria-label="{% trans 'Visit' %} {{ card.account.domain }}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></h2>
+      <p class="site-r-sub">
+        {{ card.plan }}
+        {% if card.app %}&middot; {% if card.app.state == "installing" %}{% trans "Installing WordPress..." %}{% elif card.app.state == "failed" %}<span class="text-danger">{% trans "Installation failed" %}</span>{% else %}{{ card.app.get_kind_display }}{% endif %}
+        {% elif card.needs_setup %}&middot; <span class="text-warning">{% trans "Not set up yet" %}</span>{% endif %}
+        {% if card.account.expires_at %}&middot; {% trans "Renews" %} {{ card.account.expires_at|fdate }}{% endif %}
+      </p>
+      {% if card.show_usage and card.ssl or card.php_version %}
+      <p class="site-meta">
+        {% if card.ssl %}<span class="{% if card.ssl.active %}is-ok{% else %}is-warn{% endif %}"><i class="bi {% if card.ssl.active %}bi-shield-lock-fill{% else %}bi-shield-exclamation{% endif %}" aria-hidden="true"></i> {% if card.ssl.active %}{% trans "SSL active" %}{% else %}{% trans "SSL not active" %}{% endif %}</span>{% endif %}
+        {% if card.php_version %}<span><i class="bi bi-filetype-php" aria-hidden="true"></i> PHP {{ card.php_version }}</span>{% endif %}
+      </p>
+      {% endif %}
+    </div>
+    <div class="site-r-status">{% status_badge card.account.status card.account.get_status_display %}</div>
+    <div class="site-r-actions">
+      {% if card.needs_setup %}<a class="btn btn-primary btn-sm" href="{{ card.setup_url }}">{% trans "Set up website" %}</a>{% endif %}
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">{% trans "Tools" %}</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          {% for label, url, icon in card.quick %}<li><a class="dropdown-item" href="{{ url }}"><i class="bi {{ icon }}" aria-hidden="true"></i> {{ label }}</a></li>{% endfor %}
+          {% if card.quick %}<li><hr class="dropdown-divider"></li>{% endif %}
+          <li><a class="dropdown-item" href="{% url 'hosting_customer:information' card.account.pk %}"><i class="bi bi-info-circle" aria-hidden="true"></i> {% trans "Hosting information" %}</a></li>
+          {% if card.upgrade_url %}<li><a class="dropdown-item" href="{{ card.upgrade_url }}"><i class="bi bi-arrow-up-circle" aria-hidden="true"></i> {% trans "Upgrade" %}</a></li>{% endif %}
+          <li><a class="dropdown-item" href="{% url 'support_customer:new' %}"><i class="bi bi-life-preserver" aria-hidden="true"></i> {% trans "Get help" %}</a></li>
+        </ul>
+      </div>
+      {% if card.app and card.app.kind == "wordpress" and card.app.state == "ready" and card.app.admin_url %}
+      <a class="btn btn-outline-secondary btn-sm" href="{{ card.app.admin_url }}" target="_blank" rel="noopener noreferrer">{% trans "WP Admin" %} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+      {% endif %}
+      <a class="btn btn-primary btn-sm" href="{{ card.manage_url }}">{% trans "Manage" %}</a>
+    </div>
+    {% if card.show_usage %}
+    <div class="site-r-usage">
+      {% include "hosting/customer/_meter.html" with label=_("Storage") meter=card.disk %}
+      {% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}
+    </div>
+    {% elif card.account.status == "pending" %}
+    <p class="site-note mb-0 site-r-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{% trans "Being set up. We will email you when it is ready." %}</p>
+    {% elif card.account.status == "failed" %}
+    <p class="site-note is-danger mb-0 site-r-note"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{% trans "Setup did not complete. Our team has been notified." %}</p>
+    {% endif %}
+  </li>
   {% endfor %}
 </ul>
 {% else %}

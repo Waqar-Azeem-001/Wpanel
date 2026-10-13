@@ -3,54 +3,102 @@
 {% block title %}{{ account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 {% include "hosting/customer/_header.html" with tab="overview" %}
+
+{# What this website is, and what to do next #}
 {% if account.status == "pending" %}
-<p class="site-note mb-3"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{% trans "Your website is being set up. We will email you when it is ready." %}</p>
+<p class="site-note mb-3"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{% trans "Your hosting is being set up. We will email you when it is ready, then you can create your website here." %}</p>
 {% elif account.status == "failed" %}
 <p class="site-note is-danger mb-3"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{% trans "Setup did not complete. Our team has been notified." %}</p>
 {% elif account.status == "suspended" %}
 <p class="site-note is-danger mb-3"><i class="bi bi-pause-circle" aria-hidden="true"></i>{% trans "This website is suspended." %} {{ account.suspend_reason }}</p>
 {% endif %}
-{% if card.show_usage %}
-<div class="ws-stats">
-  <section class="ws-stat">{% include "hosting/customer/_meter.html" with label=_("Storage") meter=card.disk %}</section>
-  <section class="ws-stat">{% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}</section>
-  <section class="ws-stat"><span class="site-meter-label">{% trans "SSL" %}</span>
-    <p class="ws-stat-value">{% if card.ssl %}{% if card.ssl.active %}<i class="bi bi-shield-lock-fill text-success" aria-hidden="true"></i> {% trans "Active" %}{% else %}<i class="bi bi-shield-exclamation text-warning" aria-hidden="true"></i> {% trans "Not active" %}{% endif %}{% else %}<span class="text-secondary">{% trans "Not reported yet" %}</span>{% endif %}</p></section>
-  <section class="ws-stat"><span class="site-meter-label">{% trans "PHP" %}</span>
-    <p class="ws-stat-value">{% if card.php_version %}{{ card.php_version }}{% else %}<span class="text-secondary">{% trans "Not reported yet" %}</span>{% endif %}</p></section>
-</div>
-{% endif %}
 
-{% if tiles %}
-<section class="mb-4" aria-labelledby="tools-title">
-  <h2 class="h6 ws-section-title" id="tools-title">{% trans "Manage your website" %}</h2>
-  <ul class="ws-tiles">
-    {% for tile in tiles %}
-    <li><a class="ws-tile" href="{{ tile.url }}">
-      <span class="ws-tile-icon" aria-hidden="true"><i class="bi {{ tile.icon }}"></i></span>
-      <span class="ws-tile-text"><strong>{{ tile.label }}</strong><small>{{ tile.about }}</small></span>
-    </a></li>
-    {% endfor %}
-  </ul>
+{% if card.needs_setup %}
+<section class="ws-callout" aria-labelledby="setup-title">
+  <span class="ws-callout-icon" aria-hidden="true"><i class="bi bi-rocket-takeoff"></i></span>
+  <div class="ws-callout-text"><h2 id="setup-title">{% trans "Create your website" %}</h2>
+    <p>{% trans "Choose WordPress and we install it for you, with its database and sign-in, or start with an empty custom website." %}</p></div>
+  <a class="btn btn-primary" href="{{ card.setup_url }}">{% trans "Create website" %}</a>
+</section>
+{% elif card.app %}
+<section class="card mb-3 ws-app">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
+    <span class="ws-callout-icon" aria-hidden="true"><i class="bi {% if card.app.kind == 'wordpress' %}bi-wordpress{% else %}bi-code-slash{% endif %}"></i></span>
+    <div class="flex-grow-1">
+      <h2 class="h6 mb-0">{{ card.app.get_kind_display }}{% if card.app.title and card.app.kind == "wordpress" %} <span class="text-secondary fw-normal">&middot; {{ card.app.title }}</span>{% endif %}</h2>
+      <small class="text-secondary">
+        {% if card.app.state == "installing" %}{% trans "Installing..." %}
+        {% elif card.app.state == "failed" %}{% trans "Installation failed" %}
+        {% elif card.app.kind == "wordpress" %}{% if card.app.version %}WordPress {{ card.app.version }} &middot; {% endif %}{% trans "Administrator" %}: {{ card.app.admin_user }}
+        {% else %}{% trans "Upload your files with the File manager or SFTP." %}{% endif %}
+      </small>
+    </div>
+    {% if card.app.state == "installing" or card.app.state == "failed" %}
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_customer:setup_status' account.pk %}">{% trans "See progress" %}</a>
+    {% elif card.app.kind == "wordpress" and card.app.admin_url %}
+      <a class="btn btn-primary btn-sm" href="{{ card.app.admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "WP Admin" %}</a>
+    {% endif %}
+  </div>
 </section>
 {% endif %}
 
 <div class="row g-3">
   <div class="col-xl-7">
-    {% include "renewals/_term_card.html" %}
+    {% if essentials %}
+    <section class="card mb-3" aria-labelledby="ess-title">
+      <div class="card-header"><h2 class="h6 mb-0" id="ess-title">{% trans "Essentials" %}</h2></div>
+      <ul class="list-group list-group-flush ws-essentials">
+        {% for row in essentials %}
+        <li class="list-group-item">
+          <span class="ws-ess-icon" aria-hidden="true"><i class="bi {{ row.icon }}"></i></span>
+          <span class="ws-ess-text"><strong>{{ row.label }}</strong><small>{{ row.about }}</small></span>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ row.url }}">{{ row.action }}</a>
+        </li>
+        {% endfor %}
+        <li class="list-group-item">
+          <span class="ws-ess-icon" aria-hidden="true"><i class="bi bi-hdd-rack"></i></span>
+          <span class="ws-ess-text"><strong>{% trans "Hosting plan" %}</strong><small>{{ account.product.name }}{% if account.expires_at %} &middot; {% trans "renews" %} {{ account.expires_at|fdate }}{% endif %}</small></span>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_customer:information' account.pk %}">{% trans "Details" %}</a>
+        </li>
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if tiles %}
+    <section class="mb-3" aria-labelledby="tools-title">
+      <h2 class="h6 ws-section-title" id="tools-title">{% trans "All tools" %}</h2>
+      <ul class="ws-tiles">
+        {% for tile in tiles %}
+        <li><a class="ws-tile" href="{{ tile.url }}">
+          <span class="ws-tile-icon" aria-hidden="true"><i class="bi {{ tile.icon }}"></i></span>
+          <span class="ws-tile-text"><strong>{{ tile.label }}</strong><small>{{ tile.about }}</small></span>
+        </a></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
   </div>
+
   <div class="col-xl-5">
-    <section class="card mb-3"><div class="card-body">
-      <h2 class="h5">{% trans "Plan details" %}</h2>
-      <dl class="row mb-0">
-        <dt class="col-5">{% trans "Plan" %}</dt><dd class="col-7">{{ account.product.name }}</dd>
-        <dt class="col-5">{% trans "Username" %}</dt><dd class="col-7"><code>{{ account.username }}</code></dd>
-        {% if account.status == "active" or account.status == "suspended" %}
-          <dt class="col-5">{% trans "Disk used" %}</dt><dd class="col-7">{% if account.disk_used_mb is not None %}{{ account.disk_used_mb }} MB{% if account.disk_limit_mb %} / {{ account.disk_limit_mb }} MB{% else %} / {% trans "unlimited" %}{% endif %}{% else %}{% trans "Not available" %}{% endif %}</dd>
-          <dt class="col-5">{% trans "Bandwidth used" %}</dt><dd class="col-7">{% if account.bandwidth_used_mb is not None %}{{ account.bandwidth_used_mb }} MB{% if account.bandwidth_limit_mb %} / {{ account.bandwidth_limit_mb }} MB{% else %} / {% trans "unlimited" %}{% endif %}{% else %}{% trans "Not available" %}{% endif %}</dd>
-        {% endif %}
-      </dl>
-    </div></section>
+    {% if card.show_usage %}
+    <section class="card mb-3" aria-labelledby="use-title">
+      <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h6 mb-0" id="use-title">{% trans "Plan resource usage" %}</h2>
+        {% if usage_url %}<a class="small" href="{{ usage_url }}">{% trans "See details" %}</a>{% endif %}</div>
+      <div class="card-body">
+        <div class="site-usage mb-3">
+          {% include "hosting/customer/_meter.html" with label=_("Disk") meter=card.disk %}
+          {% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}
+        </div>
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-secondary fw-normal">{% trans "SSL" %}</dt>
+          <dd class="col-7">{% if card.ssl %}{% if card.ssl.active %}<i class="bi bi-shield-lock-fill text-success" aria-hidden="true"></i> {% trans "Active" %}{% else %}<i class="bi bi-shield-exclamation text-warning" aria-hidden="true"></i> {% trans "Not active" %}{% endif %}{% else %}<span class="text-secondary">{% trans "Not reported" %}</span>{% endif %}</dd>
+          <dt class="col-5 text-secondary fw-normal">PHP</dt>
+          <dd class="col-7">{% if card.php_version %}{{ card.php_version }}{% else %}<span class="text-secondary">{% trans "Not reported" %}</span>{% endif %}</dd>
+        </dl>
+      </div>
+    </section>
+    {% endif %}
+    {% include "renewals/_term_card.html" %}
   </div>
 </div>
 {% lifecycle_card account %}

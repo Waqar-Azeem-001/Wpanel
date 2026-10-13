@@ -13,7 +13,7 @@ from apps.core.exceptions import ServiceError
 
 from . import control
 from .adapters.capabilities import Capability
-from .models import HostingStatus
+from .models import HostingStatus, WebsiteApp
 
 WARN_AT = 80
 DANGER_AT = 95
@@ -73,7 +73,11 @@ def website_card(user, account):
     live = account.status in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED)
     ssl = _optional(user, account, capabilities, Capability.SSL, "get_ssl_status", account.domain) if live else None
     php = _optional(user, account, capabilities, Capability.PHP, "get_php_settings", account.domain) if live else None
+    app = WebsiteApp.objects.filter(account=account).first()
     return {
+        "app": app,
+        "needs_setup": account.status == HostingStatus.ACTIVE and app is None,
+        "setup_url": reverse("hosting_customer:setup", args=[account.pk]),
         "account": account,
         "plan": account.product.name,
         "show_usage": live,
@@ -159,13 +163,22 @@ def workspace_links(request, account):
     return links
 
 
+ESSENTIALS = (("databases", "Open"), ("backups", "Open"), ("files", "Open"), ("email", "Open"), ("ssl", "Open"))
+
+
+def workspace_essentials(tiles):
+    """The few tools most people reach for, as the rows of the dashboard's Essentials card: the supported ones among databases, backups, files, email and SSL."""
+    by_key = {t["key"]: t for t in tiles}
+    return [{**by_key[key], "action": action} for key, action in ESSENTIALS if key in by_key]
+
+
 def workspace_tiles(account):
     """The tools this website can use, as the big quick-action tiles of its Overview: (label, about, icon, address)."""
     try:
         supported = set(control.capabilities_for(account))
     except ServiceError:
         supported = set()
-    return [{"label": label, "about": about, "icon": icon, "url": reverse("hosting_customer:section", args=[account.pk, key]), "group": group}
+    return [{"key": key, "label": label, "about": about, "icon": icon, "url": reverse("hosting_customer:section", args=[account.pk, key]), "group": group}
             for group, key, label, icon, capability, about in SECTIONS if capability.value in supported and key not in HIDDEN_UNTIL_SUPPORTED]
 
 
