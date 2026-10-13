@@ -34,20 +34,38 @@
 
 <div class="dash-grid">
   <div class="span-8 stack">
-    <section class="panel">
-      <div class="panel-head"><h2><i class="bi bi-hdd-rack" aria-hidden="true"></i> {% trans "Your services" %}</h2><a href="{% url 'hosting_customer:list' %}">{% trans "View all" %} &rarr;</a></div>
-      {% if services %}
+    <section class="panel" aria-labelledby="home-sites">
+      <div class="panel-head"><h2 id="home-sites"><i class="bi bi-hdd-rack" aria-hidden="true"></i> {% trans "Your websites" %}</h2>
+        <span><a class="btn btn-sm btn-primary" href="{% url 'hosting_customer:new' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add website" %}</a>
+        <a class="ms-2" href="{% url 'hosting_customer:list' %}">{% trans "View all" %} &rarr;</a></span></div>
+      {% if websites %}
+      <div class="panel-body"><ul class="site-grid site-grid-compact">
+        {% for card in websites %}{% include "hosting/customer/_site_tile.html" %}{% endfor %}
+      </ul></div>
+      {% else %}
+      <div>{% url 'hosting_customer:new' as new_url %}{% include "components/empty_state.html" with message=_("You have no websites yet. Pick a plan, name your website and we set it up as soon as the order is confirmed.") action_url=new_url action_label=_("Add your first website") icon="bi-hdd-network" %}</div>
+      {% endif %}
+    </section>
+
+    <section class="panel" aria-labelledby="home-domains">
+      <div class="panel-head"><h2 id="home-domains"><i class="bi bi-globe2" aria-hidden="true"></i> {% trans "Your domains" %}</h2><a href="{% url 'domains_customer:list' %}">{% trans "View all" %} &rarr;</a></div>
+      {% if my_domains %}
       <div class="table-responsive"><table class="table align-middle">
-        <thead><tr><th>{% trans "Product" %}</th><th>{% trans "Domain" %}</th><th>{% trans "Status" %}</th><th>{% trans "Next due" %}</th><th></th></tr></thead>
-        <tbody>{% for account in services %}
-          <tr><td>{{ account.product.name }}</td><td>{{ account.domain }}</td><td>{% status_badge account.status account.get_status_display %}</td>
-            <td>{{ account.expires_at|fdate|default:"—" }}</td>
-            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_customer:detail' account.pk %}">{% trans "Manage" %}</a></td></tr>
+        <thead><tr><th>{% trans "Domain" %}</th><th>{% trans "Status" %}</th><th>{% trans "Expires" %}</th><th></th></tr></thead>
+        <tbody>{% for domain in my_domains %}
+          <tr><td><a href="{% url 'domains_customer:detail' domain.pk %}">{{ domain.name }}</a></td><td>{% status_badge domain.status domain.get_status_display %}</td>
+            <td>{{ domain.expires_at|fdate|default:"—" }}</td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'domains_customer:detail' domain.pk %}">{% trans "Manage" %}</a></td></tr>
         {% endfor %}</tbody>
       </table></div>
-      {% else %}
-      <div>{% url 'catalog:product_list' as plans_url %}{% include "components/empty_state.html" with message=_("You have no active services yet. Choose a plan and your hosting is set up as soon as the order is confirmed.") action_url=plans_url action_label=_("Order new services") icon="bi-hdd-network" %}</div>
       {% endif %}
+      <div class="panel-body">
+        <form method="get" action="{% url 'domains_public:search' %}" class="row g-2">
+          <input type="hidden" name="years" value="1">
+          <div class="col"><label class="visually-hidden" for="dash_domain">{% trans "Find a new domain" %}</label><input class="form-control" id="dash_domain" name="domain" placeholder="{% trans 'Find a new domain, for example example.com' %}" required></div>
+          <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Search" %}</button></div>
+        </form>
+      </div>
     </section>
 
     <section class="panel">
@@ -63,17 +81,6 @@
       {% else %}
       <div>{% url 'support_customer:new' as new_url %}{% include "components/empty_state.html" with message=_("No tickets yet. If something is not working, open a ticket and we will follow up here.") action_url=new_url action_label=_("Open a ticket") icon="bi-life-preserver" %}</div>
       {% endif %}
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><h2><i class="bi bi-globe2" aria-hidden="true"></i> {% trans "Register a new domain" %}</h2></div>
-      <div class="panel-body">
-        <form method="get" action="{% url 'domains_public:search' %}" class="row g-2">
-          <input type="hidden" name="years" value="1">
-          <div class="col"><label class="visually-hidden" for="dash_domain">{% trans "Domain name" %}</label><input class="form-control" id="dash_domain" name="domain" placeholder="example.com" required></div>
-          <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Search" %}</button></div>
-        </form>
-      </div>
     </section>
   </div>
 

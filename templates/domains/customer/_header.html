@@ -1,8 +1,23 @@
 {% load ui portal i18n %}
-<p class="mb-2"><a href="{% url 'domains_customer:list' %}">&larr; {% trans "My Domains" %}</a></p>
-<div class="page-head">
-  <h1>{{ domain.name }}</h1>
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}">
+  <a href="{% url 'domains_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Domains" %}</a>
+  <button class="btn btn-sm btn-outline-secondary d-lg-none ws-menu-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#ws-menu" aria-controls="ws-menu"><i class="bi bi-list" aria-hidden="true"></i> {% trans "Menu" %}</button>
+</nav>
+<header class="ws-head">
+  <span class="site-avatar ws-avatar" aria-hidden="true"><i class="bi bi-globe2"></i></span>
+  <div class="ws-title">
+    <h1>{{ domain.name }}</h1>
+    <p class="site-plan">{{ domain.get_status_display }}{% if domain.expires_at %} <span>&middot; {% trans "Expires" %} {{ domain.expires_at|fdate }}</span>{% endif %}</p>
+  </div>
   {% status_badge domain.status domain.get_status_display %}
-</div>
-{% domain_tabs domain tab %}
+</header>
 {% if not can_edit and tab != "overview" %}<div class="alert alert-secondary" role="alert">{% trans "This domain can no longer be changed." %}</div>{% endif %}
+{% if sidebar %}
+<div class="offcanvas offcanvas-start ws-offcanvas" tabindex="-1" id="ws-menu" aria-labelledby="ws-menu-title">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title h6 mb-0" id="ws-menu-title">{{ domain.name }}</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close menu' %}"></button>
+  </div>
+  <div class="offcanvas-body">{% include "components/sidebar.html" with panels=sidebar %}</div>
+</div>
+{% endif %}

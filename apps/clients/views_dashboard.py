@@ -12,6 +12,7 @@ from apps.billing.models import OPEN_STATUSES, QuoteStatus
 from apps.core import portal
 from apps.domains import services as domain_services
 from apps.domains.models import DomainStatus
+from apps.hosting import dashboard as hosting_dashboard
 from apps.hosting import services as hosting_services
 from apps.hosting.models import HostingStatus
 from apps.support import services as support_services
@@ -75,6 +76,9 @@ def dashboard(request):
         "overdue_totals": overdue_totals,
         "overdue_first": overdue.order_by("due_date", "id").first(),
         "services": hosting.filter(status__in=(HostingStatus.ACTIVE, HostingStatus.SUSPENDED)).order_by("expires_at", "id")[:5],
+        "websites": hosting_dashboard.website_cards(user, list(hosting.filter(
+            status__in=(HostingStatus.ACTIVE, HostingStatus.SUSPENDED, HostingStatus.PENDING)).select_related("product", "server").order_by("expires_at", "id")[:4])),
+        "my_domains": domains.exclude(status__in=(DomainStatus.CANCELLED, DomainStatus.FAILED)).order_by("expires_at", "id")[:5],
         "recent_tickets": tickets.order_by("-last_activity_at", "-id")[:5],
         "affiliate": affiliate,
         "affiliate_balances": affiliate_services.balances(affiliate) if affiliate else None,

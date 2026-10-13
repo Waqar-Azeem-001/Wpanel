@@ -574,3 +574,18 @@ a.use-item:hover { border-color: var(--border-strong); }
 .site-tile .site-thumb { aspect-ratio: auto; height: 5.2rem; }
 .site-tile .site-thumb-letter { font-size: 1.6rem; }
 @media (max-width: 479.98px) { .ws-stats { grid-template-columns: repeat(2, 1fr); } .ws-stat-value { font-size: .95rem; } }
+
+/* --- "Add website" steps --- */
+.wiz-steps { list-style: none; margin: 0 0 1.25rem; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.wiz-steps li { display: flex; align-items: center; gap: .55rem; color: var(--muted); }
+.wiz-dot { width: 1.75rem; height: 1.75rem; border-radius: 50%; display: grid; place-items: center; font-size: .85rem; font-weight: 650; background: var(--surface-2); border: 1px solid var(--border-strong); }
+.wiz-steps .is-now { color: var(--text); font-weight: 650; }
+.wiz-steps .is-now .wiz-dot { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.wiz-steps .is-done .wiz-dot { background: var(--ok-bg); border-color: transparent; color: var(--ok); }
+.wiz-plans { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem; }
+.wiz-plan { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: .4rem; box-shadow: var(--shadow-panel); }
+.wiz-plan h3 { font-size: 1.1rem; margin: 0; }
+.wiz-price { margin: 0; font-size: 1.15rem; }
+.wiz-plan .btn { margin-top: auto; align-self: flex-start; }
+.site-grid-compact { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
+.site-grid-compact .site-thumb { height: 3.6rem; }

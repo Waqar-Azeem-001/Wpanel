@@ -5,54 +5,12 @@
 <div class="page-head">
   <h1>{% trans "Websites" %}</h1>
   <p class="page-sub">{% trans "Every website you host with us. Open one to manage its files, email, domains and more." %}</p>
-  <a class="btn btn-primary" href="{% url 'catalog:product_list' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add website" %}</a>
+  <a class="btn btn-primary" href="{% url 'hosting_customer:new' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add website" %}</a>
 </div>
 {% if cards %}
 <ul class="site-grid" data-websites>
   {% for card in cards %}
-  <li class="site-tile is-{{ card.account.status }}">
-    <a class="site-thumb tone-{{ card.tone }}" href="{{ card.manage_url }}" tabindex="-1" aria-hidden="true">
-      <span class="site-thumb-bar"><i></i><i></i><i></i></span>
-      <span class="site-thumb-letter">{{ card.account.domain|slice:":1"|upper }}</span>
-    </a>
-    <div class="site-tile-body">
-      <div class="d-flex justify-content-between align-items-start gap-2">
-        <h2 id="site-{{ card.account.pk }}" class="site-tile-title"><a href="{{ card.manage_url }}">{{ card.account.domain }}</a></h2>
-        <div class="dropdown">
-          <button class="btn btn-light site-more" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'More actions for' %} {{ card.account.domain }}"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="{{ card.manage_url }}"><i class="bi bi-speedometer2" aria-hidden="true"></i> {% trans "Overview" %}</a></li>
-            {% for label, url, icon in card.quick %}<li><a class="dropdown-item" href="{{ url }}"><i class="bi {{ icon }}" aria-hidden="true"></i> {{ label }}</a></li>{% endfor %}
-            {% if card.quick %}<li><hr class="dropdown-divider"></li>{% endif %}
-            <li><a class="dropdown-item" href="{% url 'hosting_customer:information' card.account.pk %}"><i class="bi bi-info-circle" aria-hidden="true"></i> {% trans "Hosting information" %}</a></li>
-            {% if card.upgrade_url %}<li><a class="dropdown-item" href="{{ card.upgrade_url }}"><i class="bi bi-arrow-up-circle" aria-hidden="true"></i> {% trans "Upgrade" %}</a></li>{% endif %}
-            <li><a class="dropdown-item" href="{% url 'support_customer:new' %}"><i class="bi bi-life-preserver" aria-hidden="true"></i> {% trans "Get help" %}</a></li>
-          </ul>
-        </div>
-      </div>
-      <p class="site-sub mb-1">{{ card.plan }}</p>
-      <p class="site-meta">
-        {% status_badge card.account.status card.account.get_status_display %}
-        {% if card.account.expires_at %}<span>{% trans "Renews" %} {{ card.account.expires_at|fdate }}</span>{% endif %}
-        {% if card.show_usage %}
-          {% if card.ssl %}<span class="{% if card.ssl.active %}is-ok{% else %}is-warn{% endif %}"><i class="bi {% if card.ssl.active %}bi-shield-lock-fill{% else %}bi-shield-exclamation{% endif %}" aria-hidden="true"></i> {% if card.ssl.active %}{% trans "SSL active" %}{% else %}{% trans "SSL not active" %}{% endif %}</span>{% endif %}
-          {% if card.php_version %}<span><i class="bi bi-filetype-php" aria-hidden="true"></i> PHP {{ card.php_version }}</span>{% endif %}
-        {% endif %}
-      </p>
-      {% if card.show_usage %}
-        <div class="site-usage">
-          {% include "hosting/customer/_meter.html" with label=_("Storage") meter=card.disk %}
-          {% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}
-        </div>
-      {% elif card.account.status == "pending" %}
-        <p class="site-note mb-0"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{% trans "Being set up. We will email you when it is ready." %}</p>
-      {% elif card.account.status == "failed" %}
-        <p class="site-note is-danger mb-0"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{% trans "Setup did not complete. Our team has been notified." %}</p>
-      {% endif %}
-      <div class="site-tile-go"><a class="btn btn-primary" href="{{ card.manage_url }}">{% trans "Manage" %}</a>
-        <a class="btn btn-outline-secondary" href="{{ card.account.site_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Visit" %}</a></div>
-    </div>
-  </li>
+  {% include "hosting/customer/_site_tile.html" %}
   {% endfor %}
 </ul>
 {% else %}

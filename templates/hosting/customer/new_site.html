@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Add website" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a></nav>
+<div class="page-head"><h1>{% trans "Add a website" %}</h1>
+  <p class="page-sub">{% trans "Three quick steps: pick a plan, name your website, check and order." %}</p></div>
+
+<ol class="wiz-steps" aria-label="{% trans 'Progress' %}">
+  {% for key, label in steps %}
+  <li class="{% if key == step %}is-now{% elif key in done %}is-done{% endif %}"{% if key == step %} aria-current="step"{% endif %}>
+    <span class="wiz-dot" aria-hidden="true">{% if key in done %}<i class="bi bi-check-lg"></i>{% else %}{{ forloop.counter }}{% endif %}</span>
+    <span class="wiz-label">{% if key in done %}<a href="{% if key == 'plan' %}{% url 'hosting_customer:new' %}{% else %}{% url 'hosting_customer:new' %}?product={{ product.pk }}&amp;cycle={{ cycle|urlencode }}{% endif %}">{{ label }}</a>{% else %}{{ label }}{% endif %}</span>
+  </li>
+  {% endfor %}
+</ol>
+
+{% if step == "plan" %}
+<section aria-labelledby="plan-title">
+  <h2 class="h5" id="plan-title">{% trans "Choose your plan" %}</h2>
+  {% if plans %}
+  <ul class="wiz-plans">
+    {% for row in plans %}
+    <li class="wiz-plan">
+      <h3>{{ row.product.name }}</h3>
+      <p class="wiz-price"><strong>{{ row.from|money:STORE_CURRENCY }}</strong> <small>{% blocktrans with cycle=row.cycle %}from, {{ cycle }}{% endblocktrans %}</small></p>
+      {% if row.product.description %}<p class="text-secondary">{{ row.product.description|truncatechars:140 }}</p>{% endif %}
+      <a class="btn btn-primary" href="{% url 'hosting_customer:new' %}?product={{ row.product.pk }}">{% trans "Choose this plan" %}</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {% url 'catalog:product_list' as plans_url %}{% include "components/empty_state.html" with message=_("No hosting plans are on sale right now. Please check back soon or open a ticket.") action_url=plans_url action_label=_("See all products") icon="bi-box" %}
+  {% endif %}
+</section>
+
+{% elif step == "domain" %}
+<section class="card" aria-labelledby="dom-title"><div class="card-body">
+  <h2 class="h5" id="dom-title">{% trans "Name your website" %}</h2>
+  <p class="text-secondary">{% blocktrans with plan=product.name %}You chose <strong>{{ plan }}</strong>. Which domain will it use?{% endblocktrans %}</p>
+  <form method="get" action="{% url 'hosting_customer:new' %}" class="row g-3">
+    <input type="hidden" name="product" value="{{ product.pk }}">
+    <div class="col-12 col-lg-6">
+      <label class="form-label" for="wiz_domain">{% trans "Domain name" %}</label>
+      <input class="form-control{% if error %} is-invalid{% endif %}" id="wiz_domain" name="domain" value="{{ domain }}" placeholder="example.com" autocomplete="off" required autofocus{% if error %} aria-describedby="wiz_domain_error"{% endif %}>
+      {% if error %}<div class="invalid-feedback d-block" id="wiz_domain_error">{{ error }}</div>{% endif %}
+      <div class="form-text">{% trans "A domain you already own, or one you will register next. Leave out the http and https prefix." %}</div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <label class="form-label" for="wiz_cycle">{% trans "Billing period" %}</label>
+      <select class="form-select" id="wiz_cycle" name="cycle">
+        {% for o in options %}<option value="{{ o.value }}"{% if o.value == cycle %} selected{% endif %}>{{ o.label }} &ndash; {{ o.price|money:STORE_CURRENCY }}{% if o.setup_fee %} (+{{ o.setup_fee|money:STORE_CURRENCY }} {% trans "setup" %}){% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-12 d-flex flex-wrap gap-2">
+      <button class="btn btn-primary" type="submit">{% trans "Continue" %}</button>
+      <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:new' %}">{% trans "Back" %}</a>
+      <a class="btn btn-link" href="{% url 'domains_public:search' %}">{% trans "I need to register a domain first" %}</a>
+    </div>
+  </form>
+</div></section>
+
+{% else %}
+<section class="card" aria-labelledby="ok-title"><div class="card-body">
+  <h2 class="h5" id="ok-title">{% trans "Check and order" %}</h2>
+  <dl class="row mb-3">
+    <dt class="col-sm-4">{% trans "Plan" %}</dt><dd class="col-sm-8">{{ product.name }}</dd>
+    <dt class="col-sm-4">{% trans "Domain" %}</dt><dd class="col-sm-8"><strong>{{ domain }}</strong></dd>
+    <dt class="col-sm-4">{% trans "Billing period" %}</dt><dd class="col-sm-8">{{ chosen.label }}</dd>
+    <dt class="col-sm-4">{% trans "Price" %}</dt><dd class="col-sm-8">{{ chosen.price|money:STORE_CURRENCY }}{% if chosen.setup_fee %} + {{ chosen.setup_fee|money:STORE_CURRENCY }} {% trans "setup fee" %}{% endif %}</dd>
+  </dl>
+  <p class="text-secondary">{% trans "Taxes, coupons and your payment method are shown at checkout. Nothing is charged until you confirm there." %}</p>
+  <form method="post" action="{% url 'orders_customer:cart_add_hosting' %}" class="d-flex flex-wrap gap-2" data-loading="{% trans 'Adding to your cart...' %}">{% csrf_token %}
+    <input type="hidden" name="product" value="{{ product.pk }}">
+    <input type="hidden" name="cycle" value="{{ chosen.value }}">
+    <input type="hidden" name="domain" value="{{ domain }}">
+    <button class="btn btn-primary" type="submit">{% trans "Add to cart and continue" %}</button>
+    <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:new' %}?product={{ product.pk }}&amp;cycle={{ chosen.value|urlencode }}&amp;domain={{ domain|urlencode }}">{% trans "Change" %}</a>
+  </form>
+</div></section>
+{% endif %}
+{% endblock %}

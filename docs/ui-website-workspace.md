@@ -15,3 +15,13 @@ Not changed: URLs and URL names, permissions, the capability model (a tool appea
 
 ## Checked
 Screenshots of the customer screens at 1366 and 390 px wide with the demo provider (every tool supported): no horizontal overflow, no console errors; the phone drawer opens. Dark mode and keyboard navigation were **not** checked.
+
+## Add website (guided steps), home page, domains
+
+| Part | What it does |
+|---|---|
+| **Add website** (`/account/hosting/new/`, `apps/hosting/views_wizard.py`) | Plan -> Domain -> Confirm. Plans are the active hosting products with a price; the domain is checked with the same rule DNS uses; the billing period comes from the plan's own prices (a made-up one falls back to a real one). The last step **posts to the existing cart** (`orders_customer:cart_add_hosting`): nothing is created, priced or charged by the steps themselves. State is in the address, so each step can be linked and the back button works |
+| **Home** (`clients/customer/dashboard.html`) | After the overdue notice and the figures: **Your websites** (cards, with Add website), **Your domains** (list with Manage, and a search box for a new one), then support tickets |
+| **Domains** | The same workspace shape as a website: menu *Domain* (Overview, DNS records, Nameservers, Auto renew, Registrar lock) and *Registration* (Renew, Request cancellation, Open a ticket); a Menu drawer on a phone; breadcrumb and header instead of the row of tabs |
+
+Checked with screenshots at 1366 and 390 px (no overflow, no console errors). Not checked: dark mode, keyboard use, a real payment through checkout.

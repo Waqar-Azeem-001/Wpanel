@@ -69,8 +69,9 @@ def test_every_contact_sees_the_accounts_dashboard(world, role):
     response = browser(world.people[role]).get(reverse("dashboard"))
     assert response.status_code == 200
     page = response.content.decode()
-    assert "Welcome back" in page and "Your services" in page and "Recent support tickets" in page
-    assert "Register a new domain" in page and "Affiliate program" in page
+    assert "Welcome back" in page and "Your websites" in page and "Your domains" in page and "Recent support tickets" in page
+    assert "Find a new domain" in page and "Affiliate program" in page
+    assert page.index("Your websites") < page.index("Your domains") < page.index("Recent support tickets")  # websites first, then domains, then support
 
 
 def test_each_tile_shows_exactly_the_rows_its_link_opens(world, owner):
@@ -322,13 +323,18 @@ def test_a_service_belonging_to_someone_else_is_not_found_on_any_tab(world, stra
 DOMAIN_TABS = ["Overview", "Auto renew", "Nameservers", "DNS", "Registrar lock", "Renew", "Request cancellation"]
 
 
-def test_a_domain_has_six_tabs_and_a_cancel_tab_and_every_one_opens(world, owner):
+def test_a_domain_has_a_workspace_menu_like_a_website_and_every_entry_opens(world, owner):
     domain = world.objects["domains"]["active"]
     client = browser(owner)
     response = client.get(reverse("domains_customer:detail", args=[domain.pk]))
-    assert tab_labels(response) == DOMAIN_TABS
-    for label, url in tab_links(response):
-        assert client.get(url).status_code == 200, (label, url)
+    sidebar = response.context["sidebar"]
+    assert sidebar.workspace and [p.title for p in sidebar] == ["Domain", "Registration"]
+    assert [l.label for l in sidebar[0].links] == ["Overview", "DNS records", "Nameservers", "Auto renew", "Registrar lock"]
+    assert [l.label for l in sidebar[1].links] == ["Renew", "Request cancellation", "Open a ticket"]
+    assert 'data-bs-target="#ws-menu"' in response.content.decode()  # a phone opens the same menu from a button
+    for panel in sidebar:
+        for link in panel.links:
+            assert client.get(link.url).status_code == 200, link.label
 
 
 def test_domain_actions_return_to_the_tab_they_came_from(world, owner):
@@ -505,3 +511,44 @@ def test_the_bridge_stylesheet_is_gone_and_nothing_loads_it():
     assert not (root / "static" / "css" / "legacy.css").exists()
     offenders = [str(p.relative_to(root)) for p in (root / "templates").rglob("*.html") if "legacy.css" in p.read_text(encoding="utf-8")]
     assert offenders == []
+
+
+# --- the "Add website" steps (plan -> domain -> confirm) -------------------------------------------------------------------------------------
+
+def test_add_website_walks_plan_domain_confirm_and_only_then_posts_to_the_cart(world, owner):
+    from apps.orders.models import CartItem
+    from apps.products.models import Product, ProductType
+
+    product = Product.objects.filter(type=ProductType.SHARED_HOSTING, status="active").first()
+    client = browser(owner)
+    first = client.get(reverse("hosting_customer:new"))
+    assert first.status_code == 200 and first.context["step"] == "plan" and product.name in first.content.decode()
+    second = client.get(reverse("hosting_customer:new"), {"product": product.pk})
+    assert second.context["step"] == "domain" and second.context["options"] and second.context["done"] == ["plan"]
+    bad = client.get(reverse("hosting_customer:new"), {"product": product.pk, "domain": "not a domain"})
+    assert bad.context["step"] == "domain" and bad.context["error"]
+    third = client.get(reverse("hosting_customer:new"), {"product": product.pk, "domain": "Example.COM", "cycle": second.context["cycle"]})
+    assert third.context["step"] == "confirm" and third.context["domain"] == "example.com" and third.context["done"] == ["plan", "domain"]
+    page = third.content.decode()
+    assert reverse("orders_customer:cart_add_hosting") in page and 'name="domain" value="example.com"' in page
+    assert not CartItem.objects.filter(cart__user=owner, domain_name="example.com").exists()  # walking through the steps creates nothing
+    client.post(reverse("orders_customer:cart_add_hosting"), {"product": product.pk, "cycle": third.context["chosen"]["value"], "domain": "example.com"})
+    assert CartItem.objects.filter(cart__user=owner, domain_name="example.com").exists()
+
+
+def test_add_website_ignores_a_made_up_plan_or_cycle_and_needs_sign_in(world, owner):
+    from django.test import Client
+
+    from apps.products.models import Product, ProductType
+
+    product = Product.objects.filter(type=ProductType.SHARED_HOSTING, status="active").first()
+    assert Client().get(reverse("hosting_customer:new")).status_code == 302  # signed out: sent to sign in
+    client = browser(owner)
+    assert client.get(reverse("hosting_customer:new"), {"product": "99999"}).context["step"] == "plan"
+    odd = client.get(reverse("hosting_customer:new"), {"product": product.pk, "cycle": "custom:9999", "domain": "a.com"})
+    assert odd.context["cycle"] != "custom:9999" and odd.context["step"] == "confirm"  # falls back to a real period, never a made-up one
+
+
+def test_the_websites_page_offers_the_guided_way_to_add_one(world, owner):
+    page = browser(owner).get(reverse("hosting_customer:list")).content.decode()
+    assert reverse("hosting_customer:new") in page

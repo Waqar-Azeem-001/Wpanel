@@ -132,14 +132,17 @@ def service_sidebar(request, account):
 
 
 def domain_sidebar(request, domain):
-    lines = [domain.name, domain.get_status_display()]
-    if domain.expires_at:
-        lines.append("Expires " + domain.expires_at.date().isoformat())
-    actions = []
+    # The same workspace shape as a website: the domain's own pages in one menu (a drawer on a phone), then what concerns the registration itself.
+    pk = domain.pk
+    tools = [link(request, "Overview", "domains_customer:detail", pk, icon="bi-speedometer2"),
+             link(request, "DNS records", "domains_customer:dns_add", pk, icon="bi-diagram-3"),
+             link(request, "Nameservers", "domains_customer:nameservers", pk, icon="bi-hdd-network"),
+             link(request, "Auto renew", "domains_customer:auto_renew", pk, icon="bi-arrow-repeat"),
+             link(request, "Registrar lock", "domains_customer:lock_tab", pk, icon="bi-lock")]
+    registration = []
     if domain.status == "active":
-        actions.append(link(request, "Renew", "domains_customer:renew_tab", domain.pk, icon="bi-arrow-repeat", active=False))
+        registration.append(link(request, "Renew", "domains_customer:renew_tab", pk, icon="bi-calendar-plus"))
     if can_cancel(request.user, domain):
-        actions.append(link(request, "Request cancellation", "lifecycle_customer:new", "domain", domain.pk,
-                            icon="bi-x-circle", active=False))
-    actions.append(link(request, "Open a ticket", "support_customer:new", icon="bi-life-preserver", active=False))
-    return [Panel("Overview", lines=lines), Panel("Actions", actions)]
+        registration.append(link(request, "Request cancellation", "lifecycle_customer:new", "domain", pk, icon="bi-x-circle", active=False))
+    registration.append(link(request, "Open a ticket", "support_customer:new", icon="bi-life-preserver", active=False))
+    return WorkspaceMenu([Panel("Domain", tools), Panel("Registration", registration)])
