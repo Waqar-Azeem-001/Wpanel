@@ -78,3 +78,54 @@ jobs:
       - name: Celery log
         if: always()
         run: cat celery.log || true
+
+  deploy:
+    # Runs only for pushes to main, after every check above passed. Needs the repository secret DEPLOY_SSH_KEY
+    # (private key whose public half is in the server's authorized_keys); without it the job is skipped, not failed.
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: production-deploy
+    env:
+      DEPLOY_HOST: 62.238.96.50
+      DEPLOY_USER: root
+      DEPLOY_PATH: /srv/whpanel
+      DEPLOY_URL: https://whpanel.myaiwhe.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for deploy key
+        id: key
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "::warning::DEPLOY_SSH_KEY is not set; skipping deploy"; fi
+      - name: Prepare SSH
+        if: steps.key.outputs.present == 'true'
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          # Pinned host key of the production server (public information); a changed key fails the deploy.
+          echo "$DEPLOY_HOST ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgSsuHyuVS7C96DtCNltcTlNddeqfISQHuD9ON2ZfGn" > ~/.ssh/known_hosts
+      - name: Upload code
+        if: steps.key.outputs.present == 'true'
+        run: |
+          rsync -az --delete \
+            --exclude '.git' --exclude '.github' --exclude '.env' --exclude '.venv' \
+            --exclude 'db.sqlite3*' --exclude '__pycache__' --exclude 'demo_hosting_files' \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
+            ./ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+      - name: Build, migrate and restart
+        if: steps.key.outputs.present == 'true'
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd $DEPLOY_PATH && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans && docker image prune -f"
+      - name: Health check
+        if: steps.key.outputs.present == 'true'
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS "$DEPLOY_URL/api/v1/health/" | grep -q '"status":"ok"'; then echo "healthy"; exit 0; fi
+            sleep 6
+          done
+          echo "::error::Health check failed after deploy"; exit 1

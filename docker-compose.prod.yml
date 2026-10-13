@@ -1,0 +1,7 @@
+# Production override for a host that already runs Nginx + Certbot (TLS terminates there).
+# Use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# The stack's own Nginx listens only on 127.0.0.1:8010; the host Nginx proxies the domain to it.
+services:
+  nginx:
+    ports: !override
+      - "127.0.0.1:8010:80"
