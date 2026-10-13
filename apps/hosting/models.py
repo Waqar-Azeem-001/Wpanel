@@ -196,6 +196,30 @@ class SiteCare(TimeStampedModel):
         return f"Care of {self.account.domain}"
 
 
+class StagingSite(TimeStampedModel):
+    """
+    A private copy of a WordPress website to try changes on before they go live: its own subdomain, folder and database. One per hosting account.
+    Only paths and names are kept, never passwords (the staging database password lives in the copied wp-config.php on the server).
+    """
+
+    STATES = [("creating", "Creating"), ("ready", "Ready"), ("pushing", "Publishing"), ("failed", "Failed")]
+
+    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="staging")
+    state = models.CharField(max_length=10, choices=STATES, default="creating")
+    domain = models.CharField(max_length=253)
+    docroot = models.CharField(max_length=300, blank=True)
+    db_name = models.CharField(max_length=80, blank=True)
+    db_user = models.CharField(max_length=80, blank=True)
+    script_ref = models.CharField(max_length=80, blank=True)
+    result_ref = models.CharField(max_length=80, blank=True)
+    error = models.CharField(max_length=500, blank=True)
+    pushed_at = models.DateTimeField(null=True, blank=True)
+    made_domain = models.BooleanField(default=False)  # WHPanel added the subdomain, so it removes it again
+
+    def __str__(self):
+        return f"Staging of {self.account.domain} ({self.state})"
+
+
 class SiteScan(TimeStampedModel):
     """One malware scan of a website: running, then done (with what was found) or failed. Only paths and rule names are kept, never file contents."""
 

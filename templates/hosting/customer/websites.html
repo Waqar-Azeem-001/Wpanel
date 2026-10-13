@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Websites" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+<div class="page-head page-head-split">
+  <div>
+    <h1>{% trans "Websites" %}</h1>
+    <p class="page-sub">{% trans "All your websites, across every hosting plan." %}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:list' %}">{% trans "Hosting plans" %}</a>
+    <a class="btn btn-primary" href="{% url 'hosting_customer:create' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Add website" %}</a>
+  </div>
+</div>
+
+{% if rows %}
+<ul class="web-list" data-websites>
+  {% for row in rows %}
+  <li class="web-row">
+    <a class="web-main" href="{{ row.manage_url }}">
+      <span class="web-avatar" aria-hidden="true">{% if row.app and row.app.kind == "wordpress" %}<i class="bi bi-wordpress"></i>{% else %}{{ row.account.domain|slice:":1"|upper }}{% endif %}</span>
+      <span class="web-text">
+        <strong>{{ row.account.domain }}</strong>
+        <small>{{ row.plan }}
+          {% if row.app %}&middot; {% if row.app.state == "installing" %}{% trans "Installing WordPress..." %}{% elif row.app.state == "failed" %}{% trans "Installation failed" %}{% else %}{{ row.app.get_kind_display }}{% endif %}
+          {% elif row.needs_setup %}&middot; {% trans "Website not created yet" %}{% endif %}
+        </small>
+      </span>
+    </a>
+    <span class="web-badges">
+      {% status_badge row.account.status row.account.get_status_display %}
+      {% if row.staging %}<span class="site-pill"><i class="bi bi-copy" aria-hidden="true"></i> {% trans "Staging" %}</span>{% endif %}
+    </span>
+    <span class="web-actions">
+      {% if row.needs_setup %}
+      <a class="btn btn-primary btn-sm" href="{{ row.setup_url }}">{% trans "Create website" %}</a>
+      {% else %}
+      <a class="btn btn-primary btn-sm" href="{{ row.manage_url }}">{% trans "Dashboard" %}</a>
+      {% endif %}
+      <span class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'More actions for' %} {{ row.account.domain }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ row.manage_url }}"><i class="bi bi-speedometer2" aria-hidden="true"></i> {% trans "Dashboard" %}</a></li>
+          <li><a class="dropdown-item" href="{{ row.account.site_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Visit website" %}</a></li>
+          {% if row.app and row.app.kind == "wordpress" and row.app.state == "ready" and row.app.admin_url %}
+          <li><a class="dropdown-item" href="{{ row.app.admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-wordpress" aria-hidden="true"></i> {% trans "WordPress admin" %}</a></li>
+          {% endif %}
+          {% if row.can_stage %}<li><a class="dropdown-item" href="{{ row.staging_url }}"><i class="bi bi-copy" aria-hidden="true"></i> {% trans "Staging website" %}</a></li>{% endif %}
+          <li><a class="dropdown-item" href="{{ row.upgrade_url|default:row.manage_url }}"><i class="bi bi-arrow-up-circle" aria-hidden="true"></i> {% trans "Upgrade plan" %}</a></li>
+          {% if row.delete_url %}
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item text-danger" href="{{ row.delete_url }}"><i class="bi bi-trash" aria-hidden="true"></i> {% trans "Delete website" %}</a></li>
+          {% endif %}
+        </ul>
+      </span>
+    </span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<section class="card"><div class="card-body text-center py-5">
+  <h2 class="h5">{% trans "No websites yet" %}</h2>
+  <p class="text-secondary">{% trans "Get a hosting plan and create your first website in two quick steps." %}</p>
+  <a class="btn btn-primary" href="{% url 'hosting_customer:new' %}">{% trans "Get a hosting plan" %}</a>
+</div></section>
+{% endif %}
+{% endblock %}

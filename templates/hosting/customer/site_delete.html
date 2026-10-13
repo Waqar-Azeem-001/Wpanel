@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Delete website" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="page-head"><h1>{% trans "Delete website" %}</h1>
+  <p class="page-sub">{% blocktrans with domain=account.domain %}This permanently deletes the website <strong>{{ domain }}</strong> from its hosting plan.{% endblocktrans %}</p></div>
+{% if not app %}
+<section class="care-card"><p class="care-empty mt-0">{% trans "There is no website on this hosting plan." %}</p>
+  <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:websites' %}">{% trans "Back to Websites" %}</a></section>
+{% else %}
+<div class="care-stack">
+  <section class="care-card">
+    <h2 class="h6">{% trans "What happens" %}</h2>
+    <ul class="care-notes">
+      <li>{% trans "All files of the website are removed." %}</li>
+      {% if app.db_name %}<li>{% trans "Its database and database user are removed." %}</li>{% elif app.kind == "wordpress" %}<li>{% trans "Its database is left in place; you can remove it under MySQL databases." %}</li>{% endif %}
+      {% if staging %}<li>{% trans "The staging website is removed too." %}</li>{% endif %}
+      <li>{% trans "Your hosting plan, your domain and your email stay exactly as they are, and you can create a new website on the plan." %}</li>
+    </ul>
+    <p class="care-foot">{% trans "This cannot be undone. If you might need it, take a backup first:" %} <a href="{{ backups_url }}">{% trans "Backups" %}</a>.</p>
+  </section>
+  <section class="care-card">
+    <form method="post" class="care-options" autocomplete="off">{% csrf_token %}
+      <label for="confirm">{% blocktrans with domain=account.domain %}Type <strong>{{ domain }}</strong> to confirm{% endblocktrans %}</label>
+      <input class="form-control" id="confirm" name="confirm" required placeholder="{{ account.domain }}">
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-danger" type="submit">{% trans "Delete website" %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:detail' account.pk %}">{% trans "Cancel" %}</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

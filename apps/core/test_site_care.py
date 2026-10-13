@@ -534,3 +534,148 @@ def test_the_new_pages_render_and_the_actions_answer(world, owner, account, monk
     assert "Load plugins and themes" in page
     url = reverse("hosting_customer:care_action", args=[account.pk])
     assert client.post(url, {"action": "performance", "enabled": "1"}, follow=True).status_code == 200
+
+
+# --- all websites, delete, staging ----------------------------------------------------------------------------------------
+
+def test_the_websites_page_lists_every_website_with_dashboard_and_menu(world, owner, account):  # noqa: F811
+    _wordpress(account)
+    page = browser(owner).get(reverse("hosting_customer:websites")).content.decode()
+    assert account.domain in page and "Dashboard" in page and "Add website" in page and "Delete website" in page and "Staging website" in page
+    assert reverse("hosting_customer:site_delete", args=[account.pk]) in page and reverse("hosting_customer:staging", args=[account.pk]) in page
+    assert "Websites" in browser(owner).get(reverse("hosting_customer:detail", args=[account.pk])).content.decode()
+
+
+def test_deleting_a_website_removes_its_files_and_database_but_not_the_plan(world, owner, account):  # noqa: F811
+    from apps.hosting.models import AppState
+
+    _wp_folder(owner, account)
+    _put(owner, account, "index.php", b"<?php // site")
+    app = _wordpress(account)
+    control.perform(owner, account, Capability.DATABASES, "create_database", "wpx")
+    name = next(d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases") if d.name.endswith("wpx") or d.name == "wpx")
+    WebsiteApp.objects.filter(pk=app.pk).update(db_name=name)
+    with pytest.raises(ServiceError) as err:
+        site_apps.delete_website(owner, account, "wrong.example.com")
+    assert err.value.code == "confirm_mismatch" and WebsiteApp.objects.filter(account=account).exists()
+    report = site_apps.delete_website(owner, account, account.domain.upper())
+    assert report["files"] >= 1 and report["database"] is True
+    assert not WebsiteApp.objects.filter(account=account).exists()
+    assert not [e for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html") if e.name == "index.php"]
+    assert name not in {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")}
+    account.refresh_from_db()
+    assert account.status == "active" and site_apps.needs_setup(account)  # the plan is still there, ready for a new website
+    assert AppState  # imported for clarity
+
+
+def test_a_website_that_is_still_installing_cannot_be_deleted(world, owner, account):  # noqa: F811
+    app = _wordpress(account)
+    WebsiteApp.objects.filter(pk=app.pk).update(state="installing")
+    with pytest.raises(ServiceError) as err:
+        site_apps.delete_website(owner, account, account.domain)
+    assert err.value.code == "busy"
+
+
+def test_the_delete_page_needs_the_address_typed_and_then_goes_back_to_the_list(world, owner, account):  # noqa: F811
+    _wordpress(account)
+    client = browser(owner)
+    url = reverse("hosting_customer:site_delete", args=[account.pk])
+    assert "Delete website" in client.get(url).content.decode()
+    client.post(url, {"confirm": "nope"})
+    assert WebsiteApp.objects.filter(account=account).exists()
+    reply = client.post(url, {"confirm": account.domain})
+    assert reply.status_code == 302 and reply["Location"] == reverse("hosting_customer:websites")
+    assert not WebsiteApp.objects.filter(account=account).exists()
+
+
+def test_staging_is_only_for_a_ready_wordpress_website(world, owner, account):  # noqa: F811
+    from apps.hosting import staging
+
+    assert "WordPress" in staging.unavailable_reason(account)
+    _wordpress(account)
+    assert staging.unavailable_reason(account) == ""
+    with pytest.raises(ServiceError):
+        WebsiteApp.objects.all().delete()
+        staging.create(owner, account)
+
+
+def test_staging_is_created_published_and_deleted(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import staging
+    from apps.hosting.models import StagingSite
+
+    _wordpress(account)
+    seen = []
+
+    def reach(acct, path, token, purpose=""):
+        seen.append(purpose)
+        return {"ok": True, "files": 12, "tables": 12, "rows": 340}
+
+    monkeypatch.setattr(site_apps, "reach", reach)
+    stage = staging.create(owner, account)
+    assert stage.state == "ready" and stage.domain == "staging." + account.domain.lower() and stage.db_name and stage.made_domain
+    assert stage.domain in {d.name.lower() for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
+    assert stage.db_name in {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")}
+    assert not [e.name for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html") if e.name.startswith("whp-clone-")]
+    with pytest.raises(ServiceError) as err:
+        staging.create(owner, account)
+    assert err.value.code == "exists"
+    pushed = staging.push(owner, account, acknowledged=True)
+    assert pushed.state == "ready" and pushed.pushed_at is not None and seen == ["to create the staging website", "to publish the staging website"]
+    db = stage.db_name
+    staging.delete(owner, account)
+    assert not StagingSite.objects.filter(account=account).exists()
+    assert stage.domain not in {d.name.lower() for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
+    assert db not in {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")}
+
+
+def test_a_failed_staging_copy_leaves_nothing_behind(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import staging
+
+    _wordpress(account)
+    before_dbs = {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")}
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": False, "error": "Could not connect to the database."})
+    stage = staging.create(owner, account)
+    assert stage.state == "failed" and "connect" in stage.error
+    assert {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")} == before_dbs
+    assert stage.domain not in {d.name.lower() for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
+
+    def unreachable(a, p, t, purpose=""):
+        raise ServiceError("WHPanel could not reach your website " + purpose + " (ConnectTimeout).", code="unreachable")
+
+    monkeypatch.setattr(site_apps, "reach", unreachable)
+    with pytest.raises(ServiceError):
+        staging.create(owner, account)  # replaces the failed one, fails again, cleans up again
+    assert {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")} == before_dbs
+    assert not [e.name for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html") if e.name.startswith("whp-clone-")]
+
+
+def test_publishing_needs_a_backup_or_the_customers_own(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import staging
+
+    _wordpress(account)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": True})
+    staging.create(owner, account)
+    monkeypatch.setattr(staging, "backup_before_push", lambda user, acct: "unsupported")
+    with pytest.raises(ServiceError) as err:
+        staging.push(owner, account)
+    assert err.value.code == "needs_acknowledgement"
+    monkeypatch.setattr(staging, "backup_before_push", lambda user, acct: (_ for _ in ()).throw(ServiceError("disk full", code="x")))
+    with pytest.raises(ServiceError) as err:
+        staging.push(owner, account, acknowledged=True)
+    assert err.value.code == "backup_failed"
+    staging.delete(owner, account)
+
+
+def test_the_staging_page_and_its_actions(world, owner, account, monkeypatch):  # noqa: F811
+    _wordpress(account)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": True})
+    client = browser(owner)
+    url = reverse("hosting_customer:staging", args=[account.pk])
+    assert "Create staging website" in client.get(url).content.decode()
+    client.post(reverse("hosting_customer:staging_action", args=[account.pk]), {"action": "create"})
+    page = client.get(url).content.decode()
+    assert "staging." + account.domain.lower() in page and "Publish to live" in page
+    reply = client.post(reverse("hosting_customer:staging_action", args=[account.pk]), {"action": "push", "confirm": "nope"}, follow=True)
+    assert "Type PUBLISH" in reply.content.decode()
+    client.post(reverse("hosting_customer:staging_action", args=[account.pk]), {"action": "delete"})
+    assert "Create staging website" in client.get(url).content.decode()

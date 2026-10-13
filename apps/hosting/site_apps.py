@@ -68,6 +68,15 @@ def current(account):
     return WebsiteApp.objects.filter(account=account).first()
 
 
+def database_password():
+    """A database password every provider accepts: long, with letters and digits, no symbols or spaces (a random token alone sometimes has no digit)."""
+    alphabet = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    while True:
+        value = "".join(secrets.choice(alphabet) for _ in range(24))
+        if any(c.isdigit() for c in value) and any(c.islower() for c in value) and any(c.isupper() for c in value):
+            return value
+
+
 def needs_setup(account):
     """A live website that has not been set up yet: the overview and the list invite the customer to do it."""
     return account.status == HostingStatus.ACTIVE and current(account) is None
@@ -162,7 +171,7 @@ def _start_by_script(user, account, app, title, admin_user, admin_email, admin_p
     suffix = next((s for s in ("wp", "wp2", "wp3", "wp4", "wp5") if not any(n.endswith("_" + s) or n == s for n in dbs_before | users_before)), None)
     if suffix is None:
         raise ServiceError("There are already several WordPress databases on this account.", code="limit_reached")
-    password = secrets.token_urlsafe(20)
+    password = database_password()
     made_db = made_user = False
     installer_path = ""
     try:
@@ -315,3 +324,57 @@ def job_finished(job):
         app.state, app.error = AppState.FAILED, (job.result_message or "The server could not install WordPress.")[:500]
         audit.record("hosting.site_failed", target=app.account, metadata={"kind": "wordpress", "error": app.error, "job": job.pk})
     app.save(update_fields=["state", "admin_url", "version", "error", "updated_at"])
+
+
+# --- Deleting a website (the hosting plan stays) ------------------------------------------------------------------------------------------------
+
+KEEP_ON_DELETE = {"cgi-bin", ".well-known"}
+
+
+def delete_website(user, account, confirm_domain, request=None):
+    """
+    Remove the website from its hosting plan: its files, the staging copy, and the database and user WHPanel itself made for it. The plan, the domain, email and every other
+    database are left alone, and the plan goes back to "create your website". Returns a short report of what was removed and what was left.
+    """
+    from . import care, staging
+
+    if (confirm_domain or "").strip().lower() != account.domain.lower():
+        raise ServiceError("Type the website's address exactly to confirm.", code="confirm_mismatch")
+    app = current(account)
+    if app is None:
+        raise ServiceError("There is no website to delete.", code="no_website")
+    if app.state == AppState.INSTALLING:
+        raise ServiceError("This website is still being installed. Wait for it to finish, then delete it.", code="busy")
+    report = {"files": 0, "staging": False, "database": False, "left": []}
+    if staging.current(account) is not None:
+        staging.delete(user, account, request=request)
+        report["staging"] = True
+    io = care._Io(user, account)
+    folder = docroot_path(account)
+    if Capability.FILES.value in _capabilities(account):
+        for entry in io.call(Capability.FILES, "list_files", folder):
+            if entry.name in KEEP_ON_DELETE:
+                continue
+            io.call(Capability.FILES, "delete_path", f"{folder}/{entry.name}", audit_metadata={"path": f"{folder}/{entry.name}", "purpose": "delete website"})
+            report["files"] += 1
+    if app.db_user:
+        try:
+            io.call(Capability.DATABASES, "delete_database_user", app.db_user)
+        except ServiceError:
+            report["left"].append("the database user " + app.db_user)
+    if app.db_name:
+        try:
+            io.call(Capability.DATABASES, "delete_database", app.db_name)
+            report["database"] = True
+        except ServiceError:
+            report["left"].append("the database " + app.db_name)
+    elif app.kind == "wordpress":
+        report["left"].append("its database (remove it under MySQL databases if you no longer need it)")
+    from .models import SiteCare, SiteScan, SpeedTest
+
+    SiteScan.objects.filter(account=account).delete()
+    SpeedTest.objects.filter(account=account).delete()
+    SiteCare.objects.filter(account=account).delete()
+    app.delete()
+    audit.record("hosting.site_deleted", actor=user, target=account, metadata={"kind": app.kind, "files": report["files"], "database": report["database"]}, request=request)
+    return report

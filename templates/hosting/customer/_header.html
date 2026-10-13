@@ -1,7 +1,7 @@
 {% load ui portal i18n %}
 {% admin_access_banner account %}
 <nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}">
-  <a href="{% url 'hosting_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Hosting" %}</a>
+  <a href="{% url 'hosting_customer:websites' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a>
   <button class="btn btn-sm btn-outline-secondary d-lg-none ws-menu-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#ws-menu" aria-controls="ws-menu"><i class="bi bi-list" aria-hidden="true"></i> {% trans "Menu" %}</button>
 </nav>
 <header class="ws-head">

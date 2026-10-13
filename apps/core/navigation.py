@@ -67,6 +67,7 @@ ITEMS = [
     # --- Customer area: the left rail; five of its entries are also the phone's bottom bar -------------------------
     item("client.home", _("Overview"), "dashboard", areas=CLIENT, icon="bi-house-door", mobile_tab=True),
     item("client.services", _("Services"), areas=CLIENT, requires="client_contact", icon="bi-hdd-rack", mobile_tab=True),
+    item("client.services.websites", _("Websites"), "hosting_customer:websites", areas=CLIENT, parent="client.services"),
     item("client.services.hosting", _("My hosting"), "hosting_customer:list", areas=CLIENT, parent="client.services"),
     item("client.services.order", _("Order new services"), "catalog:product_list", areas=CLIENT,
          parent="client.services"),

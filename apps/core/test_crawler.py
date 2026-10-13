@@ -19,6 +19,8 @@ NOT_CLICKABLE = {
 NOT_CLICKABLE_EXACT = {
     "hosting_customer:create": "a shortcut address for choosing which plan to create a website for; the button now lives inside each hosting plan (tested in apps/core/test_site_setup.py)",
     "hosting_customer:care_wordpress": "linked from the Website options card, which only a website set up as WordPress shows; the crawl world has none (tested in apps/core/test_site_care.py)",
+    "hosting_customer:site_delete": "linked from the website menu and the Websites list only once a website exists on a plan; the crawl world has none (tested in apps/core/test_site_care.py)",
+    "hosting_customer:staging": "linked from the website menu for a ready WordPress website; the crawl world has none (tested in apps/core/test_site_care.py)",
     "hosting_customer:setup_status": "reached after a website is set up (the progress page); the crawl world has no installation running (tested in apps/hosting)",
     "migration_staff:detail": "linked from each row of the migration dashboard; the crawl world has no migration (tested in apps/migration)",
     "billing_customer:test_gateway": "the simulated gateway's page, reached from a redirect after starting a test payment",

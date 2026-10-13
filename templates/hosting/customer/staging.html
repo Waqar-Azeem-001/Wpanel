@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Staging website" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% if staging and staging.state == "creating" or staging and staging.state == "pushing" %}<meta http-equiv="refresh" content="8">{% endif %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="page-head"><h1>{% trans "Staging website" %}</h1>
+  <p class="page-sub">{% trans "A private copy of your website to try changes on. Nothing you do here changes your live website until you publish it." %}</p></div>
+
+<div class="care-stack">
+{% if not staging %}
+  <section class="care-card">
+    {% if reason %}
+    <p class="care-empty is-bad mt-0">{{ reason }}</p>
+    {% else %}
+    <div class="care-head">
+      <span class="care-icon" aria-hidden="true"><i class="bi bi-copy"></i></span>
+      <div class="care-title"><h2>{% trans "Create a staging website" %}</h2>
+        <p>{% blocktrans %}We copy your website's files and database to <strong>{{ domain }}</strong>, with its own database. Search engines are asked not to index it.{% endblocktrans %}</p></div>
+      <form method="post" action="{{ action_url }}" data-loading="{% trans 'Copying your website...' %}">{% csrf_token %}<input type="hidden" name="action" value="create">
+        <button class="btn btn-primary" type="submit">{% trans "Create staging website" %}</button></form>
+    </div>
+    <p class="care-foot">{% trans "Copying a large website can take a few minutes; this page updates by itself." %}</p>
+    {% endif %}
+  </section>
+{% elif staging.state == "creating" %}
+  <section class="care-card"><p class="care-status mt-0"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {% trans "Creating the staging website..." %}</p>
+    <p class="care-foot">{% trans "This page refreshes by itself. You can leave it; the copy continues on the server." %}</p></section>
+{% elif staging.state == "pushing" %}
+  <section class="care-card"><p class="care-status mt-0"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {% trans "Publishing to your live website..." %}</p>
+    <p class="care-foot">{% trans "This page refreshes by itself." %}</p></section>
+{% elif staging.state == "failed" %}
+  <section class="care-card">
+    <p class="care-empty is-bad mt-0">{{ staging.error }}</p>
+    <p class="care-foot">{% trans "Nothing was left half-done." %}</p>
+    <form method="post" action="{{ action_url }}">{% csrf_token %}<input type="hidden" name="action" value="create"><button class="btn btn-primary" type="submit">{% trans "Try again" %}</button></form>
+  </section>
+{% else %}
+  <section class="care-card">
+    <div class="care-head">
+      <span class="care-icon" aria-hidden="true"><i class="bi bi-copy"></i></span>
+      <div class="care-title"><h2>{{ staging.domain }}</h2><p>{% trans "Your staging website is ready." %}{% if staging.pushed_at %} {% trans "Last published" %} {{ staging.pushed_at|date:"j M Y, H:i" }}.{% endif %}</p></div>
+    </div>
+    {% if staging.error %}<p class="care-empty is-bad">{{ staging.error }}</p>{% endif %}
+    <p class="care-foot">{% trans "Open it at" %} <strong>{{ staging.domain }}</strong>. {% trans "If that address does not open yet, its DNS record is still being added: it needs your domain's DNS to point at this hosting (see the domain note on the website's dashboard)." %}</p>
+  </section>
+  <section class="care-card">
+    <h2 class="h6">{% trans "Publish to live" %}</h2>
+    <p class="care-foot mt-0">{% trans "Replaces your live website's files and database with the staging copy. A backup of the live website is taken first where the server can make one. Orders, comments and posts made on the live website since the copy was made will be replaced." %}</p>
+    <form method="post" action="{{ action_url }}" class="care-options" data-plain>{% csrf_token %}<input type="hidden" name="action" value="push">
+      <label class="care-radio"><input type="checkbox" name="own_backup" value="1"> <span>{% trans "I have my own backup of the live website (needed on servers that cannot make one here)." %}</span></label>
+      <label for="push-confirm">{% trans "Type PUBLISH to confirm" %}</label>
+      <input class="form-control" id="push-confirm" name="confirm" autocomplete="off" placeholder="PUBLISH">
+      <div><button class="btn btn-primary" type="submit">{% trans "Publish to live website" %}</button></div>
+    </form>
+  </section>
+  <section class="care-card">
+    <h2 class="h6">{% trans "Delete the staging website" %}</h2>
+    <p class="care-foot mt-0">{% trans "Removes its files, database and subdomain. Your live website is not touched." %}</p>
+    <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="delete"><button class="btn btn-outline-danger" type="submit">{% trans "Delete staging website" %}</button></form>
+  </section>
+{% endif %}
+</div>
+{% endblock %}

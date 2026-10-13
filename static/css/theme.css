@@ -828,3 +828,16 @@ a.use-item:hover { border-color: var(--border-strong); }
 .ws-apple .care-table th { font-size: .78rem; color: var(--ap-muted); font-weight: 600; }
 .ws-apple .care-table td, .ws-apple .care-table th { padding: .6rem .25rem; border-bottom: 1px solid var(--ap-line); }
 .ws-apple .care-table code { overflow-wrap: anywhere; }
+
+/* Websites list (all websites of all plans), one row each */
+.ws-apple .web-list { list-style: none; margin: 0; padding: 0; background: var(--ap-card); border-radius: var(--ap-radius); box-shadow: var(--ap-shadow); }
+.ws-apple .web-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .75rem 1.25rem; padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--ap-line); }
+.ws-apple .web-row:last-child { border-bottom: 0; }
+.ws-apple .web-main { display: flex; align-items: center; gap: 1rem; text-decoration: none; color: var(--ap-text); min-width: 0; }
+.ws-apple .web-avatar { flex: none; width: 3rem; height: 3rem; border-radius: 50%; display: grid; place-items: center; background: var(--ap-wash); font-size: 1.2rem; font-weight: 600; }
+.ws-apple .web-text { display: flex; flex-direction: column; min-width: 0; }
+.ws-apple .web-text strong { font-size: 1.05rem; font-weight: 650; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.ws-apple .web-text small { color: var(--ap-muted); }
+.ws-apple .web-badges { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.ws-apple .web-actions { display: flex; gap: .5rem; align-items: center; }
+@media (max-width: 767.98px) { .ws-apple .web-row { grid-template-columns: minmax(0, 1fr) auto; } .ws-apple .web-badges { grid-column: 1 / -1; } .ws-apple .web-actions { grid-column: 1 / -1; } }

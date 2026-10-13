@@ -19,4 +19,6 @@ What a customer gets on each website, and how each part works. Built 2026-10-13.
 
 Flow: a hosting plan is opened from the Hosting list; "Create website" lives inside the plan. After a website is created the domain is checked: with us / pointing here. A domain not with us gets a transfer link and a hosts-file preview line.
 
-Not built (compared with Hostinger): staging site (needs files + database copy and URL rewrite), CDN, object cache / LiteSpeed cache switch, Git deploy, SSH access page, several websites inside one plan, a temporary preview domain (needs a wildcard domain you own pointed at the servers), automatic repair of modified WordPress files.
+Added after review: **Websites** list (all websites, Dashboard + menu with Staging and Delete), **Delete website** (typed confirmation; removes files and the database WHPanel made, keeps plan/domain/email), **Staging** (subdomain + own folder + own database; publish to live with a backup first). The copier (`wp_clone`) was run for real with PHP and MariaDB (apps/hosting/tests/test_wp_clone.py, needs WHP_TEST_MYSQL).
+
+Not built (compared with Hostinger): CDN, object cache / LiteSpeed cache switch, Git deploy, SSH access page, several websites inside one plan, a temporary preview domain (needs a wildcard domain you own pointed at the servers), automatic repair of modified WordPress files.

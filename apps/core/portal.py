@@ -128,8 +128,15 @@ def service_sidebar(request, account):
     from apps.hosting import dashboard  # the hosting workspace menu lives with hosting; imported here to keep core light
 
     overview = link(request, "Overview", "hosting_customer:detail", account.pk, icon="bi-speedometer2")
-    care = link(request, "Website care", "hosting_customer:care", account.pk, icon="bi-heart-pulse") if account.status == "active" else None
-    return WorkspaceMenu([Panel("Website", [overview, *([care] if care else []), *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
+    from apps.hosting import site_apps
+
+    live = account.status == "active"
+    care = link(request, "Website care", "hosting_customer:care", account.pk, icon="bi-heart-pulse") if live else None
+    app = site_apps.current(account) if live else None
+    staging = link(request, "Staging", "hosting_customer:staging", account.pk, icon="bi-copy") if app is not None and app.kind == "wordpress" and app.state == "ready" else None
+    if app is not None and app.state != "installing":
+        plan.append(link(request, "Delete website", "hosting_customer:site_delete", account.pk, icon="bi-trash", active=False))
+    return WorkspaceMenu([Panel("Website", [overview, *([care] if care else []), *([staging] if staging else []), *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
 
 
 def domain_sidebar(request, domain):
