@@ -496,11 +496,11 @@ def test_the_staff_menu_starts_with_the_dashboard_and_offers_the_audit_log_by_pe
 
     for role in EXPECTED:
         menus = build(role)
-        assert menus["main"][0].label == "Overview" and menus["main"][0].url == reverse("console:dashboard")
+        assert menus["main"][0].label == "Dashboard" and menus["main"][0].url == reverse("console:dashboard")
         has_log = any(e.key == "staff.activity" and e.url == reverse("console:audit_log") for e in menus["main"])
         assert has_log == (role not in ("support agent", "technical staff")), role
 
 
 def test_the_dashboard_link_is_marked_as_the_current_page(world):
     page = browser(world.people["manager"]).get(reverse("console:dashboard")).content.decode()
-    assert re.search(r'<a class="topnav-link is-current" href="/staff/" aria-current="page">Overview</a>', page)
+    assert re.search(r'<a class="topnav-link is-current" href="/staff/" aria-current="page">Dashboard</a>', page)

@@ -65,7 +65,7 @@ ITEMS = [
          requires="anonymous"),
 
     # --- Customer area: the left rail; five of its entries are also the phone's bottom bar -------------------------
-    item("client.home", _("Overview"), "dashboard", areas=CLIENT, icon="bi-house-door", mobile_tab=True),
+    item("client.home", _("Dashboard"), "dashboard", areas=CLIENT, icon="bi-house-door", mobile_tab=True),
     item("client.services", _("Services"), areas=CLIENT, requires="client_contact", icon="bi-hdd-rack", mobile_tab=True),
     item("client.services.websites", _("Websites"), "hosting_customer:websites", areas=CLIENT, parent="client.services"),
     item("client.services.hosting", _("My hosting"), "hosting_customer:list", areas=CLIENT, parent="client.services"),
@@ -98,7 +98,7 @@ ITEMS = [
          badge="cart", icon="bi-cart"),
 
     # --- Staff area: the same rail, in sections. What a person may not open is not listed (Rule 5.6). -----------------
-    item("staff.dashboard", _("Overview"), "console:dashboard", areas=STAFF, icon="bi-grid-1x2"),
+    item("staff.dashboard", _("Dashboard"), "console:dashboard", areas=STAFF, icon="bi-grid-1x2"),
 
     item("staff.clients", _("Clients"), areas=STAFF, section=_("People"), icon="bi-people"),
     item("staff.clients.list", _("All clients"), "clients_staff:list", areas=STAFF, parent="staff.clients",

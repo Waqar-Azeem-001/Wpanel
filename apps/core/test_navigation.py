@@ -112,7 +112,7 @@ def test_every_menu_link_reverses_to_an_internal_path():
 
 def test_a_customer_with_an_account_sees_the_full_customer_menu(owner):
     menus = navigation.build(request_for(owner), "client")
-    assert labels(menus, "main") == ["Overview", "Services", "Domains", "Orders", "Billing", "Support", "Affiliates"]
+    assert labels(menus, "main") == ["Dashboard", "Services", "Domains", "Orders", "Billing", "Support", "Affiliates"]
     services = next(e for e in menus["main"] if e.key == "client.services")
     assert [c.label for c in services.children][:4] == ["Websites", "My hosting", "Order new services", "Add-ons"]
     assert [c.label for c in services.children][4:7] == ["WordPress hosting", "Shared hosting", "Business hosting"]  # store categories
@@ -125,13 +125,13 @@ def test_a_customer_with_an_account_sees_the_full_customer_menu(owner):
 
 def test_a_customer_without_an_account_sees_the_fallback_not_the_account_menus(loner):
     menus = navigation.build(request_for(loner), "client")
-    assert labels(menus, "main") == ["Overview", "Plans", "Help"]
+    assert labels(menus, "main") == ["Dashboard", "Plans", "Help"]
     assert labels(menus, "right") == ["Notifications"]  # no cart without a client account
 
 
 def test_the_phone_bottom_bar_holds_the_five_things_customers_do_most(owner, loner, client):
     assert [e.label for e in navigation.build(request_for(owner), "client")["main"] if e.mobile_tab] == [
-        "Overview", "Services", "Domains", "Billing", "Support"]
+        "Dashboard", "Services", "Domains", "Billing", "Support"]
     client.force_login(owner)
     assert 'class="tabbar"' in client.get(reverse("dashboard"), HTTP_HOST="localhost").content.decode()
     client.force_login(loner)  # one place to go is not a bar
@@ -153,12 +153,12 @@ def test_staff_menus_follow_their_permissions(agent, technical, manager, admin):
     def top(user):
         return labels(navigation.build(request_for(user), "staff"), "main")
 
-    assert top(agent) == ["Overview", "Clients", "Orders", "Billing", "Hosting", "Domains", "Lifecycle", "Support",
+    assert top(agent) == ["Dashboard", "Clients", "Orders", "Billing", "Hosting", "Domains", "Lifecycle", "Support",
                           "Providers", "Settings"]
-    assert top(technical) == ["Overview", "Clients", "Orders", "Hosting", "Domains", "Lifecycle", "Support", "Providers"]
-    assert top(manager) == ["Overview", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting",
+    assert top(technical) == ["Dashboard", "Clients", "Orders", "Hosting", "Domains", "Lifecycle", "Support", "Providers"]
+    assert top(manager) == ["Dashboard", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting",
                             "Domains", "Lifecycle", "Support", "Reports", "Activity log", "Providers", "Settings"]
-    assert top(admin) == ["Overview", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting", "Domains",
+    assert top(admin) == ["Dashboard", "Clients", "Users", "Affiliates", "Orders", "Billing", "Products", "Hosting", "Domains",
                           "Lifecycle", "Support", "Reports", "Activity log", "Automation", "Providers", "Notifications",
                           "Settings"]
 

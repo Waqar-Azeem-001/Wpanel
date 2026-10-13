@@ -69,7 +69,7 @@
           <h2>{% trans "Your account" %}</h2>
           <ul>
             {% if user.is_authenticated %}
-            <li><a href="{% url 'dashboard' %}">{% trans "Overview" %}</a></li>
+            <li><a href="{% url 'dashboard' %}">{% trans "Dashboard" %}</a></li>
             <li><a href="{% url 'orders_customer:list' %}">{% trans "Orders" %}</a></li>
             <li><a href="{% url 'billing_customer:invoice_list' %}">{% trans "Invoices" %}</a></li>
             <li><a href="{% url 'affiliates_customer:dashboard' %}">{% trans "Affiliate programme" %}</a></li>

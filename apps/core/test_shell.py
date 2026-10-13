@@ -180,7 +180,7 @@ def test_the_sections_are_the_menus_and_their_areas_are_listed_inside(world):
     people = menus.split('id="mega-people"')[1].split('id="mega-commerce"')[0]
     assert re.findall(r'class="mega-head[^"]*" href="[^"]+"><i class="bi [a-z0-9-]+" aria-hidden="true"></i>([^<]+)</a>', people) == ["Clients", "Users", "Affiliates"]
     assert 'href="/staff/clients/new/"' in people and 'href="/staff/affiliates/payouts/"' in people  # the pages under each area
-    assert '<a class="topnav-link is-current" href="/staff/" aria-current="page">Overview</a>' in page_of(world.people["admin"], "console:dashboard").content.decode()
+    assert '<a class="topnav-link is-current" href="/staff/" aria-current="page">Dashboard</a>' in page_of(world.people["admin"], "console:dashboard").content.decode()
 
 
 def test_a_detail_page_keeps_exactly_one_menu_lit(world):
