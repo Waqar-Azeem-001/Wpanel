@@ -822,3 +822,9 @@ a.use-item:hover { border-color: var(--border-strong); }
 .ws-apple .care-radio { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; }
 @media (max-width: 575.98px) { .ws-apple .care-card { padding: 1.25rem 1.1rem; } .ws-apple .care-result { gap: 1.25rem; } }
 @media (prefers-reduced-motion: reduce) { .ws-apple .care-tile, .ws-apple .tool, .ws-apple .site-card { transition: none; } .ws-apple .care-tile:hover, .ws-apple .tool:hover, .ws-apple .site-card:hover { transform: none; } }
+.ws-apple .care-sub { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ap-faint); font-weight: 600; margin: 1.5rem 0 0; }
+.ws-apple .care-options small { color: var(--ap-muted); }
+.ws-apple .care-table { width: 100%; margin-top: 1rem; }
+.ws-apple .care-table th { font-size: .78rem; color: var(--ap-muted); font-weight: 600; }
+.ws-apple .care-table td, .ws-apple .care-table th { padding: .6rem .25rem; border-bottom: 1px solid var(--ap-line); }
+.ws-apple .care-table code { overflow-wrap: anywhere; }

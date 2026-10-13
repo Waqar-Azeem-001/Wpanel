@@ -187,6 +187,10 @@ class SiteCare(TimeStampedModel):
     backup_schedule = models.CharField(max_length=8, choices=BACKUP_CHOICES, default="off")  # used only where the server cannot schedule backups itself
     last_backup_at = models.DateTimeField(null=True, blank=True)
     backup_note = models.CharField(max_length=300, blank=True)
+    maintenance = models.BooleanField(default=False)  # visitors see a "be right back" page; signed-in WordPress users still see the site
+    discourage_search = models.BooleanField(default=False)  # WordPress asks search engines not to index the site
+    performance = models.BooleanField(default=False)  # compression and browser caching rules in .htaccess
+    quarantine = models.JSONField(default=list, blank=True)  # [{"path", "stored", "rule", "at"}] files moved aside by the customer
 
     def __str__(self):
         return f"Care of {self.account.domain}"
@@ -234,6 +238,8 @@ class SpeedTest(TimeStampedModel):
     score = models.PositiveSmallIntegerField(default=0)
     advice = models.JSONField(default=list, blank=True)  # short plain-language notes
     error = models.CharField(max_length=300, blank=True)
+    kind = models.CharField(max_length=10, default="server")  # "server" (measured from the panel) or "pagespeed" (Google's lab report)
+    report = models.JSONField(default=dict, blank=True)  # the figures of a PageSpeed report
 
     class Meta:
         ordering = ["-created_at", "-id"]

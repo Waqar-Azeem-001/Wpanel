@@ -37,6 +37,16 @@
     {% else %}
     <p class="care-empty">{% trans "Not tested yet." %}</p>
     {% endif %}
+    <form method="post" action="{{ action_url }}" class="care-form" data-loading="{% trans 'Asking Google PageSpeed (this can take a minute)...' %}">{% csrf_token %}<input type="hidden" name="action" value="pagespeed">
+      <label for="ps-strategy">{% trans "Detailed report from Google PageSpeed" %}</label>
+      <select class="form-select" id="ps-strategy" name="strategy"><option value="mobile">{% trans "Phone" %}</option><option value="desktop">{% trans "Computer" %}</option></select>
+      <button class="btn btn-outline-secondary" type="submit">{% trans "Run report" %}</button>
+    </form>
+    {% if pagespeed %}
+    <p class="care-status {% if pagespeed.score >= 90 %}is-ok{% elif pagespeed.score < 50 %}is-bad{% endif %}">Google PageSpeed: {{ pagespeed.score }} / 100 ({% if pagespeed.report.strategy == "desktop" %}{% trans "computer" %}{% else %}{% trans "phone" %}{% endif %})</p>
+    <dl class="care-facts">{% for label, value in pagespeed.report.figures.items %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>
+    <p class="care-foot">{% trans "Run" %} {{ pagespeed.created_at|date:"j M Y, H:i" }}. {% trans "A lab test by Google of your home page, not of real visitors." %}</p>
+    {% endif %}
   </section>
 
   {# Security #}
@@ -57,7 +67,9 @@
       <ul class="care-findings">
         {% for f in scan.findings %}
         <li><span class="care-sev is-{{ f.severity }}">{% if f.severity == "high" %}{% trans "High" %}{% else %}{% trans "Medium" %}{% endif %}</span>
-          <div><code>{{ f.path }}</code><small>{{ f.detail }}</small></div></li>
+          <div><code>{{ f.path }}</code><small>{{ f.detail }}</small></div>
+          {% if f.rule != "core-file-modified" %}<form method="post" action="{{ action_url }}" class="ms-auto" data-plain>{% csrf_token %}<input type="hidden" name="action" value="quarantine"><input type="hidden" name="path" value="{{ f.path }}">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">{% trans "Move aside" %}</button></form>{% endif %}</li>
         {% endfor %}
       </ul>
       <p class="care-foot">{% trans "A scan is a pattern check, not proof. Look at each file in the" %} <a href="{{ files_url }}">{% trans "File manager" %}</a>; {% trans "if you did not put it there, remove it and change your passwords." %}</p>
@@ -67,6 +79,14 @@
       <p class="care-foot">{{ scan.files_scanned }} {% trans "files checked" %}{% if scan.wp_checked %}, {{ scan.wp_checked }} {% trans "WordPress system files compared with the official WordPress" %} {{ scan.wp_version }}{% endif %}. {{ scan.finished_at|date:"j M Y, H:i" }}.</p>
     {% else %}
     <p class="care-empty">{% trans "Not scanned yet." %}</p>
+    {% endif %}
+    {% if quarantined %}
+    <h3 class="care-sub">{% trans "Moved aside" %}</h3>
+    <ul class="care-findings">
+      {% for q in quarantined %}<li><div><code>{{ q.path }}</code><small>{{ q.rule }}</small></div>
+        <form method="post" action="{{ action_url }}" class="ms-auto" data-plain>{% csrf_token %}<input type="hidden" name="action" value="restore"><input type="hidden" name="stored" value="{{ q.stored }}">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">{% trans "Put back" %}</button></form></li>{% endfor %}
+    </ul>
     {% endif %}
     <form method="post" action="{{ action_url }}" class="care-form" data-plain>{% csrf_token %}<input type="hidden" name="action" value="scan_schedule">
       <label for="scan-schedule">{% trans "Scan automatically" %}</label>
@@ -97,6 +117,44 @@
     <p class="care-foot">{% trans "WordPress looks for updates twice a day, when someone visits your website. A plugin update can occasionally change how a page looks: keep backups switched on." %}{% if care.updates_written_at %} {% trans "Saved" %} {{ care.updates_written_at|date:"j M Y, H:i" }}.{% endif %}</p>
   </section>
   {% endif %}
+
+  {# WordPress site options #}
+  {% if wordpress %}
+  <section class="care-card" id="care-options" aria-labelledby="care-options-h">
+    <div class="care-head">
+      <span class="care-icon" aria-hidden="true"><i class="bi bi-sliders"></i></span>
+      <div class="care-title"><h2 id="care-options-h">{% trans "Website options" %}</h2><p>{% trans "A maintenance page for visitors, and a request to search engines." %}</p></div>
+      <a class="btn btn-outline-secondary" href="{{ wordpress_url }}">{% trans "Plugins and themes" %}</a>
+    </div>
+    <form method="post" action="{{ action_url }}" class="care-options" data-plain>{% csrf_token %}<input type="hidden" name="action" value="site_options">
+      <label class="care-radio"><input type="checkbox" name="maintenance" value="1" {% if care.maintenance %}checked{% endif %}> <span><strong>{% trans "Maintenance mode" %}</strong><br><small>{% trans "Visitors see a 'be right back' page. You, signed in to WordPress, still see the website." %}</small></span></label>
+      <label class="care-radio"><input type="checkbox" name="discourage_search" value="1" {% if care.discourage_search %}checked{% endif %}> <span><strong>{% trans "Ask search engines not to index this website" %}</strong><br><small>{% trans "Useful while you are building it. Switch it off before you launch." %}</small></span></label>
+      <div><button class="btn btn-primary" type="submit">{% trans "Save" %}</button></div>
+    </form>
+  </section>
+  {% endif %}
+
+  {# Performance rules #}
+  {% if performance_ok %}
+  <section class="care-card" id="care-performance" aria-labelledby="care-performance-h">
+    <div class="care-head">
+      <span class="care-icon" aria-hidden="true"><i class="bi bi-lightning-charge"></i></span>
+      <div class="care-title"><h2 id="care-performance-h">{% trans "Faster pages" %}</h2><p>{% trans "Compress what is sent and let browsers keep images, styles and scripts." %}</p></div>
+      <form method="post" action="{{ action_url }}" data-plain>{% csrf_token %}<input type="hidden" name="action" value="performance"><input type="hidden" name="enabled" value="{% if care.performance %}0{% else %}1{% endif %}">
+        <button class="btn {% if care.performance %}btn-outline-secondary{% else %}btn-primary{% endif %}" type="submit">{% if care.performance %}{% trans "Turn off" %}{% else %}{% trans "Turn on" %}{% endif %}</button></form>
+    </div>
+    <p class="care-foot">{% trans "Adds a clearly marked block to your website's .htaccess file. Your own rules are not touched." %} {% if care.performance %}<strong>{% trans "On." %}</strong>{% endif %}</p>
+  </section>
+  {% endif %}
+
+  {# Traffic #}
+  <section class="care-card" id="care-traffic" aria-labelledby="care-traffic-h">
+    <div class="care-head">
+      <span class="care-icon" aria-hidden="true"><i class="bi bi-graph-up"></i></span>
+      <div class="care-title"><h2 id="care-traffic-h">{% trans "Traffic" %}</h2><p>{% trans "Visitors, page views and top pages from your website's own log." %}</p></div>
+      <a class="btn btn-outline-secondary" href="{{ traffic_url }}">{% trans "View traffic" %}</a>
+    </div>
+  </section>
 
   {# Backups #}
   {% if backups %}

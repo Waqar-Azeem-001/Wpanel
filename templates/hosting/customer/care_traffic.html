@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Traffic" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="page-head"><h1>{% trans "Traffic" %}</h1>
+  <p class="page-sub">{% trans "What your website's own access log shows for its most recent requests." %} <a href="{{ care_url }}">{% trans "Back to Website care" %}</a></p></div>
+{% if not traffic %}
+<section class="care-card"><p class="care-empty mt-0">{% trans "Traffic figures are not available on this server yet, or the log could not be read." %}</p></section>
+{% else %}
+<div class="care-stack">
+  <section class="care-card">
+    <dl class="care-facts">
+      <div><dt>{% trans "Visitors" %}</dt><dd>{{ traffic.visitors }}</dd></div>
+      <div><dt>{% trans "Page views" %}</dt><dd>{{ traffic.page_views }}</dd></div>
+      <div><dt>{% trans "All requests" %}</dt><dd>{{ traffic.requests }}</dd></div>
+      <div><dt>{% trans "Robots" %}</dt><dd>{{ traffic.bots }}</dd></div>
+    </dl>
+    <p class="care-foot">{% trans "Based on the last" %} {{ traffic.lines_read }} {% trans "log lines. Visitors are counted by address, so one person on two devices counts twice; known robots are not counted as visitors." %}{% if traffic.unparsed %} {{ traffic.unparsed }} {% trans "lines were not in a format we understand and were left out." %}{% endif %}</p>
+  </section>
+  <section class="care-card">
+    <h2 class="h6">{% trans "Top pages" %}</h2>
+    {% if traffic.top_pages %}
+    <table class="care-table"><thead><tr><th>{% trans "Page" %}</th><th class="text-end">{% trans "Views" %}</th></tr></thead>
+      <tbody>{% for path, n in traffic.top_pages %}<tr><td><code>{{ path }}</code></td><td class="text-end">{{ n }}</td></tr>{% endfor %}</tbody></table>
+    {% else %}<p class="care-empty">{% trans "No page views in this part of the log." %}</p>{% endif %}
+  </section>
+  <section class="care-card">
+    <h2 class="h6">{% trans "Responses" %}</h2>
+    <table class="care-table"><tbody>{% for code, n in traffic.statuses %}<tr><td>{{ code }}</td><td class="text-end">{{ n }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

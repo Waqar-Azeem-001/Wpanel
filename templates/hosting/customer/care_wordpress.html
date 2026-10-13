@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Plugins and themes" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="page-head"><h1>{% trans "Plugins and themes" %}</h1>
+  <p class="page-sub">{% trans "Switch plugins and themes on or off and install their updates. WordPress itself does the work." %} <a href="{{ care_url }}">{% trans "Back to Website care" %}</a></p></div>
+{% if not wordpress %}
+<section class="care-card"><p class="care-empty mt-0">{% trans "This is for WordPress websites that WHPanel set up." %}</p></section>
+{% elif error %}
+<section class="care-card"><p class="care-empty is-bad mt-0">{{ error }}</p><a class="btn btn-outline-secondary" href="{{ load_url }}">{% trans "Try again" %}</a></section>
+{% elif not data %}
+<section class="care-card">
+  <p class="care-empty mt-0">{% trans "Loading what is installed asks your website, which can take up to half a minute." %}</p>
+  <a class="btn btn-primary" href="{{ load_url }}" data-loading="{% trans 'Asking your website...' %}">{% trans "Load plugins and themes" %}</a>
+</section>
+{% else %}
+<div class="care-stack">
+  <section class="care-card">
+    <div class="care-head">
+      <div class="care-title"><h2>WordPress {{ data.core.version }}</h2>
+        <p>{% if data.core.update %}{% trans "Version" %} {{ data.core.update }} {% trans "is available." %}{% else %}{% trans "WordPress is up to date." %}{% endif %}</p></div>
+      {% if data.core.update %}
+      <form method="post" action="{{ action_url }}" data-loading="{% trans 'Updating WordPress...' %}">{% csrf_token %}<input type="hidden" name="action" value="update_core">
+        <button class="btn btn-primary" type="submit">{% trans "Update WordPress" %}</button></form>
+      {% endif %}
+    </div>
+    <p class="care-foot">{% trans "Keep a recent backup before updating." %}</p>
+  </section>
+
+  <section class="care-card">
+    <h2 class="h6">{% trans "Plugins" %}</h2>
+    <table class="care-table"><tbody>
+      {% for p in data.plugins %}
+      <tr><td><strong>{{ p.name }}</strong><br><small class="text-secondary">{{ p.version }}{% if p.update %} &middot; {% trans "update" %} {{ p.update }}{% endif %}</small></td>
+        <td class="text-end">
+          {% if p.update %}<form method="post" action="{{ action_url }}" class="d-inline" data-loading="{% trans 'Updating...' %}">{% csrf_token %}<input type="hidden" name="action" value="update_plugin"><input type="hidden" name="target" value="{{ p.file }}"><button class="btn btn-primary btn-sm" type="submit">{% trans "Update" %}</button></form>{% endif %}
+          <form method="post" action="{{ action_url }}" class="d-inline" data-loading="{% trans 'Working...' %}">{% csrf_token %}<input type="hidden" name="action" value="{% if p.active %}deactivate_plugin{% else %}activate_plugin{% endif %}"><input type="hidden" name="target" value="{{ p.file }}">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">{% if p.active %}{% trans "Switch off" %}{% else %}{% trans "Switch on" %}{% endif %}</button></form>
+        </td></tr>
+      {% empty %}<tr><td>{% trans "No plugins installed." %}</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+
+  <section class="care-card">
+    <h2 class="h6">{% trans "Themes" %}</h2>
+    <table class="care-table"><tbody>
+      {% for t in data.themes %}
+      <tr><td><strong>{{ t.name }}</strong>{% if t.active %} <span class="care-sev">{% trans "In use" %}</span>{% endif %}<br><small class="text-secondary">{{ t.version }}{% if t.update %} &middot; {% trans "update" %} {{ t.update }}{% endif %}</small></td>
+        <td class="text-end">
+          {% if t.update %}<form method="post" action="{{ action_url }}" class="d-inline" data-loading="{% trans 'Updating...' %}">{% csrf_token %}<input type="hidden" name="action" value="update_theme"><input type="hidden" name="target" value="{{ t.slug }}"><button class="btn btn-primary btn-sm" type="submit">{% trans "Update" %}</button></form>{% endif %}
+          {% if not t.active %}<form method="post" action="{{ action_url }}" class="d-inline" data-loading="{% trans 'Working...' %}">{% csrf_token %}<input type="hidden" name="action" value="activate_theme"><input type="hidden" name="target" value="{{ t.slug }}"><button class="btn btn-outline-secondary btn-sm" type="submit">{% trans "Use this theme" %}</button></form>{% endif %}
+        </td></tr>
+      {% endfor %}
+    </tbody></table>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

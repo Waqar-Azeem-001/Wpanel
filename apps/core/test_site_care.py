@@ -360,3 +360,177 @@ def test_our_domain_that_does_not_point_here_yet_is_told_so(world, account, monk
     assert domain_check.check(account)["state"] == "ours_not_pointing"
     Domain.objects.update(status=DomainStatus.PENDING_TRANSFER_IN)
     assert domain_check.check(account)["state"] == "transferring"
+
+
+# --- the rest of the care tools ------------------------------------------------------------------------------------------
+
+def _wp_folder(owner, account):
+    for entry in control.perform(owner, account, Capability.FILES, "list_files", "public_html"):
+        control.perform(owner, account, Capability.FILES, "delete_path", entry.path)
+    control.perform(owner, account, Capability.FILES, "make_directory", "public_html/wp-content")
+
+
+def test_site_options_write_a_must_use_plugin_that_says_what_was_chosen(world, owner, account):  # noqa: F811
+    from apps.hosting import care_tools
+
+    _wordpress(account)
+    _wp_folder(owner, account)
+    row = care_tools.save_site_options(owner, account, True, True)
+    assert row.maintenance and row.discourage_search
+    path = "public_html/wp-content/mu-plugins/whp-site-options.php"
+    text = control.perform(owner, account, Capability.FILES, "read_file", path, max_bytes=10_000).decode()
+    assert "status_header( 503 )" in text and "pre_option_blog_public" in text and "is_user_logged_in()" in text
+    care_tools.save_site_options(owner, account, False, False)
+    text = control.perform(owner, account, Capability.FILES, "read_file", path, max_bytes=10_000).decode()
+    assert "503" not in text and "blog_public" not in text
+
+
+@pytest.mark.skipif(shutil.which("php") is None, reason="PHP is not installed here")
+def test_the_site_options_file_is_valid_php(tmp_path):
+    from apps.hosting import care_tools
+
+    path = tmp_path / "o.php"
+    path.write_text(care_tools.options_file(True, True))
+    assert "No syntax errors" in subprocess.run(["php", "-l", str(path)], capture_output=True, text=True).stdout
+
+
+def test_the_performance_block_is_added_and_removed_without_touching_other_rules(world, owner, account):  # noqa: F811
+    from apps.hosting import care_tools
+
+    mine = "RewriteEngine On\nRewriteRule ^old$ /new [R=301,L]\n"
+    on = care_tools.merge_htaccess(mine, True)
+    assert "mod_deflate" in on and "RewriteRule ^old$ /new" in on and on.count(care_tools.BEGIN) == 1
+    assert care_tools.merge_htaccess(on, True).count(care_tools.BEGIN) == 1  # again: not doubled
+    assert care_tools.merge_htaccess(on, False) == mine and care_tools.merge_htaccess("", False) == ""
+    _put(owner, account, ".htaccess", mine.encode())
+    care_tools.save_performance(owner, account, True)
+    assert "mod_expires" in control.perform(owner, account, Capability.FILES, "read_file", "public_html/.htaccess", max_bytes=20_000).decode()
+    assert care.care_for(account).performance
+    care_tools.save_performance(owner, account, False)
+    assert control.perform(owner, account, Capability.FILES, "read_file", "public_html/.htaccess", max_bytes=20_000).decode() == mine
+
+
+def test_a_flagged_file_can_be_moved_aside_and_put_back_but_only_a_flagged_one(world, owner, account):  # noqa: F811
+    from apps.hosting import care_tools
+
+    _put(owner, account, "extra-evil.php", b"<?php eval(base64_decode($x)); ?>")
+    scan = care.start_scan(owner, account)
+    assert any(f["path"] == "extra-evil.php" for f in scan.findings)
+    with pytest.raises(ServiceError) as err:
+        care_tools.quarantine_file(owner, account, "index.html")
+    assert err.value.code == "not_flagged"
+    with pytest.raises(ServiceError):
+        care_tools.quarantine_file(owner, account, "../etc/passwd")
+    row = care_tools.quarantine_file(owner, account, "extra-evil.php")
+    names = {e.name for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html")}
+    assert "extra-evil.php" not in names and ".whp-quarantine" in names and len(row.quarantine) == 1
+    assert not any(f["path"] == "extra-evil.php" for f in care.last_scan(account).findings)
+    care_tools.restore_file(owner, account, row.quarantine[0]["stored"])
+    assert "extra-evil.php" in {e.name for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html")}
+    assert care.care_for(account).quarantine == []
+
+
+def test_a_wordpress_system_file_is_never_moved_aside(world, owner, account):  # noqa: F811
+    from apps.hosting import care_tools
+
+    SiteScan.objects.create(account=account, state="done", finished_at=timezone.now(), findings=[
+        {"path": "wp-includes/version.php", "rule": "core-file-modified", "severity": "high", "detail": "x"}])
+    with pytest.raises(ServiceError) as err:
+        care_tools.quarantine_file(owner, account, "wp-includes/version.php")
+    assert err.value.code == "critical"
+
+
+def test_the_access_log_is_turned_into_honest_figures():
+    from apps.hosting import care_tools
+
+    lines = [
+        '203.0.113.5 - - [13/Oct/2026:10:00:00 +0000] "GET / HTTP/1.1" 200 5120 "-" "Mozilla/5.0"',
+        '203.0.113.5 - - [13/Oct/2026:10:00:01 +0000] "GET /style.css HTTP/1.1" 200 800 "-" "Mozilla/5.0"',
+        '203.0.113.6 - - [13/Oct/2026:10:01:00 +0000] "GET /about HTTP/1.1" 200 4000 "-" "Mozilla/5.0"',
+        '198.51.100.9 - - [13/Oct/2026:10:02:00 +0000] "GET / HTTP/1.1" 200 5120 "-" "Googlebot/2.1"',
+        '203.0.113.7 - - [13/Oct/2026:10:03:00 +0000] "GET /missing HTTP/1.1" 404 300 "-" "Mozilla/5.0"',
+        "not a log line",
+    ]
+    result = care_tools.parse_access(lines)
+    assert result["requests"] == 5 and result["bots"] == 1 and result["visitors"] == 3 and result["page_views"] == 2 and result["unparsed"] == 1
+    assert dict(result["top_pages"]) == {"/": 1, "/about": 1}
+    assert dict(result["statuses"]) == {"2xx": 4, "4xx": 1}
+
+
+def test_a_pagespeed_report_is_stored_with_its_figures(world, account, monkeypatch):  # noqa: F811
+    from apps.hosting import care_tools
+
+    class Reply:
+        status_code = 200
+
+        def json(self):
+            return {"lighthouseResult": {"categories": {"performance": {"score": 0.87}}, "audits": {
+                "first-contentful-paint": {"displayValue": "1.2 s"}, "largest-contentful-paint": {"displayValue": "2.4 s"}}}}
+
+    seen = {}
+    monkeypatch.setattr("requests.get", lambda url, params=None, timeout=None: seen.update(params=params) or Reply())
+    row = care_tools.pagespeed(account, "desktop")
+    assert row.kind == "pagespeed" and row.score == 87 and row.report["figures"]["First contentful paint"] == "1.2 s" and seen["params"]["strategy"] == "desktop"
+    assert SpeedTest.objects.filter(account=account, kind="server").count() == 0  # the server test keeps its own history
+
+
+def test_pagespeed_failures_are_said_plainly(world, account, monkeypatch):  # noqa: F811
+    from apps.hosting import care_tools
+
+    class Limited:
+        status_code = 429
+
+    monkeypatch.setattr("requests.get", lambda *a, **k: Limited())
+    with pytest.raises(ServiceError) as err:
+        care_tools.pagespeed(account)
+    assert err.value.code == "rate_limited"
+
+
+@pytest.mark.skipif(shutil.which("php") is None, reason="PHP is not installed here")
+def test_the_wordpress_tool_php_is_valid_refuses_a_wrong_token_and_removes_itself(tmp_path):
+    from apps.hosting import wp_tool
+
+    name, result, token, source = wp_tool.build("inventory")
+    (tmp_path / name).write_text(source)
+    assert "No syntax errors" in subprocess.run(["php", "-l", str(tmp_path / name)], capture_output=True, text=True).stdout
+    wrong = subprocess.run(["php", "-r", '$_GET["t"]="nope"; include $argv[1];', str(tmp_path / name)], capture_output=True, text=True)
+    assert '"ok":false' in wrong.stdout and (tmp_path / name).exists()
+    right = subprocess.run(["php", "-r", '$_GET["t"]=$argv[2]; include $argv[1];', str(tmp_path / name), token], capture_output=True, text=True)
+    assert "WordPress was not found" in right.stdout and not (tmp_path / name).exists()  # no WordPress here: it says so, and it was used up
+    with pytest.raises(ValueError):
+        wp_tool.build("rm -rf")
+
+
+def test_the_wordpress_manager_runs_one_action_and_returns_what_is_installed(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import care_tools
+
+    _wordpress(account)
+    answer = {"ok": True, "core": {"version": "6.8.1", "update": "6.9"}, "plugins": [{"file": "a/a.php", "name": "A", "version": "1", "active": True, "update": ""}],
+              "themes": [{"slug": "twentytwentyfive", "name": "Twenty", "version": "1", "active": True, "update": ""}]}
+    seen = {}
+
+    def reach(acct, path, token, purpose=""):
+        seen.update(path=path)
+        return answer
+
+    monkeypatch.setattr(site_apps, "reach", reach)
+    data = care_tools.wordpress_action(owner, account, "deactivate_plugin", "a/a.php")
+    assert data["core"]["update"] == "6.9" and data["plugins"][0]["name"] == "A" and seen["path"].startswith("whp-wp-")
+    with pytest.raises(ServiceError):
+        care_tools.wordpress_action(owner, account, "format_disk")
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": False, "error": "That plugin is not installed."})
+    with pytest.raises(ServiceError) as err:
+        care_tools.wordpress_action(owner, account, "activate_plugin", "x/x.php")
+    assert "not installed" in err.value.message
+
+
+def test_the_new_pages_render_and_the_actions_answer(world, owner, account, monkeypatch):  # noqa: F811
+    _wordpress(account)
+    client = browser(owner)
+    html = client.get(reverse("hosting_customer:care", args=[account.pk])).content.decode()
+    assert "Website options" in html and "Traffic" in html and "Run report" in html and "Faster pages" in html
+    assert client.get(reverse("hosting_customer:care_traffic", args=[account.pk])).status_code == 200
+    page = client.get(reverse("hosting_customer:care_wordpress", args=[account.pk])).content.decode()
+    assert "Load plugins and themes" in page
+    url = reverse("hosting_customer:care_action", args=[account.pk])
+    assert client.post(url, {"action": "performance", "enabled": "1"}, follow=True).status_code == 200

@@ -12,7 +12,7 @@ from apps.audit import services as audit
 from apps.core import portal
 from apps.core.exceptions import ServiceError
 
-from . import care
+from . import care, care_tools
 from .models import SiteCare
 from .views import _own_account
 
@@ -27,10 +27,12 @@ def my_hosting_care(request, pk):
     settings = care.care_for(account)
     scan = care.poll_scan(request.user, account)
     backups = care.backup_state(request.user, account)
-    speed = account.speed_tests.first()
+    speed = account.speed_tests.filter(kind="server").first()
     return render(request, "hosting/customer/care.html", {
         "account": account, "sidebar": portal.service_sidebar(request, account), "care": settings, "scan": scan,
-        "speed": speed, "history": list(account.speed_tests.all()[1:6]), "backups": backups,
+        "speed": speed, "pagespeed": account.speed_tests.filter(kind="pagespeed").first(), "backups": backups,
+        "quarantined": settings.quarantine, "performance_ok": care_tools.performance_supported(account),
+        "traffic_url": reverse("hosting_customer:care_traffic", args=[account.pk]), "wordpress_url": reverse("hosting_customer:care_wordpress", args=[account.pk]),
         "wordpress": care.can_manage_updates(account), "scan_choices": SiteCare.SCAN_CHOICES, "core_choices": SiteCare.CORE_CHOICES,
         "action_url": reverse("hosting_customer:care_action", args=[account.pk]),
         "files_url": reverse("hosting_customer:section", args=[account.pk, "files"]),
@@ -69,6 +71,21 @@ def my_hosting_care_action(request, pk):
         elif action == "updates":
             care.save_updates(request.user, account, post.get("core", ""), post.get("plugins") == "1", post.get("themes") == "1")
             messages.success(request, "WordPress will keep itself up to date as you chose. WordPress checks twice a day, when your website is visited.")
+        elif action == "pagespeed":
+            result = care_tools.pagespeed(account, post.get("strategy", "mobile"))
+            messages.success(request, f"Google PageSpeed score: {result.score} out of 100.")
+        elif action == "site_options":
+            care_tools.save_site_options(request.user, account, post.get("maintenance") == "1", post.get("discourage_search") == "1")
+            messages.success(request, "Saved. The website now uses these choices.")
+        elif action == "performance":
+            care_tools.save_performance(request.user, account, post.get("enabled") == "1")
+            messages.success(request, "Performance rules are on." if post.get("enabled") == "1" else "Performance rules are off.")
+        elif action == "quarantine":
+            care_tools.quarantine_file(request.user, account, post.get("path", ""))
+            messages.success(request, "The file was moved aside. Nothing was deleted; you can put it back from the list below.")
+        elif action == "restore":
+            care_tools.restore_file(request.user, account, post.get("stored", ""))
+            messages.success(request, "The file was put back.")
         elif action == "backup_schedule":
             care.save_backup_schedule(request.user, account, post.get("schedule", ""))
             messages.success(request, "The backup schedule was saved.")
@@ -77,3 +94,39 @@ def my_hosting_care_action(request, pk):
     except ServiceError as exc:
         messages.error(request, exc.message)
     return redirect(_url(account))
+
+
+@login_required
+def my_hosting_care_traffic(request, pk):
+    account = _own_account(request, pk)
+    return render(request, "hosting/customer/care_traffic.html", {
+        "account": account, "sidebar": portal.service_sidebar(request, account), "traffic": care_tools.traffic(request.user, account),
+        "care_url": _url(account)})
+
+
+@login_required
+def my_hosting_care_wordpress(request, pk):
+    account = _own_account(request, pk)
+    data, error = None, ""
+    if care.can_manage_updates(account) and request.GET.get("load") == "1":
+        try:
+            data = care_tools.wordpress_action(request.user, account, "inventory")
+        except ServiceError as exc:
+            error = exc.message
+    return render(request, "hosting/customer/care_wordpress.html", {
+        "account": account, "sidebar": portal.service_sidebar(request, account), "data": data, "error": error, "wordpress": care.can_manage_updates(account),
+        "care_url": _url(account), "load_url": reverse("hosting_customer:care_wordpress", args=[account.pk]) + "?load=1",
+        "action_url": reverse("hosting_customer:care_wordpress_action", args=[account.pk])})
+
+
+@require_POST
+@login_required
+def my_hosting_care_wordpress_action(request, pk):
+    account = _own_account(request, pk)
+    action, target = request.POST.get("action", ""), request.POST.get("target", "")
+    try:
+        care_tools.wordpress_action(request.user, account, action, target)
+        messages.success(request, "Done.")
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+    return redirect(reverse("hosting_customer:care_wordpress", args=[account.pk]) + "?load=1")

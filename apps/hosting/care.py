@@ -175,7 +175,7 @@ def _addresses(account):
 def speed_test(account, now=None):
     """Measure the home page now (at most one test every few seconds per website: the earlier result is returned instead). Stores and returns the ``SpeedTest``."""
     now = now or timezone.now()
-    latest = SpeedTest.objects.filter(account=account).first()
+    latest = SpeedTest.objects.filter(account=account, kind="server").first()
     if latest is not None and now - latest.created_at < SPEED_PAUSE:
         return latest
     measured, error, url = None, "", ""
@@ -198,7 +198,7 @@ def speed_test(account, now=None):
             account=account, url=measured["final_url"][:300], ok=ok, status_code=measured["status"], first_byte_ms=measured["first_byte_ms"], total_ms=measured["total_ms"],
             size_bytes=measured["size"], redirects=measured["redirects"], https=measured["https"], compressed=measured["compressed"], cached=measured["cached"],
             score=points, advice=advice)
-    stale = list(SpeedTest.objects.filter(account=account).values_list("pk", flat=True)[KEEP_RESULTS:])
+    stale = list(SpeedTest.objects.filter(account=account, kind="server").values_list("pk", flat=True)[KEEP_RESULTS:])
     if stale:
         SpeedTest.objects.filter(pk__in=stale).delete()
     return result
@@ -242,7 +242,9 @@ def start_scan(user, account, trigger="manual"):
             result = io.call(Capability.SECURITY, "run_malware_scan")
         except ServiceError as exc:
             return _fail(scan, exc.message)
-        _store_findings(scan, {"files_scanned": result.files_scanned, "findings": [f.__dict__ for f in result.findings]})
+        prefix = site_apps.docroot_path(account) + "/"  # a provider names files from the account's home; the page and quarantine speak from the website's folder
+        found = [{**f.__dict__, "path": f.path[len(prefix):] if f.path.startswith(prefix) else f.path} for f in result.findings]
+        _store_findings(scan, {"files_scanned": result.files_scanned, "findings": found})
         scan.save()
         return scan
     if not io.supports(Capability.FILES):
@@ -421,7 +423,7 @@ def summary(user, account, now=None):
     """Four short status lines for the overview: ``[{key, title, value, note, tone, icon}]``. Reads only what WHPanel stores, plus the backup options once."""
     now = now or timezone.now()
     settings = care_for(account)
-    speed = SpeedTest.objects.filter(account=account).first()
+    speed = SpeedTest.objects.filter(account=account, kind="server").first()
     scan = SiteScan.objects.filter(account=account).first()
     rows = []
     if speed is None:
