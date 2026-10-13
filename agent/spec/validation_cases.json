@@ -36978,6 +36978,1058 @@
   }
  },
  {
+  "command": "INSTALL_WORDPRESS",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "extra": 1,
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "": 1,
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": null,
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": 5,
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": true,
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": 1.5,
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": [],
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": {},
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": false,
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "AB",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd 1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "../x",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaaa",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "1abcdefg",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "ABCD1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234\n",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": true,
+  "params": {
+   "account": "aaaaaaaaaaaaaaaa",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": null,
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": 5,
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": true,
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": 1.5,
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": [],
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": {},
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": false,
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "a.com\n",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "-a.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "a.c",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "a_b.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": ".com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "a..com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": null
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": 5
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": true
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": 1.5
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": []
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": {}
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": false
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": ""
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "<script>"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": " lead"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "x;y"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": null,
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": 5,
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": true,
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": 1.5,
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": [],
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": {},
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": false,
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "a",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "ab",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "has space",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "-lead",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "a;b",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": null,
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": 5,
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": true,
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": 1.5,
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": [],
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": {},
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": false,
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "x",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "a@b",
+   "admin_password": "Kq7vRt2mXzLp",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": null,
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": 5,
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": true,
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": 1.5,
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": [],
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": {},
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": false,
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "short",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "ab\u0001ab\u0001ab\u0001ab\u0001ab\u0001ab\u0001",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": false,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "tab\there123456",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "xxxxxxxxxxxx",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
+  "command": "INSTALL_WORDPRESS",
+  "ok": true,
+  "params": {
+   "account": "abcd1234",
+   "admin_email": "boss@gmail.example.com",
+   "admin_password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "admin_user": "siteadmin",
+   "domain": "acme.com",
+   "site_title": "My new site"
+  }
+ },
+ {
   "command": "MIGRATE_ANALYZE",
   "ok": true,
   "params": {

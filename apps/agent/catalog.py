@@ -37,11 +37,13 @@ SHA256 = re.compile(r"^[A-Fa-f0-9]{64}$")
 CRON_SCHEDULE = re.compile(r"^[0-9*/,-]+( [0-9*/,-]+){4}$")
 CRON_COMMAND = re.compile(r"^php [A-Za-z0-9_][A-Za-z0-9_./-]*\.php( [A-Za-z0-9_.=:/-]{1,100}){0,10}$")
 JOB_ID = re.compile(r"^[a-f0-9]{10}$")
+WP_TITLE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .,&!?'()-]{0,99}$")
+WP_USER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{2,29}$")
 PHP_VERSIONS = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
 
 
 # The pattern of every kind that is "a value that must look like this". The Go agent is generated from this table (manage.py export_agent_spec), so the two cannot drift apart.
-PATTERNS = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID, "archive_name": ARCHIVE_NAME, "sha256": SHA256, "cron_schedule": CRON_SCHEDULE, "cron_command": CRON_COMMAND, "job_id": JOB_ID}
+PATTERNS = {"domain": DOMAIN, "account": ACCOUNT, "db_name": DB_NAME, "db_user": DB_USER, "table": TABLE, "sftp_name": SFTP_NAME, "email": EMAIL, "email_any": EMAIL, "msgid": MSG_ID, "https_url": HTTPS_URL, "bucket": BUCKET, "s3path": S3_PATH, "snapshot": SNAPSHOT, "trash_id": TRASH_ID, "mode": MODE, "local_part": LOCAL_PART, "backup_id": BACKUP_ID, "archive_name": ARCHIVE_NAME, "sha256": SHA256, "cron_schedule": CRON_SCHEDULE, "cron_command": CRON_COMMAND, "job_id": JOB_ID, "wp_title": WP_TITLE, "wp_user": WP_USER}
 _B64 = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
 
 
@@ -258,6 +260,9 @@ COMMANDS = {c.name: c for c in [
     Command("CRON_DELETE", {"account": _f("account"), "job_id": _f("job_id")}, 60, description="Delete one scheduled job."),
     Command("CRON_RUN", {"account": _f("account"), "job_id": _f("job_id")}, 3700, idempotent=False, max_attempts=1,
             description="Run one scheduled job now, in the account's own limits, and report how it ended."),
+    Command("INSTALL_WORDPRESS", {"account": _f("account"), "domain": _f("domain"), "site_title": _f("wp_title"), "admin_user": _f("wp_user"),
+                                  "admin_email": _f("email_any"), "admin_password": Field("secret", sensitive=True)}, 900, idempotent=False, max_attempts=1,
+            description="Install WordPress into an empty website: its own database and user, checked downloads, wp-config, and the administrator account."),
     Command("MIGRATE_ANALYZE", {"account": _f("account"), "archive": _f("archive_name"), "expected_sha256": Field("sha256", required=False)}, 1800, ephemeral=True,
             description="Read a cPanel account backup that has arrived on this node and report what it holds and what cannot move by itself. Changes nothing."),
     Command("MIGRATE_IMPORT", {"account": _f("account"), "archive": _f("archive_name"), "part": _f("enum", choices=("files", "databases", "mail", "cron")),

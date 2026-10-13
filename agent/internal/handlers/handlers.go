@@ -49,11 +49,15 @@ type Agent struct {
 	// FileRunner, when set, carries out a file command as the account's own Linux user (production). Nil runs it directly (tests).
 	FileRunner func(account, command string, params map[string]any) (Result, *Error)
 	Now        func() time.Time
+	// Fetch downloads one fixed HTTPS address; Token makes random letters and digits; ToolsDir keeps downloaded helpers (WP-CLI). Tests replace all three.
+	Fetch    func(url string) ([]byte, error)
+	Token    func(n int) string
+	ToolsDir string
 }
 
 // New returns an Agent with sensible defaults.
 func New(spec *catalog.Spec, sys system.System) *Agent {
-	return &Agent{Spec: spec, Sys: sys, CgroupRoot: "/sys/fs/cgroup", Now: time.Now}
+	return &Agent{Spec: spec, Sys: sys, CgroupRoot: "/sys/fs/cgroup", Now: time.Now, Fetch: httpFetch, Token: randomToken, ToolsDir: "/var/lib/whp/tools"}
 }
 
 // Run validates and carries out one command. “raw“ is the parameters exactly as received.

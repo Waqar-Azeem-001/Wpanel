@@ -135,7 +135,7 @@ class Archive:
         with tarfile.open(self.path, "r:*") as tar:
             for member in tar:
                 rel = _clean(member.name)
-                if not (member.isfile() or member.isdir()) or not (rel == prefix or rel.startswith(prefix + "/")):
+                if not (member.isfile() or member.isdir()) or not (prefix == "" or rel == prefix or rel.startswith(prefix + "/")):
                     continue
                 inner = rel[len(prefix):].lstrip("/")
                 if skip(inner):

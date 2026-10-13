@@ -39,6 +39,8 @@ def test_the_files_the_go_agent_is_built_from_match_the_python_catalogue():
     from apps.agent import golden
 
     assert (AGENT / "spec" / golden.MIGRATE_ARCHIVE).read_bytes() == golden.build_migrate_golden()[0], "the test archive is out of date: run `python manage.py export_agent_spec`"
+    _, good, evil = golden.build_wordpress_golden()
+    assert (AGENT / "spec" / "wordpress.tar.gz").read_bytes() == good and (AGENT / "spec" / "wordpress-evil.tar.gz").read_bytes() == evil, "run `python manage.py export_agent_spec`"
 
 
 # --- the Go agent against Django ---------------------------------------------------------------------------------------------------------------

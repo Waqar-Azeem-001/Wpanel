@@ -1546,6 +1546,67 @@
    ],
    "timeout": 60
   },
+  "INSTALL_WORDPRESS": {
+   "ephemeral": false,
+   "fields": {
+    "account": {
+     "choices": [],
+     "high": 0,
+     "kind": "account",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "admin_email": {
+     "choices": [],
+     "high": 0,
+     "kind": "email_any",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "admin_password": {
+     "choices": [],
+     "high": 0,
+     "kind": "secret",
+     "low": 0,
+     "required": true,
+     "sensitive": true
+    },
+    "admin_user": {
+     "choices": [],
+     "high": 0,
+     "kind": "wp_user",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "domain": {
+     "choices": [],
+     "high": 0,
+     "kind": "domain",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    },
+    "site_title": {
+     "choices": [],
+     "high": 0,
+     "kind": "wp_title",
+     "low": 0,
+     "required": true,
+     "sensitive": false
+    }
+   },
+   "idempotent": false,
+   "max_attempts": 1,
+   "min_agent_version": [
+    0,
+    1,
+    0
+   ],
+   "timeout": 900
+  },
   "ISOLATION_CHECK": {
    "ephemeral": false,
    "fields": {},
@@ -3353,6 +3414,14 @@
   "trash_id": {
    "max_len": 0,
    "regex": "^([a-f0-9]{12}|ALL)$"
+  },
+  "wp_title": {
+   "max_len": 0,
+   "regex": "^[A-Za-z0-9][A-Za-z0-9 .,&!?'()-]{0,99}$"
+  },
+  "wp_user": {
+   "max_len": 0,
+   "regex": "^[A-Za-z0-9][A-Za-z0-9_.-]{2,29}$"
   }
  },
  "protocol": 1

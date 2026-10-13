@@ -209,7 +209,7 @@ func (a *archive) extract(prefix, target string, replace bool, skip func(string)
 		if cerr != nil {
 			return copied, kept, cerr
 		}
-		if !(isFile || isDir) || !(rel == prefix || strings.HasPrefix(rel, prefix+"/")) {
+		if !(isFile || isDir) || !(prefix == "" || rel == prefix || strings.HasPrefix(rel, prefix+"/")) {
 			continue
 		}
 		inner := strings.TrimLeft(rel[len(prefix):], "/")

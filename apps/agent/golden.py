@@ -247,3 +247,63 @@ def build_migrate_golden():
         path = build(Path(tmp) / MIGRATE_ARCHIVE, user="acmeuser", domain="acme.com")
         data = path.read_bytes()
     return data, {"archive": MIGRATE_ARCHIVE, "steps": migrate_steps(__import__("hashlib").sha256(data).hexdigest()), "expected": run_migrate(data)}
+
+
+# --- installing WordPress -------------------------------------------------------------------------------------------------------------------
+
+WP_STEP = {"account": "abcd1234", "domain": "acme.com", "site_title": "Acme Shop", "admin_user": "siteadmin", "admin_email": "owner@gmail.example.com", "admin_password": "Kq7vRt2mXzLp-91"}
+
+
+def wordpress_scenarios():
+    install = step("INSTALL_WORDPRESS", WP_STEP)
+    return [
+        {"name": "installs", "fetch": {}, "files": {}, "steps": [install, install, step("INSTALL_WORDPRESS", {**WP_STEP, "account": "nobody123"})]},
+        {"name": "tampered download", "fetch": {"tamper": True}, "files": {}, "steps": [install]},
+        {"name": "network down", "fetch": {"down": True}, "files": {}, "steps": [install]},
+        {"name": "folder not empty", "fetch": {}, "files": {"my-site.php": "<?php // mine"}, "steps": [install]},
+        {"name": "hostile archive", "fetch": {"evil": True}, "files": {}, "steps": [install]},
+        {"name": "no databases allowed", "fetch": {}, "files": {}, "limits": {"databases": 0}, "steps": [install]},
+    ]
+
+
+def run_wordpress(scenario):
+    from . import wordpress_fixture as fixture
+    from .reference_agent import NativeMachine
+
+    folder = Path(tempfile.mkdtemp(prefix="whp-wp-"))
+    root = str(folder).replace("\\", "/")
+
+    def clean(text):
+        return str(text).replace("\\", "/").replace(root, "<ROOT>")
+
+    try:
+        options = scenario["fetch"]
+        archive = fixture.archive_bytes(evil=True) if options.get("evil") else None
+        fetch = fixture.make_fetch(archive=archive, tamper=options.get("tamper", False), down=options.get("down", False))
+        machine = NativeMachine(files_dir=folder, capabilities=("web", "database"), wordpress_fetch=fetch)
+        machine.run("CREATE_WEBSITE", {**SITE, "databases": scenario.get("limits", {}).get("databases", 3)})
+        docroot = folder / "abcd1234" / "sites" / "acme.com" / "public_html"
+        docroot.mkdir(parents=True, exist_ok=True)
+        (docroot / "index.html").write_bytes(b"placeholder")
+        for rel, text in scenario["files"].items():
+            (docroot / rel).write_bytes(text.encode())
+        results = []
+        for item in scenario["steps"]:
+            try:
+                code, data = machine.run(item["command"], item["params"])
+                results.append({"ok": True, "code": code, "data": json.loads(json.dumps(data))})
+            except HandlerError as exc:
+                results.append({"ok": False, "code": exc.code, "message": exc.message})
+        tree = {clean(p.relative_to(folder)): p.read_bytes().decode("utf-8", "replace") for p in sorted(docroot.rglob("*")) if p.is_file()}
+        return {"results": results, "tree": tree, "databases": sorted(machine.engine.dbs), "users": sorted(machine.engine.users),
+                "grants": sorted([db, user, sorted(p)] for (db, user), p in machine.engine.grants.items()),
+                "commands": [[clean(a) for a in c] for c in machine.system.commands if c and c[0] in ("chown", "chmod", "systemd-run")]}
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def build_wordpress_golden():
+    from . import wordpress_fixture as fixture
+
+    return {"archive": "wordpress.tar.gz", "evil": "wordpress-evil.tar.gz", "scenarios": [{**s, "expected": run_wordpress(s)} for s in wordpress_scenarios()]}, \
+        fixture.archive_bytes(), fixture.archive_bytes(evil=True)

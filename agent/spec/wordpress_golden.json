@@ -1,0 +1,332 @@
+{
+ "archive": "wordpress.tar.gz",
+ "evil": "wordpress-evil.tar.gz",
+ "scenarios": [
+  {
+   "expected": {
+    "commands": [
+     [
+      "chown",
+      "-R",
+      "abcd1234:apache",
+      "<ROOT>/abcd1234/sites/acme.com"
+     ],
+     [
+      "chmod",
+      "-R",
+      "u+rwX,g+rX,o-rwx",
+      "<ROOT>/abcd1234/sites/acme.com"
+     ],
+     [
+      "chmod",
+      "0640",
+      "<ROOT>/abcd1234/sites/acme.com/public_html/wp-config.php"
+     ],
+     [
+      "systemd-run",
+      "--quiet",
+      "--collect",
+      "--wait",
+      "--pipe",
+      "--uid",
+      "abcd1234",
+      "--gid",
+      "abcd1234",
+      "--slice",
+      "whp-abcd1234.slice",
+      "--property=NoNewPrivileges=yes",
+      "--property=PrivateTmp=yes",
+      "--property=BindPaths=/home/abcd1234",
+      "--property=RuntimeMaxSec=900",
+      "/opt/remi/php83/root/usr/bin/php",
+      "<ROOT>/_tools/wp-cli.phar",
+      "core",
+      "install",
+      "--path=<ROOT>/abcd1234/sites/acme.com/public_html",
+      "--url=http://acme.com",
+      "--title=Acme Shop",
+      "--admin_user=siteadmin",
+      "--admin_email=owner@gmail.example.com",
+      "--prompt=admin_password",
+      "--skip-email"
+     ]
+    ],
+    "databases": [
+     "abcd1234_wp"
+    ],
+    "grants": [
+     [
+      "abcd1234_wp",
+      "abcd1234_wp",
+      [
+       "alter",
+       "create",
+       "delete",
+       "drop",
+       "index",
+       "insert",
+       "select",
+       "update"
+      ]
+     ]
+    ],
+    "results": [
+     {
+      "code": "installed",
+      "data": {
+       "admin_url": "http://acme.com/wp-admin/",
+       "database": "abcd1234_wp",
+       "version": "6.7.1"
+      },
+      "ok": true
+     },
+     {
+      "code": "exists",
+      "data": {
+       "admin_url": "http://acme.com/wp-admin/",
+       "version": "6.7.1"
+      },
+      "ok": true
+     },
+     {
+      "code": "not_found",
+      "message": "No such website on this node.",
+      "ok": false
+     }
+    ],
+    "tree": {
+     "abcd1234/sites/acme.com/public_html/index.php": "<?php\n/* Front to the blog */\nrequire __DIR__ . '/wp-blog-header.php';\n",
+     "abcd1234/sites/acme.com/public_html/wp-admin/install.php": "<?php\n",
+     "abcd1234/sites/acme.com/public_html/wp-blog-header.php": "<?php\n",
+     "abcd1234/sites/acme.com/public_html/wp-config-sample.php": "<?php\n// sample\n",
+     "abcd1234/sites/acme.com/public_html/wp-config.php": "<?php\n// managed by WH Agent when WordPress was installed. Keep this file private.\ndefine( 'DB_NAME', 'abcd1234_wp' );\ndefine( 'DB_USER', 'abcd1234_wp' );\ndefine( 'DB_PASSWORD', 'tok00001xxxxxxxxxxxxxxxx' );\ndefine( 'DB_HOST', 'localhost' );\ndefine( 'DB_CHARSET', 'utf8mb4' );\ndefine( 'DB_COLLATE', '' );\n\ndefine( 'AUTH_KEY', 'tok00003xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\ndefine( 'SECURE_AUTH_KEY', 'tok00004xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\ndefine( 'LOGGED_IN_KEY', 'tok00005xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\ndefine( 'NONCE_KEY', 'tok00006xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\ndefine( 'AUTH_SALT', 'tok00007xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\ndefine( 'SECURE_AUTH_SALT', 'tok00008xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\ndefine( 'LOGGED_IN_SALT', 'tok00009xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\ndefine( 'NONCE_SALT', 'tok00010xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );\n\n$table_prefix = 'wp_';\ndefine( 'WP_DEBUG', false );\ndefine( 'FS_METHOD', 'direct' );\n\nif ( ! defined( 'ABSPATH' ) ) {\n\tdefine( 'ABSPATH', __DIR__ . '/' );\n}\nrequire_once ABSPATH . 'wp-settings.php';\n",
+     "abcd1234/sites/acme.com/public_html/wp-content/index.php": "<?php\n// Silence is golden.\n",
+     "abcd1234/sites/acme.com/public_html/wp-includes/version.php": "<?php\n$wp_version = '6.7.1';\n"
+    },
+    "users": [
+     "abcd1234_wp"
+    ]
+   },
+   "fetch": {},
+   "files": {},
+   "name": "installs",
+   "steps": [
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "abcd1234",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    },
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "abcd1234",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    },
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "nobody123",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    }
+   ]
+  },
+  {
+   "expected": {
+    "commands": [],
+    "databases": [],
+    "grants": [],
+    "results": [
+     {
+      "code": "checksum_mismatch",
+      "message": "A download did not match its published checksum, so nothing was installed.",
+      "ok": false
+     }
+    ],
+    "tree": {
+     "abcd1234/sites/acme.com/public_html/index.html": "placeholder"
+    },
+    "users": []
+   },
+   "fetch": {
+    "tamper": true
+   },
+   "files": {},
+   "name": "tampered download",
+   "steps": [
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "abcd1234",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    }
+   ]
+  },
+  {
+   "expected": {
+    "commands": [],
+    "databases": [],
+    "grants": [],
+    "results": [
+     {
+      "code": "download_failed",
+      "message": "Could not download WordPress. Try again in a few minutes.",
+      "ok": false
+     }
+    ],
+    "tree": {
+     "abcd1234/sites/acme.com/public_html/index.html": "placeholder"
+    },
+    "users": []
+   },
+   "fetch": {
+    "down": true
+   },
+   "files": {},
+   "name": "network down",
+   "steps": [
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "abcd1234",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    }
+   ]
+  },
+  {
+   "expected": {
+    "commands": [],
+    "databases": [],
+    "grants": [],
+    "results": [
+     {
+      "code": "not_empty",
+      "message": "The website folder already holds files, so WordPress was not installed over them.",
+      "ok": false
+     }
+    ],
+    "tree": {
+     "abcd1234/sites/acme.com/public_html/index.html": "placeholder",
+     "abcd1234/sites/acme.com/public_html/my-site.php": "<?php // mine"
+    },
+    "users": []
+   },
+   "fetch": {},
+   "files": {
+    "my-site.php": "<?php // mine"
+   },
+   "name": "folder not empty",
+   "steps": [
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "abcd1234",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    }
+   ]
+  },
+  {
+   "expected": {
+    "commands": [],
+    "databases": [],
+    "grants": [],
+    "results": [
+     {
+      "code": "unsafe_archive",
+      "message": "The archive holds a path that leads outside itself.",
+      "ok": false
+     }
+    ],
+    "tree": {
+     "abcd1234/sites/acme.com/public_html/index.html": "<!doctype html><title>Welcome</title>"
+    },
+    "users": []
+   },
+   "fetch": {
+    "evil": true
+   },
+   "files": {},
+   "name": "hostile archive",
+   "steps": [
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "abcd1234",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    }
+   ]
+  },
+  {
+   "expected": {
+    "commands": [],
+    "databases": [],
+    "grants": [],
+    "results": [
+     {
+      "code": "limit_reached",
+      "message": "Your plan's database limit has been reached.",
+      "ok": false
+     }
+    ],
+    "tree": {
+     "abcd1234/sites/acme.com/public_html/index.html": "<!doctype html><title>Welcome</title>"
+    },
+    "users": []
+   },
+   "fetch": {},
+   "files": {},
+   "limits": {
+    "databases": 0
+   },
+   "name": "no databases allowed",
+   "steps": [
+    {
+     "command": "INSTALL_WORDPRESS",
+     "params": {
+      "account": "abcd1234",
+      "admin_email": "owner@gmail.example.com",
+      "admin_password": "Kq7vRt2mXzLp-91",
+      "admin_user": "siteadmin",
+      "domain": "acme.com",
+      "site_title": "Acme Shop"
+     }
+    }
+   ]
+  }
+ ]
+}

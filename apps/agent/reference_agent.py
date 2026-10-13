@@ -58,7 +58,7 @@ class NativeMachine(FakeMachine):
     SFTP = ("SFTP_LIST", "SFTP_CREATE", "SFTP_SET_PASSWORD", "SFTP_DELETE")
     MAIL_EXTRA = ("CREATE_MAILBOX",)  # an older name for a mail command
 
-    def __init__(self, system=None, files_dir=None, mail_dir=None, bucket_dir=None, cgroup_dir=None, capabilities=("web", "database")):
+    def __init__(self, system=None, files_dir=None, mail_dir=None, bucket_dir=None, cgroup_dir=None, capabilities=("web", "database"), wordpress_fetch=None):
         from .node.system import FakeSystem
         from .node.website import Websites
 
@@ -126,12 +126,22 @@ class NativeMachine(FakeMachine):
         from .node.cron import Cron
 
         self.cron = Cron(self.system, self.websites, now=lambda: self.clock())
+        from . import wordpress_fixture
+        from .node.wordpress import WordPress
+
+        self.wordpress_tokens = wordpress_fixture.CountingTokens()
+        self.wordpress = WordPress(self.system, self.websites, self.databases, root_for, self.files_dir / "_stage" if self.files_dir else _P("."),
+                                   fetch=wordpress_fetch or wordpress_fixture.make_fetch(), token=self.wordpress_tokens,
+                                   tools_dir=self.files_dir / "_tools" if self.files_dir else _P("."))
         self.migrator = Migrator(self.system, self.files_dir / "_stage" if self.files_dir else _P("."), root_for, self.engine, websites=self.websites, mail=self.mail, cron=self.cron)
 
     def run(self, command, p):
         if command in self.WEBSITE:
             self.executed.append(command)
             return self.websites.run(command, p)
+        if command == "INSTALL_WORDPRESS":
+            self.executed.append(command)
+            return self.wordpress.run(command, p)
         if command.startswith("CRON_"):
             self.executed.append(command)
             return self.cron.run(command, p)

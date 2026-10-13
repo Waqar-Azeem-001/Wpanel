@@ -12,7 +12,7 @@ def files():
     sign, public = spec.fixed_signer()
     return {"catalog.json": spec.build_spec(), "validation_cases.json": spec.build_cases(),
             "envelopes.json": {"public_key": public, "node": 7, "now": 1_800_000_000, "cases": spec.build_envelopes(sign)},
-            "golden.json": golden.build_golden(), "migrate_golden.json": golden.build_migrate_golden()[1]}
+            "golden.json": golden.build_golden(), "migrate_golden.json": golden.build_migrate_golden()[1], "wordpress_golden.json": golden.build_wordpress_golden()[0]}
 
 
 def render(data):
@@ -30,3 +30,6 @@ class Command(BaseCommand):
             self.stdout.write(f"wrote {folder / name}")
         (folder / golden.MIGRATE_ARCHIVE).write_bytes(golden.build_migrate_golden()[0])
         self.stdout.write(f"wrote {folder / golden.MIGRATE_ARCHIVE}")
+        _, good, evil = golden.build_wordpress_golden()
+        (folder / "wordpress.tar.gz").write_bytes(good)
+        (folder / "wordpress-evil.tar.gz").write_bytes(evil)
