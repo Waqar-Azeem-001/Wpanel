@@ -121,7 +121,7 @@ def setup(request, pk):
 @login_required
 def setup_status(request, pk):
     account = _own(request, pk)
-    app = site_apps.current(account)
+    app = site_apps.poll(request.user, account)
     if app is None:
         return redirect("hosting_customer:setup", pk=account.pk)
     return _page(request, account, step="install", done=["type", "details"] if app.kind == "wordpress" else ["type", "details", "install"], app=app)

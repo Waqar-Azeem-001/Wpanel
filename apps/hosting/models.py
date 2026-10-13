@@ -158,6 +158,11 @@ class WebsiteApp(TimeStampedModel):
     admin_url = models.CharField(max_length=300, blank=True)
     version = models.CharField(max_length=30, blank=True)
     error = models.CharField(max_length=500, blank=True)
+    # for an installation WHPanel runs itself (servers that cannot run our agent): the result file to wait for and what was made, so a failure can be undone
+    job_ref = models.CharField(max_length=80, blank=True)
+    installer_ref = models.CharField(max_length=80, blank=True)
+    db_name = models.CharField(max_length=80, blank=True)
+    db_user = models.CharField(max_length=80, blank=True)
 
     def __str__(self):
         return f"{self.get_kind_display()} on {self.account.domain}"

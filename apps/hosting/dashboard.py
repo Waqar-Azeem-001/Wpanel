@@ -74,6 +74,10 @@ def website_card(user, account):
     ssl = _optional(user, account, capabilities, Capability.SSL, "get_ssl_status", account.domain) if live else None
     php = _optional(user, account, capabilities, Capability.PHP, "get_php_settings", account.domain) if live else None
     app = WebsiteApp.objects.filter(account=account).first()
+    if app is not None and app.state == "installing" and app.job_ref:
+        from . import site_apps
+
+        app = site_apps.poll(user, account) or app  # an installation WHPanel started itself: has it finished?
     return {
         "app": app,
         "needs_setup": account.status == HostingStatus.ACTIVE and app is None,
