@@ -22,6 +22,12 @@ class Link:
     disabled: bool = False  # shown muted with a "Soon" tag and no address: nothing to open yet
 
 
+class WorkspaceMenu(list):
+    """The panels of one website's workspace. The layout reads ``.workspace``: on a phone this menu is opened from a button in the page header instead of sitting under the page."""
+
+    workspace = True
+
+
 @dataclass
 class Panel:
     title: str
@@ -111,19 +117,18 @@ def can_cancel(user, service):
 
 
 def service_sidebar(request, account):
-    actions = []
+    # The website workspace menu (Hostinger-style): the website's own overview first, then its tools in groups, then everything about the plan.
+    plan = [link(request, "Information", "hosting_customer:information", account.pk, icon="bi-info-circle"),
+            link(request, "Add-ons", "hosting_customer:addons", account.pk, icon="bi-plus-square")]
     if account.status == "active":
-        actions.append(link(request, "Upgrade / downgrade", "renewals_customer:hosting_upgrade", account.pk,
-                            icon="bi-arrow-up-circle", active=False))
+        plan.append(link(request, "Upgrade / downgrade", "renewals_customer:hosting_upgrade", account.pk, icon="bi-arrow-up-circle", active=False))
     if can_cancel(request.user, account):
-        actions.append(link(request, "Request cancellation", "lifecycle_customer:new", "hosting", account.pk,
-                            icon="bi-x-circle", active=False))
-    actions.append(link(request, "Open a ticket", "support_customer:new", icon="bi-life-preserver", active=False))
+        plan.append(link(request, "Request cancellation", "lifecycle_customer:new", "hosting", account.pk, icon="bi-x-circle", active=False))
+    plan.append(link(request, "Open a ticket", "support_customer:new", icon="bi-life-preserver", active=False))
     from apps.hosting import dashboard  # the hosting workspace menu lives with hosting; imported here to keep core light
 
-    return [Panel("Overview", lines=[account.domain, account.product.name, account.get_status_display()]),
-            Panel("Manage", dashboard.workspace_links(request, account)),
-            Panel("Actions", actions)]
+    overview = link(request, "Overview", "hosting_customer:detail", account.pk, icon="bi-speedometer2")
+    return WorkspaceMenu([Panel("Website", [overview, *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
 
 
 def domain_sidebar(request, domain):

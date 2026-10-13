@@ -68,7 +68,7 @@ def _service_page(request, pk, template, **extra):
 def my_hosting_detail(request, pk):
     account = _own_account(request, pk)
     return render(request, "hosting/customer/detail.html", {
-        "account": account, "card": dashboard.website_card(request.user, account),
+        "account": account, "card": dashboard.website_card(request.user, account), "tiles": dashboard.workspace_tiles(account),
         "sidebar": portal.service_sidebar(request, account)})
 
 

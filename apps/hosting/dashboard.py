@@ -152,13 +152,21 @@ def workspace_links(request, account):
     last_group = None
     for group, key, label, icon, capability, _about in SECTIONS:
         url = reverse("hosting_customer:section", args=[account.pk, key])
-        available = capability.value in supported
-        if key in HIDDEN_UNTIL_SUPPORTED and not available:
-            continue
-        links.append(Link(label, url if available else "", active=available and request.path == url, icon=icon,
-                          group=group if group != last_group else "", disabled=not available))
+        if capability.value not in supported:
+            continue  # a tool this server cannot do is not listed at all (no "Soon" rows): the menu only offers what works
+        links.append(Link(label, url, active=request.path == url, icon=icon, group=group if group != last_group else ""))
         last_group = group
     return links
+
+
+def workspace_tiles(account):
+    """The tools this website can use, as the big quick-action tiles of its Overview: (label, about, icon, address)."""
+    try:
+        supported = set(control.capabilities_for(account))
+    except ServiceError:
+        supported = set()
+    return [{"label": label, "about": about, "icon": icon, "url": reverse("hosting_customer:section", args=[account.pk, key]), "group": group}
+            for group, key, label, icon, capability, about in SECTIONS if capability.value in supported and key not in HIDDEN_UNTIL_SUPPORTED]
 
 
 def section_page(user, account, key):

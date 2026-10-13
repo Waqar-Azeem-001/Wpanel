@@ -224,7 +224,7 @@ def test_a_page_without_a_sidebar_is_still_a_single_column(world, owner):
 # --- Service and domain tabs ------------------------------------------------------------------------------------------
 
 def tab_links(response):
-    """(label, url) for each tab of the page's tab bar (not the top navigation)."""
+    """(label, url) for each tab of the page's tab bar (not the top navigation). Domains still use a row of tabs."""
     bar = response.content.decode().split('<ul class="nav nav-tabs')[1].split("</ul>")[0]
     return [(label, url) for url, label in re.findall(r'<a class="nav-link(?: active)?" href="([^"]+)"[^>]*>([^<]+)</a>', bar)]
 
@@ -233,22 +233,49 @@ def tab_labels(response):
     return [label for label, _url in tab_links(response)]
 
 
-def test_a_service_has_overview_information_addons_upgrade_and_cancel_tabs(world, owner):
+def menu_links(response):
+    """(label, url) of every link in the website workspace menu (the left menu that replaced the row of tabs)."""
+    sidebar = response.context["sidebar"]
+    return [(l.label, l.url) for panel in sidebar for l in panel.links if l.url]
+
+
+def plan_labels(response):
+    return [l.label for l in response.context["sidebar"][1].links]
+
+
+def test_a_service_has_a_workspace_menu_with_overview_tools_and_plan_pages(world, owner):
     live = world.objects["accounts"]["active"]
     client = browser(owner)
     response = client.get(reverse("hosting_customer:detail", args=[live.pk]))
-    assert tab_labels(response) == ["Overview", "Information", "Addons", "Upgrade / Downgrade", "Request cancellation"]
-    for label, url in tab_links(response):
-        assert client.get(url).status_code == 200, (label, url)  # every tab opens (Rule 5.6)
+    sidebar = response.context["sidebar"]
+    assert [p.title for p in sidebar] == ["Website", "Plan"] and sidebar.workspace
+    assert sidebar[0].links[0].label == "Overview" and plan_labels(response) == ["Information", "Add-ons", "Upgrade / downgrade", "Request cancellation", "Open a ticket"]
+    for label, url in menu_links(response):
+        assert client.get(url).status_code == 200, (label, url)  # every entry opens (Rule 5.6)
 
 
-def test_each_service_tab_marks_itself_as_the_current_page(world, owner):
+def test_the_menu_marks_the_current_page(world, owner):
     live = world.objects["accounts"]["active"]
     client = browser(owner)
-    for name, label in (("hosting_customer:information", "Information"), ("hosting_customer:addons", "Addons"),
-                        ("renewals_customer:hosting_upgrade", "Upgrade / Downgrade")):
-        page = client.get(reverse(name, args=[live.pk])).content.decode()
-        assert f'aria-current="page">{label}<' in page, name
+    for name, label in (("hosting_customer:detail", "Overview"), ("hosting_customer:information", "Information"), ("hosting_customer:addons", "Add-ons")):
+        response = client.get(reverse(name, args=[live.pk]))
+        active = [l.label for panel in response.context["sidebar"] for l in panel.links if l.active]
+        assert active == [label], name
+        assert f'aria-current="page"' in response.content.decode()
+
+
+def test_a_phone_gets_the_same_menu_from_a_button_in_the_header(world, owner):
+    live = world.objects["accounts"]["active"]
+    page = browser(owner).get(reverse("hosting_customer:detail", args=[live.pk])).content.decode()
+    assert 'data-bs-target="#ws-menu"' in page and 'id="ws-menu"' in page and "d-none d-lg-block" in page
+    assert "Manage your website" in page or "Billing term" in page  # the overview content is still there
+
+
+def test_tools_the_server_cannot_do_are_not_listed_at_all(world, owner):
+    live = world.objects["accounts"]["active"]
+    response = browser(owner).get(reverse("hosting_customer:detail", args=[live.pk]))
+    assert "sidebar-soon" not in response.content.decode()
+    assert all(l.url for l in response.context["sidebar"][0].links)  # no muted, address-less rows
 
 
 def test_the_information_tab_shows_the_server_but_never_a_password(world, owner):
@@ -276,22 +303,14 @@ def test_the_addons_tab_lists_addons_ordered_with_that_service(world, owner):
     assert "No addons were ordered" in browser(owner).get(reverse("hosting_customer:addons", args=[other.pk])).content.decode()
 
 
-def test_the_cancel_and_upgrade_tabs_appear_only_where_they_can_be_used(world):
+def test_the_cancel_and_upgrade_links_appear_only_where_they_can_be_used(world):
     active = world.objects["accounts"]["active"]
     suspended = world.objects["accounts"]["suspended"]
     for role, expect_cancel in (("customer owner", True), ("technical contact", False), ("billing contact", False)):
         page = browser(world.people[role]).get(reverse("hosting_customer:detail", args=[active.pk]))
-        assert (("Request cancellation" in tab_labels(page)) == expect_cancel), role
-    assert "Upgrade / Downgrade" not in tab_labels(browser(world.people["customer owner"]).get(
+        assert (("Request cancellation" in plan_labels(page)) == expect_cancel), role
+    assert "Upgrade / downgrade" not in plan_labels(browser(world.people["customer owner"]).get(
         reverse("hosting_customer:detail", args=[suspended.pk])))
-
-
-def test_the_service_sidebar_offers_the_same_actions_as_the_tabs(world, owner):
-    live = world.objects["accounts"]["active"]
-    sidebar = browser(owner).get(reverse("hosting_customer:detail", args=[live.pk])).context["sidebar"]
-    assert [p.title for p in sidebar] == ["Overview", "Manage", "Actions"]
-    assert [l.label for l in sidebar[2].links] == ["Upgrade / downgrade", "Request cancellation", "Open a ticket"]
-    assert live.domain in sidebar[0].lines
 
 
 def test_a_service_belonging_to_someone_else_is_not_found_on_any_tab(world, stranger):

@@ -1,14 +1,24 @@
 {% load ui portal i18n %}
 {% admin_access_banner account %}
-<p class="mb-2"><a href="{% url 'hosting_customer:list' %}">&larr; {% trans "My Services" %}</a></p>
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}">
+  <a href="{% url 'hosting_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a>
+  <button class="btn btn-sm btn-outline-secondary d-lg-none ws-menu-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#ws-menu" aria-controls="ws-menu"><i class="bi bi-list" aria-hidden="true"></i> {% trans "Menu" %}</button>
+</nav>
 <header class="ws-head">
   <span class="site-avatar ws-avatar" aria-hidden="true">{{ account.domain|slice:":1"|upper }}</span>
   <div class="ws-title">
-    <small class="site-kicker">{% trans "Primary domain" %}</small>
     <h1>{{ account.domain }}</h1>
-    <p class="site-plan">{{ account.product.name }}{% if account.expires_at %} <span>&middot; {% trans "Next due" %} {{ account.expires_at|fdate }}</span>{% endif %}</p>
+    <p class="site-plan">{{ account.product.name }}{% if account.expires_at %} <span>&middot; {% trans "Renews" %} {{ account.expires_at|fdate }}</span>{% endif %}</p>
   </div>
   {% status_badge account.status account.get_status_display %}
   <a class="btn btn-sm btn-outline-secondary ws-visit" href="{{ account.site_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Visit site" %}</a>
 </header>
-{% service_tabs account tab %}
+{% if sidebar %}
+<div class="offcanvas offcanvas-start ws-offcanvas" tabindex="-1" id="ws-menu" aria-labelledby="ws-menu-title">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title h6 mb-0" id="ws-menu-title">{{ account.domain }}</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close menu' %}"></button>
+  </div>
+  <div class="offcanvas-body">{% include "components/sidebar.html" with panels=sidebar %}</div>
+</div>
+{% endif %}
