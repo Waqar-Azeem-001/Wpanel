@@ -120,7 +120,7 @@ jobs:
         if: steps.key.outputs.present == 'true'
         run: |
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd $DEPLOY_PATH && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans && docker image prune -f"
+            "cd $DEPLOY_PATH && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans && docker compose -f docker-compose.yml -f docker-compose.prod.yml restart nginx && docker image prune -f"
       - name: Health check
         if: steps.key.outputs.present == 'true'
         run: |
