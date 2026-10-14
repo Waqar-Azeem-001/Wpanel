@@ -134,7 +134,7 @@ def service_sidebar(request, account):
     care = link(request, "Website care", "hosting_customer:care", account.pk, icon="bi-heart-pulse") if live else None
     app = site_apps.current(account) if live else None
     staging = link(request, "Staging", "hosting_customer:staging", account.pk, icon="bi-copy") if app is not None and app.kind == "wordpress" and app.state == "ready" else None
-    if app is not None and app.state != "installing":
+    if live and (app is None or app.state != "installing"):
         plan.append(link(request, "Delete website", "hosting_customer:site_delete", account.pk, icon="bi-trash", active=False))
     return WorkspaceMenu([Panel("Website", [overview, *([care] if care else []), *([staging] if staging else []), *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
 

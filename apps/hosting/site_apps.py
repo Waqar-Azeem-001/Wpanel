@@ -333,6 +333,14 @@ def job_finished(job):
 KEEP_ON_DELETE = {"cgi-bin", ".well-known"}
 
 
+def folder_entries(user, account):
+    """What is in the website's folder that deleting would remove (names only), or [] when it cannot be listed."""
+    try:
+        return sorted(e.name for e in control.perform(user, account, Capability.FILES, "list_files", docroot_path(account)) if e.name not in KEEP_ON_DELETE)
+    except ServiceError:
+        return []
+
+
 def delete_website(user, account, confirm_domain, request=None):
     """
     Remove the website from its hosting plan: its files, the staging copy, and the database and user WHPanel itself made for it. The plan, the domain, email and every other
@@ -343,9 +351,9 @@ def delete_website(user, account, confirm_domain, request=None):
     if (confirm_domain or "").strip().lower() != account.domain.lower():
         raise ServiceError("Type the website's address exactly to confirm.", code="confirm_mismatch")
     app = current(account)
-    if app is None:
-        raise ServiceError("There is no website to delete.", code="no_website")
-    if app.state == AppState.INSTALLING:
+    if app is None and not folder_entries(user, account):
+        raise ServiceError("There is nothing to delete: the website folder is empty.", code="nothing")
+    if app is not None and app.state == AppState.INSTALLING:
         raise ServiceError("This website is still being installed. Wait for it to finish, then delete it.", code="busy")
     report = {"files": 0, "staging": False, "database": False, "left": []}
     if staging.current(account) is not None:
@@ -359,24 +367,26 @@ def delete_website(user, account, confirm_domain, request=None):
                 continue
             io.call(Capability.FILES, "delete_path", f"{folder}/{entry.name}", audit_metadata={"path": f"{folder}/{entry.name}", "purpose": "delete website"})
             report["files"] += 1
-    if app.db_user:
+    if app is not None and app.db_user:
         try:
             io.call(Capability.DATABASES, "delete_database_user", app.db_user)
         except ServiceError:
             report["left"].append("the database user " + app.db_user)
-    if app.db_name:
+    if app is not None and app.db_name:
         try:
             io.call(Capability.DATABASES, "delete_database", app.db_name)
             report["database"] = True
         except ServiceError:
             report["left"].append("the database " + app.db_name)
-    elif app.kind == "wordpress":
+    elif app is not None and app.kind == "wordpress":
         report["left"].append("its database (remove it under MySQL databases if you no longer need it)")
     from .models import SiteCare, SiteScan, SpeedTest
 
     SiteScan.objects.filter(account=account).delete()
     SpeedTest.objects.filter(account=account).delete()
     SiteCare.objects.filter(account=account).delete()
-    app.delete()
-    audit.record("hosting.site_deleted", actor=user, target=account, metadata={"kind": app.kind, "files": report["files"], "database": report["database"]}, request=request)
+    kind = app.kind if app is not None else "unmanaged"
+    if app is not None:
+        app.delete()
+    audit.record("hosting.site_deleted", actor=user, target=account, metadata={"kind": kind, "files": report["files"], "database": report["database"]}, request=request)
     return report

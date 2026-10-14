@@ -26,7 +26,7 @@ def websites(request):
         account = card["account"]
         stage = staging.current(account) if card["app"] is not None else None
         rows.append({**card, "staging": stage, "staging_url": reverse("hosting_customer:staging", args=[account.pk]),
-                     "delete_url": reverse("hosting_customer:site_delete", args=[account.pk]) if card["app"] is not None and account.status == HostingStatus.ACTIVE else "",
+                     "delete_url": reverse("hosting_customer:site_delete", args=[account.pk]) if account.status == HostingStatus.ACTIVE else "",
                      "can_stage": card["app"] is not None and card["app"].kind == "wordpress" and card["app"].state == "ready"})
     return render(request, "hosting/customer/websites.html", {"rows": rows, "sidebar": []})
 
@@ -47,7 +47,8 @@ def site_delete(request, pk):
             messages.success(request, text)
             return redirect("hosting_customer:websites")
     return render(request, "hosting/customer/site_delete.html", {
-        "account": account, "app": app, "staging": staging.current(account) if app else None, "sidebar": portal.service_sidebar(request, account),
+        "account": account, "app": app, "entries": site_apps.folder_entries(request.user, account)[:30], "staging": staging.current(account) if app else None,
+        "sidebar": portal.service_sidebar(request, account),
         "backups_url": reverse("hosting_customer:section", args=[account.pk, "backups"])})
 
 

@@ -6,15 +6,15 @@
 {% include "hosting/customer/_header.html" with tab="" %}
 <div class="page-head"><h1>{% trans "Delete website" %}</h1>
   <p class="page-sub">{% blocktrans with domain=account.domain %}This permanently deletes the website <strong>{{ domain }}</strong> from its hosting plan.{% endblocktrans %}</p></div>
-{% if not app %}
-<section class="care-card"><p class="care-empty mt-0">{% trans "There is no website on this hosting plan." %}</p>
+{% if not app and not entries %}
+<section class="care-card"><p class="care-empty mt-0">{% trans "There is nothing to delete: the website folder of this hosting plan is empty." %}</p>
   <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:websites' %}">{% trans "Back to Websites" %}</a></section>
 {% else %}
 <div class="care-stack">
   <section class="care-card">
     <h2 class="h6">{% trans "What happens" %}</h2>
     <ul class="care-notes">
-      <li>{% trans "All files of the website are removed." %}</li>
+      <li>{% trans "All files of the website are removed." %}{% if entries %} {% trans "Right now the folder holds:" %} <code>{{ entries|join:", " }}</code>{% endif %}</li>
       {% if app.db_name %}<li>{% trans "Its database and database user are removed." %}</li>{% elif app.kind == "wordpress" %}<li>{% trans "Its database is left in place; you can remove it under MySQL databases." %}</li>{% endif %}
       {% if staging %}<li>{% trans "The staging website is removed too." %}</li>{% endif %}
       <li>{% trans "Your hosting plan, your domain and your email stay exactly as they are, and you can create a new website on the plan." %}</li>

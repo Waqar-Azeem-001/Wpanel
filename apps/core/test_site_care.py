@@ -679,3 +679,26 @@ def test_the_staging_page_and_its_actions(world, owner, account, monkeypatch):  
     assert "Type PUBLISH" in reply.content.decode()
     client.post(reverse("hosting_customer:staging_action", args=[account.pk]), {"action": "delete"})
     assert "Create staging website" in client.get(url).content.decode()
+
+
+def test_a_website_that_was_not_made_by_whpanel_can_be_deleted_too(world, owner, account):  # noqa: F811
+    _wp_folder(owner, account)
+    _put(owner, account, "index.php", b"<?php // hand made")
+    assert not WebsiteApp.objects.filter(account=account).exists()
+    page = browser(owner).get(reverse("hosting_customer:site_delete", args=[account.pk])).content.decode()
+    assert "index.php" in page and "wp-content" in page  # the customer sees what will go
+    report = site_apps.delete_website(owner, account, account.domain)
+    assert report["files"] >= 2
+    assert not [e for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html") if e.name not in ("cgi-bin", ".well-known")]
+    with pytest.raises(ServiceError) as err:
+        site_apps.delete_website(owner, account, account.domain)
+    assert err.value.code == "nothing"
+
+
+def test_a_website_whose_installation_failed_can_be_deleted(world, owner, account):  # noqa: F811
+    app = _wordpress(account)
+    WebsiteApp.objects.filter(pk=app.pk).update(state="failed", error="The website folder already holds files")
+    page = browser(owner).get(reverse("hosting_customer:websites")).content.decode()
+    assert reverse("hosting_customer:site_delete", args=[account.pk]) in page
+    site_apps.delete_website(owner, account, account.domain)
+    assert not WebsiteApp.objects.filter(account=account).exists()

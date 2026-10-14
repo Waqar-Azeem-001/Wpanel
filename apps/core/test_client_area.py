@@ -250,7 +250,7 @@ def test_a_service_has_a_workspace_menu_with_overview_tools_and_plan_pages(world
     response = client.get(reverse("hosting_customer:detail", args=[live.pk]))
     sidebar = response.context["sidebar"]
     assert [p.title for p in sidebar] == ["Website", "Plan"] and sidebar.workspace
-    assert sidebar[0].links[0].label == "Overview" and plan_labels(response) == ["Information", "Add-ons", "Upgrade / downgrade", "Request cancellation", "Open a ticket"]
+    assert sidebar[0].links[0].label == "Overview" and plan_labels(response) == ["Information", "Add-ons", "Upgrade / downgrade", "Request cancellation", "Open a ticket", "Delete website"]
     for label, url in menu_links(response):
         assert client.get(url).status_code == 200, (label, url)  # every entry opens (Rule 5.6)
 
