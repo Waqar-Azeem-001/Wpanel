@@ -24,6 +24,8 @@ The customer never needs to open cPanel. "Open cPanel" stays as a small advanced
 
 ## Next
 
+The detailed phase plan for the Hostinger-style experience (shell, dashboard, WordPress, domains, advanced tools, public site) is in [docs/hostinger-parity-plan.md](docs/hostinger-parity-plan.md).
+
 1. **Prove it on the live server.** Run every hosting action once against a real test account on the live WHM server and record the result (WordPress install, staging, delete, backups, SSL, DNS).
 2. **Sign-in safety.** Make two-factor authentication mandatory for staff; login and activity alerts to customers (new device, password change, staff access to their hosting).
 3. **Release hygiene.** A staging copy of WHPanel itself, branch protection on `main`, error tracking reviewed, a restore drill for the panel database.
