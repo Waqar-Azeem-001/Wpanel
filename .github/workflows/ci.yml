@@ -142,7 +142,7 @@ jobs:
   notify:
     # An e-mail with the result of every run, passed or failed. It needs four repository secrets (Settings > Secrets and variables > Actions):
     # MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD (an SMTP account, for Gmail an app password) and NOTIFY_EMAIL (where to send). Without them this job does nothing.
-    needs: test
+    needs: [test, deploy]
     if: always()
     runs-on: ubuntu-latest
     env:
@@ -159,9 +159,10 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           to: ${{ secrets.NOTIFY_EMAIL }}
           from: WHPanel CI <${{ secrets.MAIL_USERNAME }}>
-          subject: "WHPanel CI ${{ needs.test.result }}: ${{ github.event.head_commit.message || github.ref_name }}"
+          subject: "WHPanel tests ${{ needs.test.result }}, deploy ${{ needs.deploy.result }}: ${{ github.event.head_commit.message || github.ref_name }}"
           body: |
-            Result: ${{ needs.test.result }}
+            Tests: ${{ needs.test.result }}
+            Deploy to production: ${{ needs.deploy.result }} (skipped = not on main, or no deploy key)
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
             By: ${{ github.actor }}
