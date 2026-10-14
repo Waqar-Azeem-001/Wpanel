@@ -126,6 +126,7 @@ EVENTS = _events(
     Event("client.new", "Someone created an account", C.TEAM, default_email=False),
     Event("invoice.team_update", "An invoice was issued, paid, refunded or cancelled", C.TEAM, default_email=False),
     Event("order.team_update", "An order was activated or cancelled", C.TEAM, default_email=False),
+    Event("system.deploy", "A new version was published, or its tests failed", C.TEAM, default_email=False),
     # The email sent to the alert addresses chosen in Setup > Email provider (see services.alert_addresses).
     Event("team.alert", "An alert copied to the team's alert addresses", C.ACCOUNT, "team_alert", default_email=False),
 )

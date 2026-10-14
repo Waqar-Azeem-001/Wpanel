@@ -176,6 +176,7 @@ class NotificationSettings(models.Model):
     alert_cancellations = models.BooleanField(default=True, verbose_name="A customer asks to cancel a service")
     alert_invoices = models.BooleanField(default=True, verbose_name="An invoice is issued, paid, refunded or cancelled")
     alert_order_updates = models.BooleanField(default=True, verbose_name="An order is activated or cancelled")
+    alert_deploys = models.BooleanField(default=True, verbose_name="A new version was published (or its tests failed)")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

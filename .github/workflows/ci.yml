@@ -140,30 +140,38 @@ jobs:
           echo "::error::Health check failed after deploy"; exit 1
 
   notify:
-    # An e-mail with the result of every run, passed or failed. It needs four repository secrets (Settings > Secrets and variables > Actions):
-    # MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD (an SMTP account, for Gmail an app password) and NOTIFY_EMAIL (where to send). Without them this job does nothing.
+    # Tells the team how the run went, through WHPanel's own email provider (Setup > Email), so no mail account is needed here: it runs `manage.py notify_deploy` inside the live
+    # web container over SSH. The message goes to the alert addresses set in WHPanel, or to the Super Admins when none are set. Runs for passed and failed runs alike.
     needs: [test, deploy]
-    if: always()
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
-      MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+      DEPLOY_HOST: 62.238.96.50
+      DEPLOY_USER: root
+      DEPLOY_PATH: /srv/whpanel
     steps:
-      - name: Send the result
-        if: ${{ env.MAIL_SERVER != '' }}
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.MAIL_SERVER }}
-          server_port: 465
-          secure: true
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          to: ${{ secrets.NOTIFY_EMAIL }}
-          from: WHPanel CI <${{ secrets.MAIL_USERNAME }}>
-          subject: "WHPanel tests ${{ needs.test.result }}, deploy ${{ needs.deploy.result }}: ${{ github.event.head_commit.message || github.ref_name }}"
-          body: |
-            Tests: ${{ needs.test.result }}
-            Deploy to production: ${{ needs.deploy.result }} (skipped = not on main, or no deploy key)
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            By: ${{ github.actor }}
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Check for deploy key
+        id: key
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "::warning::DEPLOY_SSH_KEY is not set; no notice sent"; fi
+      - name: Send the notice from the live panel
+        if: steps.key.outputs.present == 'true'
+        continue-on-error: true
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          TESTS: ${{ needs.test.result }}
+          DEPLOY: ${{ needs.deploy.result }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          echo "$DEPLOY_HOST ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgSsuHyuVS7C96DtCNltcTlNddeqfISQHuD9ON2ZfGn" > ~/.ssh/known_hosts
+          # only plain characters go into the remote command line
+          clean() { printf '%s' "$1" | head -n 1 | tr -cd '[:alnum:] ._:/#()-' | cut -c1-"$2"; }
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd $DEPLOY_PATH && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web python manage.py notify_deploy --tests '$(clean "$TESTS" 20)' --deploy '$(clean "$DEPLOY" 20)' --sha '$(clean "$SHA" 40)' --actor '$(clean "$ACTOR" 40)' --message '$(clean "$MESSAGE" 80)' --run-url '$(clean "$RUN_URL" 200)'"

@@ -100,6 +100,7 @@ class NotificationSettingsForm(forms.Form):
     alert_cancellations = forms.BooleanField(required=False, label="A customer asks to cancel a service")
     alert_invoices = forms.BooleanField(required=False, label="An invoice is issued, paid, refunded or cancelled")
     alert_order_updates = forms.BooleanField(required=False, label="An order is activated or cancelled")
+    alert_deploys = forms.BooleanField(required=False, label="A new version was published (or its tests failed)")
 
     def clean_alert_emails(self):
         from django.core.validators import validate_email

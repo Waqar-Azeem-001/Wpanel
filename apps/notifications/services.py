@@ -506,7 +506,7 @@ ALERT_SETTINGS = {
     "order.new": "alert_new_order", "order.failed": "alert_new_order", "payment.reported": "alert_payment_reported",
     "ticket.unassigned": "alert_tickets", "ticket.customer_reply": "alert_tickets", "client.new": "alert_new_client",
     "affiliate.applied": "alert_affiliates", "cancellation.requested_team": "alert_cancellations",
-    "invoice.team_update": "alert_invoices", "order.team_update": "alert_order_updates",
+    "invoice.team_update": "alert_invoices", "order.team_update": "alert_order_updates", "system.deploy": "alert_deploys",
 }
 
 
