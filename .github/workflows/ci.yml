@@ -86,6 +86,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency: production-deploy
+    outputs:
+      deployed: ${{ steps.key.outputs.present }}
     env:
       DEPLOY_HOST: 62.238.96.50
       DEPLOY_USER: root
@@ -98,7 +100,10 @@ jobs:
         env:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "::warning::DEPLOY_SSH_KEY is not set; skipping deploy"; fi
+          if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else
+            echo "::warning::DEPLOY_SSH_KEY is not set; the code was NOT deployed to the live server"
+            echo "### NOT DEPLOYED: the repository secret DEPLOY_SSH_KEY is not set, so nothing was sent to the live server." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Prepare SSH
         if: steps.key.outputs.present == 'true'
         env:
@@ -158,7 +163,7 @@ jobs:
         env:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           TESTS: ${{ needs.test.result }}
-          DEPLOY: ${{ needs.deploy.result }}
+          DEPLOY: ${{ needs.deploy.outputs.deployed == 'true' && needs.deploy.result || 'NOT deployed - no deploy key set' }}
           SHA: ${{ github.sha }}
           ACTOR: ${{ github.actor }}
           MESSAGE: ${{ github.event.head_commit.message }}
