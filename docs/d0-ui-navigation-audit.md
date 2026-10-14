@@ -1,7 +1,7 @@
 # Phase D0 Gap Report: UI & Navigation Audit
 
 **Date:** 2026-09-25
-**Baseline:** Phases 01-14 complete (`211a3bb`); roadmap v2 (`new_phase.md`) adopted
+**Baseline:** Phases 01-14 complete (`211a3bb`); roadmap v2 (`docs/specs/roadmap-v2-original.md`) adopted
 **Method:** inspection only (Rule 1), using four tools built for the audit: a route inventory read from Django's URL resolver (now `manage.py route_inventory`), a first link crawler (8 roles, 3,000+ pages), a permission matrix (68 pages x 5 roles), a hostile-query sweep (3,588 requests) and a browser pass (one page per route, 3 roles, 375 and 1280 px, headless Chromium).
 
 Full route table: [route-inventory.md](route-inventory.md) (414 routes: 157 staff, 54 customer, 18 public, 184 API).

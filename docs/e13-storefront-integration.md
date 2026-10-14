@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-02 (slice 1), 2026-10-03 (slice 2: webhook invalidation, per-storefront overrides)
 **Baseline:** Phases 01-16 (both slices), D0-D8, E1-E12 and Phase 17 slice 1 complete, all local (not deployed).
-**Source:** `WP_Requirement.md` (owner-supplied 16-step specification, pasted in full and followed point by point).
+**Source:** `docs/specs/wordpress-storefront-requirement.md` (owner-supplied 16-step specification, pasted in full and followed point by point).
 
 The brief: let one or more external WordPress sites display a chosen slice of the catalog (plans, prices, addons,
 domain pricing) and send customers back into this project's own cart/checkout - without ever letting WordPress

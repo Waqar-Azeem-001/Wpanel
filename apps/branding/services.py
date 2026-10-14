@@ -83,6 +83,33 @@ def contrast_ratio(first, second):
     return (lighter + 0.05) / (darker + 0.05)
 
 
+# --- Packaged pictures --------------------------------------------------------------------------------------------------
+# The brand pictures that ship with the project (static/img/brand/). They are what a fresh install, an error page or the maintenance page shows, and what every screen shows
+# until a picture is uploaded in Setup > Branding (an uploaded picture always wins).
+PACKAGED_NAMES = {"logo": ("logo.png", "logo.webp", "logo.jpg"), "logo_dark": ("logo-dark.png", "logo-dark.webp", "logo-dark.jpg"),
+                  "mark_dark": ("icon-dark.png", "icon-dark.webp"), "favicon": ("favicon.png", "favicon.ico", "icon.png")}
+PACKAGED_TYPES = {".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".ico": "image/x-icon"}
+
+
+def packaged_file(kind):
+    """The shipped file for ``kind`` ("logo", "logo_dark", "mark_dark" or "favicon") as a Path, or None."""
+    from pathlib import Path
+
+    folder = Path(getattr(settings, "BRAND_ASSET_DIR", settings.BASE_DIR / "static" / "img" / "brand"))
+    for name in PACKAGED_NAMES.get(kind, ()):
+        candidate = folder / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def packaged_image(kind):
+    found = packaged_file(kind)
+    if found is None:
+        return None
+    return found.read_bytes(), PACKAGED_TYPES.get(found.suffix.lower(), "image/png")
+
+
 # --- Reading ----------------------------------------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -139,10 +166,11 @@ def get():
         cached = cache.get(CACHE_KEY)
         if cached is None:
             row = BrandSettings.load()
-            has_logo = BrandSettings.objects.filter(pk=1, logo_type__gt="").exists()
-            has_favicon = BrandSettings.objects.filter(pk=1, favicon_type__gt="").exists()
+            has_logo = BrandSettings.objects.filter(pk=1, logo_type__gt="").exists() or packaged_file("logo") is not None
+            has_favicon = BrandSettings.objects.filter(pk=1, favicon_type__gt="").exists() or packaged_file("favicon") is not None
             cached = {**{f: getattr(row, f) for f in TEXT_FIELDS}, "version": row.version, "has_logo": has_logo,
-                      "has_favicon": has_favicon, "has_logo_dark": bool(row.logo_dark_type), "has_mark_dark": bool(row.mark_dark_type),
+                      "has_favicon": has_favicon, "has_logo_dark": bool(row.logo_dark_type) or packaged_file("logo_dark") is not None,
+                      "has_mark_dark": bool(row.mark_dark_type) or packaged_file("mark_dark") is not None,
                       "policy_links": list(row.policy_links or [])}
             cache.set(CACHE_KEY, cached, 300)
         return _brand_from(cached, cached["has_logo"], cached["has_favicon"], cached.get("has_logo_dark", False),
@@ -153,11 +181,11 @@ def get():
 
 
 def image(kind):
-    """(bytes, content type) of the stored logo or favicon, or None."""
+    """(bytes, content type) of the uploaded picture, else the one shipped with the project, else None."""
     row = BrandSettings.objects.filter(pk=1).only(kind, f"{kind}_type").first()
     data = getattr(row, kind) if row else None
     if not data:
-        return None
+        return packaged_image(kind)
     return bytes(data), getattr(row, f"{kind}_type")
 
 

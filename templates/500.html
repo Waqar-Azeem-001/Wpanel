@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static brand_assets %}<!doctype html>
 {# Standalone on purpose: Django renders this with no request, no context processors and no database, because it is shown when something is already broken. #}
 <html lang="en">
 <head>
@@ -10,6 +10,7 @@
 </head>
 <body>
   <main class="page" id="main">
+    {% brand_asset_url "logo" as logo %}{% if logo %}<p class="text-center mt-4"><img src="{{ logo }}" alt="" style="max-height:48px;max-width:70%"></p>{% endif %}
     <div class="error-page">
       <div class="code" aria-hidden="true">500</div>
       <h1>Something went wrong on our side</h1>

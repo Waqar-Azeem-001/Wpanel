@@ -3,7 +3,7 @@
 **Date:** 2026-10-03
 **Baseline:** Phase 17 (both slices) and D5 complete, all local.
 **Why this exists:** before starting Phase 18 (Testing & Production Readiness), the owner asked for the project's
-original v2 specification (`new_phase.md`) and every doc in `docs/` to be read end to end and cross-checked against
+original v2 specification (`docs/specs/roadmap-v2-original.md`) and every doc in `docs/` to be read end to end and cross-checked against
 the current roadmap and the actual code - not just the roadmap's own running summary of itself. That audit found
 four genuine, previously-untracked gaps (three of them traced back to Phase 15's own feature list, never closed)
 and three stale rows in the roadmap's Open/Deferred table describing bugs that had actually been fixed two to three
@@ -12,9 +12,9 @@ corrected directly in the roadmap (Section 26) with no code change, each citing 
 
 ## Audit findings that led here
 
-Reading `new_phase.md` (the pristine v2 spec, predating every D/E-track addition) against the current state found:
+Reading `docs/specs/roadmap-v2-original.md` (the pristine v2 spec, predating every D/E-track addition) against the current state found:
 
-- **Maintenance mode** - `new_phase.md`'s Phase 15 feature list and Rule 5.8 both name a maintenance-mode toggle
+- **Maintenance mode** - `docs/specs/roadmap-v2-original.md`'s Phase 15 feature list and Rule 5.8 both name a maintenance-mode toggle
   "served by Nginx"; D0 flagged it `Missing (Phase 15/17)`; it was never built, and never even added to the
   Open/Deferred table, so it had been silently missing since D0 - three phases past its own target.
 - **Reminder schedule is fixed** (Known Work, target "Phase 15") - Phase 15 went 🟢 without ever revisiting it, and

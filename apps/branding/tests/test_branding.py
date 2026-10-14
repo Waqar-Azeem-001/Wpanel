@@ -508,3 +508,62 @@ def test_pdfs_and_emails_take_the_colour_of_the_look(admin):
 
     services.save_settings(admin, values={"theme": "heritage"})
     assert notifications._brand_context()["brand"].primary == services.LOOKS["heritage"]["primary"]
+
+
+# --- the pictures that ship with the project ---------------------------------------------------------------------------
+
+PNG = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x8e\x8f\xcd\x00\x00\x00\x00IEND\xaeB`\x82")
+
+
+@pytest.fixture
+def shipped(tmp_path, settings):
+    from django.core.cache import cache
+
+    settings.BRAND_ASSET_DIR = str(tmp_path)
+    cache.clear()
+    yield tmp_path
+    cache.clear()
+
+
+def test_without_any_picture_the_pages_show_the_name_not_a_broken_image(client, shipped, db):
+    page = client.get("/account/login/").content.decode()
+    assert "/brand/logo/" not in page and client.get("/brand/logo/").status_code == 404
+
+
+def test_a_shipped_logo_appears_everywhere_until_one_is_uploaded(client, shipped, db):
+    (shipped / "logo.png").write_bytes(PNG)
+    (shipped / "favicon.png").write_bytes(PNG)
+    page = client.get("/account/login/").content.decode()
+    assert "/brand/logo/" in page
+    reply = client.get("/brand/logo/")
+    assert reply.status_code == 200 and reply["Content-Type"] == "image/png" and reply.content == PNG
+    assert client.get("/brand/favicon/").status_code == 200
+
+
+def test_an_uploaded_picture_wins_over_the_shipped_one(client, shipped, db):
+    from apps.branding.models import BrandSettings
+
+    (shipped / "logo.png").write_bytes(PNG)
+    other = PNG + b"\x00"
+    BrandSettings.objects.update_or_create(pk=1, defaults={"logo": other, "logo_type": "image/png"})
+    from django.core.cache import cache
+
+    cache.clear()
+    assert client.get("/brand/logo/").content == other
+
+
+def test_the_error_and_maintenance_pages_carry_the_logo_without_the_database(shipped, db):
+    from django.template.loader import render_to_string
+
+    from apps.core.management.commands.render_maintenance_page import Command
+
+    (shipped / "logo.png").write_bytes(PNG)
+    (shipped / "logo-dark.png").write_bytes(PNG)
+    plain = render_to_string("maintenance.html")
+    assert "{%" not in plain  # the page the web server serves is plain HTML
+    page = Command.with_logo(plain)
+    assert "data:image/png;base64," in page and 'prefers-color-scheme: dark)" srcset="data:image/png' in page and 'class="badge"' not in page
+    (shipped / "logo.png").unlink()
+    (shipped / "logo-dark.png").unlink()
+    assert 'class="badge"' in Command.with_logo(plain) and "BRAND_LOGO" not in Command.with_logo(plain)
+    assert "Something went wrong" in render_to_string("500.html")  # the tag never raises, even before static files are collected
