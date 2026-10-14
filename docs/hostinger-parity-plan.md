@@ -20,7 +20,29 @@ Size: **S** = a day or less, **M** = a few days, **L** = a week or more.
 | One **test hosting account** on the live WHM server that we may use freely | Every "Proven" in this plan needs a real account to try things on | Owner |
 | Note the server facts: cPanel/WHM version, whether **LiteSpeed**, **CloudLinux**, **git** and **SSH** are available | Several features below only exist if the server has them; we check once and plan around it | Technical, 1 hour |
 
-**Done when:** currency is PKR, a push reaches live on its own, and the server facts are written in this file.
+**Status (2026-10-15).**
+
+| Item | Result |
+|---|---|
+| Store currency | **Done.** PKR is set on live (Setup > Branding). The TLD price sync ran: 39 extensions, prices follow webhostera.pk. |
+| Deploy key | **Not working yet.** The pipeline still reports "NOT deployed" because it cannot see `DEPLOY_SSH_KEY`. The key itself works (we logged in with it). Deploys are done by hand until the secret is visible to the workflow. |
+| Test account | `testing.com` (plan "WordPress-Best Value Grow") exists on the live WHM and was used for the checks below. |
+| Server facts | Checked read-only on the live server, see the table below. |
+
+**Server facts (checked on the live WHM, read-only).**
+
+| Fact | Result | What it means for the plan |
+|---|---|---|
+| cPanel/WHM version | 11.138.0.15 (server.webhostera.pk) | Very recent; the APIs we use are all available |
+| Web server | **Apache** (httpd). No LiteSpeed service | **No LiteSpeed cache switch** (Phase 3 drops it). Browser-cache and compression rules stay |
+| CloudLinux | **Yes** (alt-php 5.2 to 8.4 installed, LVE usage keys answer) | CPU, memory, I/O and process usage are available per account (Phase 2) |
+| PHP | MultiPHP: ea-php74 to 84 and alt-php | PHP version switch works as built; "PHP Info" can show it |
+| Git (Version Control) | **Feature not enabled** for this plan ("You do not have the feature version_control") | Git deployment needs the owner to enable the feature in WHM > Feature Manager first (Phase 6) |
+| SSH | sshd running; the account's shell is `noshell` | SSH Access is possible by granting the account a shell in WHM; needs a test (Phase 6) |
+| Raw access logs | **Not reachable** through the file API (the logs folder is outside the account's home) | Real visitor analytics from logs is not possible this way; options are cPanel's own AWStats (feature exists) or a small WordPress tracking snippet (Phase 6) |
+| Redirects, SSL list, error log | Answer normally | Phase 4 and the Security pages can use them |
+
+**Done when:** a push reaches live on its own (the only open item above).
 
 ---
 
@@ -62,9 +84,9 @@ menu with groups: Dashboard, WordPress, Hosting Plan, Performance, Analytics, Se
 4. Plan resource usage: disk, inodes, websites used / allowed, **CPU and memory (last 24 hours)** where the server reports them.
 
 **How.** Cache clear for WordPress through the existing one-file tool (call WordPress's own cache flush); "Preview without cache" is the site address with a no-cache query. CPU, memory and
-inodes come from the cPanel resource-usage API if the server provides it (CloudLinux), otherwise the card shows disk and bandwidth only.
+inodes come from the cPanel resource-usage API; the live server is CloudLinux, so CPU, memory, I/O and processes are available (confirmed in Phase 0).
 
-**Needs from the server.** Resource-usage API availability (Phase 0 check).
+**Needs from the server.** Nothing more: confirmed available.
 
 **Size.** M. **Done when:** the grouped list and the dashboard match the layout above on a test account; CPU/memory shown only when the server reports them (never invented).
 
@@ -82,11 +104,11 @@ database name; backup status; PHP version; **Recommended installations** (plugin
 2. Force HTTPS switch (the SSL capability already has "always use HTTPS").
 3. Plugin and theme **install** from wordpress.org by name (curated recommended list).
 4. **Copy Website**: clone a site into a new folder/subdomain using the same copier staging uses.
-5. LiteSpeed switch only when LiteSpeed is present (see Phase 0); otherwise the card is not shown.
+5. A LiteSpeed switch is **not** built: the live server runs Apache (Phase 0 check).
 
 **How.** Extend the one-file WordPress tool (`wp_tool`) with an install action using WordPress's own upgrader; reuse `wp_clone` for copy.
 
-**Needs from the server.** LiteSpeed check; outbound access to wordpress.org from the server (already needed by the installer).
+**Needs from the server.** Outbound access to wordpress.org from the server (already needed by the installer).
 
 **Size.** M. **Done when:** each switch changes the real site on the test account and the page shows the real state after reload.
 
@@ -140,11 +162,11 @@ Do these only after Phase 0 has confirmed what the server offers; each one is a 
 
 | Feature | Possible when | Notes |
 |---|---|---|
-| **SSH Access** (enable, port, username, key upload, change password) | WHM allows shell for the account and port 22/custom is open | Show the exact `ssh` command like hPanel; never show a password back |
-| **Git deployment** | cPanel Version Control is installed | Connect repository, deploy on push, log, roll back |
-| **Resource usage over time** (CPU, memory, processes, inodes) | CloudLinux or cPanel resource API | Charts for the last 24 hours |
-| **Analytics** (visitors, top pages, countries) | Access logs can be read for the account | Today's Traffic page parses lines it is given; reading cPanel's raw logs must be tested |
-| **LiteSpeed cache manager** | Server runs LiteSpeed with its cPanel plugin | Otherwise only our browser-cache and compression rules |
+| **SSH Access** (enable, port, username, key upload, change password) | WHM grants the account a shell (now `noshell`); sshd is running | Show the exact `ssh` command like hPanel; never show a password back |
+| **Git deployment** | The `version_control` feature is enabled in WHM (**currently off** on the plan) | Connect repository, deploy on push, log, roll back |
+| **Resource usage over time** (CPU, memory, processes, inodes) | **Available** (CloudLinux confirmed) | Needs a place to keep the history: store a reading every few minutes, chart the last 24 hours |
+| **Analytics** (visitors, top pages, countries) | **Raw logs are not reachable** through the file API | Use cPanel AWStats (feature present) or a tracking snippet; decide when we get here |
+| **LiteSpeed cache manager** | Not available: the server runs Apache | Only our browser-cache and compression rules |
 | **phpMyAdmin / database tools** | cPanel exposes the one-time sign-in | Open from the Databases page |
 
 **Size.** M each. **Done when:** a spike note for each says "works" or "not available on this server", and available ones have a screen.
