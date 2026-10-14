@@ -55,7 +55,8 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
-          pg_dump --version
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"   # pg_dump and pg_restore must both be 17, not the runner's 16
+          /usr/lib/postgresql/17/bin/pg_dump --version
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -137,3 +138,31 @@ jobs:
             sleep 6
           done
           echo "::error::Health check failed after deploy"; exit 1
+
+  notify:
+    # An e-mail with the result of every run, passed or failed. It needs four repository secrets (Settings > Secrets and variables > Actions):
+    # MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD (an SMTP account, for Gmail an app password) and NOTIFY_EMAIL (where to send). Without them this job does nothing.
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+    steps:
+      - name: Send the result
+        if: ${{ env.MAIL_SERVER != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: WHPanel CI <${{ secrets.MAIL_USERNAME }}>
+          subject: "WHPanel CI ${{ needs.test.result }}: ${{ github.event.head_commit.message || github.ref_name }}"
+          body: |
+            Result: ${{ needs.test.result }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            By: ${{ github.actor }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

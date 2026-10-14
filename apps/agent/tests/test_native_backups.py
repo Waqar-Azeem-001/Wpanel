@@ -338,10 +338,12 @@ def test_backup_commands_are_typed():
 def test_the_panels_own_database_is_backed_up_encrypted_and_can_be_verified(tmp_path, settings, staff):
     staff(Role.MANAGER)  # some data in the database
     path = backup_panel.make_backup(tmp_path / "panel")
+    from django.db import connection
+
     raw = path.read_bytes()
-    assert path.name.startswith("panel-sqlite-") and b"SQLite format" not in raw and b"auth_user" not in raw  # encrypted
-    assert "integrity ok" in backup_panel.verify_backup(path)
-    damaged = tmp_path / "panel-sqlite-damaged.bak.enc"
+    assert path.name.startswith(f"panel-{connection.vendor}-") and b"SQLite format" not in raw and b"PGDMP" not in raw and b"auth_user" not in raw  # encrypted
+    assert ("integrity ok" if connection.vendor == "sqlite" else "postgresql dump") in backup_panel.verify_backup(path)
+    damaged = tmp_path / f"panel-{connection.vendor}-damaged.bak.enc"
     damaged.write_bytes(raw[:-20])
     with pytest.raises(Exception):
         backup_panel.verify_backup(damaged)
@@ -355,5 +357,7 @@ def test_old_panel_backups_are_pruned_and_the_command_reports(tmp_path, capsys):
         time.sleep(1.1)  # file names carry the second
     assert len(list(tmp_path.glob("panel-*.bak.enc"))) == 2
     call_command("backup_panel", "--to", str(tmp_path), "--keep", "5")
-    assert "integrity ok" in capsys.readouterr().out
+    from django.db import connection
+
+    assert ("integrity ok" if connection.vendor == "sqlite" else "postgresql dump") in capsys.readouterr().out
     _ = (hosting, HostingError, NativeBackupSettings, enrollment)
