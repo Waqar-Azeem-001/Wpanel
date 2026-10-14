@@ -35,9 +35,9 @@ class BrandForm(forms.ModelForm):
     class Meta:
         model = BrandSettings
         fields = ["site_name", "primary_color", "accent_color", "support_email", "footer_text", "date_format",
-                  "money_format", "theme", "custom_look", "maintenance_mode"]
+                  "money_format", "currency", "theme", "custom_look", "maintenance_mode"]
         widgets = {"primary_color": forms.TextInput(attrs={"type": "color"}),
                    "accent_color": forms.TextInput(attrs={"type": "color"})}
         labels = {"theme": "Look", "custom_look": "Type, corners and header", "site_name": "Company / site name", "primary_color": "Primary colour", "accent_color": "Accent colour",
-                  "date_format": "How dates are written", "money_format": "How money is written",
+                  "date_format": "How dates are written", "money_format": "How money is written", "currency": "Store currency",
                   "maintenance_mode": "Turn on maintenance mode"}

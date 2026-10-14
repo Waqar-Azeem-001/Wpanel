@@ -96,9 +96,9 @@ class Command(BaseCommand):
         if not options["brand"]:
             self.plans()
             self.domain_prices()
-        if settings.STORE_CURRENCY != "PKR":
+        if branding.store_currency() != "PKR":
             self.stdout.write(self.style.WARNING(
-                f"STORE_CURRENCY is {settings.STORE_CURRENCY}: these prices are in rupees. Set STORE_CURRENCY=PKR in .env "
+                f"The store currency is {branding.store_currency()}: these prices are in rupees. Choose PKR as the Store currency in Setup > Branding "
                 "(before taking any orders) so invoices and clients use PKR."))
 
     def brand(self):
@@ -122,6 +122,8 @@ class Command(BaseCommand):
             wanted["site_name"] = BRAND["site_name"]
         if not row.footer_text:
             wanted["footer_text"] = BRAND["footer_text"]
+        if not row.currency and not row.site_name:  # the very first fill only: this brand's prices are rupees; after that the owner's choice in Setup > Branding stands
+            wanted["currency"] = "PKR"
         if row.theme == "custom" and row.primary_color == "#2459d6" and row.accent_color == "#1f7a4d":  # never configured: take the brand's look
             wanted.update({"theme": "aura"})
         links = None if row.policy_links else json.loads((SEED / "webhostera-policies.json").read_text(encoding="utf-8"))

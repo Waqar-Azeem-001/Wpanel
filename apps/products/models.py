@@ -197,7 +197,9 @@ class CatalogItem(TimeStampedModel):
             return "no price yet"
         low = min(rows, key=lambda p: p.price)
         cycle = "one-time" if low.billing_cycle == BillingCycle.ONE_TIME else low.get_billing_cycle_display().lower()
-        return f"{settings.STORE_CURRENCY} {low.price} {cycle}"
+        from apps.branding.services import store_currency
+
+        return f"{store_currency()} {low.price} {cycle}"
 
 
 CATEGORY_ICONS = (

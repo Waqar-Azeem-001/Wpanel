@@ -16,6 +16,7 @@ from apps.core.web import run_action
 
 from . import categories, forms, services
 from .models import Addon, CatalogStatus, Product, Server, StoreCategory
+from apps.branding.services import store_currency
 
 
 def _apply_error(form, exc):
@@ -454,7 +455,7 @@ def staff_whmcs_import(request):
                                                                          "identifier": request.POST.get("identifier", "")})
         request.session[SESSION_KEY] = {"rows": rows, "currency": currency}  # prices only: the login is not kept
         return render(request, "products/staff/whmcs_import.html", {"preview": services.whmcs_preview(rows), "currency": currency, "codes": codes,
-                                                                     "store_currency": settings.STORE_CURRENCY})
+                                                                     "store_currency": store_currency()})
     return render(request, "products/staff/whmcs_import.html", {})
 
 

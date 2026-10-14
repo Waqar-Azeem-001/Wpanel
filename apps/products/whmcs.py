@@ -14,6 +14,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import requests
 from django.conf import settings
+from apps.branding.services import store_currency
 
 TIMEOUT = 25
 # WHMCS price key -> (WPanel billing cycle, months for a custom cycle, WHMCS setup-fee key)
@@ -95,7 +96,7 @@ def fetch_products(address, identifier, secret, currency=""):
         for code in (item.get("pricing") or {}):
             if code not in codes:
                 codes.append(code)
-    wanted = currency or settings.STORE_CURRENCY
+    wanted = currency or store_currency()
     chosen = wanted if wanted in codes else (codes[0] if codes else wanted)
     rows = []
     for item in items:

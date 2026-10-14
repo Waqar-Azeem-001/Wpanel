@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 CACHE_KEY = "branding.settings.v1"
 MENU_CACHE_KEY = "branding.menu.v1"
 TEXT_FIELDS = ("site_name", "primary_color", "accent_color", "support_email", "footer_text", "date_format",
-               "money_format", "theme", "custom_look", "maintenance_mode")
+               "money_format", "currency", "theme", "custom_look", "maintenance_mode")
 # The ready-made looks: each has its own colours, type, corners and header (see static/css/looks.css). "custom" keeps the colours typed in
 # the settings and borrows the structure of one of these.
 LOOKS = {
@@ -135,6 +135,7 @@ class Brand:
     theme: str = "signature"
     look: str = "signature"  # the structure in use: the ready-made look, or the one a custom brand borrows
     maintenance_mode: bool = False
+    currency: str = ""  # the store's currency: the one chosen in Setup > Branding, else the STORE_CURRENCY setting
 
 
 def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=False):
@@ -152,10 +153,10 @@ def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=F
         date_format=row["date_format"], money_format=row["money_format"], has_logo=has_logo,
         has_favicon=has_favicon, version=row["version"], has_logo_dark=has_logo_dark, has_mark_dark=has_mark_dark,
         policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()), theme=theme, look=look,
-        maintenance_mode=bool(row.get("maintenance_mode")))
+        maintenance_mode=bool(row.get("maintenance_mode")), currency=(row.get("currency") or settings.STORE_CURRENCY))
 
 
-DEFAULTS = {"site_name": "", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "theme": "custom",
+DEFAULTS = {"site_name": "", "primary_color": "#2459d6", "accent_color": "#1f7a4d", "support_email": "", "theme": "custom", "currency": "",
             "custom_look": "signature", "maintenance_mode": False,
             "footer_text": "", "date_format": "%d %b %Y", "money_format": "code_before", "version": 1}
 
@@ -178,6 +179,11 @@ def get():
     except Exception:  # noqa: BLE001 - a page must not fail because the brand could not be read
         logger.exception("Could not read the brand settings; using the defaults")
         return _brand_from(DEFAULTS, False, False)
+
+
+def store_currency():
+    """The currency of the whole store (prices, carts, orders, reports): chosen once in Setup > Branding, else the STORE_CURRENCY setting."""
+    return get().currency or settings.STORE_CURRENCY
 
 
 def image(kind):

@@ -82,7 +82,7 @@ def test_the_brand_only_option_leaves_the_catalogue_alone(settings):
 def test_it_warns_when_the_store_currency_is_not_rupees(settings, capsys):
     settings.STORE_CURRENCY = "USD"
     call_command("seed_webhostera", "--brand")
-    assert "STORE_CURRENCY is USD" in capsys.readouterr().out
+    assert "The store currency is USD" in capsys.readouterr().out
 
 
 def test_the_seeded_brand_can_be_changed_afterwards_in_setup(seeded, staff):
@@ -130,6 +130,7 @@ def test_fill_blank_sets_what_was_never_chosen_and_leaves_the_rest(db):
     call_command("seed_webhostera", "--fill-blank", verbosity=0)
     brand = services.get()
     assert brand.name == "Web Host Era" and "Web Host Era Hosting Ltd" in brand.footer_text and brand.theme == "aura" and len(brand.policy_links) == 5
+    assert brand.currency == "PKR" and services.store_currency() == "PKR"
     # an owner changes the name and the footer; running it again (every deploy does) changes nothing they chose
     BrandSettings.objects.filter(pk=1).update(site_name="My Company", footer_text="Mine")
     from django.core.cache import cache
@@ -138,3 +139,26 @@ def test_fill_blank_sets_what_was_never_chosen_and_leaves_the_rest(db):
     call_command("seed_webhostera", "--fill-blank", verbosity=0)
     again = services.get()
     assert again.name == "My Company" and again.footer_text == "Mine"
+
+
+def test_the_store_currency_is_one_choice_that_everything_follows(db, settings, client):
+    from decimal import Decimal
+
+    from apps.branding.models import BrandSettings
+    from apps.core.system import SYSTEM
+    from apps.domains import price_sync
+    from apps.domains.models import TldPricing
+    from django.core.cache import cache
+
+    settings.STORE_CURRENCY = "USD"
+    assert services.store_currency() == "USD"  # nothing chosen: the setting
+    page = ('<table id="tablepress-domains"><tr><th>TLD</th><th>Min. Years</th><th>Register</th><th>Transfer</th><th>Renew</th></tr>'
+            + "".join(f"<tr><td>.t{i}</td><td>1</td><td>PKR{1000 + i}.00</td><td>PKR{1000 + i}.00</td><td>PKR{1000 + i}.00</td></tr>" for i in range(12)) + "</table>")
+    with pytest.raises(Exception) as err:
+        price_sync.sync(html=page)
+    assert "Store currency" in str(err.value) or "currency" in str(err.value)
+    BrandSettings.objects.update_or_create(pk=1, defaults={"currency": "PKR"})
+    cache.clear()
+    assert services.store_currency() == "PKR"
+    report = price_sync.sync(html=page)  # the same page is now accepted, with no .env change
+    assert len(report["created"]) == 12 and TldPricing.objects.get(tld=".t1").register_price == Decimal("1001.00")

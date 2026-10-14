@@ -26,6 +26,7 @@ from apps.support.models import Ticket, TicketStatus
 from . import exports
 from .builders import GROUP_TITLES, REGISTRY, all_reports
 from .definitions import SCREEN_ROWS, parse_params
+from apps.branding.services import store_currency
 
 
 def _denied():
@@ -89,7 +90,7 @@ def screen_rows(result):
 
 def _net_income(start, end):
     ok = Transaction.objects.filter(status=TransactionStatus.SUCCEEDED, occurred_at__gte=start, occurred_at__lt=end,
-                                    currency=settings.STORE_CURRENCY)
+                                    currency=store_currency())
     totals = {r["type"]: r["t"] for r in ok.values("type").annotate(t=Sum("amount"))}
     return calc.money((totals.get(TransactionType.PAYMENT) or 0) - (totals.get(TransactionType.REFUND) or 0))
 
@@ -114,7 +115,7 @@ def kpi_sections(user):
     month_start = day_start.replace(day=1)
     year_start = month_start.replace(month=1)
     tomorrow = day_start + timedelta(days=1)
-    currency = settings.STORE_CURRENCY
+    currency = store_currency()
     sections = {"Money": [], "Orders and customers": [], "Services": [], "Support": []}
 
     def add(section, label, kind, value, slug, sub=""):
@@ -174,7 +175,7 @@ def headline(user):
     if user.has_perm(perm("view_billing")):
         overdue = Invoice.objects.filter(status__in=OPEN_STATUSES, due_date__lt=today)
         figures += [
-            (f"Income today ({settings.STORE_CURRENCY})", "money", _net_income(day_start, tomorrow), "income"),
+            (f"Income today ({store_currency()})", "money", _net_income(day_start, tomorrow), "income"),
             ("Income this month", "money", _net_income(month_start, tomorrow), "income"),
             ("Invoices overdue", "int", overdue.count(), "unpaid-invoices")]
     if user.has_perm(perm("view_orders")):

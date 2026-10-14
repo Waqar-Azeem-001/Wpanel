@@ -31,6 +31,7 @@ from apps.orders.models import Order, OrderStatus
 from apps.products.models import Server
 from apps.support import services as support
 from apps.support.models import Ticket, TicketStatus
+from apps.branding.services import store_currency
 
 
 @dataclass(frozen=True)
@@ -74,7 +75,7 @@ def billing_widget(user):
         "owed": _money(owed["total"]), "open": open_invoices.count(),
         "overdue": filter_invoices_by_status(Invoice.objects.all(), "overdue").count(),
         "waiting": Transaction.objects.filter(status=TransactionStatus.PENDING, provider__isnull=True).count(),
-        "currency": settings.STORE_CURRENCY,
+        "currency": store_currency(),
     }
 
 
@@ -246,7 +247,7 @@ def _more_tiles(user, today):
     if _can(user, "view_billing"):
         billing = billing_widget(user)
         refunds = Transaction.objects.filter(status=TransactionStatus.SUCCEEDED, type=TransactionType.REFUND,
-                                             occurred_at__date__gte=month_start, currency=settings.STORE_CURRENCY)
+                                             occurred_at__date__gte=month_start, currency=store_currency())
         refunded = _money(refunds.aggregate(t=Sum("amount"))["t"])
         tiles.append({"kpi": True, "label": "Income this year", "value": billing["year"], "money": True, "currency": billing["currency"],
                       "icon": "bi-graph-up-arrow", "tone": "ok", "sub": f"{billing['month']} this month",
@@ -260,8 +261,8 @@ def _more_tiles(user, today):
     if _can(user, "view_orders"):
         month_orders = Order.objects.filter(created_at__date__gte=month_start).exclude(
             status__in=(OrderStatus.DRAFT, OrderStatus.CANCELLED))
-        average = month_orders.filter(currency=settings.STORE_CURRENCY).aggregate(a=Avg("total"))["a"]
-        tiles.append({"kpi": True, "label": "Average order", "value": _money(average), "money": True, "currency": settings.STORE_CURRENCY,
+        average = month_orders.filter(currency=store_currency()).aggregate(a=Avg("total"))["a"]
+        tiles.append({"kpi": True, "label": "Average order", "value": _money(average), "money": True, "currency": store_currency(),
                       "icon": "bi-basket", "tone": "info", "sub": f"{month_orders.count()} order(s) this month",
                       "url": reverse("orders_staff:list")})
     if _can(user, "view_clients"):

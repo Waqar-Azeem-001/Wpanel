@@ -47,6 +47,11 @@ LOOKS = (("signature", "Signature"), ("heritage", "Heritage"), ("aura", "Aura"))
 THEMES = LOOKS + (("custom", "Custom"),)
 
 
+CURRENCIES = [("", "Use the STORE_CURRENCY setting"), ("PKR", "PKR - Pakistani rupee"), ("USD", "USD - US dollar"), ("EUR", "EUR - Euro"),
+              ("GBP", "GBP - British pound"), ("AED", "AED - UAE dirham"), ("SAR", "SAR - Saudi riyal"), ("INR", "INR - Indian rupee"),
+              ("CAD", "CAD - Canadian dollar"), ("AUD", "AUD - Australian dollar")]
+
+
 class BrandSettings(models.Model):
     """
     Single row (pk=1): how the portal presents itself. Brand is configuration, never hard-coded (roadmap Rule 6): name,
@@ -66,6 +71,9 @@ class BrandSettings(models.Model):
     footer_text = models.CharField(max_length=300, blank=True)
     date_format = models.CharField(max_length=12, choices=DATE_FORMATS, default="%d %b %Y")
     money_format = models.CharField(max_length=12, choices=MONEY_FORMATS, default="code_before")
+    currency = models.CharField(max_length=3, blank=True, choices=CURRENCIES,
+                                help_text="The currency every price, cart, order and report in this store uses. Blank = the STORE_CURRENCY setting. "
+                                          "Prices are numbers in this currency; changing it does not convert them and does not touch invoices already issued.")
 
     logo = models.BinaryField(null=True, blank=True, editable=False)
     logo_type = models.CharField(max_length=30, blank=True, editable=False)

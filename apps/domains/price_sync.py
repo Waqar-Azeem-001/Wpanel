@@ -159,11 +159,13 @@ def sync(*, html=None, url=None, dry_run=False, force=False, actor=SYSTEM):
     """Read the price list and apply it. Returns a report; raises ServiceError when nothing could be trusted."""
     page = html if html is not None else fetch(url)
     rows, currency = parse(page)
-    store = getattr(settings, "STORE_CURRENCY", "")
+    from apps.branding.services import store_currency
+
+    store = store_currency()
     if len(rows) < MIN_ROWS:
         raise ServiceError(f"The price list page did not look as expected ({len(rows)} usable rows, at least {MIN_ROWS} needed), so no price was changed.", code="unexpected_page")
     if currency and store and currency != store:
-        raise ServiceError(f"The price list is in {currency} but the store's currency is {store}. No price was changed: set STORE_CURRENCY={currency} first.", code="currency_mismatch")
+        raise ServiceError(f"The price list is in {currency} but the store's currency is {store}. No price was changed: choose {currency} as the Store currency in Setup > Branding first.", code="currency_mismatch")
     existing = {p.tld: p for p in TldPricing.objects.all()}
     report = {"source": url or source_url(), "rows": len(rows), "created": [], "updated": [], "unchanged": 0, "held": [], "dry_run": dry_run}
     for row in rows:

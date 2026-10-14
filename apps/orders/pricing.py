@@ -26,6 +26,7 @@ from apps.products import services as product_services
 from apps.products.models import BillingCycle, CatalogStatus
 
 from .models import CartItem, CouponRedemption, ItemKind, OrderItem, OrderStatus
+from apps.branding.services import store_currency
 
 def cycle_label(billing_cycle, custom_months=0):
     if billing_cycle == BillingCycle.CUSTOM:
@@ -250,7 +251,7 @@ def price_cart(cart, *, strict=False, verify_availability=False, country=""):
                 raise ServiceError(f"{line.description}: {line.error}", code="cart_invalid")
         lines.append(line)
 
-    priced = PricedCart(lines=lines, currency=settings.STORE_CURRENCY)
+    priced = PricedCart(lines=lines, currency=store_currency())
     priced.errors = [line.error for line in lines if line.error]
     priced.subtotal = money(sum((line.total for line in lines if line.ok), ZERO))
 

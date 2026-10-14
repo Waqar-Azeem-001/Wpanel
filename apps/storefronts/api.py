@@ -21,6 +21,7 @@ from . import services
 from .authentication import StorefrontKeyAuthentication
 from .permissions import IsStorefrontAuthenticated
 from .throttling import StorefrontRateThrottle
+from apps.branding.services import store_currency
 
 
 class _StorefrontView:
@@ -53,7 +54,7 @@ class StorefrontPriceSerializer(serializers.Serializer):
     currency = serializers.SerializerMethodField()
 
     def get_currency(self, obj) -> str:
-        return settings.STORE_CURRENCY
+        return store_currency()
 
 
 class StorefrontProductSerializer(serializers.Serializer):
@@ -187,7 +188,7 @@ class StorefrontTldPricingSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_currency(self, obj) -> str:
-        return settings.STORE_CURRENCY
+        return store_currency()
 
 
 class StorefrontTldPricingListView(_StorefrontView, generics.ListAPIView):
@@ -226,6 +227,6 @@ class StorefrontDomainSearchView(_StorefrontView, APIView):
             "tld": pricing.tld,
             "register_price": str(pricing.register_price),
             "renew_price": str(pricing.renew_price),
-            "currency": settings.STORE_CURRENCY,
+            "currency": store_currency(),
             "order_url": _absolute(reverse("domains_public:search")) + f"?domain={name}&years=1",
         })

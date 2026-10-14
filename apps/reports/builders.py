@@ -25,6 +25,7 @@ from apps.renewals.models import ChangeStatus, ServiceChange
 from apps.support.models import Department, Ticket, TicketStatus
 
 from .definitions import MAX_ROWS, Column, ReportDef, Result, describe
+from apps.branding.services import store_currency
 
 REGISTRY = {}
 GROUP_TITLES = {"sales": "Sales", "financial": "Financial", "services": "Services", "support": "Support"}
@@ -108,10 +109,10 @@ def sales_performance(definition, params, user):
     orders = Order.objects.exclude(status=OrderStatus.DRAFT).filter(created_at__gte=params.start_at,
                                                                      created_at__lt=params.end_at)
     lost = (OrderStatus.CANCELLED, OrderStatus.FAILED, OrderStatus.FRAUD)
-    placed = {r["p"]: r for r in orders.filter(currency=settings.STORE_CURRENCY).annotate(
+    placed = {r["p"]: r for r in orders.filter(currency=store_currency()).annotate(
         p=_trunc(params.group, "created_at")).values("p").annotate(
         n=Count("id"), value=Sum("total"), lost=Count("id", filter=Q(status__in=lost)))}
-    other = orders.exclude(currency=settings.STORE_CURRENCY).count()
+    other = orders.exclude(currency=store_currency()).count()
     customers = {r["p"]: r["n"] for r in Client.objects.filter(
         created_at__gte=params.start_at, created_at__lt=params.end_at).annotate(
         p=_trunc(params.group, "created_at")).values("p").annotate(n=Count("id"))}
@@ -126,7 +127,7 @@ def sales_performance(definition, params, user):
         totals["lost"] += lost_n
         totals["customers"] += new
     columns = [Column("period", "Period"), Column("orders", "Orders placed", "int"),
-               Column("value", f"Order value ({settings.STORE_CURRENCY})", "money"),
+               Column("value", f"Order value ({store_currency()})", "money"),
                Column("lost", "Cancelled / failed", "int"), Column("customers", "New customers", "int")]
     summary = [("Orders placed", "int", int(totals["orders"])), ("Order value", "money", totals["value"]),
                ("New customers", "int", int(totals["customers"]))]
@@ -145,7 +146,7 @@ def orders_report(definition, params, user):
         "reference": o.reference, "date": timezone.localtime(o.created_at), "client": o.client.display_name,
         "status": o.get_status_display(), "method": o.payment_method_name or "", "currency": o.currency,
         "total": o.total})
-    totals = queryset.aggregate(n=Count("id"), value=Sum("total", filter=Q(currency=settings.STORE_CURRENCY)))
+    totals = queryset.aggregate(n=Count("id"), value=Sum("total", filter=Q(currency=store_currency())))
     by_status = queryset.values("status").annotate(n=Count("id")).order_by("-n")
     summary = [("Orders", "int", totals["n"]), ("Value", "money", calc.money(totals["value"] or 0))]
     summary += [(OrderStatus(r["status"]).label, "int", r["n"]) for r in by_status]
@@ -191,12 +192,12 @@ def income(definition, params, user):
         paid=Sum("amount", filter=Q(type=TransactionType.PAYMENT)),
         refunded=Sum("amount", filter=Q(type=TransactionType.REFUND)),
         n=Count("id", filter=Q(type=TransactionType.PAYMENT)))}
-    currencies = sorted({c for _, c in grouped} | {settings.STORE_CURRENCY})
+    currencies = sorted({c for _, c in grouped} | {store_currency()})
     rows, totals = [], defaultdict(lambda: defaultdict(lambda: Decimal(0)))
     for period in _periods(params.group, params.start, params.end):
         for currency in currencies:
             data = grouped.get((period, currency))
-            if data is None and currency != settings.STORE_CURRENCY:
+            if data is None and currency != store_currency():
                 continue
             data = data or {}
             paid, refunded = calc.money(data.get("paid") or 0), calc.money(data.get("refunded") or 0)
