@@ -49,9 +49,6 @@ class HostingAccount(TimeStampedModel):
     # Snapshot of the product's WHM package at creation/last change, so a later
     # rename or reconfiguration of the product doesn't retroactively rewrite history.
     package_name = models.CharField(max_length=100, blank=True)
-    limit_alerts = models.JSONField(default=dict, blank=True, help_text="Which usage warnings have already been sent this month, so each is sent once (native hosting).")
-    mail_server = models.ForeignKey("products.Server", null=True, blank=True, on_delete=models.SET_NULL, related_name="mail_accounts",
-                                    help_text="Native hosting only: the separate mail node that holds this account's mailboxes (chosen when mail is first used).")
     suspend_reason = models.CharField(max_length=500, blank=True)
     suspended_for_nonpayment = models.BooleanField(
         default=False, help_text="Suspended automatically because the renewal was not paid; lifted when it is.")
@@ -100,39 +97,6 @@ class HostingAccount(TimeStampedModel):
         self.domain = self.domain.lower()
         self.username = self.username.lower()
         super().save(*args, **kwargs)
-
-
-class NativeBackup(models.Model):
-    """
-    One backup of a native hosting account (N8). WHPanel keeps this register itself, so what exists is known even if a node is lost. A customer's backup is a *group*: the web node's
-    part, and the mail node's part when mail is used.
-    """
-
-    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="native_backups")
-    node = models.ForeignKey("agent.AgentNode", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
-    group = models.CharField(max_length=12, db_index=True)
-    part = models.CharField(max_length=4, choices=[("web", "Web node"), ("mail", "Mail node")])
-    kind = models.CharField(max_length=10, help_text="What this part holds: files, database, email or full.")
-    requested_kind = models.CharField(max_length=10, help_text="What the customer asked for.")
-    source = models.CharField(max_length=20, default="manual", help_text="manual, scheduled or before restore")
-    snapshot_id = models.CharField(max_length=64, blank=True)
-    status = models.CharField(max_length=10, default="running", db_index=True, help_text="running, complete, failed, deleting or deleted")
-    size_mb = models.FloatField(null=True, blank=True)
-    error = models.CharField(max_length=300, blank=True)
-    verified = models.CharField(max_length=6, blank=True)  # "", "ok" or "failed"
-    verified_at = models.DateTimeField(null=True, blank=True)
-    restore_tested_at = models.DateTimeField(null=True, blank=True)
-    restore_test_ok = models.BooleanField(null=True)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-
-    class Meta:
-        ordering = ["-created_at", "-id"]
-
-
-class NativeBackupSettings(models.Model):
-    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="native_backup_settings")
-    schedule = models.CharField(max_length=8, default="off")  # off, daily or weekly
-    last_scheduled_at = models.DateTimeField(null=True, blank=True)
 
 
 class AppState(models.TextChoices):

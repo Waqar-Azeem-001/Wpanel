@@ -2,7 +2,7 @@
 The demo provider's databases: a small JSON file per account that behaves like a shared-hosting database service
 (prefixed names, plan limits, users, per-database privileges, passwords that are checked and never stored in the clear).
 There is no real database server behind it - it exists so the screens and the rules can be built and tested first. A real
-provider (the cPanel adapter, or a native node's agent) implements the same ``DatabasesCapability`` contract.
+provider (the cPanel adapter) implements the same ``DatabasesCapability`` contract.
 """
 import json
 import re

@@ -70,8 +70,6 @@ INSTALLED_APPS = [
     "apps.products",
     "apps.domains",
     "apps.hosting",
-    "apps.agent",
-    "apps.migration",
     "apps.billing",
     "apps.orders",
     "apps.renewals",
@@ -281,12 +279,8 @@ CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
-    "native-mail-reputation": {"task": "apps.agent.tasks.mail_reputation_task", "schedule": crontab(minute=10)},
-    "panel-database-backup": {"task": "apps.agent.tasks.panel_backup_task", "schedule": crontab(hour=1, minute=30)},
-    "native-monitoring-sweep": {"task": "apps.agent.tasks.monitor_sweep_task", "schedule": crontab(minute="*")},
-    "native-scheduled-backups": {"task": "apps.hosting.tasks.run_native_backups_task", "schedule": crontab(hour=2, minute=30)},
+    "panel-database-backup": {"task": "apps.core.tasks.panel_backup_task", "schedule": crontab(hour=1, minute=30)},
     "website-care": {"task": "apps.hosting.tasks.run_site_care_task", "schedule": crontab(hour=3, minute=15)},
-    "native-restore-test": {"task": "apps.hosting.tasks.native_restore_test_task", "schedule": crontab(day_of_month=1, hour=4, minute=0)},
     "generate-renewal-invoices": {
         "task": "apps.renewals.tasks.generate_renewal_invoices_task",
         "schedule": crontab(hour=3, minute=0),
@@ -382,25 +376,5 @@ LOGGING = {
 # key derived from SECRET_KEY; set explicitly in production so SECRET_KEY rotation
 # does not make stored credentials unreadable.
 CREDENTIALS_ENCRYPTION_KEY = env("CREDENTIALS_ENCRYPTION_KEY", default="")
-# N1: base64 Ed25519 seed that signs commands for native-node agents (python -c "from apps.agent import envelope; print(envelope.generate_key())")
-AGENT_SIGNING_KEY = env("AGENT_SIGNING_KEY", default="")
-# N2: set True once the reverse proxy does mutual TLS and passes the verified client certificate fingerprint in AGENT_CERT_HEADER (it must strip any copy sent by clients)
-# N8: where `manage.py backup_panel` writes the panel's own encrypted database backups (copy them away from this server)
+# Where `manage.py backup_panel` writes the panel's own encrypted database backups (copy them away from this server)
 PANEL_BACKUP_DIR = env("PANEL_BACKUP_DIR", default=str(BASE_DIR / "panel_backups"))
-# N9: what to do when a native account uses more than its monthly bandwidth: "notify" (tell the customer) or "suspend" (take the site offline until next month or until staff reactivate it)
-NATIVE_BANDWIDTH_OVER_ACTION = env("NATIVE_BANDWIDTH_OVER_ACTION", default="notify")
-# N10: who is emailed when a native node turns warning, critical or offline (comma separated), and whether WHPanel may restart a failed service by itself (off until proven on a real node)
-MONITORING_ALERT_EMAILS = env("MONITORING_ALERT_EMAILS", default="")
-SELF_HEALING_ENABLED = env.bool("SELF_HEALING_ENABLED", default=False)
-AGENT_REQUIRE_CLIENT_CERT = env.bool("AGENT_REQUIRE_CLIENT_CERT", default=False)
-AGENT_CERT_HEADER = "X-Client-Cert-Fingerprint"
-# N5: the PowerDNS API that serves native hosting zones (ADR 07). Blank means native DNS is not offered.
-POWERDNS_URL = env("POWERDNS_URL", default="")
-POWERDNS_API_KEY = env("POWERDNS_API_KEY", default="")
-POWERDNS_NAMESERVERS = env("POWERDNS_NAMESERVERS", default="")  # comma separated, for example ns1.example.net,ns2.example.net
-# M1: when true, a new hosting account can only be made on a native node (never on cPanel). Turn on once native hosting is trusted.
-NEW_ACCOUNTS_NATIVE_ONLY = env.bool("NEW_ACCOUNTS_NATIVE_ONLY", default=False)
-# Agent endpoints (apps/agent/throttle.py): turned-away requests per source address before it is locked out for the window, and requests per node per minute.
-AGENT_FAIL_LIMIT = env.int("AGENT_FAIL_LIMIT", default=20)
-AGENT_FAIL_WINDOW = env.int("AGENT_FAIL_WINDOW", default=600)
-AGENT_NODE_RATE = env.int("AGENT_NODE_RATE", default=600)

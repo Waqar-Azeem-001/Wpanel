@@ -2,7 +2,7 @@
 The demo provider's PHP settings: a JSON file per account that behaves like a shared-hosting PHP selector. Each domain has its own
 version, memory limit, upload limit, run time, error display and extensions - but only from the plan's lists of choices, never a
 raw configuration file. An extension the website depends on cannot be switched off, and the upload limit cannot be larger than the
-memory limit. No PHP runs here; a real provider (the cPanel adapter, a native node) implements the same ``PhpCapability`` contract.
+memory limit. No PHP runs here; a real provider (the cPanel adapter) implements the same ``PhpCapability`` contract.
 """
 import json
 from pathlib import Path

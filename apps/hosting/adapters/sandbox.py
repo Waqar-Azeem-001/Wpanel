@@ -1,6 +1,6 @@
 """
 A directory the code may work inside and never escape: the safety layer behind every file operation of a provider that
-keeps an account's files on a disk we can reach (the demo provider today, a native node's agent later).
+keeps an account's files on a disk we can reach (the demo provider).
 
 The rules, all enforced here and not left to callers:
 

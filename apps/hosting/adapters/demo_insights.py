@@ -2,7 +2,7 @@
 The demo provider's usage history and live performance. Both are sample figures worked out from the account's name and the date, so
 they are steady between page loads and tomorrow's picture continues today's: disk grows slowly towards today's real figure, bandwidth
 varies from day to day, and CPU, memory, processes and disk activity move with the time of day. The last point of the history is
-always today's figure. A real provider (the cPanel adapter, a native node) implements the same ``InsightsCapability`` contract.
+always today's figure. A real provider (the cPanel adapter) implements the same ``InsightsCapability`` contract.
 """
 from datetime import date, datetime, timedelta, timezone
 

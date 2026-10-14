@@ -8,7 +8,7 @@ The demo provider's security tools. They work on the account's real (sandbox) we
 * Directory protection: a folder that asks for a login; only a hash of the password is kept.
 * SSH: switch on or off, and public keys that are checked properly (type, structure, RSA size) and shown by fingerprint.
 * File-integrity monitoring: a baseline of every file's checksum, and a check that lists what changed, appeared or vanished.
-No traffic is filtered and no SSH service runs here; a real provider (the cPanel adapter, a native node) implements the same
+No traffic is filtered and no SSH service runs here; a real provider (the cPanel adapter) implements the same
 ``SecurityCapability`` contract.
 """
 import base64

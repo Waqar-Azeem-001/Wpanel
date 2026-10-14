@@ -7,7 +7,7 @@ The demo provider's advanced tools: logs, FTP accounts and IP blocking.
   as a hash. Five accounts per account.
 * IP blocking: an address or a range, tidied; a range wider than a /16 (IPv4) or /48 (IPv6) is refused as too broad to be a sensible
   block; duplicates are refused; fifty rules per account.
-No traffic is filtered and no FTP server runs here; a real provider (the cPanel adapter, a native node) implements the same contracts.
+No traffic is filtered and no FTP server runs here; a real provider (the cPanel adapter) implements the same contracts.
 """
 import ipaddress
 import json

@@ -1,9 +1,9 @@
 """
-Provider-neutral hosting capabilities (next-generation roadmap, H0).
+Provider-neutral hosting capabilities (roadmap H0).
 
-The customer UI and the hosting services never learn whether an account lives on cPanel/WHM or on a native node.
+The customer UI and the hosting services never learn which kind of server an account lives on.
 They ask for a *capability* ("files", "dns", ...) and an operation inside it; a provider (``HostingAdapter``
-subclass: today ``WhmApiAdapter`` is the cPanel provider, a native provider arrives with the N track) either
+subclass: ``WhmApiAdapter`` is the cPanel provider, ``DemoAdapter`` the sample one) either
 implements that capability's contract below or does not declare it. Nothing here names cPanel.
 
 How a provider opts in: subclass the capability mixin(s) it implements, next to ``HostingAdapter``::

@@ -7,7 +7,6 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('agent', '0005_backuprepository'),
         ('hosting', '0005_hostingaccount_mail_server'),
     ]
 
@@ -31,7 +30,6 @@ class Migration(migrations.Migration):
                 ('restore_test_ok', models.BooleanField(null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
                 ('account', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='native_backups', to='hosting.hostingaccount')),
-                ('node', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='agent.agentnode')),
             ],
             options={
                 'ordering': ['-created_at', '-id'],

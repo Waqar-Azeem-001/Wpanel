@@ -3,7 +3,7 @@ The demo provider's SSL: a JSON file per account that behaves like a free, autom
 issued only for a domain that is on the account and whose DNS points at this server (the check a real authority makes); it lasts
 90 days; with auto-renew on it is renewed on its own once 30 days or fewer are left; "always use HTTPS" needs a working
 certificate; removing a certificate switches it off. Status and days left are worked out from the dates every time. No real
-certificate exists - a real provider (the cPanel adapter, a native node) implements the same ``SslCapability`` contract.
+certificate exists - a real provider (the cPanel adapter) implements the same ``SslCapability`` contract.
 """
 import json
 from datetime import datetime, timedelta, timezone

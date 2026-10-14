@@ -93,13 +93,12 @@ def create(user, account, request=None):
     if sub in {d.name.lower() for d in io.call(Capability.DOMAINS, "list_domains")}:
         raise ServiceError(f"{sub} already exists on this hosting account, so a staging site was not created.", code="domain_exists")
     staging = StagingSite.objects.create(account=account, domain=sub, state="creating")
-    native = account.server is not None and account.server.kind == "native"
-    root = f"{sub}/public_html" if native else "public_html/staging"
+    root = "public_html/staging"
     try:
-        io.call(Capability.DOMAINS, "add_domain", sub, "subdomain", "" if native else root, audit_metadata={"domain": sub, "purpose": "staging"})
+        io.call(Capability.DOMAINS, "add_domain", sub, "subdomain", root, audit_metadata={"domain": sub, "purpose": "staging"})
         staging.made_domain = True
         for info in io.call(Capability.DOMAINS, "list_domains"):
-            if info.name.lower() == sub and info.document_root and not native:
+            if info.name.lower() == sub and info.document_root:
                 root = info.document_root.strip("/") or root
         staging.docroot = root
         staging.save()

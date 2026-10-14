@@ -13,7 +13,7 @@ with a checksum recorded when it was made.
   backup holds. Archive paths are checked, so a damaged or hostile archive cannot write outside the account.
 * Retention: at most seven backups are kept; making room removes the oldest. A schedule (daily or weekly, full backups) is
   checked whenever backups are listed.
-No server snapshot is involved; a real provider (the cPanel adapter, a native node with off-server storage) implements the same
+No server snapshot is involved; a real provider (the cPanel adapter) implements the same
 ``BackupsCapability`` contract.
 """
 import hashlib

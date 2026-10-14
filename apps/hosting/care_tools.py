@@ -97,8 +97,8 @@ def merge_htaccess(current, enabled):
 
 
 def performance_supported(account):
-    """.htaccess is read by Apache and LiteSpeed (cPanel servers); the native stack does not use it."""
-    return account.server is not None and account.server.kind != "native"
+    """.htaccess is read by Apache and LiteSpeed (cPanel servers)."""
+    return account.server is not None
 
 
 def save_performance(user, account, enabled):

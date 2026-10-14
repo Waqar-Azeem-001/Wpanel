@@ -3,7 +3,7 @@ The "Create website" step of a hosting plan: what kind of website this is (WordP
 
 WordPress is installed with everything automatic; the customer only gives the site title and the administrator's name, email and password. Two ways, chosen by what the account's server can do:
 
-* **A server whose agent can do it** (native nodes): one signed command; the node makes the database and user, downloads and checks WordPress and installs it. WHPanel is told when it ends.
+* **A provider that installs applications itself** (the demo provider, as a sample): one call, and the provider reports the result.
 * **A server that cannot** (cPanel/WHM): WHPanel makes the database and user through the same hosting-control layer the Databases screen uses, writes ONE small installer file into the
   website's folder (``wp_installer``), calls it once, and reads the result file it leaves. The server needs PHP with curl or allow_url_fopen and zip or phar, which every cPanel server has.
 
@@ -60,8 +60,7 @@ def can_install_wordpress(account):
 
 def docroot_path(account):
     """The website's folder as the files capability names it."""
-    server = account.server
-    return f"{account.domain.lower()}/public_html" if server is not None and server.kind == "native" else "public_html"
+    return "public_html"
 
 
 def current(account):
@@ -308,24 +307,6 @@ def poll(user, account):
         return app
     _apply(user, account, app, data if isinstance(data, dict) else {"ok": False})
     return app
-
-
-def job_finished(job):
-    """The node has finished (or failed) the installation WordPress was waiting for."""
-    try:
-        app = WebsiteApp.objects.select_related("account").get(account_id=int(job.subject.split(":", 1)[1]))
-    except (ValueError, WebsiteApp.DoesNotExist):
-        return
-    if job.command != "INSTALL_WORDPRESS" or app.state != AppState.INSTALLING:
-        return
-    if job.result_ok is True:
-        data = job.result_data or {}
-        app.state, app.admin_url, app.version, app.error = AppState.READY, data.get("admin_url", ""), data.get("version", ""), ""
-        audit.record("hosting.site_ready", target=app.account, metadata={"kind": "wordpress", "version": app.version, "job": job.pk})
-    else:
-        app.state, app.error = AppState.FAILED, (job.result_message or "The server could not install WordPress.")[:500]
-        audit.record("hosting.site_failed", target=app.account, metadata={"kind": "wordpress", "error": app.error, "job": job.pk})
-    app.save(update_fields=["state", "admin_url", "version", "error", "updated_at"])
 
 
 # --- Deleting a website (the hosting plan stays) ------------------------------------------------------------------------------------------------

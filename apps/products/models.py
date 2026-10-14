@@ -94,7 +94,6 @@ class ServerKind(models.TextChoices):
     MANUAL = "manual", "Manual (no real provisioning - development/testing only)"
     WHM_API = "whm_api", "WHM API"
     DEMO = "demo", "Demo (sample data - design and testing only)"
-    NATIVE = "native", "Native node (WH Agent; provisioning arrives with N3)"
 
 
 class InfraProvider(models.TextChoices):

@@ -121,18 +121,8 @@ def request_hosting(actor, client, product, domain, *, server=None, request=None
         raise ServiceError("This product has no WHM package configured.", code="no_package_configured")
 
     mapped_servers = list(product.servers.all())
-    if getattr(settings, "NEW_ACCOUNTS_NATIVE_ONLY", False):  # M1: once native hosting is trusted, no new account is made on cPanel
-        native = [s for s in mapped_servers if s.kind == "native"]
-        if server is not None and server.kind == "whm_api" or (server is None and not native):
-            raise ServiceError("New accounts are made on native nodes only. Map a native node to this product.", code="native_only")
-        if server is None:
-            mapped_servers = native
     if server is None and len(mapped_servers) == 1:
         server = mapped_servers[0]
-    elif server is None and len(mapped_servers) > 1 and all(s.kind == "native" for s in mapped_servers):
-        from apps.agent.placement import pick_node
-
-        server = pick_node(among=mapped_servers)  # several native nodes are mapped: the least full healthy one gets the website
     elif server is not None and mapped_servers and server not in mapped_servers:
         raise ServiceError("This server is not mapped to the selected product.", code="server_not_mapped")
 
@@ -191,12 +181,6 @@ def complete_provisioning(actor, account, *, request=None):
         audit.record("hosting.provisioning_failed", actor=actor, target=account, metadata={"error": str(exc)},
                      request=request)
         raise ServiceError(f"Provisioning failed: {exc}", code="adapter_error") from exc
-
-    if result.get("pending"):  # a provider that works through a queue (the native one): the account becomes active when the node reports back
-        account.last_error = ""
-        account.save(update_fields=["last_error", "updated_at"])
-        audit.record("hosting.provisioning_started", actor=actor, target=account, metadata={"provider_ref": result.get("provider_ref", "")}, request=request)
-        return account
 
     account.status = HostingStatus.ACTIVE
     account.last_error = ""
@@ -448,15 +432,6 @@ def _refresh_usage(account):
     account.last_synced_at = timezone.now()
     account.save(update_fields=["disk_used_mb", "disk_limit_mb", "bandwidth_used_mb", "bandwidth_limit_mb",
                                 "last_synced_at", "updated_at"])
-    if account.server.kind == "native":  # native accounts have measured, node-enforced limits: warn at 90 percent, say so when over, act on bandwidth
-        from . import limits
-
-        try:
-            limits.check(account)
-        except Exception:  # noqa: BLE001 - telling the customer must never break the usage sync
-            import logging
-
-            logging.getLogger(__name__).exception("Limit check failed for account %s", account.pk)
     return account
 
 

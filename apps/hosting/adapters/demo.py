@@ -6,7 +6,7 @@ never a production server kind - and what it reports says so ("Sample data").
 
 Usage, SSL and PHP are sample values derived from the account's username, so they are stable between page loads and
 differ between accounts. Files are REAL files on this machine, inside one folder per account (``DEMO_FILES_ROOT``),
-worked on through the same sandbox a native provider's agent will use, so the File Manager is exercised for real.
+worked on through the same sandbox as a real provider, so the File Manager is exercised for real.
 """
 from pathlib import Path
 

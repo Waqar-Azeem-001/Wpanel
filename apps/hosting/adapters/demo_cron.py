@@ -2,7 +2,7 @@
 The demo provider's scheduled jobs: a JSON file per account. A job is never a free shell command: only ``php`` followed by a
 script inside the account (and plain arguments) is accepted, the schedule must be a valid five-field expression that does not run
 more often than every five minutes, an account may have ten jobs, and a job can be switched off without being deleted. "Run now"
-records a sample result - nothing is executed here; a real provider (the cPanel adapter, a native node) implements the same
+records a sample result - nothing is executed here; a real provider (the cPanel adapter) implements the same
 ``CronCapability`` contract.
 """
 import json

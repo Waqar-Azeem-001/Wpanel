@@ -1,7 +1,6 @@
 """
 The demo provider's machine figures: sample values worked out from the server's hostname and the time, so a few demo servers look
-different from each other and steady between page loads. They are not measurements. A real provider (a native node's agent) reports
-real ones; a cPanel server reports only what WHM can (see ``WhmApiAdapter.node_status``).
+different from each other and steady between page loads. They are not measurements. A real provider reports real ones; a cPanel server reports only what WHM can (see ``WhmApiAdapter.node_status``).
 """
 from datetime import datetime, timezone
 
