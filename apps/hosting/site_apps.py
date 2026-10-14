@@ -161,10 +161,12 @@ def _new_names(before, after, getter):
 def _start_by_script(user, account, app, title, admin_user, admin_email, admin_password, request):
     """Make the database, put the installer in the folder, call it once. The result is read later (``poll``): installing can take a minute or more."""
     folder = docroot_path(account)
-    keep = {"index.html", "index.htm", "cgi-bin", ".well-known", "error_log", ".htaccess", ".ftpquota"}
+    keep = set(wp_installer.HARMLESS) | set(wp_installer.PLACEHOLDERS)
     names = {e.name for e in _perform(user, account, Capability.FILES, "list_files", folder)}
-    if names - keep:
-        raise ServiceError("The website folder already holds files, so WordPress was not installed over them. Empty it first, or choose a custom website.", code="not_empty")
+    found = sorted(n for n in names - keep if not n.startswith((".cpanel", "whp-install-")))
+    if found:
+        raise ServiceError("The website folder already holds files (" + ", ".join(found[:6]) + "), so WordPress was not installed over them. Move them away in the File manager, or choose a custom website.",
+                           code="not_empty")
 
     dbs_before = {d.name for d in _perform(user, account, Capability.DATABASES, "list_databases")}
     users_before = {u.name for u in _perform(user, account, Capability.DATABASES, "list_database_users")}

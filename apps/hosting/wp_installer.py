@@ -15,6 +15,9 @@ import json
 import secrets
 
 SCHEME = "https"
+# What a brand-new hosting folder may already hold without counting as "the customer's files": the server's own folders and dot-files, and the placeholder pages a host puts there.
+HARMLESS = ("cgi-bin", "error_log", "php.ini", "robots.txt", ".htaccess", ".well-known", ".ftpquota", ".user.ini", ".cpanel", ".php-ini", ".cagefs", ".trash", "stats", "tmp")
+PLACEHOLDERS = ("index.html", "index.htm", "default.html", "default.htm", "default.php", "index.php.disabled", "coming-soon.html", "parking-page.html", "cp_errordocument.html")
 WP_ZIP = SCHEME + "://wordpress.org/latest.zip"
 WP_TAR = SCHEME + "://wordpress.org/latest.tar.gz"
 
@@ -72,11 +75,15 @@ if (!hash_equals(WHP_TOKEN_HASH, hash('sha256', isset($_GET['t']) ? (string)$_GE
 @unlink(__FILE__); // one use: it cannot be run again
 
 try {
-    $keep = array('index.html', 'index.htm', 'cgi-bin', '.well-known', 'error_log', '.htaccess', '.ftpquota', WHP_RESULT);
+    $keep = array_merge(json_decode('__HARMLESS__', true), json_decode('__PLACEHOLDERS__', true), array(WHP_RESULT));
+    $found = array();
     foreach (scandir(__DIR__) as $name) {
         if ($name === '.' || $name === '..' || in_array($name, $keep, true)) { continue; }
-        if (strpos($name, 'whp-install-') === 0) { continue; }
-        whp_finish(false, array('error' => 'The website folder already holds files, so WordPress was not installed over them.', 'code' => 'not_empty'));
+        if (strpos($name, 'whp-install-') === 0 || strpos($name, '.cpanel') === 0) { continue; }
+        $found[] = $name;
+    }
+    if ($found) {
+        whp_finish(false, array('error' => 'The website folder already holds files (' . implode(', ', array_slice($found, 0, 6)) . '), so WordPress was not installed over them.', 'code' => 'not_empty'));
     }
     if (file_exists(__DIR__ . '/wp-config.php')) {
         whp_finish(false, array('error' => 'WordPress is already installed here.', 'code' => 'exists'));
@@ -92,7 +99,7 @@ try {
     file_put_contents($tmp, $archive);
     unset($archive);
 
-    foreach (array('index.html', 'index.htm') as $holder) { if (is_file(__DIR__ . '/' . $holder)) { @unlink(__DIR__ . '/' . $holder); } }
+    foreach (json_decode('__PLACEHOLDERS__', true) as $holder) { if (is_file(__DIR__ . '/' . $holder)) { @unlink(__DIR__ . '/' . $holder); } }
 
     if ($useZip) {
         $zip = new ZipArchive();
@@ -172,5 +179,5 @@ def build(*, domain, scheme, db, db_user, db_password, title, admin_user, admin_
               "admin_user": admin_user, "admin_email": admin_email, "admin_password": admin_password}
     result = f"whp-install-{ident}.json"
     source = (PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result).replace("__ZIP__", WP_ZIP)
-              .replace("__TAR__", WP_TAR).replace("__CONFIG__", base64.b64encode(json.dumps(config).encode()).decode()))
+              .replace("__TAR__", WP_TAR).replace("__HARMLESS__", json.dumps(list(HARMLESS))).replace("__PLACEHOLDERS__", json.dumps(list(PLACEHOLDERS))).replace("__CONFIG__", base64.b64encode(json.dumps(config).encode()).decode()))
     return f"whp-install-{ident}.php", result, token, source

@@ -142,3 +142,23 @@ def test_a_custom_website_gets_a_starter_page_only_when_there_is_no_index(world,
     assert "index.html" in _names(owner, account)
     page = control.perform(owner, account, Capability.FILES, "read_file", "public_html/index.html", max_bytes=100_000).decode()
     assert account.domain in page and "ready" in page
+
+
+def test_a_fresh_hosting_folder_with_the_servers_own_files_is_still_empty_enough(world, owner, account, monkeypatch):  # noqa: F811
+    _folder(owner, account)
+    for name in (".htaccess", ".user.ini", ".cpanel_thing", "cgi-bin/keep", "default.html", "php.ini", "error_log"):
+        if "/" in name:
+            control.perform(owner, account, Capability.FILES, "make_directory", "public_html/cgi-bin")
+            continue
+        control.perform(owner, account, Capability.FILES, "write_file", f"public_html/{name}", b"x", overwrite=False)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": None)
+    app = site_apps.start_wordpress(owner, account, title="Acme", admin_user="siteadmin", admin_email="o@gmail.example.com", admin_password=WP["admin_password"])
+    assert app.state == AppState.INSTALLING
+
+
+def test_the_refusal_names_what_is_in_the_way(world, owner, account, monkeypatch):  # noqa: F811
+    _folder(owner, account)
+    control.perform(owner, account, Capability.FILES, "write_file", "public_html/old-site.php", b"<?php", overwrite=False)
+    with pytest.raises(ServiceError) as err:
+        site_apps.start_wordpress(owner, account, title="Acme", admin_user="siteadmin", admin_email="o@gmail.example.com", admin_password=WP["admin_password"])
+    assert "old-site.php" in err.value.message
