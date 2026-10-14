@@ -19,7 +19,7 @@ The administrator's password is never stored by WHPanel, never in the audit trai
 | Whole chain through WHPanel on a pretend node: request, signed job, result, screen | Yes |
 | A real download from wordpress.org, real WP-CLI, `systemd-run`, a real WordPress answering | **Never run.** The two download addresses for WP-CLI (`raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar` and its `.sha512`) are written from memory of how WP-CLI publishes and must be checked first |
 | cPanel servers | WordPress is **not offered** there (the option shows as not available); the custom website works |
-| More than one website in a plan | **Not built.** One website per hosting account until multiple domains per native account exist (roadmap N12) |
+| More than one website in a plan | **Not built.** One website per hosting account until the product supports several domains per plan |
 
 ## Not built (asked for, honest list)
 Staging, cloning, auto-updates, caching, speed test, migration from another WordPress host, WooCommerce presets, and choosing the WordPress language.

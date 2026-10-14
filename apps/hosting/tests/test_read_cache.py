@@ -108,5 +108,5 @@ def test_a_provider_that_does_not_ask_for_it_is_never_remembered(setup, monkeypa
 
 
 def test_contents_and_one_time_links_are_never_in_the_list_of_remembered_things():
-    for operation in ("read_file", "read_message", "list_messages", "webmail_access", "browse_table", "database_admin_access", "open_native_panel"):
+    for operation in ("read_file", "read_message", "list_messages", "webmail_access", "browse_table", "database_admin_access", "open_cpanel_access"):
         assert operation in control.NOT_CACHED

@@ -20,7 +20,7 @@
 
 ## Verified
 17 new tests (`test_ssl_php.py`): provider rules, both screens end to end, refusals shown as messages, audit, strangers get 404, a
-provider without these capabilities shows the not-available page. Real certificates and real PHP need the cPanel/native adapter (H14).
+provider without these capabilities shows the not-available page. Real certificates and real PHP need the cPanel adapter (H14).
 
 ## Deferred
 Uploading a custom certificate, per-domain `.htaccess` tools, PHP-FPM pool tuning, and the 375 / 768 px browser pass.

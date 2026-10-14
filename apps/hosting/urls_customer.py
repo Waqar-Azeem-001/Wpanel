@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_native, views_php, views_security, views_care, views_websites, views_ssl, views_tools, views_usage
+from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_ssl, views_tools, views_usage
 
 app_name = "hosting_customer"
 
@@ -59,8 +59,8 @@ urlpatterns = [
     path("<int:pk>/care/traffic/", views_care.my_hosting_care_traffic, name="care_traffic"),
     path("<int:pk>/care/wordpress/", views_care.my_hosting_care_wordpress, name="care_wordpress"),
     path("<int:pk>/care/wordpress/do/", views_care.my_hosting_care_wordpress_action, name="care_wordpress_action"),
-    path("<int:pk>/manage/native/", views_native.my_hosting_native, name="native"),
-    path("<int:pk>/manage/native/open/", views_native.my_hosting_native_open, name="native_open"),
-    path("<int:pk>/manage/native/sample/", views_native.my_hosting_native_demo, name="native_demo"),
+    path("<int:pk>/manage/cpanel/", views_cpanel_access.my_hosting_cpanel_access, name="cpanel_access"),
+    path("<int:pk>/manage/cpanel/open/", views_cpanel_access.my_hosting_cpanel_access_open, name="cpanel_access_open"),
+    path("<int:pk>/manage/cpanel/sample/", views_cpanel_access.my_hosting_cpanel_access_demo, name="cpanel_access_demo"),
     path("<int:pk>/manage/<slug:section>/", views.my_hosting_section, name="section"),
 ]

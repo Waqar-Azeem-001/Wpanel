@@ -91,6 +91,6 @@ way to sign out; basic mail settings such as a signature. Done:
   account menu, draft autosave, settings, no console errors.
 
 ## Deferred
-Sending and receiving real mail and a full webmail client (needs a real provider: H14, or the native mail platform N7),
+Sending and receiving real mail and a full webmail client (needs a real provider: H14,),
 catch-all and per-domain routing, mail filters, mailbox import, additional domains (H5), DKIM/SPF/DMARC records (H5 DNS),
 the 375 / 768 px check.

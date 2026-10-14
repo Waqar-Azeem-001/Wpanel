@@ -15,7 +15,7 @@
     contents must match the manifest. A changed, incomplete, damaged or missing archive is marked failed. Nothing on the website is
     touched by the test.
   - **Off-server copy:** a switch; when on, every new backup is also written to a separate location (standing in for storage away
-    from the server, which a native provider needs). If the local copy is lost or damaged and the off-server one is sound, the test
+    from the server, which some providers need). If the local copy is lost or damaged and the off-server one is sound, the test
     and the restore use it and rebuild the local copy. A lost off-server copy is shown as "Missing".
   - Restore: refused unless the backup passes the check (nothing is changed); otherwise a safety copy of what will be replaced is
     taken first ("before restore"), then exactly the parts the backup holds are replaced. Archive names are validated, so a hostile

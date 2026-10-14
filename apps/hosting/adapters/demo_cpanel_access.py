@@ -1,7 +1,7 @@
 """
 The demo provider's stand-in for "Open cPanel": a one-time sign-in link to a sample page, so the whole flow can be seen and tried without a
 cPanel server. The link carries a random token that works once and for two minutes; only a hash of it is kept, beside the account's other
-sample state. A real provider (the cPanel adapter) returns its own one-time link through the same ``NativePanelCapability`` contract.
+sample state. A real provider (the cPanel adapter) returns its own one-time link through the same ``CpanelAccessCapability`` contract.
 """
 import hashlib
 import hmac
@@ -14,7 +14,7 @@ LIFETIME_SECONDS = 120
 
 
 def _file(state_dir):
-    return Path(state_dir) / "native_session.json"
+    return Path(state_dir) / "cpanel_session.json"
 
 
 def _digest(token):

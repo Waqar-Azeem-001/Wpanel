@@ -44,7 +44,7 @@ class Capability(str, Enum):
     ACCESS = "access"
     SECURITY = "security"
     INSIGHTS = "insights"
-    NATIVE_PANEL = "native_panel"
+    CPANEL_ACCESS = "cpanel_access"
     BACKUPS = "backups"
     USAGE = "usage"
     APPS = "apps"
@@ -887,7 +887,7 @@ class AccessCapability(ABC):
 
 
 @dataclass(frozen=True)
-class NativePanelSession:
+class CpanelAccessSession:
     """A one-time sign-in link into the server's own control panel (cPanel). Never stored, never logged, never shown as text."""
 
     url: str
@@ -933,14 +933,14 @@ def supports_node(adapter) -> bool:
     return isinstance(adapter, NodeCapability)
 
 
-class NativePanelCapability(ABC):
+class CpanelAccessCapability(ABC):
     """
     TRANSITIONAL (H15): sign the customer into the server's own panel with a one-time link, for the things WHPanel does not do yet.
     It exists only while cPanel is in use and is removed with it. The provider must not reveal its own credentials.
     """
 
     @abstractmethod
-    def open_native_panel(self, username: str) -> NativePanelSession: ...
+    def open_cpanel_access(self, username: str) -> CpanelAccessSession: ...
 
 
 class InsightsCapability(ABC):
@@ -1062,7 +1062,7 @@ CONTRACTS = {
     Capability.ACCESS: AccessCapability,
     Capability.SECURITY: SecurityCapability,
     Capability.INSIGHTS: InsightsCapability,
-    Capability.NATIVE_PANEL: NativePanelCapability,
+    Capability.CPANEL_ACCESS: CpanelAccessCapability,
     Capability.BACKUPS: BackupsCapability,
     Capability.APPS: AppsCapability,
 }
@@ -1105,7 +1105,7 @@ OPERATIONS = {
                                     "create_integrity_baseline", "check_integrity"}),
     Capability.INSIGHTS: frozenset({"usage_history", "performance_stats"}),
     Capability.APPS: frozenset({"install_wordpress"}),
-    Capability.NATIVE_PANEL: frozenset({"open_native_panel"}),
+    Capability.CPANEL_ACCESS: frozenset({"open_cpanel_access"}),
     Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
                                    "delete_backup", "set_backup_schedule", "set_backup_offsite"}),
 }

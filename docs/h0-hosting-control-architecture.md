@@ -1,7 +1,7 @@
 # H0: Hosting Control Architecture and Provider Abstraction
 
 **Source:** `WHPANEL_NEXT_GENERATION_ROADMAP_FOR_CLAUDE.md`, section H0. **Date:** 2026-10-05. Local only.
-**Exit criterion (roadmap):** the UI and core hosting services do not need to know whether an account is cPanel or native.
+**Exit criterion (roadmap):** the UI and core hosting services do not need to know which cPanel server an account is on.
 
 ## 1. Rule 1 inspection (what already existed)
 
@@ -25,7 +25,7 @@ perform such an operation, which operations exist, and how they are audited.
 
 ## 2. Decisions (architecture decision records)
 
-1. **Keep `HostingAdapter` as the provider interface.** `WhmApiAdapter` is the cPanel provider; a native provider
+1. **Keep `HostingAdapter` as the provider interface.** `WhmApiAdapter` is the cPanel provider;
    arrives with the N track as another adapter chosen by `Server.kind`. Renaming to `HostingProvider` would only churn
    code and tests.
 2. **Capabilities are opt-in contracts** (`adapters/capabilities.py`, contract v1). A provider subclasses the capability
@@ -58,8 +58,8 @@ and `WhmApiAdapter` are untouched and report `["account", "usage"]`.
 
 ## 4. What H0 deliberately does not do
 
-- No capability is implemented by a real provider yet (that is H2 to H11 for the UI and H14 for the cPanel adapter;
-  the native provider is the N track). Today every account honestly reports only account and usage.
+- No capability is implemented by a real provider yet (that was H2 to H11 for the UI and H14 for the cPanel adapter).
+  At this point in the project every account honestly reported only account and usage; today every account honestly reports only account and usage.
 - No customer screens (H1 onwards), no Admin Access context (H12), no node/health fields (H13).
 - The WHM adapter's live verification remains a blocker for H14, not something H0 can fix.
 
@@ -67,7 +67,7 @@ and `WhmApiAdapter` are untouched and report `["account", "usage"]`.
 
 The customer UI and API ask the gateway for a capability and never touch an adapter class or a server kind; swapping the
 provider behind an account changes only which capabilities it reports. Demonstrated with the in-memory fake provider in
-the tests. Not yet demonstrable end to end with a real cPanel or native provider (needs H14 / N).
+the tests. Not yet demonstrable end to end with a real cPanel provider (needs H14).
 
 ## 6. Next slice
 

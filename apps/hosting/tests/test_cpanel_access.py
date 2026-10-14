@@ -68,21 +68,21 @@ def account(client_obj, manager):
 
 
 def page(account, tail=""):
-    return f"/account/hosting/{account.pk}/manage/native/{tail}"
+    return f"/account/hosting/{account.pk}/manage/cpanel/{tail}"
 
 
 # --- The adapter ------------------------------------------------------------------------------------------------------------
 
 def test_the_tool_is_off_until_staff_enable_it():
     adapter = WhmApiAdapter(host="whm.test", port=2087, credentials={})
-    assert "native_panel" not in {c.value for c in supported_capabilities(adapter)}
-    with override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"]):
-        assert "native_panel" in {c.value for c in supported_capabilities(adapter)}
+    assert "cpanel_access" not in {c.value for c in supported_capabilities(adapter)}
+    with override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"]):
+        assert "cpanel_access" in {c.value for c in supported_capabilities(adapter)}
 
 
 def test_the_session_is_asked_for_by_account_with_no_password_and_returns_the_link_and_expiry(fake):
     adapter = WhmApiAdapter(host="whm.test", port=2087, credentials={"api_username": "root", "api_token": TOKEN})
-    session = adapter.open_native_panel("acme")
+    session = adapter.open_cpanel_access("acme")
     assert fake.calls == [("create_user_session", {"user": "acme", "service": "cpaneld"})]
     assert session.url == LINK and session.expires_at.startswith("2030-")
 
@@ -92,17 +92,17 @@ def test_the_session_is_asked_for_by_account_with_no_password_and_returns_the_li
 def test_an_unusable_or_dangerous_link_is_refused(monkeypatch, answer):
     monkeypatch.setattr(WhmApiAdapter, "_call", Whm(answer=answer))
     with pytest.raises(HostingError, match="usable sign-in link"):
-        WhmApiAdapter(host="whm.test", port=2087, credentials={}).open_native_panel("acme")
+        WhmApiAdapter(host="whm.test", port=2087, credentials={}).open_cpanel_access("acme")
 
 
 def test_a_missing_expiry_is_fine(monkeypatch):
     monkeypatch.setattr(WhmApiAdapter, "_call", Whm(answer={"data": {"url": LINK}}))
-    assert WhmApiAdapter(host="whm.test", port=2087, credentials={}).open_native_panel("acme").expires_at is None
+    assert WhmApiAdapter(host="whm.test", port=2087, credentials={}).open_cpanel_access("acme").expires_at is None
 
 
 # --- The menu ---------------------------------------------------------------------------------------------------------------
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_the_menu_shows_advanced_tools_only_where_it_exists(client, owner, account, fake):
     client.force_login(owner)
     assert page(account) in client.get(f"/account/hosting/{account.pk}/").content.decode()
@@ -157,14 +157,14 @@ def test_only_a_hash_of_the_demo_link_is_kept(client, owner, demo):
     client.force_login(owner)
     url = client.post(page(demo, "open/")).url
     token = url.split("session=")[1]
-    assert token not in (files_root() / f"{demo.username}.state" / "native_session.json").read_text()
+    assert token not in (files_root() / f"{demo.username}.state" / "cpanel_session.json").read_text()
     everything = str(list(AuditEvent.objects.values_list("metadata", flat=True)))
     assert token not in everything
 
 
 # --- The page and the sign-in -------------------------------------------------------------------------------------------------
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_the_page_says_it_is_temporary_and_shows_no_secret(client, owner, account, fake):
     client.force_login(owner)
     text = client.get(page(account)).content.decode()
@@ -172,7 +172,7 @@ def test_the_page_says_it_is_temporary_and_shows_no_secret(client, owner, accoun
     assert TOKEN not in text and "password" in text.lower() and fake.calls == []  # opening the page makes no sign-in
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_a_click_redirects_once_with_no_caching_and_no_referrer(client, owner, account, fake):
     client.force_login(owner)
     response = client.post(page(account, "open/"))
@@ -182,31 +182,31 @@ def test_a_click_redirects_once_with_no_caching_and_no_referrer(client, owner, a
     assert client.get(page(account, "open/")).status_code == 405  # a link cannot be followed by a GET
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_the_request_is_audited_but_neither_the_link_nor_the_token_is_kept_anywhere(client, owner, account, fake):
     client.force_login(owner)
     client.post(page(account, "open/"))
-    event = AuditEvent.objects.get(action="hosting.control", metadata__operation="open_native_panel")
+    event = AuditEvent.objects.get(action="hosting.control", metadata__operation="open_cpanel_access")
     assert event.actor == owner and event.target_id == str(account.pk)
-    assert event.metadata == {"capability": "native_panel", "operation": "open_native_panel", "transitional": True}
+    assert event.metadata == {"capability": "cpanel_access", "operation": "open_cpanel_access", "transitional": True}
     everything = str([(e.action, e.metadata, e.target_repr, e.actor_repr) for e in AuditEvent.objects.all()])
     assert "AbCdEfSecretToken" not in everything and "cpsess" not in everything and TOKEN not in everything
     recent = client.get(page(account)).content.decode()
     assert "Opened" in recent and "AbCdEf" not in recent and "cpsess" not in recent
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_a_provider_failure_is_shown_as_a_message_and_audited_as_failed(client, owner, account, monkeypatch):
     monkeypatch.setattr(WhmApiAdapter, "_call", Whm(error=HostingError("The server refused the login.")))
     client.force_login(owner)
     response = client.post(page(account, "open/"), follow=True)
     assert "could not complete that" in response.content.decode() and "Refused" in response.content.decode()
-    assert AuditEvent.objects.filter(action="hosting.control_failed", metadata__operation="open_native_panel").count() == 1
+    assert AuditEvent.objects.filter(action="hosting.control_failed", metadata__operation="open_cpanel_access").count() == 1
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_too_many_sign_ins_are_held_back(client, owner, account, fake):
-    from apps.hosting.views_native import LIMIT
+    from apps.hosting.views_cpanel_access import LIMIT
 
     client.force_login(owner)
     for _ in range(LIMIT):
@@ -217,7 +217,7 @@ def test_too_many_sign_ins_are_held_back(client, owner, account, fake):
 
 # --- Who may start it -------------------------------------------------------------------------------------------------------
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_other_customers_get_nothing_and_make_no_sign_in(client, customer, account, fake):
     client.force_login(customer)
     assert client.get(page(account)).status_code == 404
@@ -225,7 +225,7 @@ def test_other_customers_get_nothing_and_make_no_sign_in(client, customer, accou
     assert fake.calls == []
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_staff_need_admin_access_and_a_managing_role_before_any_session_is_created(client, staff, account, fake):
     agent, technical = staff(Role.SUPPORT_AGENT), staff(Role.TECHNICAL)
     client.force_login(technical)
@@ -239,10 +239,10 @@ def test_staff_need_admin_access_and_a_managing_role_before_any_session_is_creat
     client.post(f"/staff/hosting/{account.pk}/admin-access/", {"reason": "Ticket 77: site stuck in cPanel"})
     response = client.post(page(account, "open/"))
     assert response.status_code == 302 and response.url == LINK and len(fake.calls) == 1
-    assert AuditEvent.objects.get(action="hosting.control", metadata__operation="open_native_panel").metadata["admin_access"] is True
+    assert AuditEvent.objects.get(action="hosting.control", metadata__operation="open_cpanel_access").metadata["admin_access"] is True
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["cpanel_access"])
 def test_a_pending_or_terminated_account_cannot_sign_in(client, owner, account, fake):
     HostingAccount.objects.filter(pk=account.pk).update(status=HostingStatus.PENDING)
     client.force_login(owner)
@@ -252,4 +252,4 @@ def test_a_pending_or_terminated_account_cannot_sign_in(client, owner, account, 
     assert "must be active" in client.post(page(account, "open/"), follow=True).content.decode() and fake.calls == []
     HostingAccount.objects.filter(pk=account.pk).update(status=HostingStatus.TERMINATED)
     with pytest.raises(ServiceError):
-        control.perform(owner, HostingAccount.objects.get(pk=account.pk), "native_panel", "open_native_panel")
+        control.perform(owner, HostingAccount.objects.get(pk=account.pk), "cpanel_access", "open_cpanel_access")

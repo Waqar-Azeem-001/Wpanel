@@ -35,7 +35,7 @@ def owner(account):
     return account.client.contacts.get().user
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "ftp", "logs", "domains", "dns", "ssl", "email", "native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "ftp", "logs", "domains", "dns", "ssl", "email", "cpanel_access"])
 def test_the_email_page_lists_the_mailboxes_and_leaves_out_what_cpanel_does_not_offer(client, owner, account):
     client.force_login(owner)
     page = client.get(f"/account/hosting/{account.pk}/manage/email/").content.decode()
@@ -43,7 +43,7 @@ def test_the_email_page_lists_the_mailboxes_and_leaves_out_what_cpanel_does_not_
     assert "Spam protection" not in page and "Where your mail is delivered" not in page and "Opens in a new window" not in page
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "ftp", "logs", "domains", "dns", "ssl", "email", "native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "ftp", "logs", "domains", "dns", "ssl", "email", "cpanel_access"])
 def test_ftp_files_logs_ssl_and_domains_pages_work_for_a_cpanel_account(client, owner, account):
     client.force_login(owner)
     ftp = client.get(f"/account/hosting/{account.pk}/manage/ftp/").content.decode()
@@ -55,14 +55,14 @@ def test_ftp_files_logs_ssl_and_domains_pages_work_for_a_cpanel_account(client, 
     assert "acme.com" in client.get(f"/account/hosting/{account.pk}/manage/domains/").content.decode()
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "ftp", "logs", "native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "ftp", "logs", "cpanel_access"])
 def test_the_menu_shows_only_what_is_enabled_and_advanced_tools_opens_cpanel(client, owner, account):
     client.force_login(owner)
     menu = client.get(f"/account/hosting/{account.pk}/").content.decode()
     for label in ("File manager", "FTP accounts", "Logs", "Advanced tools (cPanel)"):
         assert f"{label}</a>" in menu or label in menu
-    assert f"/account/hosting/{account.pk}/manage/native/" in menu
-    page = client.get(f"/account/hosting/{account.pk}/manage/native/").content.decode()
+    assert f"/account/hosting/{account.pk}/manage/cpanel/" in menu
+    page = client.get(f"/account/hosting/{account.pk}/manage/cpanel/").content.decode()
     assert "Open cPanel" in page and "never need a cPanel password" in page
 
 

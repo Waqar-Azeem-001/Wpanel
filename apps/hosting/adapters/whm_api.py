@@ -34,7 +34,7 @@ from .cpanel_files import CpanelFiles
 from .cpanel_ftp import CpanelFtp
 from .cpanel_logs import CpanelLogs
 from .cpanel_mysql import CpanelMysql
-from .cpanel_native import CpanelNative
+from .cpanel_access import CpanelAccess
 from .cpanel_php import CpanelPhp
 from .cpanel_ssl import CpanelSsl
 
@@ -43,7 +43,7 @@ SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]
             ("dns", "DNS", ["named"])]
 
 
-class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelNative,
+class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelAccess,
                     NodeCapability, HostingAdapter):
     read_cache_seconds = 45  # a real server is slow to answer, so what the gateway has just read is remembered for a few seconds
 

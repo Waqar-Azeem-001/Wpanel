@@ -19,7 +19,7 @@ status badge and upgrade/ticket links.
   (a test proves they appear once a provider reports them).
 - `templates/hosting/customer/list.html`: responsive card grid (1, 2, 3 columns), pending accounts show a setup note,
   actions: Manage (the existing service page for now), Upgrade (active only), Get help.
-- `_meter.html` plus a small `.usage-meter` rule in `static/css/theme.css`: a native `<progress>` element (accessible,
+- `_meter.html` plus a small `.usage-meter` rule in `static/css/theme.css`: a plain `<progress>` element (accessible,
   no inline style, themed for light and dark).
 - The view keeps its `accounts` and `sidebar` context, so the status filters and their tests are unchanged.
 
@@ -27,7 +27,7 @@ status badge and upgrade/ticket links.
 
 Hosting, client-area, crawler and design suites pass (new tests: meter maths, card content, pending state, ownership
 scoping, SSL and PHP appearing when a provider reports them). The project's rule against inline styles caught my first
-version of the bar; fixed with the native element.
+version of the bar; fixed with the plain element.
 
 ## Not done / next
 

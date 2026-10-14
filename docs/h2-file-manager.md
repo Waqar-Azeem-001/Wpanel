@@ -9,7 +9,7 @@ and header (H1), the demo provider.
 
 ## What was built
 - **Sandbox** (`apps/hosting/adapters/sandbox.py`): the one safety layer for any provider that keeps files on a disk we can
-  reach (demo now, a native node's agent later). Paths are relative; absolute paths, drive letters, `..`, backslashes,
+  reach (the demo provider). Paths are relative; absolute paths, drive letters, `..`, backslashes,
   NUL and control characters are refused outright; the resolved location must stay inside the website's folder; no
   existing path component may be a symbolic link; names are plain; the main folder cannot be renamed, copied or deleted;
   a folder cannot be moved or copied into itself; collisions are refused; overwrite must be asked for.
@@ -46,8 +46,7 @@ The first screen hid Download/Delete in a three-dot menu that was also cut off b
 
 ## Deferred inside H2 (listed in the roadmap but not built yet)
 Permissions editing, drag-and-drop upload, bulk copy and move, automatic emptying of old trash, folder size, and
-checking at 375 / 768 px. The cPanel provider cannot offer files until H14 and a verified WHM adapter; a native node
-needs the N track.
+checking at 375 / 768 px. The cPanel provider cannot offer files until H14 and a verified WHM adapter.
 
 
 ## Completed after the roadmap check

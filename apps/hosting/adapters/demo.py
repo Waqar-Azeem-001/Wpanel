@@ -14,14 +14,14 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           AccessCapability, AppsCapability, BackupsCapability, InsightsCapability, NativePanelCapability, NativePanelSession, NodeCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
+                           AccessCapability, AppsCapability, BackupsCapability, InsightsCapability, CpanelAccessCapability, CpanelAccessSession, NodeCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
 from .demo_backups import DemoBackups
 from .demo_cron import DemoCron
 from .demo_domains import SERVER_IP, DemoDomains
 from .demo_email import DemoEmail
 from .demo_insights import DemoInsights
-from .demo_native import create_token
+from .demo_cpanel_access import create_token
 from .demo_node import demo_node_status
 from .demo_php import DemoPhp
 from .demo_security import DemoSecurity
@@ -180,7 +180,7 @@ def sandbox_for(username):
 
 
 class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
-                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, InsightsCapability, NativePanelCapability, NodeCapability, ManualAdapter):
+                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, InsightsCapability, CpanelAccessCapability, NodeCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -598,7 +598,7 @@ class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapabil
 
     # --- "Open cPanel" (transitional, demo stand-in) -----------------------------------------------------------------
 
-    def open_native_panel(self, username):
+    def open_cpanel_access(self, username):
         from datetime import datetime, timezone
 
         from django.urls import reverse
@@ -609,5 +609,5 @@ class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapabil
         if account is None:
             raise HostingError("This account has no sample cPanel.")
         token, expires = create_token(files_root() / f"{username}.state")
-        return NativePanelSession(url=reverse("hosting_customer:native_demo", args=[account.pk]) + f"?session={token}",
+        return CpanelAccessSession(url=reverse("hosting_customer:cpanel_access_demo", args=[account.pk]) + f"?session={token}",
                                   expires_at=datetime.fromtimestamp(expires, tz=timezone.utc).isoformat())

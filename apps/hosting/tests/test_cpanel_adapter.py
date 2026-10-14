@@ -77,7 +77,7 @@ def test_enabled_tools_appear_one_by_one_and_unknown_names_are_ignored():
     assert {c.value for c in supported_capabilities(real)} == {"account", "usage", "dns", "php"}
 
 
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "domains", "dns", "ssl", "databases", "email", "php", "cron", "backups", "native_panel"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["files", "domains", "dns", "ssl", "databases", "email", "php", "cron", "backups", "cpanel_access"])
 def test_every_enabled_cpanel_tool_goes_through_the_normal_gateway_checks():
     from apps.hosting.adapters.capabilities import OPERATIONS
 

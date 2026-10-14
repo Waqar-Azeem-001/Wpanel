@@ -4,7 +4,7 @@ backups that run on a schedule the customer chose. Everything here works for any
 the public internet, and uses the provider's own scheduling only where the provider has some.
 
 Run by a customer, every call goes through ``control.perform`` (ownership, audit). Run by the panel's daily job (``user`` is None) it talks to the account's provider directly,
-the same way the native scheduled backups already do; it only ever does what the customer switched on.
+the same way the provider's own scheduled jobs do; it only ever does what the customer switched on.
 """
 import json
 import time

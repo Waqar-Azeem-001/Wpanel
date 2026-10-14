@@ -28,7 +28,7 @@ EVENT_TEXT = {
     "check_integrity": "Integrity check run", "add_ip_rule": "IP address blocked", "delete_ip_rule": "IP block removed",
     "request_ssl": "Certificate installed or renewed", "remove_ssl": "Certificate removed", "set_https_redirect": "Always use HTTPS changed",
     "restore_backup": "Backup restored", "set_ftp_password": "FTP password changed", "create_ftp_account": "FTP account created",
-    "open_native_panel": "cPanel opened (transitional)", "delete_ftp_account": "FTP account deleted", "set_mailbox_password": "Mailbox password changed",
+    "open_cpanel_access": "cPanel opened (transitional)", "delete_ftp_account": "FTP account deleted", "set_mailbox_password": "Mailbox password changed",
 }
 
 

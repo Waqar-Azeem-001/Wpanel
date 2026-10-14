@@ -1,7 +1,7 @@
 """
 The demo provider's domains and DNS: a JSON file per account that behaves like a shared-hosting domain and DNS service - extra
 domains, subdomains and aliases under plan limits, a website folder for each, redirects, and one editable DNS zone per domain
-with per-type record validation. No real DNS server is behind it; a real provider (the cPanel adapter, a native DNS node)
+with per-type record validation. No real DNS server is behind it; a real provider (the cPanel adapter)
 implements the same ``DomainsCapability`` and ``DnsCapability`` contracts.
 """
 import json

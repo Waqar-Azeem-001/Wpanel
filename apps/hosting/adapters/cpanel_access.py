@@ -9,12 +9,12 @@ from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from .base import HostingError
-from .capabilities import NativePanelCapability, NativePanelSession
+from .capabilities import CpanelAccessCapability, CpanelAccessSession
 from .cpanel_api import CpanelApi
 
 
-class CpanelNative(CpanelApi, NativePanelCapability):
-    def open_native_panel(self, username):
+class CpanelAccess(CpanelApi, CpanelAccessCapability):
+    def open_cpanel_access(self, username):
         data = (self._call("create_user_session", {"user": username, "service": "cpaneld"}).get("data") or {})
         url = str(data.get("url") or "")
         parts = urlsplit(url)
@@ -24,4 +24,4 @@ class CpanelNative(CpanelApi, NativePanelCapability):
             expires = datetime.fromtimestamp(int(data.get("expires")), tz=timezone.utc).isoformat()
         except (TypeError, ValueError, OverflowError, OSError):
             expires = None
-        return NativePanelSession(url=url, expires_at=expires)
+        return CpanelAccessSession(url=url, expires_at=expires)

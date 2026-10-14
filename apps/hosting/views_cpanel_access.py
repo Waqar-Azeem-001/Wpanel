@@ -25,7 +25,7 @@ from . import dashboard
 from .models import HostingStatus
 from .views import _own_account
 from .adapters.demo import files_root
-from .adapters.demo_native import consume_token
+from .adapters.demo_cpanel_access import consume_token
 from .views_domains import _run, _supports
 
 LIMIT = 6  # sign-ins per account in the window below, counting refused ones: a brake on a stuck button or abuse
@@ -34,27 +34,27 @@ WINDOW_MINUTES = 10
 
 def _recent(account):
     return AuditEvent.objects.filter(target_type__endswith="hostingaccount", target_id=str(account.pk), action__startswith="hosting.control",
-                                     metadata__operation="open_native_panel")
+                                     metadata__operation="open_cpanel_access")
 
 
 @login_required
-def my_hosting_native(request, pk):
+def my_hosting_cpanel_access(request, pk):
     account = _own_account(request, pk)
     sidebar = portal.service_sidebar(request, account)
-    if not _supports(account, "native_panel"):
+    if not _supports(account, "cpanel_access"):
         return render(request, "hosting/customer/section.html", {
-            "account": account, "sidebar": sidebar, "section": dashboard.section_page(request.user, account, "native")})
+            "account": account, "sidebar": sidebar, "section": dashboard.section_page(request.user, account, "cpanel")})
     past = [{"when": e.created_at, "by": e.actor_repr or "system", "support": bool((e.metadata or {}).get("admin_access")),
              "failed": e.action.endswith("failed")} for e in _recent(account)[:5]]
-    return render(request, "hosting/customer/native.html", {
-        "account": account, "sidebar": sidebar, "past": past, "open_url": reverse("hosting_customer:native_open", args=[account.pk])})
+    return render(request, "hosting/customer/cpanel_access.html", {
+        "account": account, "sidebar": sidebar, "past": past, "open_url": reverse("hosting_customer:cpanel_access_open", args=[account.pk])})
 
 
 @require_POST
 @login_required
-def my_hosting_native_open(request, pk):
+def my_hosting_cpanel_access_open(request, pk):
     account = _own_account(request, pk)
-    back = redirect("hosting_customer:native", pk=account.pk)
+    back = redirect("hosting_customer:cpanel_access", pk=account.pk)
     if account.status != HostingStatus.ACTIVE:
         messages.error(request, "Your hosting must be active to open cPanel.")
         return back
@@ -63,7 +63,7 @@ def my_hosting_native_open(request, pk):
         messages.error(request, f"Too many sign-in requests for this account. Wait {WINDOW_MINUTES} minutes and try again.")
         return back
     try:
-        session = _run(request, account, "native_panel", "open_native_panel", metadata={"transitional": True})
+        session = _run(request, account, "cpanel_access", "open_cpanel_access", metadata={"transitional": True})
     except ServiceError as exc:
         messages.error(request, exc.message)
         return back
@@ -74,14 +74,14 @@ def my_hosting_native_open(request, pk):
 
 
 @login_required
-def my_hosting_native_demo(request, pk):
+def my_hosting_cpanel_access_demo(request, pk):
     """The demo server's stand-in for cPanel: a sample page, opened by the one-time link and never again by the same link."""
     account = _own_account(request, pk)
     if account.server is None or account.server.kind != "demo":
         raise Http404
     valid = consume_token(files_root() / f"{account.username}.state", request.GET.get("session", ""))
-    response = render(request, "hosting/customer/native_demo.html", {"account": account, "valid": valid,
-                                                                     "back_url": reverse("hosting_customer:native", args=[account.pk])})
+    response = render(request, "hosting/customer/cpanel_access_demo.html", {"account": account, "valid": valid,
+                                                                     "back_url": reverse("hosting_customer:cpanel_access", args=[account.pk])})
     response["Cache-Control"] = "no-store"
     response["Referrer-Policy"] = "no-referrer"
     return response

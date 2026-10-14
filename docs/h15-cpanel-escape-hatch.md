@@ -7,7 +7,7 @@ off by default like the other cPanel tools.
 ## What it does
 For a cPanel server whose staff have turned it on, the website menu gets **Advanced tools (cPanel)** under Advanced. The page explains
 that this is temporary, then **Open cPanel** signs the customer in with a one-time link and redirects the browser there. Servers that
-are not cPanel (the demo, manual, a future native node) never show it.
+are not cPanel (the demo and manual providers) never show it.
 
 ## How the roadmap's requirements are met
 - **Secure temporary login:** WHM's `create_user_session` makes a short-lived, single-use link for one account's cPanel; the link
@@ -21,23 +21,23 @@ are not cPanel (the demo, manual, a future native node) never show it.
   `transitional: true` (and `admin_access: true` for support). **Neither the link nor the session token is stored or logged**; the
   page's "Recent sign-ins" list shows only who and when. A short-term limit (6 per account per 10 minutes, refused ones included)
   stops a stuck button or abuse.
-- **Clearly transitional:** a warning on the page, the word Temporary, and this module is one file (`cpanel_native.py`) plus one
-  screen (`views_native.py`, `native.html`) to delete.
+- **Clearly transitional:** a warning on the page, the word Temporary, and this module is one file (`cpanel_access.py`) plus one
+  screen (`views_cpanel_access.py`, `cpanel_access.html`) to delete.
 - The redirect is POST-only, sent with `Cache-Control: no-store` and `Referrer-Policy: no-referrer`; a link that is not http(s) (for
   example `javascript:`) is refused.
 
 ## Seeing it on the demo server
 Demo accounts show **Advanced tools (cPanel)** too. **Open cPanel** there signs in to a **sample page** that stands in for cPanel (a
-one-time link to `.../manage/native/sample/?session=...`): the link works once and for two minutes (only a hash of it is kept; a wrong
+one-time link to `.../manage/cpanel/sample/?session=...`): the link works once and for two minutes (only a hash of it is kept; a wrong
 guess also spends it), and reloading shows "This sign-in link has expired". Nothing about it is cPanel-specific, so the whole flow,
 audit and warnings can be looked at without a cPanel server.
 
 ## Turning it on
-`HOSTING_CPANEL_CAPABILITIES=native_panel` (add to the list of tools; see `docs/h14-cpanel-adapter.md`). Check on a staging server that
+`HOSTING_CPANEL_CAPABILITIES=cpanel_access` (add to the list of tools; see `docs/h14-cpanel-adapter.md`). Check on a staging server that
 `create_user_session` with `service=cpaneld` returns `data.url` and `data.expires`.
 
 ## Verified
-23 tests (`test_native_panel.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
+23 tests (`test_cpanel_access.py`): off by default; the exact WHM call (account only, no password); odd or dangerous links refused;
 menu hidden for cPanel when not enabled; the demo flow with its sample page (single use, expiry, only a hash stored, demo-only, owner-only); the page makes no sign-in just by opening; the redirect headers; the audit
 holds no link or token; failures shown and audited as failed; the limit; other customers get 404 and no sign-in is made; staff need
 Admin Access and a managing role; pending, suspended and terminated accounts refused.

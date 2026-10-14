@@ -2,7 +2,7 @@
 The demo provider's email service: a JSON file per account that behaves like a shared-hosting mail service - the
 account's own domain only, plan limits, quotas, forwarders that cannot loop, autoresponders, routing, spam settings,
 passwords kept only as hashes, and a small sample inbox per mailbox so the webmail screen has something to show.
-No mail is ever sent or received. A real provider (the cPanel adapter, a native mail node) implements the same
+No mail is ever sent or received. A real provider (the cPanel adapter) implements the same
 ``EmailCapability`` contract.
 """
 import json
