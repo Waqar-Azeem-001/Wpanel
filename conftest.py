@@ -19,6 +19,12 @@ def fresh_cache():
 
 
 @pytest.fixture(autouse=True)
+def no_shipped_brand_pictures(settings, tmp_path_factory):
+    """The pictures shipped in static/img/brand would make every page show a logo; tests start from "nothing uploaded, nothing shipped" and opt in (see apps/branding/tests)."""
+    settings.BRAND_ASSET_DIR = str(tmp_path_factory.mktemp("no-brand-pictures"))
+
+
+@pytest.fixture(autouse=True)
 def run_on_commit_immediately(monkeypatch):
     """Test DB transactions never commit; run on_commit callbacks (e.g. email delivery) inline."""
     from django.db import transaction

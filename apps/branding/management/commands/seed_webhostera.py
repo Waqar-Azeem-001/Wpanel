@@ -3,6 +3,7 @@ Load the Web Host Era brand, plans and domain prices (transcribed from the publi
 
     python manage.py seed_webhostera            # brand, plans, domain prices
     python manage.py seed_webhostera --brand    # only the brand (name, colours, logo, favicon, footer)
+    python manage.py seed_webhostera --fill-blank   # run by every deploy: sets the brand text, look and policy links ONLY where nothing was chosen yet
 
 Everything here is ordinary configuration written through the same services the staff screens use, so it can be
 changed afterwards in Setup (Brand, Products, Domain Pricing). It is safe to run again: existing rows are updated, not
@@ -85,8 +86,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--brand", action="store_true", help="Only the brand: name, colours, logo, favicon, footer.")
+        parser.add_argument("--fill-blank", action="store_true", help="Only fill brand settings nobody has set yet; never change or remove anything already chosen.")
 
     def handle(self, *args, **options):
+        if options["fill_blank"]:
+            self.fill_blank()
+            return
         self.brand()
         if not options["brand"]:
             self.plans()
@@ -103,6 +108,26 @@ class Command(BaseCommand):
                                favicon=(SEED / "webhostera-icon.png").read_bytes(),
                                policy_links=json.loads((SEED / "webhostera-policies.json").read_text(encoding="utf-8")))
         self.stdout.write("Brand: Web Host Era (colours, logo, favicon, footer, policy links).")
+
+    def fill_blank(self):
+        """The brand a fresh live site should have: what was never set is set (name, footer, look, policy links); anything an owner chose in Setup is left exactly as it is.
+        The logos need no filling: the pictures shipped in static/img/brand are shown until one is uploaded."""
+        import json
+
+        from apps.branding.models import BrandSettings
+
+        row = BrandSettings.load()
+        wanted = {}
+        if not row.site_name:
+            wanted["site_name"] = BRAND["site_name"]
+        if not row.footer_text:
+            wanted["footer_text"] = BRAND["footer_text"]
+        if row.theme == "custom" and row.primary_color == "#2459d6" and row.accent_color == "#1f7a4d":  # never configured: take the brand's look
+            wanted.update({"theme": "aura"})
+        links = None if row.policy_links else json.loads((SEED / "webhostera-policies.json").read_text(encoding="utf-8"))
+        if wanted or links is not None:
+            branding.save_settings(SYSTEM, values=wanted, policy_links=links)
+        self.stdout.write(f"Brand: filled {', '.join(sorted(wanted)) or 'nothing'}{' and the policy links' if links is not None else ''}.")
 
     def plans(self):
         server = Server.objects.first() or products.create_server(SYSTEM, {

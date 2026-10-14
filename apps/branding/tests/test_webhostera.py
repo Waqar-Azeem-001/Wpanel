@@ -122,3 +122,19 @@ def test_a_light_accent_is_accepted_and_reaches_the_stylesheet(staff, client):
     services.save_settings(staff(Role.ADMIN), values={"accent_color": "#c8fc35"})
     css = client.get(reverse("brand_css")).content.decode()
     assert "--brand-accent: #c8fc35;" in css and "--brand-accent-text: #14213d;" in css
+
+
+def test_fill_blank_sets_what_was_never_chosen_and_leaves_the_rest(db):
+    from apps.branding.models import BrandSettings
+
+    call_command("seed_webhostera", "--fill-blank", verbosity=0)
+    brand = services.get()
+    assert brand.name == "Web Host Era" and "Web Host Era Hosting Ltd" in brand.footer_text and brand.theme == "aura" and len(brand.policy_links) == 5
+    # an owner changes the name and the footer; running it again (every deploy does) changes nothing they chose
+    BrandSettings.objects.filter(pk=1).update(site_name="My Company", footer_text="Mine")
+    from django.core.cache import cache
+
+    cache.clear()
+    call_command("seed_webhostera", "--fill-blank", verbosity=0)
+    again = services.get()
+    assert again.name == "My Company" and again.footer_text == "Mine"
