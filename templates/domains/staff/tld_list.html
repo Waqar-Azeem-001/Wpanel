@@ -4,6 +4,14 @@
 {% block content %}
 <p><a href="{% url 'domains_staff:list' %}">&larr; Domains</a></p>
 <h1>TLD Pricing</h1>
+<section class="card mb-3"><div class="card-body d-flex flex-wrap align-items-center gap-3">
+  <div class="flex-grow-1">
+    <strong>Prices follow the company website</strong>
+    <div class="small text-secondary">Read every night from <code>{{ sync_source }}</code>; nothing is deleted or switched off, and a price that moves more than 3 times is held back for you to check.
+      {% if last_sync %}Last run {{ last_sync.when|date:"j M Y, H:i" }}: {% if last_sync.ok %}{{ last_sync.summary }}.{% else %}<span class="text-danger">failed &mdash; {{ last_sync.summary }}</span>{% endif %}{% else %}It has not run yet.{% endif %}</div>
+  </div>
+  {% if can_manage %}<form method="post" action="{% url 'domains_staff:tld_sync' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Read prices now</button></form>{% endif %}
+</div></section>
 <div class="table-responsive">
 <table class="table">
   <thead><tr><th>TLD</th><th>Register</th><th>Renew</th><th>Transfer</th><th>Years</th><th>Active</th></tr></thead>

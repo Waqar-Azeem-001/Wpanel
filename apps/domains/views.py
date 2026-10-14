@@ -332,10 +332,29 @@ def staff_domain_dns_remove(request, pk, record_id):
 def staff_tld_list(request):
     tlds = TldPricing.objects.all()
     can_manage = request.user.has_perm(perm("manage_domains"))
+    from . import price_sync
+
     return render(request, "domains/staff/tld_list.html", {
-        "tlds": tlds, "can_manage": can_manage,
+        "tlds": tlds, "can_manage": can_manage, "last_sync": price_sync.last_run(), "sync_source": price_sync.source_url(),
         "form": forms.TldPricingForm() if can_manage else None,
     })
+
+
+@require_POST
+@portal_permission_required(perm("manage_domains"))
+def staff_tld_sync(request):
+    """Read the company website's price list now (the same job that runs every night)."""
+    from . import price_sync
+
+    result = price_sync.run_and_record(actor=request.user, force=request.POST.get("force") == "1")
+    if result["ok"]:
+        text = f"Prices read: {len(result['created'])} added, {len(result['updated'])} updated, {result['unchanged']} already right."
+        if result["held"]:
+            text += f" {len(result['held'])} held back because the price moved more than 3 times: " + ", ".join(h["tld"] for h in result["held"][:8]) + "."
+        messages.success(request, text)
+    else:
+        messages.error(request, result["error"])
+    return redirect("domains_staff:tld_list")
 
 
 @require_POST

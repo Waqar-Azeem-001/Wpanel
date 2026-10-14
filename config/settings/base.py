@@ -281,6 +281,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
     "panel-database-backup": {"task": "apps.core.tasks.panel_backup_task", "schedule": crontab(hour=1, minute=30)},
     "website-care": {"task": "apps.hosting.tasks.run_site_care_task", "schedule": crontab(hour=3, minute=15)},
+    "sync-tld-prices": {"task": "apps.domains.tasks.sync_tld_prices_task", "schedule": crontab(hour=2, minute=10)},
     "generate-renewal-invoices": {
         "task": "apps.renewals.tasks.generate_renewal_invoices_task",
         "schedule": crontab(hour=3, minute=0),
@@ -376,5 +377,7 @@ LOGGING = {
 # key derived from SECRET_KEY; set explicitly in production so SECRET_KEY rotation
 # does not make stored credentials unreadable.
 CREDENTIALS_ENCRYPTION_KEY = env("CREDENTIALS_ENCRYPTION_KEY", default="")
+# The company website's public domain price list, read daily to keep the TLD prices current (apps/domains/price_sync.py). It must be https.
+TLD_PRICE_SOURCE_URL = env("TLD_PRICE_SOURCE_URL", default="https://webhostera.pk/domain-pricing/")
 # Where `manage.py backup_panel` writes the panel's own encrypted database backups (copy them away from this server)
 PANEL_BACKUP_DIR = env("PANEL_BACKUP_DIR", default=str(BASE_DIR / "panel_backups"))

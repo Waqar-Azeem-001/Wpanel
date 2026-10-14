@@ -9,6 +9,7 @@ urlpatterns = [
     path("bulk/", views.staff_domain_bulk, name="bulk"),
     path("tlds/", views.staff_tld_list, name="tld_list"),
     path("tlds/save/", views.staff_tld_save, name="tld_save"),
+    path("tlds/sync/", views.staff_tld_sync, name="tld_sync"),
     path("tlds/<int:pk>/status/", views.staff_tld_status, name="tld_status"),
     path("whois/", views.staff_whois, name="whois"),
     path("settings/", views.staff_settings, name="settings"),
