@@ -52,8 +52,9 @@ def series(account, hours=24):
         if len(points) < 2:
             continue
         limit = points[-1][1].get("limit") or 0
-        peak = max([p[1].get("used", 0) for p in points] + [limit * 0.05, 1e-9])
-        top = max(peak, limit) if limit and limit < peak * 20 else peak
+        peak = max([p[1].get("used", 0) for p in points] + [0])
+        scale = max(peak, limit * 0.05, 1e-9)  # a chart of an idle account is a flat line near the bottom, not stretched to fill the box
+        top = max(scale, limit) if limit and limit < scale * 20 else scale
         span = (points[-1][0] - points[0][0]).total_seconds() or 1
         coords = []
         for when, value in points:
