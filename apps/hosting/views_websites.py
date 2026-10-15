@@ -4,6 +4,7 @@ Deleting asks the customer to type the website's address; it removes the website
 email alone.
 """
 from django.contrib import messages
+from django.http import Http404
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -12,7 +13,9 @@ from django.views.decorators.http import require_POST
 from apps.core import portal
 from apps.core.exceptions import ServiceError
 
-from . import dashboard, plan_sites, services, site_apps, staging
+from urllib.parse import urlencode
+
+from . import dashboard, domain_check, plan_sites, services, site_apps, staging
 from .models import HostingAccount, HostingStatus
 from .views import _own_account
 
@@ -44,6 +47,28 @@ def websites(request):
         groups.append({"account": account, "plan": card["plan"], "state": state, "rows": rows, "plan_url": reverse("hosting_customer:plan", args=[account.pk]),
                        "expires_at": account.expires_at})
     return render(request, "hosting/customer/websites.html", {"groups": groups, "sidebar": []})
+
+
+@login_required
+def wp_admin(request, pk, domain=""):
+    """The way into WordPress admin. When the domain already leads to this hosting it goes straight there; when it does not, the address would show nothing,
+    so this page says why and gives the ways to see the website anyway (a hosts-file line for a preview, or pointing / transferring the domain)."""
+    account = _own_account(request, pk)
+    domain = "" if (domain or account.domain).lower() == account.domain.lower() else domain.lower()
+    if domain and domain not in {s["domain"] for s in plan_sites.summary(request.user, account)["sites"]}:
+        raise Http404
+    app = site_apps.current(account, domain)
+    if app is None or app.kind != "wordpress" or app.state != "ready" or not app.admin_url:
+        return redirect("hosting_customer:site_setup", pk=account.pk, domain=domain) if domain else redirect("hosting_customer:setup", pk=account.pk)
+    state = domain_check.check(account, domain)
+    if state["points_here"]:
+        return redirect(app.admin_url)
+    name = site_apps.site_domain(account, domain)
+    return render(request, "hosting/customer/wp_admin.html", {
+        "account": account, "name": name, "ip": state["ip"], "hosts_line": state["hosts_line"], "ours": state["ours"], "admin_url": app.admin_url,
+        "preview_url": state["preview_url"], "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": name}),
+        "back_url": reverse("hosting_customer:site_setup_status", args=[account.pk, domain]) if domain else reverse("hosting_customer:detail", args=[account.pk]),
+        "sidebar": portal.service_sidebar(request, account)})
 
 
 @login_required

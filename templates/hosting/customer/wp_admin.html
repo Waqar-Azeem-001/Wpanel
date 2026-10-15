@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "WordPress admin" %} · {{ name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {{ name }}</a></nav>
+<header class="page-head">
+  <h1>{% trans "Open WordPress admin" %}</h1>
+  <p class="page-sub">{% blocktrans with name=name %}{{ name }} does not lead to this hosting yet, so its address cannot show your website. Your WordPress is installed and working. Use one of these ways to see it.{% endblocktrans %}</p>
+</header>
+
+<section class="card mb-4" aria-labelledby="wa-preview">
+  <div class="card-body">
+    <h2 class="h5" id="wa-preview"><span class="badge text-bg-primary me-2">1</span>{% trans "Preview it from your computer, right now" %}</h2>
+    <p class="text-secondary">{% trans "Add this one line to your computer's hosts file. It tells only your computer that this domain lives on our server, so you see and sign in to the real website. Nobody else is affected. Remove the line when the domain is live." %}</p>
+    {% if hosts_line %}
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <input id="wa-hosts" type="text" class="form-control font-monospace flex-grow-1" readonly value="{{ hosts_line }}" aria-label="{% trans 'Line to add' %}" data-select-on-click>
+      <button class="btn btn-outline-primary" type="button" data-copy="#wa-hosts"><i class="bi bi-clipboard" aria-hidden="true"></i> <span>{% trans "Copy" %}</span></button>
+    </div>
+    <ol class="small text-secondary mb-3">
+      <li>{% trans "Windows: open Notepad as administrator, open C:\Windows\System32\drivers\etc\hosts, paste the line at the end and save." %}</li>
+      <li>{% trans "Mac or Linux: run  sudo nano /etc/hosts  in a terminal, paste the line at the end and save." %}</li>
+      <li>{% trans "Close and reopen your browser, then press the button below." %}</li>
+    </ol>
+    <a class="btn btn-primary" href="{{ admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open WordPress admin" %}</a>
+    <a class="btn btn-outline-secondary" href="{{ preview_url }}" target="_blank" rel="noopener noreferrer">{% trans "Preview the website" %}</a>
+    {% else %}
+    <p class="site-note mb-0"><i class="bi bi-info-circle" aria-hidden="true"></i>{% trans "This hosting's server address is not known yet, so the preview line cannot be made. Please contact support." %}</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card mb-4" aria-labelledby="wa-live">
+  <div class="card-body">
+    <h2 class="h5" id="wa-live"><span class="badge text-bg-primary me-2">2</span>{% trans "Make the domain live" %}</h2>
+    <p class="text-secondary">{% if ours %}{% trans "This domain is registered with us. Point its A record to this hosting:" %}{% else %}{% trans "At the company where you bought the domain, set its A record to this hosting's address, or transfer the domain to us and we do it for you:" %}{% endif %} {% if ip %}<code>{{ ip }}</code>{% endif %}</p>
+    {% if not ours %}<a class="btn btn-outline-secondary" href="{{ transfer_url }}">{% trans "Transfer the domain to us" %}</a>{% endif %}
+    <p class="small text-secondary mt-3 mb-0">{% trans "After the change, it can take a few hours until the whole internet sees it. This page then opens WordPress admin directly." %}</p>
+  </div>
+</section>
+{% endblock %}

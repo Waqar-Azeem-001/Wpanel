@@ -209,3 +209,37 @@ def test_the_wordpress_tool_knows_the_flush_cache_action():
     assert "flush_cache" in wp_tool.ACTIONS
     source = wp_tool.build("flush_cache")[3]
     assert "wp_cache_flush" in source and "litespeed_purge_all" in source
+
+
+# --- WordPress admin when the domain is not ours / not pointing here ----------------------------------------------------------
+
+def test_wordpress_admin_explains_the_preview_when_the_domain_does_not_lead_here(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import domain_check
+
+    WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com", admin_url="https" + "://site/wp-admin/")
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: {"203.0.113.9"})
+    account.server.ip_address = "198.51.100.7"
+    account.server.save(update_fields=["ip_address"])
+    reply = browser(owner).get(reverse("hosting_customer:wp_admin", args=[account.pk]))
+    html = reply.content.decode()
+    assert reply.status_code == 200 and f"198.51.100.7 {account.domain} www.{account.domain}" in html and "hosts file" in html and "Open WordPress admin" in html
+    assert "Transfer the domain to us" in html
+
+
+def test_wordpress_admin_goes_straight_there_when_the_domain_leads_here(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import domain_check
+
+    target = "https" + "://site.example.com/wp-admin/"
+    WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com", admin_url=target)
+    account.server.ip_address = "198.51.100.7"
+    account.server.save(update_fields=["ip_address"])
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: {"198.51.100.7"})
+    reply = browser(owner).get(reverse("hosting_customer:wp_admin", args=[account.pk]))
+    assert reply.status_code == 302 and reply["Location"] == target
+
+
+def test_wordpress_admin_links_use_the_gate_and_foreign_domains_are_404(world, owner, account):  # noqa: F811
+    WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com", admin_url="https" + "://site/wp-admin/")
+    html = _page(owner, "hosting_customer:detail", account.pk)
+    assert reverse("hosting_customer:wp_admin", args=[account.pk]) in html
+    assert browser(owner).get(reverse("hosting_customer:site_wp_admin", args=[account.pk, "not-mine.example.com"])).status_code == 404

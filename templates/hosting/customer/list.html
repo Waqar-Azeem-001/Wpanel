@@ -36,7 +36,7 @@
     <div class="site-card-actions">
       <a class="btn btn-outline-secondary btn-sm" href="{{ card.account.site_url }}" target="_blank" rel="noopener noreferrer" aria-label="{% trans 'Visit' %} {{ card.account.domain }}">{% trans "Visit" %} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
       {% if card.app and card.app.kind == "wordpress" and card.app.state == "ready" and card.app.admin_url %}
-      <a class="btn btn-outline-secondary btn-sm" href="{{ card.app.admin_url }}" target="_blank" rel="noopener noreferrer">WP Admin</a>
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'hosting_customer:wp_admin' card.account.pk %}" target="_blank" rel="noopener noreferrer">WP Admin</a>
       {% endif %}
     </div>
   </li>

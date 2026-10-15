@@ -37,7 +37,7 @@
     {% if card.app.state == "installing" or card.app.state == "failed" %}
       <a class="btn btn-sm btn-outline-secondary" href="{% url 'hosting_customer:setup_status' account.pk %}">{% trans "See progress" %}</a>
     {% elif card.app.kind == "wordpress" and card.app.admin_url %}
-      <a class="btn btn-primary btn-sm" href="{{ card.app.admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "WP Admin" %}</a>
+      <a class="btn btn-primary btn-sm" href="{% url 'hosting_customer:wp_admin' account.pk %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "WP Admin" %}</a>
     {% endif %}
   </div>
 </section>

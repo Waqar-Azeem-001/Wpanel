@@ -82,7 +82,7 @@
     {% if app.version %}<dt class="col-sm-4">WordPress</dt><dd class="col-sm-8">{{ app.version }}</dd>{% endif %}
   </dl>
   <p class="text-secondary">{% trans "Sign in with the username and password you chose. We do not keep the password." %}</p>
-  {% if app.admin_url %}<a class="btn btn-primary" href="{{ app.admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open WordPress admin" %}</a>{% endif %}
+  {% if app.admin_url %}<a class="btn btn-primary" href="{% if site_domain and site_domain != account.domain %}{% url 'hosting_customer:site_wp_admin' account.pk site_domain %}{% else %}{% url 'hosting_customer:wp_admin' account.pk %}{% endif %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open WordPress admin" %}</a>{% endif %}
   {% endif %}
   <a class="btn btn-outline-secondary" href="{{ visit_url }}" target="_blank" rel="noopener noreferrer">{% trans "Visit website" %}</a>
   <a class="btn btn-outline-secondary" href="{{ done_url }}">{% trans "Go to the dashboard" %}</a>
