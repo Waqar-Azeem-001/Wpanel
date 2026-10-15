@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_plan, views_ssl, views_tools, views_usage
+from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_plan, views_wordpress, views_ssl, views_tools, views_usage
 
 app_name = "hosting_customer"
 
@@ -67,6 +67,8 @@ urlpatterns = [
     path("<int:pk>/care/traffic/", views_care.my_hosting_care_traffic, name="care_traffic"),
     path("<int:pk>/care/wordpress/", views_care.my_hosting_care_wordpress, name="care_wordpress"),
     path("<int:pk>/cache/clear/", views_care.my_hosting_cache_clear, name="cache_clear"),
+    path("<int:pk>/wordpress/", views_wordpress.wordpress_overview, name="wordpress"),
+    path("<int:pk>/wordpress/do/", views_wordpress.wordpress_do, name="wordpress_do"),
     path("<int:pk>/care/wordpress/do/", views_care.my_hosting_care_wordpress_action, name="care_wordpress_action"),
     path("<int:pk>/manage/cpanel/", views_cpanel_access.my_hosting_cpanel_access, name="cpanel_access"),
     path("<int:pk>/manage/cpanel/open/", views_cpanel_access.my_hosting_cpanel_access_open, name="cpanel_access_open"),

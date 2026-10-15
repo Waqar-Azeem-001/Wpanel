@@ -23,6 +23,8 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:staging": "linked from the website menu for a ready WordPress website; the crawl world has none (tested in apps/core/test_site_care.py)",
     "hosting_customer:site_setup": "the set-up of a website on a domain added to a plan; the crawl world has no added domain (tested in apps/core/test_client_shell.py)",
     "preview_resolve": "the web server's own question about a preview host; answers only with the shared key (tested in apps/core/test_client_shell.py)",
+    "hosting_customer:wordpress": "WordPress > Overview: listed in the website menu only for a WordPress website (tested in apps/core/test_client_shell.py)",
+    "hosting_customer:wordpress_do": "the WordPress overview switches and installs; POST only (tested in apps/core/test_client_shell.py)",
     "hosting_customer:wp_password": "sets a new WordPress administrator password; POST only (tested in apps/core/test_client_shell.py)",
     "hosting_customer:wp_admin": "the way into WordPress admin; goes straight there or explains the preview (tested in apps/core/test_client_shell.py)",
     "hosting_customer:site_wp_admin": "the same for a website on an added domain (tested in apps/core/test_client_shell.py)",

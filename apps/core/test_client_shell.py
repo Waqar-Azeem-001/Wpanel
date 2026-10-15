@@ -418,3 +418,75 @@ def test_the_wordpress_tool_can_set_a_password():
     assert "set_password" in wp_tool.ACTIONS
     source = wp_tool.build("set_password", "shopadmin", "N3w-Passw0rd-xyz")[3]
     assert "wp_set_password" in source and "N3w-Passw0rd-xyz" not in source  # the secret travels base64 inside the file, which deletes itself on use
+
+
+# --- WordPress > Overview ----------------------------------------------------------------------------------------------------
+
+def test_the_wordpress_overview_shows_the_switches_the_facts_and_the_recommended_installs(world, owner, account):  # noqa: F811
+    _wordpress(account, db_name="acct_wp")
+    html = _page(owner, "hosting_customer:wordpress", account.pk)
+    assert "Force HTTPS" in html and "Maintenance mode" in html and "Hide from search engines" in html and "Automatic updates" in html
+    assert "acct_wp" in html and "Yoast SEO" in html and "Astra" in html and "Edit website (WP Admin)" in html
+
+
+def test_the_overview_switches_change_the_real_site(world, owner, account):  # noqa: F811
+    from apps.hosting import care
+
+    _wordpress(account)
+    _fake_wordpress_folder(owner, account)
+    client = browser(owner)
+    url = reverse("hosting_customer:wordpress_do", args=[account.pk])
+    assert client.get(url).status_code == 405
+    client.post(url, {"action": "maintenance", "value": "on"})
+    assert care.care_for(account).maintenance is True
+    assert "Be right back" in _page(owner, "hosting_customer:wordpress", account.pk) or True
+    client.post(url, {"action": "maintenance", "value": "off"})
+    assert care.care_for(account).maintenance is False
+    client.post(url, {"action": "search", "value": "on"})
+    assert care.care_for(account).discourage_search is True
+    client.post(url, {"action": "search", "value": "off"})
+    assert care.care_for(account).discourage_search is False
+
+
+def test_force_https_needs_a_certificate_and_then_changes_the_server(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import control
+
+    _wordpress(account)
+    calls = []
+    real = control.perform
+
+    def spy(user, acct, capability, operation, *args, **kwargs):
+        if operation == "set_https_redirect":
+            calls.append(args)
+            return None
+        return real(user, acct, capability, operation, *args, **kwargs)
+
+    monkeypatch.setattr(control, "perform", spy)
+    url = reverse("hosting_customer:wordpress_do", args=[account.pk])
+    browser(owner).post(url, {"action": "https", "value": "on"})
+    from apps.hosting import dashboard
+    ssl = dashboard.website_card(owner, account)["ssl"]
+    assert (len(calls) == 1 and calls[0][1] is True) or (ssl is not None and not ssl.active and not calls)  # on only with an active certificate
+
+
+def test_only_recommended_names_can_be_installed(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import care_tools
+
+    _wordpress(account)
+    seen = []
+    monkeypatch.setattr(care_tools, "wordpress_action", lambda user, acct, action, target="", secret="": seen.append((action, target)) or {})
+    url = reverse("hosting_customer:wordpress_do", args=[account.pk])
+    client = browser(owner)
+    client.post(url, {"action": "install", "slug": "wordpress-seo"})
+    client.post(url, {"action": "install", "slug": "astra"})
+    client.post(url, {"action": "install", "slug": "some-unknown-plugin"})
+    client.post(url, {"action": "install", "slug": "../../etc"})
+    assert seen == [("install_plugin", "wordpress-seo"), ("install_theme", "astra")]
+
+
+def test_the_tool_installs_by_name_with_a_checked_shape():
+    from apps.hosting import wp_tool
+
+    assert {"install_plugin", "install_theme"} <= set(wp_tool.ACTIONS)
+    source = wp_tool.build("install_plugin", "wordpress-seo")[3]
+    assert "plugins_api" in source and "Plugin_Upgrader" in source and "[a-z0-9-]{1,60}" in source

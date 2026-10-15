@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "WordPress" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:detail' account.pk %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {{ account.domain }}</a></nav>
+<header class="page-head page-head-split">
+  <div>
+    <h1><i class="bi bi-wordpress" aria-hidden="true"></i> {% trans "WordPress" %}</h1>
+    <p class="page-sub">{{ account.domain }}{% if app.version %} &middot; WordPress {{ app.version }}{% endif %}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{{ admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Edit website (WP Admin)" %}</a>
+  </div>
+</header>
+
+<section class="card mb-4" aria-labelledby="wp-switches">
+  <div class="card-header"><h2 class="h6 mb-0" id="wp-switches">{% trans "Settings" %}</h2></div>
+  <ul class="wp-switches">
+    <li>
+      <div class="wp-switch-text"><strong>{% trans "Force HTTPS" %}</strong>
+        <small>{% if not can_https %}{% trans "This server does not offer this switch." %}{% elif not ssl_active %}{% trans "Install the certificate first (Security > SSL), then visitors can be sent to HTTPS." %}{% else %}{% trans "Visitors who open the website on the plain, unsecured address are sent to the secure one." %}{% endif %}</small></div>
+      <form method="post" action="{{ do_url }}">{% csrf_token %}<input type="hidden" name="action" value="https"><input type="hidden" name="value" value="{% if https_on %}off{% else %}on{% endif %}">
+        <button class="btn btn-sm {% if https_on %}btn-success{% else %}btn-outline-secondary{% endif %}" type="submit" {% if not can_https %}disabled{% endif %} aria-pressed="{% if https_on %}true{% else %}false{% endif %}">{% if https_on %}<i class="bi bi-toggle-on" aria-hidden="true"></i> {% trans "On" %}{% else %}<i class="bi bi-toggle-off" aria-hidden="true"></i> {% trans "Off" %}{% endif %}</button></form>
+    </li>
+    <li>
+      <div class="wp-switch-text"><strong>{% trans "Maintenance mode" %}</strong>
+        <small>{% trans "Visitors see a 'be right back' page while you work. You, signed in to WordPress, still see the real website." %}</small></div>
+      <form method="post" action="{{ do_url }}">{% csrf_token %}<input type="hidden" name="action" value="maintenance"><input type="hidden" name="value" value="{% if care.maintenance %}off{% else %}on{% endif %}">
+        <button class="btn btn-sm {% if care.maintenance %}btn-warning{% else %}btn-outline-secondary{% endif %}" type="submit" aria-pressed="{% if care.maintenance %}true{% else %}false{% endif %}">{% if care.maintenance %}<i class="bi bi-toggle-on" aria-hidden="true"></i> {% trans "On" %}{% else %}<i class="bi bi-toggle-off" aria-hidden="true"></i> {% trans "Off" %}{% endif %}</button></form>
+    </li>
+    <li>
+      <div class="wp-switch-text"><strong>{% trans "Hide from search engines" %}</strong>
+        <small>{% trans "Asks Google and others not to list the website. Useful while it is being built." %}</small></div>
+      <form method="post" action="{{ do_url }}">{% csrf_token %}<input type="hidden" name="action" value="search"><input type="hidden" name="value" value="{% if care.discourage_search %}off{% else %}on{% endif %}">
+        <button class="btn btn-sm {% if care.discourage_search %}btn-warning{% else %}btn-outline-secondary{% endif %}" type="submit" aria-pressed="{% if care.discourage_search %}true{% else %}false{% endif %}">{% if care.discourage_search %}<i class="bi bi-toggle-on" aria-hidden="true"></i> {% trans "On" %}{% else %}<i class="bi bi-toggle-off" aria-hidden="true"></i> {% trans "Off" %}{% endif %}</button></form>
+    </li>
+    <li>
+      <div class="wp-switch-text"><strong>{% trans "Automatic updates" %}</strong>
+        <small>{% blocktrans with core=care.get_wp_core_display %}WordPress core: {{ core }}.{% endblocktrans %} {% if care.wp_plugins %}{% trans "Plugins and themes are updated automatically." %}{% else %}{% trans "Plugins and themes are updated by you." %}{% endif %}</small></div>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ care_url }}#care-updates">{% trans "Change" %}</a>
+    </li>
+  </ul>
+</section>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <section class="card h-100" aria-labelledby="wp-facts">
+      <div class="card-header"><h2 class="h6 mb-0" id="wp-facts">{% trans "About this website" %}</h2></div>
+      <dl class="row mb-0 p-3 small wp-facts">
+        <dt class="col-5">{% trans "WordPress version" %}</dt><dd class="col-7">{{ app.version|default:"—" }}</dd>
+        <dt class="col-5">{% trans "Administrator" %}</dt><dd class="col-7"><code>{{ app.admin_user }}</code> &middot;
+          <form class="d-inline" method="post" action="{{ password_url }}">{% csrf_token %}<button class="btn btn-link btn-sm p-0 align-baseline" type="submit">{% trans "Set a new password" %}</button></form></dd>
+        <dt class="col-5">PHP</dt><dd class="col-7">{% if card.php_version %}{{ card.php_version }}{% else %}<span class="text-secondary">{% trans "Not reported" %}</span>{% endif %}</dd>
+        <dt class="col-5">{% trans "Database" %}</dt><dd class="col-7">{% if app.db_name %}<code>{{ app.db_name }}</code>{% else %}<span class="text-secondary">{% trans "Not reported" %}</span>{% endif %}</dd>
+        <dt class="col-5">{% trans "Certificate" %}</dt><dd class="col-7">{% if ssl %}{% if ssl.active %}<i class="bi bi-shield-lock-fill text-success" aria-hidden="true"></i> {% trans "Active" %}{% if ssl.days_left is not None %} &middot; {% blocktrans with n=ssl.days_left %}{{ n }} days left{% endblocktrans %}{% endif %}{% else %}<i class="bi bi-shield-exclamation text-warning" aria-hidden="true"></i> {% trans "Not active" %}{% endif %}{% else %}<span class="text-secondary">{% trans "Not reported" %}</span>{% endif %}</dd>
+        <dt class="col-5">{% trans "Backups" %}</dt><dd class="col-7">{% if backups %}{{ backups.current|default:"—" }}{% if backups.last %} &middot; {% trans "last" %}: {{ backups.last|slice:":10" }}{% endif %}{% else %}<span class="text-secondary">{% trans "Not available on this server" %}</span>{% endif %}</dd>
+      </dl>
+    </section>
+  </div>
+  <div class="col-lg-5">
+    <section class="card h-100" aria-labelledby="wp-more">
+      <div class="card-header"><h2 class="h6 mb-0" id="wp-more">{% trans "More tools" %}</h2></div>
+      <ul class="essentials">
+        <li><a class="essential" href="{{ manager_url }}"><span class="essential-icon" aria-hidden="true"><i class="bi bi-plug"></i></span><span class="essential-text"><strong>{% trans "Plugins and themes" %}</strong><small>{% trans "Switch on or off and update" %}</small></span></a></li>
+        <li><a class="essential" href="{{ staging_url }}"><span class="essential-icon" aria-hidden="true"><i class="bi bi-copy"></i></span><span class="essential-text"><strong>{% trans "Staging website" %}</strong><small>{% trans "Try changes safely first" %}</small></span></a></li>
+        <li><form method="post" action="{{ cache_url }}">{% csrf_token %}<button class="essential" type="submit"><span class="essential-icon" aria-hidden="true"><i class="bi bi-lightning-charge"></i></span><span class="essential-text"><strong>{% trans "Clear cache" %}</strong><small>{% trans "Show fresh pages to visitors" %}</small></span></button></form></li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<section class="mb-4" aria-labelledby="wp-recommended">
+  <div class="ws-block-head"><h2 id="wp-recommended">{% trans "Recommended installations" %}</h2></div>
+  <p class="text-secondary">{% trans "Installed from WordPress.org in one click. Plugins are switched on right away." %}</p>
+  <ul class="wp-rec">
+    {% for item in plugins %}
+    <li><div><strong>{{ item.label }}</strong><small>{{ item.about }}</small></div>
+      <form method="post" action="{{ do_url }}" data-loading="{% trans 'Installing...' %}">{% csrf_token %}<input type="hidden" name="action" value="install"><input type="hidden" name="slug" value="{{ item.slug }}">
+        <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Install" %}</button></form></li>
+    {% endfor %}
+    {% for item in themes %}
+    <li><div><strong>{{ item.label }}</strong> <span class="badge text-bg-secondary">{% trans "Theme" %}</span><small>{{ item.about }}</small></div>
+      <form method="post" action="{{ do_url }}" data-loading="{% trans 'Installing...' %}">{% csrf_token %}<input type="hidden" name="action" value="install"><input type="hidden" name="slug" value="{{ item.slug }}">
+        <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Install" %}</button></form></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

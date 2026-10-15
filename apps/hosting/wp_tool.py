@@ -10,7 +10,7 @@ import hashlib
 import json
 import secrets
 
-ACTIONS = ("inventory", "activate_plugin", "deactivate_plugin", "update_plugin", "activate_theme", "update_theme", "update_core", "flush_cache", "set_password")
+ACTIONS = ("inventory", "activate_plugin", "deactivate_plugin", "update_plugin", "activate_theme", "update_theme", "update_core", "flush_cache", "set_password", "install_plugin", "install_theme")
 
 PHP = r"""<?php
 /* WHPanel one-time WordPress tool. It removes itself when it starts. */
@@ -86,6 +86,29 @@ try {
         if (!is_array($updates) || !isset($updates[0]) || $updates[0]->response !== 'upgrade') { whp_finish(false, array('error' => 'WordPress is already up to date.')); }
         $r = (new Core_Upgrader(new Automatic_Upgrader_Skin()))->upgrade($updates[0]);
         if (is_wp_error($r)) { whp_finish(false, array('error' => $r->get_error_message())); }
+    } elseif ($action === 'install_plugin' || $action === 'install_theme') {
+        if (!preg_match('/^[a-z0-9-]{1,60}$/', $target)) { whp_finish(false, array('error' => 'That name is not valid.')); }
+        require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+        if ($action === 'install_plugin') {
+            $api = plugins_api('plugin_information', array('slug' => $target, 'fields' => array('sections' => false)));
+            if (is_wp_error($api)) { whp_finish(false, array('error' => 'WordPress.org does not list that plugin.')); }
+            $installer = new Plugin_Upgrader(new Automatic_Upgrader_Skin());
+            $result = $installer->install($api->download_link);
+            if (is_wp_error($result)) { whp_finish(false, array('error' => $result->get_error_message())); }
+            if (!$result) { whp_finish(false, array('error' => 'The plugin could not be installed (it may already be installed).')); }
+            $file = $installer->plugin_info();
+            if ($file) {
+                $on = activate_plugin($file);
+                if (is_wp_error($on)) { whp_finish(false, array('error' => 'Installed, but it could not be switched on: ' . $on->get_error_message())); }
+            }
+        } else {
+            $api = themes_api('theme_information', array('slug' => $target, 'fields' => array('sections' => false)));
+            if (is_wp_error($api)) { whp_finish(false, array('error' => 'WordPress.org does not list that theme.')); }
+            $installer = new Theme_Upgrader(new Automatic_Upgrader_Skin());
+            $result = $installer->install($api->download_link);
+            if (is_wp_error($result)) { whp_finish(false, array('error' => $result->get_error_message())); }
+            if (!$result) { whp_finish(false, array('error' => 'The theme could not be installed (it may already be installed).')); }
+        }
     } elseif ($action === 'set_password') {
         $secret = isset($whp['secret']) ? (string)$whp['secret'] : '';
         $who = get_user_by('login', $target);

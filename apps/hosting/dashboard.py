@@ -213,7 +213,8 @@ def workspace_groups(request, account, *, app=None, live=True):
         plan.append(make("Upgrade / downgrade", reverse("renewals_customer:hosting_upgrade", args=[pk]), "bi-arrow-up-circle"))
     spec = [
         ("Dashboard", "bi-grid-1x2", reverse("hosting_customer:detail", args=[pk]), []),
-        ("WordPress", "bi-wordpress", "", [make("Plugins and themes", reverse("hosting_customer:care_wordpress", args=[pk])),
+        ("WordPress", "bi-wordpress", "", [make("Overview", reverse("hosting_customer:wordpress", args=[pk]), "bi-wordpress"),
+                                           make("Plugins and themes", reverse("hosting_customer:care_wordpress", args=[pk])),
                                            make("Staging", reverse("hosting_customer:staging", args=[pk])),
                                            make("Website options", care + "#care-options")] if wordpress else []),
         ("Hosting plan", "bi-hdd-rack", "", plan),
