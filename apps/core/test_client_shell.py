@@ -231,11 +231,12 @@ def test_wordpress_admin_goes_straight_there_when_the_domain_leads_here(world, o
 
     target = "https" + "://site.example.com/wp-admin/"
     WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com", admin_url=target)
+    _fake_wordpress_folder(owner, account)
     account.server.ip_address = "198.51.100.7"
     account.server.save(update_fields=["ip_address"])
     monkeypatch.setattr(domain_check, "_addresses", lambda name: {"198.51.100.7"})
     reply = browser(owner).get(reverse("hosting_customer:wp_admin", args=[account.pk]))
-    assert reply.status_code == 302 and reply["Location"] == target
+    assert reply.status_code == 302 and reply["Location"].startswith("https" + "://site.example.com/") and "whp_login" in reply["Location"]
 
 
 def test_wordpress_admin_links_use_the_gate_and_foreign_domains_are_404(world, owner, account):  # noqa: F811
@@ -279,21 +280,73 @@ def _preview_on(settings):
     settings.PREVIEW_PROXY_KEY = "k" * 32
 
 
-def test_the_preview_plugin_is_written_and_the_gate_offers_the_preview_address(world, owner, account, settings):  # noqa: F811
-    from apps.hosting import control, preview
+def _wordpress(account, **extra):
+    return WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="shopadmin", admin_email="a@gmail.example.com",
+                                     admin_url="https" + "://site.example.com/wp-admin/", **extra)
+
+
+def _fake_wordpress_folder(owner, account):
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    try:
+        control.perform(owner, account, Capability.FILES, "make_directory", "public_html/wp-content")  # a real WordPress has it
+    except Exception:  # noqa: BLE001 - the demo server keeps its folders between tests
+        pass
+
+
+def test_wp_admin_signs_in_through_the_preview_address_in_one_click(world, owner, account, settings, monkeypatch):  # noqa: F811
+    import hashlib
+    import json
+    from urllib.parse import parse_qs, urlsplit
+
+    from apps.hosting import control, domain_check, preview
     from apps.hosting.adapters.capabilities import Capability
 
     _preview_on(settings)
-    WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com", admin_url="https" + "://site/wp-admin/")
-    control.perform(owner, account, Capability.FILES, "make_directory", "public_html/wp-content")  # a real WordPress has it
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: {"203.0.113.9"})  # the domain does not lead here
+    _wordpress(account)
+    _fake_wordpress_folder(owner, account)
     expected = preview.host(account)
     assert expected.endswith(".preview.example.net") and "." not in expected.split(".preview.")[0]
-    html = _page(owner, "hosting_customer:wp_admin", account.pk)
-    assert "Open it now on your preview address" in html and f"http://{expected}/wp-admin/" in html
-    plugin = control.perform(owner, account, Capability.FILES, "read_file", "public_html/wp-content/mu-plugins/whp-preview-host.php", max_bytes=5000)
-    assert expected.encode() in plugin and preview.token(expected).encode() in plugin
+    reply = browser(owner).get(reverse("hosting_customer:wp_admin", args=[account.pk]))
+    assert reply.status_code == 302
+    target = urlsplit(reply["Location"])
+    assert f"{target.scheme}://{target.netloc}/" == f"http://{expected}/"
+    secret = parse_qs(target.query)["whp_login"][0]
+    token_file = f"public_html/wp-content/whp-login/{hashlib.sha256(secret.encode()).hexdigest()}"
+    data = json.loads(control.perform(owner, account, Capability.FILES, "read_file", token_file, max_bytes=2000))
+    assert data["u"] == "shopadmin" and data["exp"] > 0  # the secret itself is never stored, only its hash as the file's name
+    plugin = control.perform(owner, account, Capability.FILES, "read_file", "public_html/wp-content/mu-plugins/whp-preview-host.php", max_bytes=8000)
+    assert expected.encode() in plugin and preview.token(expected).encode() in plugin and b"whp_login" in plugin
     domains = {d.name for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
     assert expected not in domains  # nothing is added to the hosting account's domains
+
+
+def test_wp_admin_signs_in_on_the_domain_itself_once_it_leads_here(world, owner, account, monkeypatch):  # noqa: F811
+    from urllib.parse import parse_qs, urlsplit
+
+    from apps.hosting import domain_check
+
+    account.server.ip_address = "198.51.100.7"
+    account.server.save(update_fields=["ip_address"])
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: {"198.51.100.7"})
+    _wordpress(account)
+    _fake_wordpress_folder(owner, account)
+    reply = browser(owner).get(reverse("hosting_customer:wp_admin", args=[account.pk]))
+    target = urlsplit(reply["Location"])
+    assert reply.status_code == 302 and target.netloc == "site.example.com" and "whp_login" in parse_qs(target.query)
+
+
+def test_without_a_working_address_the_gate_page_explains_the_hosts_file_way(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import domain_check
+
+    monkeypatch.setattr(domain_check, "_addresses", lambda name: {"203.0.113.9"})
+    account.server.ip_address = "198.51.100.7"
+    account.server.save(update_fields=["ip_address"])
+    _wordpress(account)
+    html = _page(owner, "hosting_customer:wp_admin", account.pk)  # preview is off in this test: no address reaches the website yet
+    assert "hosts file" in html and f"198.51.100.7 {account.domain} www.{account.domain}" in html
 
 
 def test_the_resolver_answers_only_the_panels_own_web_server(world, owner, account, settings):  # noqa: F811

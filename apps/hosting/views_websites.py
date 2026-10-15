@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 from apps.core import portal
 from apps.core.exceptions import ServiceError
 
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from . import dashboard, domain_check, plan_sites, preview, services, site_apps, staging
 from .models import HostingAccount, HostingStatus
@@ -61,17 +61,24 @@ def wp_admin(request, pk, domain=""):
     if app is None or app.kind != "wordpress" or app.state != "ready" or not app.admin_url:
         return redirect("hosting_customer:site_setup", pk=account.pk, domain=domain) if domain else redirect("hosting_customer:setup", pk=account.pk)
     state = domain_check.check(account, domain)
-    if state["points_here"]:
-        return redirect(app.admin_url)
     name = site_apps.site_domain(account, domain)
+    origin = ""  # an address that reaches this website now: its own domain when that leads here, else the preview address
+    if state["points_here"]:
+        parts = urlsplit(app.admin_url)
+        origin = f"{parts.scheme}://{parts.netloc}/" if parts.netloc else ""
+    elif preview.enabled() and not domain:
+        origin = preview.url(account)
     preview_admin = ""
-    if preview.enabled() and not domain:
+    if origin:
         try:
-            host = preview.ensure(request.user, account)
+            preview.install(request.user, account, domain)
+            secret = preview.sign_in_token(request.user, account, domain)
         except ServiceError:
-            pass  # the server refused (for example a plan with no alias domains): the hosts-file way below still works, and the refusal is in the audit log
+            if state["points_here"]:
+                return redirect(app.admin_url)  # signing in for them did not work: the sign-in page at least opens
+            preview_admin = origin + "wp-admin/"
         else:
-            preview_admin = preview.url(account) + "wp-admin/" if host else ""
+            return redirect(origin + "?" + urlencode({"whp_login": secret}))
     return render(request, "hosting/customer/wp_admin.html", {
         "preview_admin": preview_admin, "preview_site": preview.url(account) if preview_admin else "",
         "account": account, "name": name, "ip": state["ip"], "hosts_line": state["hosts_line"], "ours": state["ours"], "admin_url": app.admin_url,
