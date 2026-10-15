@@ -27,7 +27,7 @@ def test_the_rail_has_a_label_under_every_icon_and_marks_where_you_are(world, ow
     html = _page(owner, "hosting_customer:detail", account.pk)
     rail = html.split('<nav class="crail"')[1].split("</nav>")[0]
     labels = [l.replace("&amp;", "&") for l in re.findall(r"<span>([^<]+)</span>", rail)]
-    assert labels == ["Home", "Websites", "More services", "Domains", "Orders", "Billing", "Support", "Refer & earn"]
+    assert labels == ["Home", "Websites", "More services", "Domains", "Emails", "Orders", "Billing", "Support", "Refer & earn"]
     assert re.search(r'class="crail-link is-current" href="[^"]*websites/"', rail)  # a website page keeps Websites lit
     assert "<i class=\"bi " in rail
 
@@ -504,3 +504,21 @@ def test_the_import_page_names_the_three_ways(world, owner, account):  # noqa: F
     html = _page(owner, "hosting_customer:import_site", account.pk)
     assert "We move it for you" in html and "I will do it myself" in html and "I have a backup file" in html
     assert reverse("support_customer:new") in html
+
+
+# --- Emails overview and the uniform breadcrumbs ----------------------------------------------------------------------------
+
+def test_the_emails_overview_lists_the_plans_with_their_mailboxes(world, owner, account):  # noqa: F811
+    html = _page(owner, "hosting_customer:emails")
+    assert "Emails" in html and account.domain in html and reverse("hosting_customer:email", args=[account.pk]) in html
+    rail = html.split('<nav class="crail"')[1].split("</nav>")[0]
+    assert re.search(r'class="crail-link is-current" href="[^"]*emails/"', rail)  # the rail lights Emails here
+
+
+def test_pages_of_one_website_share_one_breadcrumb_trail(world, owner, account):  # noqa: F811
+    WebsiteApp.objects.filter(account=account).delete()
+    html = _page(owner, "hosting_customer:section", account.pk, "files")
+    trail = html.split('<nav class="cs-crumbs"')[1].split("</nav>")[0]
+    assert [t for t in re.findall(r">([^<>]+)</(?:a|span)>", trail)] == ["Home", "Websites", account.domain, "File manager"]
+    plan = _page(owner, "hosting_customer:plan", account.pk).split('<nav class="cs-crumbs"')[1].split("</nav>")[0]
+    assert "Websites" in plan and account.product.name in plan

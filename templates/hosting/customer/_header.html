@@ -1,8 +1,6 @@
 {% load ui portal i18n %}
 {% admin_access_banner account %}
-<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}">
-  <a href="{% url 'hosting_customer:websites' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a>
-</nav>
+<nav class="cs-crumbs" aria-label="{% trans 'Breadcrumb' %}"><ol><li><a href="{% url 'home' %}">{% trans "Home" %}</a></li><li><a href="{% url 'hosting_customer:websites' %}">{% trans "Websites" %}</a></li>{% if sidebar.current_label %}<li><a href="{% url 'hosting_customer:detail' account.pk %}">{{ account.domain }}</a></li><li><span aria-current="page">{{ sidebar.current_label }}</span></li>{% else %}<li><span aria-current="page">{{ account.domain }}</span></li>{% endif %}</ol></nav>
 <header class="ws-head">
   <span class="site-avatar ws-avatar" aria-hidden="true">{{ account.domain|slice:":1"|upper }}</span>
   <div class="ws-title">

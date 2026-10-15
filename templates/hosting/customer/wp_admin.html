@@ -3,7 +3,7 @@
 {% block title %}{% trans "WordPress admin" %} · {{ name }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
-<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{{ back_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {{ name }}</a></nav>
+<nav class="cs-crumbs" aria-label="{% trans 'Breadcrumb' %}"><ol><li><a href="{% url 'home' %}">{% trans "Home" %}</a></li><li><a href="{% url 'hosting_customer:websites' %}">{% trans "Websites" %}</a></li><li><a href="{{ back_url }}">{{ name }}</a></li><li><span aria-current="page">{% trans "WordPress admin" %}</span></li></ol></nav>
 <header class="page-head">
   <h1>{% trans "Open WordPress admin" %}</h1>
   <p class="page-sub">{% blocktrans with name=name %}{{ name }} does not lead to this hosting yet, so its address cannot show your website. Your WordPress is installed and working. Use one of these ways to see it.{% endblocktrans %}</p>

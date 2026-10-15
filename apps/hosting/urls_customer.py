@@ -1,12 +1,13 @@
 from django.urls import path
 
-from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_plan, views_wordpress, views_import, views_ssl, views_tools, views_usage
+from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_plan, views_wordpress, views_import, views_emails, views_ssl, views_tools, views_usage
 
 app_name = "hosting_customer"
 
 urlpatterns = [
     path("", views.my_hosting_list, name="list"),
     path("websites/", views_websites.websites, name="websites"),
+    path("emails/", views_emails.emails, name="emails"),
     path("<int:pk>/delete/", views_websites.site_delete, name="site_delete"),
     path("<int:pk>/wp-admin/", views_websites.wp_admin, name="wp_admin"),
     path("<int:pk>/wp-admin/password/", views_websites.wp_password, name="wp_password"),

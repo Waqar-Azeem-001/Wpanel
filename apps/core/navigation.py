@@ -76,6 +76,7 @@ ITEMS = [
     item("client.domains.list", _("My domains"), "domains_customer:list", areas=CLIENT, parent="client.domains"),
     item("client.domains.register", _("Register a domain"), "domains_public:search", areas=CLIENT,
          parent="client.domains"),
+    item("client.emails", _("Emails"), "hosting_customer:emails", areas=CLIENT, requires="client_contact", icon="bi-envelope"),
     item("client.orders", _("Orders"), "orders_customer:list", areas=CLIENT, requires="client_contact", icon="bi-bag"),
     item("client.billing", _("Billing"), areas=CLIENT, requires="client_contact", icon="bi-credit-card-2-front",
          mobile_tab=True),

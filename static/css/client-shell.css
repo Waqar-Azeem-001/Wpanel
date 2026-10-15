@@ -194,3 +194,10 @@ body.shell-client { --topbar-h: 3.9rem; }
 .import-ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem; }
 .import-ways .card-body { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
 .import-ways .essential-icon { margin-bottom: .25rem; }
+
+/* Emails overview */
+.mail-rows { list-style: none; margin: 0; padding: 0; }
+.mail-rows li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem 1.1rem; border-top: 1px solid var(--border); }
+.mail-address { overflow-wrap: anywhere; font-weight: 550; }
+.mail-use { display: flex; align-items: center; gap: .6rem; flex: none; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.mail-use .usage-meter { width: 7rem; }

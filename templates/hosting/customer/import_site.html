@@ -3,7 +3,7 @@
 {% block title %}{% trans "Import a website" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
-<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:websites' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a></nav>
+<nav class="cs-crumbs" aria-label="{% trans 'Breadcrumb' %}"><ol><li><a href="{% url 'home' %}">{% trans "Home" %}</a></li><li><a href="{% url 'hosting_customer:websites' %}">{% trans "Websites" %}</a></li><li><span aria-current="page">{% trans "Import website" %}</span></li></ol></nav>
 <header class="page-head">
   <h1>{% trans "Import a website" %}</h1>
   <p class="page-sub">{% blocktrans with plan=account.product.name domain=account.domain %}Bring a website you already have onto {{ plan }} ({{ domain }}). Choose the way that suits you.{% endblocktrans %}</p>

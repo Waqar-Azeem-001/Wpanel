@@ -43,6 +43,7 @@ class WorkspaceMenu(list):
     groups = ()
     switcher = ()
     heading = ""
+    current_label = ""  # the label of the menu entry you are on (for the breadcrumb)
 
 
 @dataclass
@@ -157,6 +158,12 @@ def service_sidebar(request, account):
     menu.heading = account.domain
     menu.groups = dashboard.workspace_groups(request, account, app=app, live=live)
     menu.switcher = _switcher(request, account)
+    for group in menu.groups:
+        if group.url and group.active and group.label != "Dashboard":
+            menu.current_label = group.label
+        for child in group.children:
+            if child.active:
+                menu.current_label = child.label
     return menu
 
 

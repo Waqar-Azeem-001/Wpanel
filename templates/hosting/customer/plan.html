@@ -3,7 +3,7 @@
 {% block title %}{% trans "Websites" %} · {{ account.product.name }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
-<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Hosting" %}</a></nav>
+<nav class="cs-crumbs" aria-label="{% trans 'Breadcrumb' %}"><ol><li><a href="{% url 'home' %}">{% trans "Home" %}</a></li><li><a href="{% url 'hosting_customer:websites' %}">{% trans "Websites" %}</a></li><li><span aria-current="page">{{ account.product.name }}</span></li></ol></nav>
 <header class="page-head page-head-split">
   <div>
     <h1>{{ account.product.name }}</h1>

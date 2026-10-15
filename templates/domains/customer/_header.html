@@ -1,7 +1,5 @@
 {% load ui portal i18n %}
-<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}">
-  <a href="{% url 'domains_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Domains" %}</a>
-</nav>
+<nav class="cs-crumbs" aria-label="{% trans 'Breadcrumb' %}"><ol><li><a href="{% url 'home' %}">{% trans "Home" %}</a></li><li><a href="{% url 'domains_customer:list' %}">{% trans "Domains" %}</a></li><li><span aria-current="page">{{ domain.name }}</span></li></ol></nav>
 <header class="ws-head">
   <span class="site-avatar ws-avatar" aria-hidden="true"><i class="bi bi-globe2"></i></span>
   <div class="ws-title">

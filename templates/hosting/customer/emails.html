@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Emails" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+<div class="page-head page-head-split">
+  <div>
+    <h1>{% trans "Emails" %}</h1>
+    <p class="page-sub">{% trans "The mailboxes of your hosting plans, with what they use." %}</p>
+  </div>
+</div>
+
+{% if plans %}
+{% for plan in plans %}
+<section class="card mb-3" aria-labelledby="mail-{{ plan.account.pk }}">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h2 class="h6 mb-0" id="mail-{{ plan.account.pk }}">{{ plan.account.domain }}</h2>
+      <small class="text-secondary">{{ plan.account.product.name }}
+        {% if plan.count is not None %}&middot; <strong>{{ plan.count }}</strong>{% if plan.limit %} {% blocktrans with n=plan.limit %}of {{ n }} mailboxes{% endblocktrans %}{% else %} {% trans "mailboxes" %}{% endif %}{% endif %}</small>
+    </div>
+    <a class="btn btn-sm btn-primary" href="{{ plan.manage_url }}">{% if plan.can_add %}{% trans "Manage and add mailboxes" %}{% else %}{% trans "Open" %}{% endif %}</a>
+  </div>
+  {% if not plan.supported %}
+  <div class="card-body text-secondary">{% trans "Email is not available on this hosting server yet." %}</div>
+  {% elif plan.error %}
+  <div class="card-body text-secondary">{{ plan.error }}</div>
+  {% elif plan.boxes %}
+  <ul class="mail-rows">
+    {% for box in plan.boxes %}
+    <li><span class="mail-address"><i class="bi bi-envelope" aria-hidden="true"></i> {{ box.address }}</span>
+      <span class="mail-use">{% if box.percent is not None %}<progress class="usage-meter{% if box.percent >= 95 %} is-danger{% elif box.percent >= 80 %} is-warning{% endif %}" max="100" value="{{ box.percent }}" aria-label="{{ box.address }}">{{ box.percent }}%</progress> {{ box.percent }}%{% else %}<span class="text-secondary">{% trans "unlimited" %}</span>{% endif %}</span></li>
+    {% endfor %}
+    {% if plan.more %}<li class="text-secondary">{% blocktrans with n=plan.more %}and {{ n }} more{% endblocktrans %}</li>{% endif %}
+  </ul>
+  {% else %}
+  <div class="card-body text-secondary">{% trans "No mailboxes yet. Create your first address, for example info@your-domain." %}</div>
+  {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<section class="card"><div class="card-body text-center py-5">
+  <h2 class="h5">{% trans "No email yet" %}</h2>
+  <p class="text-secondary">{% trans "Mailboxes belong to a hosting plan. Get a plan and create addresses on your own domain." %}</p>
+  <a class="btn btn-primary" href="{% url 'hosting_customer:new' %}">{% trans "Get a hosting plan" %}</a>
+</div></section>
+{% endif %}
+{% endblock %}
