@@ -87,7 +87,11 @@
     <dt class="col-sm-4">{% trans "Administrator" %}</dt><dd class="col-sm-8"><code>{{ app.admin_user }}</code> ({{ app.admin_email }})</dd>
     {% if app.version %}<dt class="col-sm-4">WordPress</dt><dd class="col-sm-8">{{ app.version }}</dd>{% endif %}
   </dl>
-  <p class="text-secondary">{% trans "Sign in with the username and password you chose. We do not keep the password." %}</p>
+  <p class="text-secondary">{% trans "Sign in with the username and password you chose. We do not keep the password, so use the button to sign in without it, or set a new one." %}</p>
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <form method="post" action="{% if site_domain and site_domain != account.domain %}{% url 'hosting_customer:site_wp_password' account.pk site_domain %}{% else %}{% url 'hosting_customer:wp_password' account.pk %}{% endif %}">{% csrf_token %}
+      <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> {% trans "Set a new password" %}</button></form>
+  </div>
   {% if app.admin_url %}<a class="btn btn-primary" href="{% if site_domain and site_domain != account.domain %}{% url 'hosting_customer:site_wp_admin' account.pk site_domain %}{% else %}{% url 'hosting_customer:wp_admin' account.pk %}{% endif %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open WordPress admin" %}</a>{% endif %}
   {% endif %}
   <a class="btn btn-outline-secondary" href="{{ visit_url }}" target="_blank" rel="noopener noreferrer">{% trans "Visit website" %}</a>

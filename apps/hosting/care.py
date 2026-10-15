@@ -65,7 +65,7 @@ def care_for(account):
 
 
 def _wordpress_ready(account):
-    app = WebsiteApp.objects.filter(account=account).first()
+    app = WebsiteApp.objects.filter(account=account, domain="").first()
     return app is not None and app.kind == "wordpress" and app.state == "ready"
 
 

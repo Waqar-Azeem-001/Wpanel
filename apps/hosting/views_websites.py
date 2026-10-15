@@ -89,7 +89,7 @@ def wp_admin(request, pk, domain=""):
 
 @require_POST
 @login_required
-def wp_password(request, pk):
+def wp_password(request, pk, domain=""):
     """Give the website's WordPress administrator a new password and show it once, on this page only (never stored, emailed or put in an address)."""
     import secrets
     import string
@@ -97,21 +97,26 @@ def wp_password(request, pk):
     from . import care, care_tools
 
     account = _own_account(request, pk)
-    app = site_apps.current(account)
-    if app is None or app.kind != "wordpress" or app.state != "ready" or not app.admin_user or not care.can_manage_updates(account):
+    domain = "" if (domain or account.domain).lower() == account.domain.lower() else domain.lower()
+    app = site_apps.current(account, domain)
+    if domain and domain not in {s["domain"] for s in plan_sites.summary(request.user, account)["sites"]}:
+        raise Http404
+    if app is None or app.kind != "wordpress" or app.state != "ready" or not app.admin_user:
         messages.error(request, "A new WordPress password can be set for a WordPress website that WHPanel set up.")
         return redirect("hosting_customer:detail", pk=account.pk)
     alphabet = string.ascii_letters + string.digits + "-_.!@#"
     password = "".join(secrets.choice(alphabet) for _ in range(20))
     password = password[:-3] + secrets.choice(string.ascii_uppercase) + secrets.choice(string.ascii_lowercase) + secrets.choice(string.digits)
     try:
-        care_tools.wordpress_action(request.user, account, "set_password", app.admin_user, secret=password)
+        care_tools.wordpress_action(request.user, account, "set_password", app.admin_user, secret=password, domain=domain)
     except ServiceError as exc:
         messages.error(request, exc.message)
         return redirect("hosting_customer:detail", pk=account.pk)
     response = render(request, "hosting/customer/wp_password.html", {
-        "account": account, "app": app, "password": password, "admin_url": reverse("hosting_customer:wp_admin", args=[account.pk]),
-        "back_url": reverse("hosting_customer:detail", args=[account.pk]), "sidebar": portal.service_sidebar(request, account)})
+        "account": account, "app": app, "password": password, "site_domain": site_apps.site_domain(account, domain),
+        "admin_url": reverse("hosting_customer:site_wp_admin", args=[account.pk, domain]) if domain else reverse("hosting_customer:wp_admin", args=[account.pk]),
+        "back_url": reverse("hosting_customer:site_setup_status", args=[account.pk, domain]) if domain else reverse("hosting_customer:detail", args=[account.pk]),
+        "sidebar": portal.service_sidebar(request, account)})
     response["Cache-Control"] = "no-store"
     return response
 

@@ -33,7 +33,7 @@ def staging_domain(account):
 
 def unavailable_reason(account):
     """Why this website cannot have a staging copy, or "" when it can."""
-    app = WebsiteApp.objects.filter(account=account).first()
+    app = WebsiteApp.objects.filter(account=account, domain="").first()
     if app is None or app.kind != "wordpress" or app.state != AppState.READY:
         return "Staging is for WordPress websites that are installed and ready."
     try:

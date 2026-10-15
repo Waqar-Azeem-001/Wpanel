@@ -84,7 +84,7 @@ def website_card(user, account):
     live = account.status in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED)
     ssl = _optional(user, account, capabilities, Capability.SSL, "get_ssl_status", account.domain) if live else None
     php = _optional(user, account, capabilities, Capability.PHP, "get_php_settings", account.domain) if live else None
-    app = WebsiteApp.objects.filter(account=account).first()
+    app = WebsiteApp.objects.filter(account=account, domain="").first()
     if app is not None and app.state == "installing" and app.job_ref:
         from . import site_apps
 

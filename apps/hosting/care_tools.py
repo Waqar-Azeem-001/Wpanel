@@ -273,20 +273,21 @@ def _tidy_leftovers(io, folder):
                 pass
 
 
-def wordpress_action(user, account, action, target="", secret=""):
+def wordpress_action(user, account, action, target="", secret="", domain=""):
     """Run one WordPress action (``wp_tool.ACTIONS``) and return what is installed afterwards: {"core", "plugins", "themes"}. Raises ServiceError with WordPress's own message."""
     if action not in wp_tool.ACTIONS:
         raise ServiceError("That action is not available.", code="unknown_action")
-    if not care.can_manage_updates(account):
+    app = site_apps.current(account, domain)
+    if app is None or app.kind != "wordpress" or app.state != "ready":
         raise ServiceError("The WordPress manager is for WordPress websites that WHPanel set up.", code="not_wordpress")
     io = care._Io(user, account)
-    folder = site_apps.docroot_path(account)
+    folder = site_apps.docroot_path(account, domain)
     _tidy_leftovers(io, folder)
     file_name, result_name, token, source = wp_tool.build(action, target, secret)
     path = f"{folder}/{file_name}"
     io.call(Capability.FILES, "write_file", path, source.encode(), overwrite=False, audit_metadata={"path": path, "purpose": "one-time WordPress tool", "action": action})
     try:
-        outcome = site_apps.reach(account, file_name, token, purpose="to manage WordPress")
+        outcome = site_apps.reach(account, file_name, token, purpose="to manage WordPress", domain=domain)
     except ServiceError:
         care._remove(io, path)
         raise

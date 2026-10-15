@@ -395,7 +395,7 @@ def test_a_new_password_is_set_through_the_tool_and_shown_once(world, owner, acc
     _wordpress(account)
     seen = {}
 
-    def fake(user, acct, action, target="", secret=""):
+    def fake(user, acct, action, target="", secret="", domain=""):
         seen.update(action=action, target=target, secret=secret)
         return {}
 
@@ -474,7 +474,7 @@ def test_only_recommended_names_can_be_installed(world, owner, account, monkeypa
 
     _wordpress(account)
     seen = []
-    monkeypatch.setattr(care_tools, "wordpress_action", lambda user, acct, action, target="", secret="": seen.append((action, target)) or {})
+    monkeypatch.setattr(care_tools, "wordpress_action", lambda user, acct, action, target="", secret="", domain="": seen.append((action, target)) or {})
     url = reverse("hosting_customer:wordpress_do", args=[account.pk])
     client = browser(owner)
     client.post(url, {"action": "install", "slug": "wordpress-seo"})
@@ -522,3 +522,26 @@ def test_pages_of_one_website_share_one_breadcrumb_trail(world, owner, account):
     assert [t for t in re.findall(r">([^<>]+)</(?:a|span)>", trail)] == ["Home", "Websites", account.domain, "File manager"]
     plan = _page(owner, "hosting_customer:plan", account.pk).split('<nav class="cs-crumbs"')[1].split("</nav>")[0]
     assert "Websites" in plan and account.product.name in plan
+
+
+def test_a_new_password_can_be_set_for_a_website_on_an_added_domain(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import care_tools, control, plan_sites
+    from apps.hosting.adapters.capabilities import Capability
+
+    client = browser(owner)
+    reply = client.post(reverse("hosting_customer:site_add", args=[account.pk]), {"domain": "pw.example-test.com"})
+    assert reply.status_code == 302
+    WebsiteApp.objects.create(account=account, domain="pw.example-test.com", kind="wordpress", state="ready", title="Blog", admin_user="blogadmin", admin_email="b@gmail.example.com")
+    seen = {}
+    monkeypatch.setattr(care_tools, "wordpress_action", lambda user, acct, action, target="", secret="", domain="": seen.update(action=action, target=target, domain=domain, n=len(secret)) or {})
+    reply = client.post(reverse("hosting_customer:site_wp_password", args=[account.pk, "pw.example-test.com"]))
+    assert reply.status_code == 200 and seen == {"action": "set_password", "target": "blogadmin", "domain": "pw.example-test.com", "n": 20}
+    assert client.post(reverse("hosting_customer:site_wp_password", args=[account.pk, "not-mine.example.com"])).status_code == 404
+
+
+def test_the_plans_own_website_is_never_confused_with_an_added_domains(world, owner, account):  # noqa: F811
+    from apps.hosting import care, dashboard
+
+    WebsiteApp.objects.create(account=account, domain="other.example-test.com", kind="wordpress", state="ready", title="Other", admin_user="o", admin_email="o@gmail.example.com")
+    assert care.can_manage_updates(account) is False  # the plan's own website does not exist yet
+    assert dashboard.website_card(owner, account)["app"] is None
