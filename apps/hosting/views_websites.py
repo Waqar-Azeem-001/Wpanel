@@ -68,8 +68,8 @@ def wp_admin(request, pk, domain=""):
     if preview.enabled() and not domain:
         try:
             host = preview.ensure(request.user, account)
-        except ServiceError as exc:
-            messages.warning(request, "The preview address could not be set up (" + exc.message + "). The hosts-file way below still works.")
+        except ServiceError:
+            pass  # the server refused (for example a plan with no alias domains): the hosts-file way below still works, and the refusal is in the audit log
         else:
             preview_admin = "http" + f"://{host}/wp-admin/" if host else ""
     return render(request, "hosting/customer/wp_admin.html", {
