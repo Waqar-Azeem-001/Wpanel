@@ -266,6 +266,10 @@ def block_ip(user, account, ip, note="", your_ip=""):
 
 
 def unblock_ip(user, account, ip):
+    try:
+        ip = _clean_network(ip)  # "1.2.3.4" and "1.2.3.4/32" are the same address
+    except ServiceError:
+        pass
     io = _io(user, account)
     data = state(user, account)
     data["ips"] = [i for i in data["ips"] if i["ip"] != ip]
