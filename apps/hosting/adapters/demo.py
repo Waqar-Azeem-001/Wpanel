@@ -196,6 +196,9 @@ class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapabil
 
     # --- Files (real, sandboxed) ---------------------------------------------------------------------------------
 
+    def home_path(self, username):
+        return f"/home/{username}"
+
     def list_files(self, username, path):
         return sandbox_for(username).list_files(path)
 

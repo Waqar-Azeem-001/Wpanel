@@ -591,3 +591,166 @@ def test_a_subdomain_a_parked_domain_and_a_redirect_work_from_the_new_pages(worl
 def test_the_all_in_one_domains_page_still_returns_to_itself(world, owner, account):  # noqa: F811
     reply = browser(owner).post(reverse("hosting_customer:domain_action", args=[account.pk]), {"action": "remove", "name": "nobody.example-test.com"})
     assert reply.status_code == 302 and reply["Location"] == reverse("hosting_customer:domains", args=[account.pk])
+
+
+# --- Phase 5: advanced tools ---------------------------------------------------------------------------------------------------
+
+def test_the_htpasswd_line_matches_apaches_known_value():
+    from apps.hosting import htpasswd
+
+    assert htpasswd.apr1("myPassword", "r31.....") == "$apr1$r31.....$HqJZimcKQFAMYayBlzkrA/"  # the value Apache's own documentation gives
+    line = htpasswd.line("ann", "s3cret-pass")
+    assert line.startswith("ann:$apr1$") and "s3cret-pass" not in line
+    assert htpasswd.line("ann", "s3cret-pass") != htpasswd.line("ann", "s3cret-pass")  # a fresh salt each time
+
+
+def test_marked_blocks_are_added_replaced_and_removed_leaving_the_rest_alone():
+    from apps.hosting import site_tools
+
+    original = "# BEGIN WordPress\nRewriteEngine On\n# END WordPress\n"
+    with_block = site_tools.set_block(original, "ipblock", "Require not ip 1.2.3.4")
+    assert with_block.startswith("# BEGIN WHPanel ipblock") and "# BEGIN WordPress" in with_block
+    replaced = site_tools.set_block(with_block, "ipblock", "Require not ip 5.6.7.8")
+    assert replaced.count("# BEGIN WHPanel ipblock") == 1 and "5.6.7.8" in replaced and "1.2.3.4" not in replaced
+    assert site_tools.set_block(replaced, "ipblock", "") == original
+    assert site_tools.set_block("", "listing", "") == ""
+
+
+def _tool_state(owner, account):
+    from apps.hosting import site_tools
+
+    return site_tools.state(owner, account)
+
+
+def _read(owner, account, path):
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    return control.perform(owner, account, Capability.FILES, "read_file", path, max_bytes=50000).decode()
+
+
+def test_a_folder_can_be_password_protected_and_opened_again(world, owner, account):  # noqa: F811
+    client = browser(owner)
+    do = reverse("hosting_customer:advanced_do", args=[account.pk])
+    try:
+        from apps.hosting import control
+        from apps.hosting.adapters.capabilities import Capability
+        control.perform(owner, account, Capability.FILES, "make_directory", "public_html/private")
+    except Exception:  # noqa: BLE001 - the demo server keeps its folders between tests
+        pass
+    reply = client.post(do, {"action": "protect", "tool": "protect", "path": "public_html/private", "login": "ann", "password": "s3cret-pass"})
+    assert reply.status_code == 302
+    htaccess = _read(owner, account, "public_html/private/.htaccess")
+    assert "# BEGIN WHPanel password" in htaccess and "AuthType Basic" in htaccess and f"AuthUserFile /home/{account.username}/.whp-auth/" in htaccess
+    stored = [l for l in _read(owner, account, ".whp-auth/" + __import__("hashlib").sha1(b"public_html/private").hexdigest()[:12] + ".htpasswd").splitlines()]
+    assert len(stored) == 1 and stored[0].startswith("ann:$apr1$") and "s3cret-pass" not in stored[0]
+    assert any(e["path"] == "public_html/private" and e["users"] == ["ann"] for e in _tool_state(owner, account)["protect"])
+    assert "public_html/private" in client.get(reverse("hosting_customer:advanced", args=[account.pk, "protect"])).content.decode()
+    client.post(do, {"action": "unprotect", "tool": "protect", "path": "public_html/private"})
+    assert "WHPanel password" not in _read(owner, account, "public_html/private/.htaccess")
+    assert not _tool_state(owner, account)["protect"]
+
+
+def test_protection_refuses_weak_passwords_and_folders_outside_the_website(world, owner, account):  # noqa: F811
+    from apps.core.exceptions import ServiceError
+    from apps.hosting import site_tools
+
+    with pytest.raises(ServiceError, match="at least 8"):
+        site_tools.protect_folder(owner, account, "public_html/private", "ann", "short")
+    for bad in ("etc", "/", "public_html/../secret", "other_home/x", "public_html/.git"):
+        with pytest.raises(ServiceError):
+            site_tools.protect_folder(owner, account, bad, "ann", "long-enough-pass")
+
+
+def test_hotlink_protection_writes_a_block_with_the_account_domain_and_switches_off(world, owner, account):  # noqa: F811
+    from apps.hosting import site_tools
+
+    site_tools.set_hotlink(owner, account, True, ["partner.example.org"], ["png", "jpg", "exe"])
+    text = _read(owner, account, "public_html/.htaccess")
+    assert "# BEGIN WHPanel hotlink" in text and "partner" in text and account.domain.split(".")[0] in text
+    assert "(png|jpg)" in text and "exe" not in text  # only the known file types
+    assert _tool_state(owner, account)["hotlink"]["enabled"] is True
+    site_tools.set_hotlink(owner, account, False)
+    assert "WHPanel hotlink" not in _read(owner, account, "public_html/.htaccess") and _tool_state(owner, account)["hotlink"] == {}
+
+
+def test_addresses_are_blocked_and_unblocked_and_you_cannot_block_yourself(world, owner, account):  # noqa: F811
+    from apps.core.exceptions import ServiceError
+    from apps.hosting import site_tools
+
+    site_tools.block_ip(owner, account, "203.0.113.0/24", "spam", your_ip="198.51.100.9")
+    text = _read(owner, account, "public_html/.htaccess")
+    assert "Require not ip 203.0.113.0/24" in text and "<RequireAll>" in text
+    with pytest.raises(ServiceError, match="already blocked"):
+        site_tools.block_ip(owner, account, "203.0.113.0/24")
+    with pytest.raises(ServiceError, match="address you are using"):
+        site_tools.block_ip(owner, account, "198.51.100.0/24", your_ip="198.51.100.9")
+    with pytest.raises(ServiceError, match="IP address"):
+        site_tools.block_ip(owner, account, "not-an-ip")
+    site_tools.unblock_ip(owner, account, "203.0.113.0/24")
+    assert "WHPanel ipblock" not in _read(owner, account, "public_html/.htaccess")
+
+
+def test_the_folder_list_can_be_hidden_and_reset(world, owner, account):  # noqa: F811
+    from apps.hosting import site_tools
+
+    try:
+        from apps.hosting import control
+        from apps.hosting.adapters.capabilities import Capability
+        control.perform(owner, account, Capability.FILES, "make_directory", "public_html/files")
+    except Exception:  # noqa: BLE001
+        pass
+    site_tools.set_listing(owner, account, "public_html/files", False)
+    assert "Options -Indexes" in _read(owner, account, "public_html/files/.htaccess")
+    site_tools.set_listing(owner, account, "public_html/files", True)
+    assert "Options +Indexes" in _read(owner, account, "public_html/files/.htaccess") and "-Indexes" not in _read(owner, account, "public_html/files/.htaccess")
+    site_tools.reset_listing(owner, account, "public_html/files")
+    assert "Indexes" not in _read(owner, account, "public_html/files/.htaccess")
+
+
+def test_php_info_and_permissions_are_one_time_tools_that_clean_up(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import server_tools, site_apps
+
+    answers = {"phpinfo": {"ok": True, "version": "8.1.9", "sapi": "fpm-fcgi", "os": "Linux", "zend": "4.1", "ini": {"memory_limit": "256M"}, "extensions": ["curl", "mysqli"], "loaded_ini": "/x/php.ini"},
+               "permissions": {"ok": True, "folders": 12, "files": 340, "fixed": 3, "skipped": 0, "complete": True}}
+    seen = []
+
+    def reach(acct, path, token, purpose="", domain=""):
+        seen.append(path)
+        action = "permissions" if "permission" in purpose or len(seen) % 2 == 0 else "phpinfo"
+        return answers["phpinfo"] if len(seen) == 1 else answers["permissions"]
+
+    monkeypatch.setattr(site_apps, "reach", reach)
+    info = server_tools.run(owner, account, "phpinfo")
+    assert info["version"] == "8.1.9"
+    result = server_tools.run(owner, account, "permissions")
+    assert result["fixed"] == 3
+    names = {e.name for e in __import__("apps.hosting.control", fromlist=["perform"]).perform(owner, account, "files", "list_files", "public_html")}
+    assert not [n for n in names if n.startswith("whp-tool-")]  # nothing left behind
+    page = _page(owner, "hosting_customer:advanced", account.pk, "phpinfo")
+    assert "Read PHP information" in page
+    with pytest.raises(__import__("apps.core.exceptions", fromlist=["ServiceError"]).ServiceError):
+        server_tools.run(owner, account, "format_disk")
+
+
+def test_the_tool_files_are_token_guarded_and_never_follow_links_out():
+    from apps.hosting import server_tools
+
+    name, token, source = server_tools._build("permissions")
+    assert name.startswith("whp-tool-") and token not in source and "hash_equals" in source and "@unlink(__FILE__)" in source
+    assert "is_link($path)" in source and "strpos($real, $root) !== 0" in source
+
+
+def test_the_activity_log_shows_what_changed_on_the_hosting(world, owner, account):  # noqa: F811
+    from apps.audit import services as audit
+
+    audit.record("hosting.server_tool", actor=owner, target=account, metadata={"action": "phpinfo"})
+    html = _page(owner, "hosting_customer:advanced", account.pk, "activity")
+    assert "Ran a server tool" in html and "You" in html
+
+
+def test_the_advanced_group_lists_the_tools_and_unknown_tools_are_404(world, owner, account):  # noqa: F811
+    menu = _page(owner, "hosting_customer:detail", account.pk).split('<aside class="cmenu"')[1].split("</aside>")[0]
+    for label in ("Password protect directories", "Hotlink protection", "Folder index manager", "IP manager", "PHP info", "Fix file permissions", "Activity log"):
+        assert label in menu
+    assert browser(owner).get(reverse("hosting_customer:advanced", args=[account.pk, "nothing"])).status_code == 404

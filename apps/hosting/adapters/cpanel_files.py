@@ -32,6 +32,9 @@ class CpanelFiles(CpanelApi, FilesCapability):
         home = self._home(user)
         return f"{home}/{rel}" if rel else home
 
+    def home_path(self, username):
+        return self._home(username)
+
     def _op(self, user, op, source_rel, dest=None, **extra):
         params = {"op": op, "sourcefiles": self._abs(user, source_rel), "doubledecode": 0, **extra}
         if dest is not None:

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_plan, views_wordpress, views_import, views_emails, views_ssl, views_tools, views_usage
+from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_plan, views_wordpress, views_import, views_emails, views_advanced, views_ssl, views_tools, views_usage
 
 app_name = "hosting_customer"
 
@@ -44,6 +44,8 @@ urlpatterns = [
     path("<int:pk>/manage/email/webmail/do/", views_email.my_hosting_webmail_action, name="webmail_action"),
     path("<int:pk>/manage/email/webmail/settings/", views_email.my_hosting_webmail_settings, name="webmail_settings"),
     path("<int:pk>/manage/domains/", views_domains.my_hosting_domains, name="domains"),
+    path("<int:pk>/advanced/do/", views_advanced.advanced_do, name="advanced_do"),
+    path("<int:pk>/advanced/<slug:tool>/", views_advanced.advanced_tool, name="advanced"),
     path("<int:pk>/manage/domains/do/", views_domains.my_hosting_domain_action, name="domain_action"),
     path("<int:pk>/manage/domains/<slug:page>/", views_domains.my_hosting_domain_page, name="domain_page"),
     path("<int:pk>/manage/dns/", views_domains.my_hosting_dns, name="dns"),

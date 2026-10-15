@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ title }} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi {{ icon }}" aria-hidden="true"></i> {{ title }}</h2>
+</div>
+
+{% if not supported %}
+<section class="card"><div class="card-body text-secondary">{% trans "This tool needs file access on the hosting server, which this server does not offer yet." %}</div></section>
+
+{% elif tool == "protect" %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Ask for a password before a folder opens" %}</h3>
+  <p class="small text-secondary">{% trans "Visitors of that folder (and everything inside it) see a sign-in box first. Use it for a private area, a staging copy or a client preview." %}</p>
+  <form method="post" action="{{ do_url }}" class="row g-2 align-items-end" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="protect"><input type="hidden" name="tool" value="protect">
+    <div class="col-lg-4"><label class="form-label small" for="pp-path">{% trans "Folder" %}</label>
+      <select class="form-select" id="pp-path" name="path">{% for f in folders %}<option value="{{ f }}">{{ f }}</option>{% endfor %}</select></div>
+    <div class="col-lg-3"><label class="form-label small" for="pp-login">{% trans "Username" %}</label><input class="form-control" id="pp-login" name="login" maxlength="32" required autocomplete="off"></div>
+    <div class="col-lg-3"><label class="form-label small" for="pp-pass">{% trans "Password" %}</label><input class="form-control" id="pp-pass" name="password" type="password" minlength="8" required autocomplete="new-password"></div>
+    <div class="col-lg-2"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-lock" aria-hidden="true"></i> {% trans "Protect" %}</button></div>
+  </form>
+  <p class="small text-secondary mb-0 mt-2">{% trans "The password is saved only as a scrambled value on the server; it cannot be shown again." %}</p>
+</div></section>
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Protected folders" %}</h3></div>
+  {% if state.protect %}<ul class="list-group list-group-flush">{% for e in state.protect %}<li class="list-group-item">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div><i class="bi bi-lock-fill text-success" aria-hidden="true"></i> <code>{{ e.path }}</code>
+        <div class="small text-secondary">{% trans "Users" %}: {% for u in e.users %}<span class="site-pill">{{ u }}
+          <form class="d-inline" method="post" action="{{ do_url }}">{% csrf_token %}<input type="hidden" name="action" value="remove_user"><input type="hidden" name="tool" value="protect"><input type="hidden" name="path" value="{{ e.path }}"><input type="hidden" name="login" value="{{ u }}"><button class="btn btn-link btn-sm p-0 ms-1" type="submit" aria-label="{% trans 'Remove user' %} {{ u }}">&times;</button></form></span> {% endfor %}</div></div>
+      <form method="post" action="{{ do_url }}" data-confirm="{% trans 'Open this folder to everyone again?' %}">{% csrf_token %}<input type="hidden" name="action" value="unprotect"><input type="hidden" name="tool" value="protect"><input type="hidden" name="path" value="{{ e.path }}">
+        <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Remove protection" %}</button></form>
+    </div></li>{% endfor %}</ul>
+  {% else %}<div class="card-body text-secondary">{% trans "No folder is protected." %}</div>{% endif %}
+</section>
+
+{% elif tool == "hotlink" %}
+<section class="card mb-3"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h3 class="h6 mb-0">{% trans "Stop other websites from showing your files" %}</h3>
+    <span class="site-pill {% if hot_on %}is-ok{% endif %}">{% if hot_on %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</span>
+  </div>
+  <p class="small text-secondary">{% trans "When another website shows your pictures straight from your hosting, you pay for their visitors' downloads. This blocks that. Your own website, and the domains you list, still work." %}</p>
+  <form method="post" action="{{ do_url }}" data-plain>{% csrf_token %}
+    <input type="hidden" name="tool" value="hotlink">
+    <div class="mb-3"><label class="form-label small" for="hl-domains">{% trans "Other domains that may use your files (optional, separated by spaces)" %}</label>
+      <input class="form-control" id="hl-domains" name="domains" value="{{ hot_domains }}" placeholder="partner.com"></div>
+    <fieldset class="mb-3"><legend class="form-label small">{% trans "File types to protect" %}</legend>
+      <div class="d-flex flex-wrap gap-3">{% for t in hotlink_types %}<label class="form-check"><input class="form-check-input" type="checkbox" name="types" value="{{ t }}" {% if t in hot_types %}checked{% endif %}> <span class="form-check-label">.{{ t }}</span></label>{% endfor %}</div></fieldset>
+    <button class="btn btn-primary" type="submit" name="action" value="hotlink_on">{% if hot_on %}{% trans "Save" %}{% else %}{% trans "Turn on" %}{% endif %}</button>
+    {% if hot_on %}<button class="btn btn-outline-danger" type="submit" name="action" value="hotlink_off" formnovalidate>{% trans "Turn off" %}</button>{% endif %}
+  </form>
+</div></section>
+
+{% elif tool == "indexes" %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Show or hide a folder's file list" %}</h3>
+  <p class="small text-secondary">{% trans "A folder with no index page shows its list of files to anyone who opens its address. Hide it to show a 'forbidden' page instead." %}</p>
+  <form method="post" action="{{ do_url }}" class="row g-2 align-items-end" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="listing"><input type="hidden" name="tool" value="indexes">
+    <div class="col-lg-6"><label class="form-label small" for="ix-path">{% trans "Folder" %}</label>
+      <select class="form-select" id="ix-path" name="path">{% for f in folders %}<option value="{{ f }}">{{ f }}</option>{% endfor %}</select></div>
+    <div class="col-lg-3"><label class="form-label small" for="ix-value">{% trans "File list" %}</label>
+      <select class="form-select" id="ix-value" name="value"><option value="hide">{% trans "Hide it" %}</option><option value="show">{% trans "Show it" %}</option></select></div>
+    <div class="col-lg-3"><button class="btn btn-primary w-100" type="submit">{% trans "Save" %}</button></div>
+  </form>
+</div></section>
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Your choices" %}</h3></div>
+  {% if state.indexes %}<ul class="list-group list-group-flush">{% for e in state.indexes %}<li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+    <span><code>{{ e.path }}</code> &middot; {% if e.listing %}{% trans "list shown" %}{% else %}{% trans "list hidden" %}{% endif %}</span>
+    <form method="post" action="{{ do_url }}">{% csrf_token %}<input type="hidden" name="action" value="listing_reset"><input type="hidden" name="tool" value="indexes"><input type="hidden" name="path" value="{{ e.path }}">
+      <button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Back to default" %}</button></form></li>{% endfor %}</ul>
+  {% else %}<div class="card-body text-secondary">{% trans "No folder has its own choice yet." %}</div>{% endif %}
+</section>
+
+{% elif tool == "ips" %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Block an address from your website" %}</h3>
+  <p class="small text-secondary">{% blocktrans with ip=your_ip %}Visitors from a blocked address (or range) see a 'forbidden' page. Your own address right now is {{ ip }}.{% endblocktrans %}</p>
+  <form method="post" action="{{ do_url }}" class="row g-2 align-items-end" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="block_ip"><input type="hidden" name="tool" value="ips">
+    <div class="col-lg-4"><label class="form-label small" for="ip-ip">{% trans "IP address or range" %}</label><input class="form-control" id="ip-ip" name="ip" placeholder="203.0.113.7 or 203.0.113.0/24" required autocomplete="off"></div>
+    <div class="col-lg-6"><label class="form-label small" for="ip-note">{% trans "Note (optional)" %}</label><input class="form-control" id="ip-note" name="note" maxlength="100"></div>
+    <div class="col-lg-2"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-slash-circle" aria-hidden="true"></i> {% trans "Block" %}</button></div>
+  </form>
+</div></section>
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Blocked addresses" %} <span class="text-secondary">({{ state.ips|length }})</span></h3></div>
+  {% if state.ips %}<ul class="list-group list-group-flush">{% for e in state.ips %}<li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+    <span><code>{{ e.ip }}</code>{% if e.note %} <span class="text-secondary">&middot; {{ e.note }}</span>{% endif %}</span>
+    <form method="post" action="{{ do_url }}">{% csrf_token %}<input type="hidden" name="action" value="unblock_ip"><input type="hidden" name="tool" value="ips"><input type="hidden" name="ip" value="{{ e.ip }}">
+      <button class="btn btn-sm btn-outline-secondary" type="submit">{% trans "Unblock" %}</button></form></li>{% endfor %}</ul>
+  {% else %}<div class="card-body text-secondary">{% trans "No address is blocked." %}</div>{% endif %}
+</section>
+
+{% elif tool == "phpinfo" %}
+{% if info %}
+<section class="card mb-3"><div class="card-body">
+  <dl class="row mb-0 small">
+    <dt class="col-sm-3">PHP</dt><dd class="col-sm-9">{{ info.version }} <span class="text-secondary">({{ info.sapi }}, {{ info.os }})</span></dd>
+    <dt class="col-sm-3">{% trans "Configuration file" %}</dt><dd class="col-sm-9"><code>{{ info.loaded_ini|default:"-" }}</code></dd>
+    <dt class="col-sm-3">Zend</dt><dd class="col-sm-9">{{ info.zend }}</dd>
+  </dl>
+</div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="h6 mb-0">{% trans "Main settings" %}</h3></div>
+  <div class="table-responsive"><table class="table table-sm mb-0"><tbody>{% for key, value in info.ini.items %}<tr><th scope="row" class="fw-normal text-secondary">{{ key }}</th><td class="text-break"><code>{{ value|default:"(empty)" }}</code></td></tr>{% endfor %}</tbody></table></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="h6 mb-0">{% trans "Loaded extensions" %} <span class="text-secondary">({{ info.extensions|length }})</span></h3></div>
+  <div class="card-body">{% for e in info.extensions %}<span class="site-pill me-1 mb-1">{{ e }}</span>{% endfor %}</div></section>
+{% else %}
+<section class="card mb-3"><div class="card-body">
+  {% if error %}<p class="site-note is-danger"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ error }}</p>{% endif %}
+  <p class="text-secondary">{% trans "See which PHP version your website runs on, its main settings and the extensions it has. We run a small one-time check on your website to read it; it removes itself straight after." %}</p>
+  <a class="btn btn-primary" href="{{ page_url }}?load=1"><i class="bi bi-info-square" aria-hidden="true"></i> {% trans "Read PHP information" %}</a>
+</div></section>
+{% endif %}
+
+{% elif tool == "permissions" %}
+<section class="card mb-3"><div class="card-body">
+  <p class="text-secondary">{% trans "If your website shows 403 or 500 errors after files were uploaded or moved, the permissions on its files may be wrong. This sets every folder to 755 and every file to 644 (wp-config.php to 640) inside your website's folder." %}</p>
+  <p class="small text-secondary">{% trans "It does not change who owns a file (a hosting account cannot), and it never follows a link out of your website." %}</p>
+  <form method="post" action="{{ do_url }}" data-loading="{% trans 'Checking the permissions...' %}">{% csrf_token %}
+    <input type="hidden" name="action" value="permissions"><input type="hidden" name="tool" value="permissions">
+    <button class="btn btn-primary" type="submit"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> {% trans "Fix permissions" %}</button>
+  </form>
+</div></section>
+
+{% elif tool == "activity" %}
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "What changed on this hosting" %}</h3></div>
+  {% if events %}<div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>{% trans "When" %}</th><th>{% trans "Who" %}</th><th>{% trans "What" %}</th></tr></thead>
+    <tbody>{% for e in events %}<tr><td class="text-nowrap">{{ e.when|fdatetime }}</td><td>{{ e.who }}</td><td>{{ e.what }} <small class="text-secondary">{{ e.action }}</small></td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="card-body text-secondary">{% trans "Nothing has changed yet." %}</div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

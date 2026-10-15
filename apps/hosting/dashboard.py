@@ -231,7 +231,11 @@ def workspace_groups(request, account, *, app=None, live=True):
                                       make("Delete website", reverse("hosting_customer:site_delete", args=[pk]), "bi-trash") if live and (app is None or app.state != "installing") else None]),
         ("Files", "bi-folder2-open", "", [section("files"), section("ftp"), section("backups")]),
         ("Databases", "bi-database", "", [section("databases")]),
-        ("Advanced", "bi-gear", "", [section("php"), section("cron"), section("logs"), section("cpanel")]),
+        ("Advanced", "bi-gear", "", [section("php"), section("cron"), section("logs"),
+                                     *([make(title, reverse("hosting_customer:advanced", args=[pk, key]), icon)
+                                        for key, (title, icon) in ADVANCED_TOOLS if key != "activity" and "files" in supported] if live else []),
+                                     make("Activity log", reverse("hosting_customer:advanced", args=[pk, "activity"]), "bi-clock-history") if live else None,
+                                     section("cpanel")]),
     ]
     groups = []
     for label, icon, url, children in spec:
@@ -243,6 +247,11 @@ def workspace_groups(request, account, *, app=None, live=True):
         groups.append(MenuGroup(label=label, icon=icon, url=url, children=children, active=here or opened, open=opened))
     return groups
 
+
+ADVANCED_TOOLS = (("protect", ("Password protect directories", "bi-lock")), ("hotlink", ("Hotlink protection", "bi-link-45deg")),
+                  ("indexes", ("Folder index manager", "bi-folder-symlink")), ("ips", ("IP manager", "bi-slash-circle")),
+                  ("phpinfo", ("PHP info", "bi-info-square")), ("permissions", ("Fix file permissions", "bi-wrench-adjustable")),
+                  ("activity", ("Activity log", "bi-clock-history")))
 
 ESSENTIALS = (("databases", "Open"), ("backups", "Open"), ("files", "Open"), ("email", "Open"), ("ssl", "Open"))
 

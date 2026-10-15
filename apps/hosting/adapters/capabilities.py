@@ -459,6 +459,10 @@ class BackupOptions:
 
 class FilesCapability(ABC):
     @abstractmethod
+    def home_path(self, username: str) -> str:
+        """The account's home folder as the web server knows it (for a rule that needs a full path, such as a password file). Paths everywhere else are relative to it."""
+
+    @abstractmethod
     def list_files(self, username: str, path: str) -> list:
         """Entries (``FileEntry``) directly inside ``path`` (relative to the hosting root)."""
 
@@ -1072,7 +1076,7 @@ CONTRACTS = {
 OPERATIONS = {
     Capability.ACCOUNT: frozenset({"get_status"}),
     Capability.USAGE: frozenset({"get_usage"}),
-    Capability.FILES: frozenset({"list_files", "read_file", "write_file", "make_directory", "rename_path",
+    Capability.FILES: frozenset({"home_path", "list_files", "read_file", "write_file", "make_directory", "rename_path",
                                  "copy_path", "set_permissions", "delete_path", "search_files", "archive_paths", "extract_archive",
                                  "trash_path", "list_trash", "restore_trash", "purge_trash"}),
     Capability.DATABASES: frozenset({"database_limits", "database_admin_access", "list_tables", "browse_table",
@@ -1111,7 +1115,7 @@ OPERATIONS = {
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
-READ_OPERATIONS = frozenset({"get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
+READ_OPERATIONS = frozenset({"home_path", "get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
                              "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",
