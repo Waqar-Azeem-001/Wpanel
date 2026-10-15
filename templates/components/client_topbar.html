@@ -10,10 +10,11 @@
     </a>
     <div class="chrome-actions">
       <button class="chrome-search" type="button" data-quick-open aria-haspopup="dialog" title="{% trans 'Search or jump to a page' %}"><i class="bi bi-search" aria-hidden="true"></i><span>{% trans "Search or jump to…" %}</span><kbd>Ctrl K</kbd></button>
+      <a class="chrome-help" href="{% url 'help:index' %}"><i class="bi bi-question-circle" aria-hidden="true"></i><span>{% trans "Help" %}</span></a>
       {% for e in nav.right %}
       <a class="chrome-icon" href="{{ e.url }}" title="{{ e.label }}"{% if e.active %} aria-current="page"{% endif %}><i class="bi {{ e.icon }}" aria-hidden="true"></i><span class="visually-hidden">{{ e.label }}</span>{% if e.badge %}<span class="icon-badge">{{ e.badge }}<span class="visually-hidden"> {% trans "new" %}</span></span>{% endif %}</a>
       {% endfor %}
-      {% include "components/account_menu.html" with where="top" %}
+      {% include "components/account_menu.html" with where="top" show_name=True %}
     </div>
   </div>
   {# The phone drawer: the rail entries, then the website menu or the pages of the entry you are in. shell.js opens it (id "topnav"). #}

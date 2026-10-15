@@ -2,7 +2,7 @@
 {# The person's menu in the header: who they are, light/dark/auto, the account pages (from the registry) and sign out (a POST). #}
 {% for menu in nav.account %}
 <div class="dropdown">
-  <button class="chrome-account" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Account menu' %}: {{ user.get_full_name }}" title="{{ user.get_full_name }}"><span class="avatar" aria-hidden="true">{{ user.get_short_name|slice:":1"|upper }}</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+  <button class="chrome-account" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'Account menu' %}: {{ user.get_full_name }}" title="{{ user.get_full_name }}"><span class="avatar" aria-hidden="true">{{ user.get_short_name|slice:":1"|upper }}</span>{% if show_name %}<span class="chrome-account-name">{{ user.get_short_name }}</span>{% endif %}<i class="bi bi-chevron-down" aria-hidden="true"></i></button>
   <ul class="dropdown-menu dropdown-menu-end profile-menu">
     <li class="profile-head">{% if user.full_name %}<strong>{{ user.full_name }}</strong>{% endif %}<span>{{ user.email }}</span><span class="profile-role">{{ user.get_role_display }}</span></li>
     <li><hr class="dropdown-divider"></li>

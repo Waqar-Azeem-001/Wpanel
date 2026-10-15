@@ -97,7 +97,7 @@
 .ws-block-head h2 { font-size: 1.1rem; margin: 0; }
 
 /* Website dashboard: Essentials, Performance, plan use */
-.essentials { list-style: none; margin: 0; padding: .35rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .15rem; }
+.essentials { list-style: none; margin: 0; padding: .35rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr)); gap: .15rem; }
 .essentials form { margin: 0; }
 .essential { display: flex; align-items: center; gap: .75rem; width: 100%; padding: .6rem .7rem; border: 0; border-radius: 10px; background: transparent; color: var(--text); text-align: left; text-decoration: none; cursor: pointer; font: inherit; }
 .essential:hover { background: var(--surface-2); }
@@ -117,3 +117,23 @@
 .plan-use li { display: grid; grid-template-columns: 1fr auto; gap: .2rem .8rem; font-size: .88rem; }
 .plan-use li span { color: var(--muted); }
 .plan-use .usage-meter { grid-column: 1 / -1; width: 100%; }
+
+/* ---- The customer header: a full-width bar that sits over the rail, with room to search; the rail and menu are wider ---------- */
+body.shell-client { --topbar-h: 3.9rem; }
+@media (min-width: 992px) {
+  html body.shell-client .chrome.cs-top { padding: 0; background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: none; }
+  html body.shell-client .cs-top .chrome-bar { height: var(--topbar-h); padding: 0 1.25rem 0 .75rem; gap: 1rem; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+  html body.shell-client .cs-top .chrome-brand { width: 15.2rem; padding-right: .75rem; }
+  html body.shell-client .cs-top .chrome-actions { flex: 1 1 auto; margin-left: 0; gap: .4rem; }
+  html body.shell-client .cs-top .chrome-search { flex: 1 1 auto; max-width: 36rem; margin-right: auto; height: 2.5rem; background: var(--surface-2); }
+  .chrome-help { display: inline-flex; align-items: center; gap: .4rem; height: 2.4rem; padding: 0 .8rem; border-radius: 999px; color: var(--chrome-muted); text-decoration: none; font-size: .85rem; font-weight: 600; }
+  .chrome-help:hover { background: var(--chrome-hover); color: var(--chrome-fg); }
+  .chrome-account-name { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; font-weight: 600; color: var(--chrome-fg); }
+  html body.shell-client .cs-top .chrome-account { padding: .15rem .55rem .15rem .2rem; border: 1px solid var(--border); }
+}
+@media (max-width: 991.98px) { .chrome-help, .chrome-account-name { display: none; } }
+.crail { width: 6rem; }
+.crail-link { font-size: .74rem; padding: .6rem .25rem .55rem; }
+.crail-link .bi { font-size: 1.4rem; }
+.cmenu { width: 17.5rem; }
+.cmenu-link { font-size: .92rem; padding: .55rem .7rem; }
