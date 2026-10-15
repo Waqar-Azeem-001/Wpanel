@@ -34,6 +34,11 @@ def test_a_path_outside_the_home_folder_is_refused_before_anything_is_sent(bad):
     assert not fake.uapi_calls("Fileman") and not fake.api2_calls()
 
 
+def test_an_empty_file_reads_as_empty_not_as_the_text_none():
+    real, _ = adapter({**FILES, ("uapi_cpanel", "Fileman::get_file_content"): {"content": None}})
+    assert real.read_file(USER, "public_html/.htaccess", max_bytes=10) == b""
+
+
 def test_reading_and_saving_text_files():
     real, fake = adapter({**FILES, ("uapi_cpanel", "Fileman::get_file_content"): {"content": "hello"}})
     assert real.read_file(USER, "public_html/a.txt", max_bytes=10) == b"hello"

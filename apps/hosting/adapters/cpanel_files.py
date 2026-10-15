@@ -66,7 +66,8 @@ class CpanelFiles(CpanelApi, FilesCapability):
         if not rel:
             raise HostingError("Choose a file.")
         data = self._uapi(username, "Fileman", "get_file_content", {"dir": self._abs(username, _parent(rel)), "file": _leaf(rel)}) or {}
-        content = str(data.get("content", "")).encode("utf-8")
+        raw = data.get("content")
+        content = ("" if raw is None else str(raw)).encode("utf-8")  # an empty file comes back as null, which is not the text "None"
         if len(content) > max_bytes:
             raise HostingError("That file is too large to open here.")
         return content
