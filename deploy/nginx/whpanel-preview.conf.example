@@ -20,6 +20,7 @@ server {
         proxy_pass_request_body off;
         proxy_set_header Content-Length "";
         proxy_set_header Host whpanel.example.com;           # CHANGE-ME: a host name the panel accepts (DJANGO_ALLOWED_HOSTS)
+        proxy_set_header X-Forwarded-Proto https;           # the panel sits behind TLS; without this it redirects the question to https
         proxy_set_header X-Preview-Host $host;
         proxy_set_header X-Preview-Key "CHANGE-ME-same-as-PREVIEW_PROXY_KEY";
     }
