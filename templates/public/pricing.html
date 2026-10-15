@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Pricing" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide flush{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <div class="container-xxl">
+    <h1>{% trans "Pricing" %}</h1>
+    <p class="lead">{% trans "Every plan and every domain extension with its price. What you see here is what you pay." %}</p>
+    <p class="mb-0"><a class="btn btn-light btn-sm" href="#plans">{% trans "Hosting plans" %}</a> <a class="btn btn-outline-light btn-sm" href="#domains">{% trans "Domain prices" %}</a></p>
+  </div>
+</section>
+<div class="container-xxl pt-4 pb-4">
+  <section id="plans" aria-labelledby="plans-h">
+    <h2 id="plans-h" class="visually-hidden">{% trans "Hosting plans" %}</h2>
+    {% for block in blocks %}
+    <div class="cat-block">
+      <div class="cat-block-head">
+        <span class="chip" aria-hidden="true"><i class="bi {% if block.category %}{{ block.category.icon }}{% else %}bi-box-seam{% endif %}"></i></span>
+        <div class="grow"><h3>{% if block.category %}{{ block.category.name }}{% else %}{% trans "More plans" %}{% endif %}</h3>{% if block.category %}<p class="text-secondary mb-0">{{ block.category.blurb }}</p>{% endif %}</div>
+        {% if block.category %}<a class="cat-all" href="{% url 'catalog:product_list' %}?category={{ block.category.slug }}">{% trans "See all" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+      </div>
+      <div class="row g-4">
+        {% for item in block.items %}<div class="col-md-6 col-xl-3">{% include "products/_plan_card.html" with product=item featured=False %}</div>{% endfor %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="card"><div class="card-body text-secondary">{% trans "Our plans are coming soon." %}</div></div>
+    {% endfor %}
+  </section>
+
+  <section id="domains" class="mt-5" aria-labelledby="domains-h">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+      <div><h2 id="domains-h" class="h3 mb-1">{% trans "Domain prices" %}</h2>
+        <p class="text-secondary mb-0">{% trans "Registration, renewal and transfer, per year." %}</p></div>
+      <div class="price-filter"><label class="visually-hidden" for="tld-filter">{% trans "Filter extensions" %}</label>
+        <input id="tld-filter" class="form-control" type="search" placeholder="{% trans 'Filter, for example .com' %}" data-filter-table="#tld-table" autocomplete="off"></div>
+    </div>
+    {% if tlds %}
+    <div class="table-responsive price-table-wrap">
+      <table class="table price-table align-middle mb-0" id="tld-table">
+        <thead><tr><th>{% trans "Extension" %}</th><th class="text-end">{% trans "Register" %}</th><th class="text-end">{% trans "Renew" %}</th><th class="text-end">{% trans "Transfer" %}</th><th></th></tr></thead>
+        <tbody>
+          {% for t in tlds %}
+          <tr data-filter-text="{{ t.tld }}"><th scope="row"><strong>{{ t.tld }}</strong></th>
+            <td class="text-end">{{ t.register_price|money:STORE_CURRENCY }}</td><td class="text-end">{{ t.renew_price|money:STORE_CURRENCY }}</td><td class="text-end">{{ t.transfer_price|money:STORE_CURRENCY }}</td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&years=1">{% trans "Search" %}</a></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="small text-secondary mt-2 mb-0" data-filter-empty hidden>{% trans "No extension matches." %}</p>
+    {% else %}
+    <div class="card"><div class="card-body text-secondary">{% trans "The domain price list is coming soon." %}</div></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

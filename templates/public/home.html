@@ -50,6 +50,19 @@
   </div>
 </section>
 
+{% if tld_teaser %}
+<section class="container-xxl mt-5" aria-labelledby="tld-h">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div><h2 id="tld-h" class="h3 mb-1">{% trans "Domains from" %} {{ tld_teaser.0.register_price|money:STORE_CURRENCY }}</h2>
+      <p class="text-secondary mb-0">{% trans "A few of our most affordable extensions." %}</p></div>
+    <a class="btn btn-outline-primary" href="{% url 'pricing' %}#domains">{% trans "All domain prices" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+  </div>
+  <ul class="tld-strip">
+    {% for t in tld_teaser %}<li><a href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&years=1"><strong>{{ t.tld }}</strong><span>{{ t.register_price|money:STORE_CURRENCY }}<small>/{% trans "yr" %}</small></span></a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <section class="container-xxl py-5 mt-4">
   <div class="row g-4">
     <div class="col-md-4 feature-tile"><i class="bi bi-lock" aria-hidden="true"></i><div><h2 class="h5">{% trans "Secure" %}</h2><p class="text-secondary mb-0">{% trans "SSL on every site, DDoS protection and regular updates keep your website and your visitors safe." %}</p></div></div>

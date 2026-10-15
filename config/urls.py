@@ -6,7 +6,7 @@ from apps.clients.views_dashboard import dashboard
 from apps.core.redirects import retired_urlpatterns
 from apps.hosting.views_preview import resolve as preview_resolve
 from apps.notifications import views as notification_views
-from apps.products.views import public_home
+from apps.products.views import public_home, public_pricing
 
 
 def home(request):
@@ -22,6 +22,7 @@ def home(request):
 
 urlpatterns = [
     path("", home, name="home"),
+    path("pricing/", public_pricing, name="pricing"),
     path("account/", dashboard, name="dashboard"),
     path("_preview/resolve/", preview_resolve, name="preview_resolve"),
     path("staff/", include("apps.console.urls")),

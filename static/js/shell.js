@@ -318,6 +318,23 @@
     }
   });
 
+  // --- Filter the rows of a table by what is typed: <input data-filter-table="#table-id">, rows carry data-filter-text ---------
+  doc.addEventListener("input", function (event) {
+    var box = event.target.closest("[data-filter-table]");
+    if (!box) { return; }
+    var table = doc.querySelector(box.getAttribute("data-filter-table"));
+    if (!table) { return; }
+    var term = box.value.trim().toLowerCase();
+    var shown = 0;
+    table.querySelectorAll("tbody tr[data-filter-text]").forEach(function (row) {
+      var match = !term || row.getAttribute("data-filter-text").toLowerCase().indexOf(term) !== -1;
+      row.hidden = !match;
+      if (match) { shown += 1; }
+    });
+    var empty = doc.querySelector("[data-filter-empty]");
+    if (empty) { empty.hidden = shown !== 0; }
+  });
+
   // --- Generate a strong password in the browser (never sent anywhere until the form is submitted) -------------------------
   doc.addEventListener("click", function (event) {
     var button = event.target.closest("[data-generate-password]");

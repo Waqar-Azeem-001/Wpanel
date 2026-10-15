@@ -52,8 +52,10 @@
           <h2>{% trans "Domains and more" %}</h2>
           <ul>
             <li><a href="{% url 'domains_public:search' %}">{% trans "Register a domain" %}</a></li>
+            <li><a href="{% url 'pricing' %}#domains">{% trans "Domain prices" %}</a></li>
             <li><a href="{% url 'catalog:addons' %}">{% trans "Add-ons" %}</a></li>
             <li><a href="{% url 'catalog:product_list' %}">{% trans "All plans" %}</a></li>
+            <li><a href="{% url 'pricing' %}">{% trans "Pricing" %}</a></li>
           </ul>
         </nav>
         <nav class="foot-col" aria-label="{% trans 'Support' %}">

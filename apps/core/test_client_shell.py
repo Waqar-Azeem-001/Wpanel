@@ -876,3 +876,64 @@ def test_a_public_key_is_added_and_removed_and_a_private_key_is_refused(world, o
     client.post(do, {"action": "ssh_remove_key", "tool": "ssh", "key_id": gone})
     assert "work-laptop" not in client.get(page).content.decode()
     client.post(do, {"action": "ssh_off", "tool": "ssh"})
+
+
+# --- Phase 7: the public top bar, mega menu and Pricing page ------------------------------------------------------------------
+
+def test_the_public_bar_has_pricing_a_products_mega_menu_and_only_real_pages(client):
+    from django.urls import reverse as rev
+
+    html = client.get("/").content.decode()
+    bar = html.split('<nav class="navbar navbar-expand-lg app-navbar navbar-public"')[1].split("</nav>")[0]
+    assert rev("pricing") in bar and "pm-menu" in bar and "pm-title" in bar
+    hrefs = re.findall(r'href="([^"#?]+)', bar)
+    assert hrefs and all(h.startswith("/") for h in hrefs)
+    for h in sorted(set(hrefs)):  # no dead links: every entry opens a real page
+        assert client.get(h).status_code in (200, 302), h
+
+
+def test_the_mega_menu_lists_the_active_store_categories_under_their_headings(client, world):  # noqa: F811
+    from apps.products import public_menu
+    from apps.products.models import StoreCategory
+
+    columns = public_menu.products()
+    names = {i["label"] for c in columns for i in c["items"]}
+    active = set(StoreCategory.objects.filter(is_active=True).values_list("name", flat=True))
+    assert active <= names
+    first = StoreCategory.objects.filter(is_active=True).order_by("sort_order", "name").first()
+    if first is not None:
+        StoreCategory.objects.filter(pk=first.pk).update(is_active=False)
+        assert first.name not in {i["label"] for c in public_menu.products() for i in c["items"]}  # a hidden category leaves the menu
+    assert columns[-1]["title"] and any("Domain prices" == i["label"] for i in columns[-1]["items"])
+
+
+def test_empty_menus_are_left_out_not_shown_as_placeholders(client, monkeypatch):
+    from apps.products import public_menu
+
+    monkeypatch.setattr(public_menu, "products", lambda: [])
+    monkeypatch.setattr(public_menu, "resources", lambda: [{"label": "Help centre", "about": "", "url": "/help/"}])
+    html = client.get("/").content.decode()
+    bar = html.split('<nav class="navbar navbar-expand-lg app-navbar navbar-public"')[1].split("</nav>")[0]
+    assert "pm-menu" not in bar and "Pricing" in bar
+
+
+def test_the_pricing_page_lists_plans_and_domain_prices_and_works_without_a_session(client, world):  # noqa: F811
+    from apps.domains.models import TldPricing
+
+    TldPricing.objects.get_or_create(tld=".pricetest", defaults={"register_price": 12, "renew_price": 14, "transfer_price": 11})
+    response = client.get("/pricing/")
+    html = response.content.decode()
+    assert response.status_code == 200 and "Domain prices" in html and ".pricetest" in html and 'data-filter-table="#tld-table"' in html
+    assert "plan-card" in html or "Our plans are coming soon" in html
+    assert "yourname.pricetest" in html  # each extension leads to a search with it filled in
+
+
+def test_the_public_bar_has_no_developers_entry_while_the_api_reference_is_staff_only(client):
+    html = client.get("/").content.decode()
+    bar = html.split('<nav class="navbar navbar-expand-lg app-navbar navbar-public"')[1].split("</nav>")[0]
+    assert "Developers" not in bar and client.get("/api/v1/docs/").status_code == 401
+
+
+def test_the_home_page_shows_the_cheapest_domain_extensions(client, world):  # noqa: F811
+    html = client.get("/").content.decode()
+    assert "tld-strip" in html and "All domain prices" in html

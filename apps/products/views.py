@@ -71,6 +71,24 @@ def _cheapest_first(products):
     return sorted(products, key=lowest)
 
 
+def public_pricing(request):
+    """Every plan we sell with its lowest price, grouped by category, and every domain extension with its price. All of it read from the catalog and the price list."""
+    from apps.domains.models import TldPricing
+
+    blocks = []
+    for category in categories.active():
+        if category.kind != "plans":
+            continue
+        entries = categories.items(category)
+        if entries:
+            blocks.append({"category": category, "items": entries})
+    more = categories.uncategorised()
+    if more:
+        blocks.append({"category": None, "items": more})
+    tlds = TldPricing.objects.filter(is_active=True).order_by("register_price", "tld")
+    return render(request, "public/pricing.html", {"blocks": blocks, "tlds": tlds})
+
+
 def public_home(request):
     """The front page for visitors: a search box for a domain, the plans, and why to choose us."""
     tiles = []
@@ -79,7 +97,10 @@ def public_home(request):
         lowest = [categories.lowest_price(e) for e in entries]
         lowest = [p for p in lowest if p is not None]
         tiles.append({"category": category, "count": len(entries), "from": min(lowest, key=lambda p: p.price) if lowest else None})
-    return render(request, "public/home.html", {"products": _cheapest_first(_active_products())[:4], "tiles": tiles})
+    from apps.domains.models import TldPricing
+
+    return render(request, "public/home.html", {"products": _cheapest_first(_active_products())[:4], "tiles": tiles,
+                                                 "tld_teaser": list(TldPricing.objects.filter(is_active=True).order_by("register_price", "tld")[:8])})
 
 
 def public_addon_list(request):

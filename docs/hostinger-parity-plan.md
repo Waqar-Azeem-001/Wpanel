@@ -232,3 +232,17 @@ Home page with hero, plans, domain search, FAQs, footer with columns (Hosting, D
 | **Git deployment** | **Not available.** "You do not have the feature version_control". | Nothing built; it needs the feature enabled in WHM > Feature Manager first. |
 | **LiteSpeed cache** | **Not available** (Apache). | Nothing built. |
 | **phpMyAdmin** | One-time session works, but phpMyAdmin then fails inside the server (`cpses_...` MySQL user is refused). | WHPanel's own table browser instead (tables, rows, typed SQL, single-row edit) through a one-time tool. |
+
+---
+
+## Phase 7 results (2026-10-16)
+
+| Item | Result |
+|---|---|
+| Top bar | **Pricing**, **Products** (mega menu), **Domains**, **Resources** (help centre and its categories), then Cart and Sign in. On a phone the mega menu opens inside the drawer, fully expanded. |
+| Mega menu | Built from the store categories under the heading staff gave them (Hosting, Servers, Security and domains) plus a "Domains and more" column (Domain prices, Add-ons). A hidden category leaves the menu; an empty menu is not drawn. Code: `apps/products/public_menu.py`. |
+| Pricing page | `/pricing/`: every plan with its lowest price by category, and the full domain price table with a filter box. Each extension leads to a search with it filled in. |
+| Home | A strip of the cheapest domain extensions with their price, linking to the price table. |
+| Footer | "Pricing" and "Domain prices" added. |
+| **Left out on purpose** | **Solutions** (no such pages exist) and **Developers** (the API reference is staff-only by design, see `test_api_docs_are_staff_only`, so a public link would be a dead end). No language switcher: there is one language. |
+| Needs the owner | Home page copy, a comparison table and FAQ text: these are written in the templates today; making them editable from Setup is a separate step once the owner supplies the content. |

@@ -15,6 +15,17 @@ register = template.Library()
 
 
 @register.simple_tag
+def public_menu():
+    """The mega menu and the resources menu of the public top bar (see apps/products/public_menu.py). Never breaks a page: on any trouble the menus are simply empty."""
+    try:
+        from apps.products import public_menu as menu
+
+        return menu.build()
+    except Exception:  # noqa: BLE001
+        return {"products": [], "resources": [], "pricing_url": ""}
+
+
+@register.simple_tag
 def footer_info():
     """What the store footer lists, all of it real: the store categories, the ways to pay and the company's contact details."""
     info = {"categories": [], "methods": [], "phone": "", "address": ""}
