@@ -545,3 +545,49 @@ def test_the_plans_own_website_is_never_confused_with_an_added_domains(world, ow
     WebsiteApp.objects.create(account=account, domain="other.example-test.com", kind="wordpress", state="ready", title="Other", admin_user="o", admin_email="o@gmail.example.com")
     assert care.can_manage_updates(account) is False  # the plan's own website does not exist yet
     assert dashboard.website_card(owner, account)["app"] is None
+
+
+# --- Phase 4: Subdomains, Parked domains and Redirects as their own pages ---------------------------------------------------
+
+def test_subdomains_parked_domains_and_redirects_each_have_their_page_and_menu_entry(world, owner, account):  # noqa: F811
+    menu = _page(owner, "hosting_customer:detail", account.pk).split('<aside class="cmenu"')[1].split("</aside>")[0]
+    for label in ("All domains", "Subdomains", "Parked domains", "Redirects", "DNS Zone Editor"):
+        assert label in menu
+    assert "Create a subdomain" in _page(owner, "hosting_customer:domain_page", account.pk, "subdomains")
+    assert "Park a domain" in _page(owner, "hosting_customer:domain_page", account.pk, "parked")
+    assert "Send visitors of a domain" in _page(owner, "hosting_customer:domain_page", account.pk, "redirects")
+    assert browser(owner).get(reverse("hosting_customer:domain_page", args=[account.pk, "nothing"])).status_code == 404
+
+
+def test_a_subdomain_a_parked_domain_and_a_redirect_work_from_the_new_pages(world, owner, account):  # noqa: F811
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    client = browser(owner)
+    action = reverse("hosting_customer:domain_action", args=[account.pk])
+    names = lambda: {d.name: d for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}  # noqa: E731
+    page = lambda name: reverse("hosting_customer:domain_page", args=[account.pk, name])  # noqa: E731
+
+    reply = client.post(action, {"action": "add", "kind": "subdomain", "name": "blog", "parent": account.domain, "return_to": "subdomains"})
+    assert reply.status_code == 302 and reply["Location"] == page("subdomains")
+    assert f"blog.{account.domain}" in names()
+    assert f"blog.{account.domain}" in client.get(page("subdomains")).content.decode()
+
+    reply = client.post(action, {"action": "add", "kind": "alias", "name": "also-mine.example-test.com", "return_to": "parked"})
+    assert reply["Location"] == page("parked") and "also-mine.example-test.com" in names()
+
+    reply = client.post(action, {"action": "redirect", "name": f"blog.{account.domain}", "redirect_to": "www.example-test.com", "kind": "302", "return_to": "redirects"})
+    assert reply["Location"] == page("redirects")
+    saved = names()[f"blog.{account.domain}"]
+    assert saved.redirect_to and saved.redirect_permanent is False
+    client.post(action, {"action": "remove_redirect", "name": f"blog.{account.domain}", "return_to": "redirects"})
+    assert not names()[f"blog.{account.domain}"].redirect_to
+
+    client.post(action, {"action": "remove", "name": f"blog.{account.domain}", "return_to": "subdomains"})
+    client.post(action, {"action": "remove", "name": "also-mine.example-test.com", "return_to": "parked"})
+    assert f"blog.{account.domain}" not in names() and "also-mine.example-test.com" not in names()
+
+
+def test_the_all_in_one_domains_page_still_returns_to_itself(world, owner, account):  # noqa: F811
+    reply = browser(owner).post(reverse("hosting_customer:domain_action", args=[account.pk]), {"action": "remove", "name": "nobody.example-test.com"})
+    assert reply.status_code == 302 and reply["Location"] == reverse("hosting_customer:domains", args=[account.pk])

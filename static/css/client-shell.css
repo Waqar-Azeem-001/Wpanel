@@ -205,3 +205,6 @@ body.shell-client { --topbar-h: 3.9rem; }
 /* A website's pages: every card on a page is as wide as the page (the narrow form-card rule is for stand-alone form pages) */
 .canvas > main.page.ws-apple:has(> .card > .card-body > form):not(:has(table)):not(:has(.stat-tiles)) { max-width: 1180px; }
 .canvas main.page.ws-apple > .card:has(> .card-body > form) { max-width: none; }
+
+/* Redirects page */
+.dm-redirect-input { max-width: 22rem; }

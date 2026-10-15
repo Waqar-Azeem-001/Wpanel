@@ -221,7 +221,12 @@ def workspace_groups(request, account, *, app=None, live=True):
         ("Performance", "bi-speedometer", "", [make("Speed test", care + "#care-speed"), make("Faster pages", care + "#care-performance"), section("usage")] if live else [section("usage")]),
         ("Analytics", "bi-graph-up", reverse("hosting_customer:care_traffic", args=[pk]) if live else "", []),
         ("Security", "bi-shield-check", "", [make("Malware scan", care + "#care-scan") if live else None, section("ssl"), section("access"), section("security")]),
-        ("Domains", "bi-globe2", "", [section("domains"), section("dns")]),
+        ("Domains", "bi-globe2", "", ([make("All domains", reverse("hosting_customer:domains", args=[pk]), "bi-globe2"),
+                                       make("Subdomains", reverse("hosting_customer:domain_page", args=[pk, "subdomains"]), "bi-diagram-2"),
+                                       make("Parked domains", reverse("hosting_customer:domain_page", args=[pk, "parked"]), "bi-signpost-2"),
+                                       make("Redirects", reverse("hosting_customer:domain_page", args=[pk, "redirects"]), "bi-signpost-split")]
+                                      if "domains" in supported else []) + [(make("DNS Zone Editor", reverse("hosting_customer:dns", args=[pk]), "bi-diagram-3")
+                                                                             if "dns" in supported else None)]),
         ("Website", "bi-window", "", [make("Website care", care) if live else None,
                                       make("Delete website", reverse("hosting_customer:site_delete", args=[pk]), "bi-trash") if live and (app is None or app.state != "installing") else None]),
         ("Files", "bi-folder2-open", "", [section("files"), section("ftp"), section("backups")]),

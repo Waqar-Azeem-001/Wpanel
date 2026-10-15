@@ -45,6 +45,7 @@ urlpatterns = [
     path("<int:pk>/manage/email/webmail/settings/", views_email.my_hosting_webmail_settings, name="webmail_settings"),
     path("<int:pk>/manage/domains/", views_domains.my_hosting_domains, name="domains"),
     path("<int:pk>/manage/domains/do/", views_domains.my_hosting_domain_action, name="domain_action"),
+    path("<int:pk>/manage/domains/<slug:page>/", views_domains.my_hosting_domain_page, name="domain_page"),
     path("<int:pk>/manage/dns/", views_domains.my_hosting_dns, name="dns"),
     path("<int:pk>/manage/dns/do/", views_domains.my_hosting_dns_action, name="dns_action"),
     path("<int:pk>/manage/ssl/", views_ssl.my_hosting_ssl, name="ssl"),

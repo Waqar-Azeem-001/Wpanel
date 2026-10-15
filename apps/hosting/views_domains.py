@@ -56,6 +56,58 @@ def _parent_zone(name, zone_domains):
 
 # --- Domains --------------------------------------------------------------------------------------------------------
 
+DOMAIN_PAGES = {
+    "subdomains": ("Subdomains", "bi-diagram-2"),
+    "parked": ("Parked domains", "bi-signpost-2"),
+    "redirects": ("Redirects", "bi-signpost-split"),
+}
+
+
+def _return_url(account, name):
+    """Where a form goes back to: one of the three focused pages, or the all-in-one Domains page."""
+    if name in DOMAIN_PAGES:
+        return reverse("hosting_customer:domain_page", args=[account.pk, name])
+    return _domains_url(account)
+
+
+@login_required
+def my_hosting_domain_page(request, pk, page):
+    """Subdomains, Parked domains and Redirects: one focused page each, over the same domains engine as the all-in-one page."""
+    from django.http import Http404
+
+    if page not in DOMAIN_PAGES:
+        raise Http404
+    account = _own_account(request, pk)
+    sidebar = portal.service_sidebar(request, account)
+    if not _supports(account, "domains"):
+        return render(request, "hosting/customer/section.html", {
+            "account": account, "sidebar": sidebar, "section": dashboard.section_page(request.user, account, "domains")})
+    try:
+        limits = _read(request, account, "domains", "domain_limits")
+        domains = _read(request, account, "domains", "list_domains")
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        limits, domains = None, []
+    zone_domains = [d.name for d in domains if d.kind != "subdomain"]
+    files_url = reverse("hosting_customer:files", args=[account.pk])
+
+    def row(d):
+        return {"d": d, "dns": _dns_url(account, _parent_zone(d.name, zone_domains)),
+                "files": files_url + "?" + urlencode({"path": d.document_root}) if d.document_root else ""}
+
+    subs = [row(d) for d in domains if d.kind == "subdomain"]
+    aliases = [row(d) for d in domains if d.kind == "alias"]
+    addons = [row(d) for d in domains if d.kind == "addon"]
+    title, icon = DOMAIN_PAGES[page]
+    return render(request, "hosting/customer/domain_page.html", {
+        "account": account, "sidebar": sidebar, "limits": limits, "page": page, "title": title, "icon": icon, "zone_domains": zone_domains,
+        "subs": subs, "aliases": aliases, "addons": addons, "all_rows": [row(d) for d in domains],
+        "sub_full": bool(limits and limits.max_subdomains is not None and len(subs) >= limits.max_subdomains),
+        "extra_full": bool(limits and limits.max_addon_domains is not None and len(aliases) + len(addons) >= limits.max_addon_domains),
+        "action_url": reverse("hosting_customer:domain_action", args=[account.pk]), "all_url": _domains_url(account),
+        "plan_url": reverse("hosting_customer:plan", args=[account.pk]), "dns_url": _dns_url(account)})
+
+
 @login_required
 def my_hosting_domains(request, pk):
     account = _own_account(request, pk)
@@ -103,7 +155,9 @@ def my_hosting_domain_action(request, pk):
             messages.success(request, f"{name} was removed. Its files were left in place.")
         elif action in ("redirect", "remove_redirect"):
             name = post.get("name", "")
-            target = "" if action == "remove_redirect" else post.get("redirect_to", "")
+            target = "" if action == "remove_redirect" else post.get("redirect_to", "").strip()
+            if target and "://" not in target:
+                target = "https" + "://" + target  # a bare "www.example.com" is what people type; the server wants the full address
             permanent = post.get("kind", "301") != "302"
             _run(request, account, "domains", "set_redirect", name, target, permanent,
                  metadata={"domain": name, "redirect": bool(target), "permanent": permanent})
@@ -112,7 +166,7 @@ def my_hosting_domain_action(request, pk):
             raise ServiceError("That action is not available.", code="unknown_action")
     except ServiceError as exc:
         messages.error(request, exc.message)
-    return redirect(_domains_url(account))
+    return redirect(_return_url(account, post.get("return_to", "")))
 
 
 # --- DNS ------------------------------------------------------------------------------------------------------------

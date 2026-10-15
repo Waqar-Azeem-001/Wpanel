@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{{ title }} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+{% if not limits %}
+<section class="card"><div class="card-body text-secondary">{% trans "Domains could not be loaded right now." %}</div></section>
+{% else %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi {{ icon }}" aria-hidden="true"></i> {{ title }}</h2>
+  <p class="db-counts">
+    {% if page == "subdomains" %}<span class="site-pill {% if sub_full %}is-warn{% endif %}"><i class="bi bi-diagram-2" aria-hidden="true"></i> {{ subs|length }}{% if limits.max_subdomains %} / {{ limits.max_subdomains }}{% endif %} {% trans "subdomains" %}</span>
+    {% elif page == "parked" %}<span class="site-pill {% if extra_full %}is-warn{% endif %}"><i class="bi bi-signpost-2" aria-hidden="true"></i> {{ aliases|length }} {% trans "parked" %}</span>
+    {% else %}<span class="site-pill"><i class="bi bi-signpost-split" aria-hidden="true"></i> {{ all_rows|length }} {% trans "domains" %}</span>{% endif %}
+    <a class="site-pill" href="{{ all_url }}">{% trans "All domains" %}</a>
+    <a class="site-pill" href="{{ dns_url }}"><i class="bi bi-diagram-3" aria-hidden="true"></i> {% trans "DNS Zone Editor" %}</a>
+  </p>
+</div>
+
+{% if page == "subdomains" %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Create a subdomain" %}</h3>
+  <p class="small text-secondary">{% trans "A subdomain is a part of a domain you already have, such as blog.example.com. It gets its own folder and can be its own website." %}</p>
+  <form method="post" action="{{ action_url }}" class="row g-2 align-items-end" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="add"><input type="hidden" name="kind" value="subdomain"><input type="hidden" name="return_to" value="subdomains">
+    <div class="col-lg-5"><label class="form-label small" for="sd-name">{% trans "Subdomain" %}</label>
+      <div class="input-group"><input class="form-control" id="sd-name" name="name" placeholder="blog" maxlength="63" required autocomplete="off">
+        <select class="form-select" name="parent" aria-label="{% trans 'Under which domain' %}">{% for z in zone_domains %}<option value="{{ z }}">.{{ z }}</option>{% endfor %}</select></div></div>
+    <div class="col-lg-5"><label class="form-label small" for="sd-root">{% trans "Folder (optional)" %}</label><input class="form-control" id="sd-root" name="document_root" placeholder="public_html/blog" maxlength="200" autocomplete="off"></div>
+    <div class="col-lg-2"><button class="btn btn-primary w-100" type="submit" {% if sub_full %}disabled{% endif %}><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Create" %}</button></div>
+  </form>
+  {% if sub_full %}<p class="small text-warning mb-0 mt-2">{% trans "You have reached your plan's limit of subdomains." %}</p>{% endif %}
+</div></section>
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Your subdomains" %}</h3></div>
+  {% if subs %}<div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>{% trans "Subdomain" %}</th><th>{% trans "Folder" %}</th><th class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>{% for r in subs %}<tr><td class="fw-semibold text-break">{{ r.d.name }}</td>
+      <td>{% if r.files %}<a href="{{ r.files }}"><code>{{ r.d.document_root }}</code></a>{% else %}<span class="text-secondary">&mdash;</span>{% endif %}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ r.dns }}">{% trans "DNS" %}</a>
+        <form class="d-inline" method="post" action="{{ action_url }}" data-confirm="{% trans 'Remove this subdomain? Its files stay in place.' %}">{% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="name" value="{{ r.d.name }}"><input type="hidden" name="return_to" value="subdomains">
+          <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Remove" %}</button></form></td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}<div class="card-body text-secondary">{% trans "No subdomains yet." %}</div>{% endif %}
+</section>
+
+{% elif page == "parked" %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Park a domain" %}</h3>
+  <p class="small text-secondary">{% trans "A parked domain is a second name for your main website: visitors of either name see the same website." %}</p>
+  <form method="post" action="{{ action_url }}" class="row g-2 align-items-end" data-plain>{% csrf_token %}
+    <input type="hidden" name="action" value="add"><input type="hidden" name="kind" value="alias"><input type="hidden" name="return_to" value="parked">
+    <div class="col-lg-8"><label class="form-label small" for="pk-name">{% trans "Domain" %}</label><input class="form-control" id="pk-name" name="name" placeholder="my-other-name.com" maxlength="253" required autocomplete="off"></div>
+    <div class="col-lg-4"><button class="btn btn-primary w-100" type="submit" {% if extra_full %}disabled{% endif %}><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "Park domain" %}</button></div>
+  </form>
+  {% if extra_full %}<p class="small text-warning mb-0 mt-2">{% trans "You have reached your plan's limit of extra domains." %}</p>{% endif %}
+  {% if limits.nameservers %}<p class="small text-secondary mb-0 mt-2">{% trans "Point the domain's nameservers to" %}: <code>{{ limits.nameservers|join:", " }}</code></p>{% endif %}
+</div></section>
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Parked domains" %}</h3></div>
+  {% if aliases %}<ul class="list-group list-group-flush">{% for r in aliases %}<li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+    <span class="fw-semibold text-break">{{ r.d.name }}</span>
+    <span><a class="btn btn-sm btn-outline-secondary" href="{{ r.dns }}">{% trans "DNS" %}</a>
+      <form class="d-inline" method="post" action="{{ action_url }}" data-confirm="{% trans 'Remove this parked domain?' %}">{% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="name" value="{{ r.d.name }}"><input type="hidden" name="return_to" value="parked">
+        <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Remove" %}</button></form></span></li>{% endfor %}</ul>
+  {% else %}<div class="card-body text-secondary">{% trans "No parked domains yet." %}</div>{% endif %}
+</section>
+{% if addons %}
+<p class="small text-secondary">{% blocktrans with n=addons|length %}You also have {{ n }} domain(s) with a website of their own. They are managed as websites in your plan.{% endblocktrans %} <a href="{{ plan_url }}">{% trans "Websites in this plan" %}</a></p>
+{% endif %}
+
+{% else %}
+<section class="card mb-3">
+  <div class="card-header"><h3 class="h6 mb-0">{% trans "Redirects" %}</h3></div>
+  <p class="small text-secondary px-3 pt-3 mb-0">{% trans "Send visitors of a domain or subdomain to another address. Permanent (301) tells search engines the website moved for good; temporary (302) means for now." %}</p>
+  {% if all_rows %}<div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>{% trans "Domain" %}</th><th>{% trans "Sends visitors to" %}</th><th class="text-end">{% trans "Change" %}</th></tr></thead>
+    <tbody>{% for r in all_rows %}<tr>
+      <td class="fw-semibold text-break">{{ r.d.name }}</td>
+      <td colspan="2">
+        <form class="d-flex flex-wrap gap-2 justify-content-end" method="post" action="{{ action_url }}" data-plain>{% csrf_token %}
+          <input type="hidden" name="name" value="{{ r.d.name }}"><input type="hidden" name="return_to" value="redirects">
+          <input class="form-control dm-redirect-input" type="text" name="redirect_to" value="{{ r.d.redirect_to }}" placeholder="www.example.com" maxlength="500" aria-label="{% trans 'Redirect to' %} {{ r.d.name }}">
+          <select class="form-select w-auto" name="kind" aria-label="{% trans 'Type' %}"><option value="301" {% if r.d.redirect_permanent %}selected{% endif %}>301</option><option value="302" {% if not r.d.redirect_permanent %}selected{% endif %}>302</option></select>
+          <button class="btn btn-sm btn-primary" type="submit" name="action" value="redirect">{% trans "Save" %}</button>
+          {% if r.d.redirect_to %}<button class="btn btn-sm btn-outline-danger" type="submit" name="action" value="remove_redirect" formnovalidate>{% trans "Remove" %}</button>{% endif %}
+        </form></td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}<div class="card-body text-secondary">{% trans "No domains yet." %}</div>{% endif %}
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
