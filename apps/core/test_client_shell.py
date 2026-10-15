@@ -243,3 +243,55 @@ def test_wordpress_admin_links_use_the_gate_and_foreign_domains_are_404(world, o
     html = _page(owner, "hosting_customer:detail", account.pk)
     assert reverse("hosting_customer:wp_admin", args=[account.pk]) in html
     assert browser(owner).get(reverse("hosting_customer:site_wp_admin", args=[account.pk, "not-mine.example.com"])).status_code == 404
+
+
+# --- install progress and the preview address ---------------------------------------------------------------------------------
+
+def test_the_installer_reports_each_step_and_the_page_shows_steps_and_percent(world, owner, account):  # noqa: F811
+    from apps.hosting import control, site_apps, wp_installer
+    from apps.hosting.adapters.capabilities import Capability
+
+    source = wp_installer.build(domain="a.example.com", scheme="https", db="d", db_user="u", db_password="p", title="T", admin_user="a", admin_email="a@gmail.example.com", admin_password="Pw1!aaaa")[3]
+    for key in ("start", "download", "verify", "unpack", "config", "install", "finish"):
+        assert f"whp_step('{key}'" in source
+    app = WebsiteApp.objects.create(account=account, kind="wordpress", state="installing", job_ref="whp-install-abc.json", title="Shop")
+    control.perform(owner, account, Capability.FILES, "write_file", "public_html/whp-install-abc.progress.json", b'{"step": "unpack", "percent": 42}', overwrite=True)
+    site_apps.poll(owner, account)
+    app.refresh_from_db()
+    assert app.progress_step == "unpack" and app.progress_percent == 42 and app.state == "installing"
+    steps = site_apps.install_progress(app)
+    assert steps["percent"] == 42 and [s["state"] for s in steps["steps"]] == ["done", "done", "done", "running", "waiting", "waiting", "waiting"]
+    html = _page(owner, "hosting_customer:setup_status", account.pk)
+    assert "42%" in html and "Unpacking the WordPress files" in html and "Downloading WordPress" in html and "<progress" in html
+
+
+def test_the_preview_plugin_only_trusts_the_domain_its_www_and_the_preview_address():
+    from apps.hosting import preview
+
+    code = preview.mu_plugin("acme.com", "acme-com.preview.example.net")
+    assert "'acme.com', 'www.acme.com', 'acme-com.preview.example.net'" in code and "in_array( $whp_host" in code and "pre_option_home" in code
+
+
+def test_a_preview_address_is_set_up_and_offered_when_the_feature_is_on(world, owner, account, settings):  # noqa: F811
+    from apps.hosting import control, preview
+    from apps.hosting.adapters.capabilities import Capability
+
+    settings.PREVIEW_DOMAIN = "preview.example.net"
+    WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com", admin_url="https" + "://site/wp-admin/")
+    control.perform(owner, account, Capability.FILES, "make_directory", "public_html/wp-content")  # a real WordPress has it
+    expected = preview.host(account)
+    assert expected.endswith(".preview.example.net") and "." not in expected.split(".preview.")[0]
+    html = _page(owner, "hosting_customer:wp_admin", account.pk)
+    assert "Open it now on your preview address" in html and f"http://{expected}/wp-admin/" in html
+    assert expected in {d.name for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
+    plugin = control.perform(owner, account, Capability.FILES, "read_file", "public_html/wp-content/mu-plugins/whp-preview-host.php", max_bytes=5000)
+    assert expected.encode() in plugin
+    preview.ensure(owner, account)  # again: nothing breaks, nothing is added twice
+    assert [d.name for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")].count(expected) == 1
+
+
+def test_without_the_preview_domain_the_feature_is_off(world, owner, account, settings):  # noqa: F811
+    from apps.hosting import preview
+
+    settings.PREVIEW_DOMAIN = ""
+    assert not preview.enabled() and preview.host(account) == "" and preview.url(account) == ""

@@ -15,7 +15,7 @@ from apps.core.exceptions import ServiceError
 
 from urllib.parse import urlencode
 
-from . import dashboard, domain_check, plan_sites, services, site_apps, staging
+from . import dashboard, domain_check, plan_sites, preview, services, site_apps, staging
 from .models import HostingAccount, HostingStatus
 from .views import _own_account
 
@@ -64,7 +64,16 @@ def wp_admin(request, pk, domain=""):
     if state["points_here"]:
         return redirect(app.admin_url)
     name = site_apps.site_domain(account, domain)
+    preview_admin = ""
+    if preview.enabled() and not domain:
+        try:
+            host = preview.ensure(request.user, account)
+        except ServiceError as exc:
+            messages.warning(request, "The preview address could not be set up (" + exc.message + "). The hosts-file way below still works.")
+        else:
+            preview_admin = "http" + f"://{host}/wp-admin/" if host else ""
     return render(request, "hosting/customer/wp_admin.html", {
+        "preview_admin": preview_admin, "preview_site": preview.url(account) if preview_admin else "",
         "account": account, "name": name, "ip": state["ip"], "hosts_line": state["hosts_line"], "ours": state["ours"], "admin_url": app.admin_url,
         "preview_url": state["preview_url"], "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": name}),
         "back_url": reverse("hosting_customer:site_setup_status", args=[account.pk, domain]) if domain else reverse("hosting_customer:detail", args=[account.pk]),

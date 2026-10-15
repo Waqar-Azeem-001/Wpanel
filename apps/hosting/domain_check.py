@@ -9,6 +9,8 @@ website with a one-line change on their own computer (the hosts file), which sho
 """
 import socket
 
+from . import preview
+
 from apps.domains.models import Domain, DomainStatus
 
 
@@ -38,4 +40,5 @@ def check(account, domain=""):
     else:
         state = "not_ours"
     return {"domain": name, "ours": ours, "points_here": points_here, "ip": ip, "resolved": sorted(resolved), "state": state, "transferring": transferring,
-            "hosts_line": f"{ip} {name} www.{name}" if ip else "", "preview_url": "https" + "://" + name + "/"}
+            "hosts_line": f"{ip} {name} www.{name}" if ip else "", "preview_url": "https" + "://" + name + "/",
+            "temporary_url": preview.url(account, domain if domain and domain.lower() != account.domain.lower() else "")}

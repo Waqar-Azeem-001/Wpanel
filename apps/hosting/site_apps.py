@@ -299,13 +299,59 @@ def _apply(user, account, app, data):
         app.state, app.error = AppState.FAILED, str(data.get("error") or "WordPress could not be installed.")[:500]
         audit.record("hosting.site_failed", target=account, metadata={"kind": "wordpress", "error": app.error})
         _cleanup(user, account, folder, app.installer_ref, app.db_name, app.db_user, bool(app.db_name), bool(app.db_user), "")
-    for leftover in (app.job_ref,):
+    for leftover in (app.job_ref, app.job_ref.replace(".json", ".progress.json") if app.job_ref else ""):
         if leftover:
             try:
                 _perform(user, account, Capability.FILES, "delete_path", f"{folder}/{leftover}")
             except Exception:  # noqa: BLE001
                 pass
     app.save(update_fields=["state", "admin_url", "version", "error", "updated_at"])
+    if data.get("ok"):
+        try:
+            from . import preview
+
+            preview.ensure(user, account, domain=app.domain)  # the preview address, so the website can be opened before its domain leads here
+        except Exception:  # noqa: BLE001 - never let the preview spoil a finished installation
+            pass
+
+
+INSTALL_STEPS = (
+    ("database", "Database and its user created"),
+    ("download", "Downloading WordPress"),
+    ("verify", "Checking the download is genuine"),
+    ("unpack", "Unpacking the WordPress files"),
+    ("config", "Writing the website's settings"),
+    ("install", "Setting up the website and the administrator"),
+    ("finish", "Final touches"),
+)
+
+
+def install_progress(app):
+    """What the installation page shows: the percentage and each step as done, running or waiting."""
+    order = [key for key, _ in INSTALL_STEPS]
+    current = app.progress_step if app.progress_step in order else "database"
+    index = order.index(current) if app.progress_step in order else 0
+    if app.progress_step == "start":
+        index = 0
+    rows = []
+    for position, (key, label) in enumerate(INSTALL_STEPS):
+        state = "done" if app.state == AppState.READY or position < index else "running" if position == index else "waiting"
+        rows.append({"key": key, "label": label, "state": state})
+    percent = 100 if app.state == AppState.READY else max(app.progress_percent, 3)
+    return {"percent": percent, "steps": rows}
+
+
+def _read_progress(user, account, app, folder):
+    """The installer writes where it is as it goes; keep the last step and percentage on the website record."""
+    try:
+        raw = control.perform(user, account, Capability.FILES, "read_file", f"{folder}/{app.job_ref.replace('.json', '.progress.json')}", max_bytes=2000)
+        info = json.loads(raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw))
+        step, percent = str(info.get("step", ""))[:20], int(info.get("percent", 0))
+    except Exception:  # noqa: BLE001
+        return
+    if (step, percent) != (app.progress_step, app.progress_percent):
+        app.progress_step, app.progress_percent = step, max(0, min(99, percent))
+        type(app).objects.filter(pk=app.pk).update(progress_step=app.progress_step, progress_percent=app.progress_percent)
 
 
 def poll(user, account, domain=""):
@@ -318,6 +364,7 @@ def poll(user, account, domain=""):
         raw = control.perform(user, account, Capability.FILES, "read_file", f"{folder}/{app.job_ref}", max_bytes=20000)
         data = json.loads(raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw))
     except Exception:  # noqa: BLE001 - not there yet
+        _read_progress(user, account, app, folder)
         if timezone.now() - app.updated_at > TIMEOUT:
             _apply(user, account, app, {"ok": False, "error": "The installation did not report back in ten minutes. Nothing was left half-done; try again."})
         return app

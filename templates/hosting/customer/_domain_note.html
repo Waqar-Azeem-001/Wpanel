@@ -17,6 +17,10 @@
       <a class="btn btn-primary" href="{{ transfer_url }}">{% trans "Transfer domain to us" %}</a>
       {% endif %}
     </div>
+    {% if domain_state.temporary_url and not domain_state.points_here %}
+    <div class="domain-steps"><p class="care-foot"><strong>{% trans "Use it now" %}</strong> &mdash; {% trans "your website is already open on a temporary address, and moves to your domain by itself once the domain leads here:" %}
+      <a href="{{ domain_state.temporary_url }}" target="_blank" rel="noopener noreferrer">{{ domain_state.temporary_url }}</a></p></div>
+    {% endif %}
     {% if domain_state.ip and not domain_state.points_here %}
     <div class="domain-steps">
       <p class="care-foot"><strong>{% trans "To make it live" %}</strong> &mdash; {% trans "set the domain's A record to this hosting's address:" %} <code>{{ domain_state.ip }}</code>.</p>

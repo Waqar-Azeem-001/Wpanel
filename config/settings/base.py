@@ -29,6 +29,8 @@ HOSTING_CPANEL_CAPABILITIES = env.list("HOSTING_CPANEL_CAPABILITIES", default=[]
 SITE_URL = env("SITE_URL", default="http://localhost:8000")
 # All catalog prices and orders are in this one currency (multi-currency is a deferred item).
 STORE_CURRENCY = env("STORE_CURRENCY", default="USD")
+# A domain whose wildcard DNS (*.<this>) leads to the hosting server: every website gets <name>.<this> as a preview address before its own domain leads there. "" = off.
+PREVIEW_DOMAIN = env("PREVIEW_DOMAIN", default="")
 # The built-in test payment gateway simulates a hosted checkout page and signs its own webhooks. It moves no
 # money, so it must never be usable in production: off by default, on in dev/test settings only.
 ALLOW_TEST_PAYMENT_GATEWAY = env.bool("ALLOW_TEST_PAYMENT_GATEWAY", default=False)

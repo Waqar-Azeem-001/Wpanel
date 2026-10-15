@@ -3,7 +3,7 @@
 {% block title %}{% trans "Create website" %} · {{ site_domain }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
-{% if step == "install" and app.state == "installing" %}<meta http-equiv="refresh" content="6">{% endif %}
+{% if step == "install" and app.state == "installing" %}<meta http-equiv="refresh" content="4">{% endif %}
 {% include "hosting/customer/_header.html" with tab="" %}
 <div class="page-head"><h1>{% trans "Create your website" %}</h1>
   <p class="page-sub">{% blocktrans with domain=site_domain %}Set up <strong>{{ domain }}</strong>. This takes a couple of minutes and everything else is done for you.{% endblocktrans %}</p></div>
@@ -63,9 +63,15 @@
   {% if app.state == "installing" %}
   <h2 class="h5" id="inst-title"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {% trans "Installing WordPress..." %}</h2>
   <p class="text-secondary">{% trans "This page refreshes by itself. You can also leave: we will have it ready and you will find it on your website's dashboard." %}</p>
-  <ul class="list-unstyled mb-0">
-    <li><i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% trans "Request sent to your server" %}</li>
-    <li class="text-secondary"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {% trans "Creating the database, installing and signing in the administrator" %}</li>
+  <progress class="install-bar" max="100" value="{{ progress.percent }}" aria-label="{% trans 'Installation progress' %}">{{ progress.percent }}%</progress>
+  <p class="install-percent"><strong>{{ progress.percent }}%</strong></p>
+  <ul class="install-steps list-unstyled mb-0">
+    {% for s in progress.steps %}
+    <li class="is-{{ s.state }}">
+      {% if s.state == "done" %}<i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>{% elif s.state == "running" %}<span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>{% else %}<i class="bi bi-circle text-secondary" aria-hidden="true"></i>{% endif %}
+      <span>{% trans s.label %}</span>
+    </li>
+    {% endfor %}
   </ul>
   {% elif app.state == "failed" %}
   <h2 class="h5 text-danger" id="inst-title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "WordPress could not be installed" %}</h2>

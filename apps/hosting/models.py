@@ -127,6 +127,8 @@ class WebsiteApp(TimeStampedModel):
     # for an installation WHPanel runs itself (servers that cannot run our agent): the result file to wait for and what was made, so a failure can be undone
     job_ref = models.CharField(max_length=80, blank=True)
     installer_ref = models.CharField(max_length=80, blank=True)
+    progress_step = models.CharField(max_length=20, blank=True)  # where the installer is: start, download, verify, unpack, config, install, finish
+    progress_percent = models.PositiveSmallIntegerField(default=0)
     db_name = models.CharField(max_length=80, blank=True)
     db_user = models.CharField(max_length=80, blank=True)
 

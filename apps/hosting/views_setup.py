@@ -164,4 +164,6 @@ def setup_status(request, pk, domain=""):
         from django.urls import reverse
 
         extra = {"domain_state": domain_check.check(account, domain), "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": domain or account.domain})}
+    if app.kind == "wordpress":
+        extra["progress"] = site_apps.install_progress(app)
     return _page(request, account, domain, step="install", done=["type", "details"] if app.kind == "wordpress" else ["type", "details", "install"], app=app, **extra)

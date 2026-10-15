@@ -9,9 +9,21 @@
   <p class="page-sub">{% blocktrans with name=name %}{{ name }} does not lead to this hosting yet, so its address cannot show your website. Your WordPress is installed and working. Use one of these ways to see it.{% endblocktrans %}</p>
 </header>
 
+{% if preview_admin %}
+<section class="card mb-4 border-primary" aria-labelledby="wa-now">
+  <div class="card-body">
+    <h2 class="h5" id="wa-now"><i class="bi bi-lightning-charge-fill text-primary" aria-hidden="true"></i> {% trans "Open it now on your preview address" %}</h2>
+    <p class="text-secondary">{% trans "This temporary address shows your real website and its WordPress admin, with nothing to install on your computer. When your domain leads to this hosting, the same website works on the domain by itself." %}</p>
+    <p><code>{{ preview_site }}</code></p>
+    <a class="btn btn-primary" href="{{ preview_admin }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open WordPress admin" %}</a>
+    <a class="btn btn-outline-secondary" href="{{ preview_site }}" target="_blank" rel="noopener noreferrer">{% trans "Preview the website" %}</a>
+  </div>
+</section>
+{% endif %}
+
 <section class="card mb-4" aria-labelledby="wa-preview">
   <div class="card-body">
-    <h2 class="h5" id="wa-preview"><span class="badge text-bg-primary me-2">1</span>{% trans "Preview it from your computer, right now" %}</h2>
+    <h2 class="h5" id="wa-preview"><span class="badge text-bg-primary me-2">{% if preview_admin %}A{% else %}1{% endif %}</span>{% if preview_admin %}{% trans "Or preview it with your computer's hosts file" %}{% else %}{% trans "Preview it from your computer, right now" %}{% endif %}</h2>
     <p class="text-secondary">{% trans "Add this one line to your computer's hosts file. It tells only your computer that this domain lives on our server, so you see and sign in to the real website. Nobody else is affected. Remove the line when the domain is live." %}</p>
     {% if hosts_line %}
     <div class="d-flex flex-wrap gap-2 mb-3">
@@ -33,7 +45,7 @@
 
 <section class="card mb-4" aria-labelledby="wa-live">
   <div class="card-body">
-    <h2 class="h5" id="wa-live"><span class="badge text-bg-primary me-2">2</span>{% trans "Make the domain live" %}</h2>
+    <h2 class="h5" id="wa-live"><span class="badge text-bg-primary me-2">{% if preview_admin %}B{% else %}2{% endif %}</span>{% trans "Make the domain live" %}</h2>
     <p class="text-secondary">{% if ours %}{% trans "This domain is registered with us. Point its A record to this hosting:" %}{% else %}{% trans "At the company where you bought the domain, set its A record to this hosting's address, or transfer the domain to us and we do it for you:" %}{% endif %} {% if ip %}<code>{{ ip }}</code>{% endif %}</p>
     {% if not ours %}<a class="btn btn-outline-secondary" href="{{ transfer_url }}">{% trans "Transfer the domain to us" %}</a>{% endif %}
     <p class="small text-secondary mt-3 mb-0">{% trans "After the change, it can take a few hours until the whole internet sees it. This page then opens WordPress admin directly." %}</p>

@@ -28,6 +28,7 @@ PHP = r"""<?php
 header('Content-Type: application/json');
 const WHP_TOKEN_HASH = '__TOKEN_HASH__';
 const WHP_RESULT = '__RESULT__';
+const WHP_PROGRESS = '__PROGRESS__';
 const WHP_ZIP = '__ZIP__';
 const WHP_TAR = '__TAR__';
 $whp = json_decode(base64_decode('__CONFIG__'), true);
@@ -38,6 +39,9 @@ function whp_finish($ok, $extra = array()) {
     @file_put_contents(__DIR__ . '/' . WHP_RESULT, $body);
     echo $body;
     exit;
+}
+function whp_step($key, $percent) {
+    @file_put_contents(__DIR__ . '/' . WHP_PROGRESS, json_encode(array('step' => $key, 'percent' => $percent)));
 }
 function whp_rm($path) {
     if (is_dir($path) && !is_link($path)) {
@@ -75,6 +79,7 @@ if (!hash_equals(WHP_TOKEN_HASH, hash('sha256', isset($_GET['t']) ? (string)$_GE
 @unlink(__FILE__); // one use: it cannot be run again
 
 try {
+    whp_step('start', 5);
     $keep = array_merge(json_decode('__HARMLESS__', true), json_decode('__PLACEHOLDERS__', true), array(WHP_RESULT));
     $found = array();
     foreach (scandir(__DIR__) as $name) {
@@ -90,7 +95,9 @@ try {
     }
 
     $useZip = class_exists('ZipArchive');
+    whp_step('download', 12);
     $archive = whp_get($useZip ? WHP_ZIP : WHP_TAR);
+    whp_step('verify', 32);
     $sum = strtolower(trim(strtok(whp_get(($useZip ? WHP_ZIP : WHP_TAR) . '.sha1'), " \t\r\n")));
     if ($sum === '' || sha1($archive) !== $sum) {
         whp_finish(false, array('error' => 'A download did not match its published checksum, so nothing was installed.', 'code' => 'checksum_mismatch'));
@@ -101,6 +108,7 @@ try {
 
     foreach (json_decode('__PLACEHOLDERS__', true) as $holder) { if (is_file(__DIR__ . '/' . $holder)) { @unlink(__DIR__ . '/' . $holder); } }
 
+    whp_step('unpack', 42);
     if ($useZip) {
         $zip = new ZipArchive();
         if ($zip->open($tmp) !== true) { throw new Exception('The WordPress download could not be read.'); }
@@ -137,6 +145,7 @@ try {
     @unlink($tmp);
     if (!is_file(__DIR__ . '/wp-includes/version.php')) { throw new Exception('The WordPress download did not contain WordPress.'); }
 
+    whp_step('config', 66);
     $salts = '';
     foreach (array('AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT') as $key) {
         $salts .= "define( '" . $key . "', '" . bin2hex(random_bytes(32)) . "' );\n";
@@ -152,6 +161,7 @@ try {
     $created[] = __DIR__ . '/wp-config.php';
     @chmod(__DIR__ . '/wp-config.php', 0640);
 
+    whp_step('install', 76);
     $_SERVER['HTTP_HOST'] = $whp['domain'];
     $_SERVER['SERVER_NAME'] = $whp['domain'];
     $_SERVER['REQUEST_URI'] = '/wp-admin/install.php';
@@ -160,6 +170,7 @@ try {
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     if (is_blog_installed()) { throw new Exception('WordPress is already installed in this database.'); }
     wp_install($whp['title'], $whp['admin_user'], $whp['admin_email'], true, '', $whp['admin_password']);
+    whp_step('finish', 94);
     update_option('siteurl', $whp['url']);
     update_option('home', $whp['url']);
     global $wp_version;
@@ -178,6 +189,7 @@ def build(*, domain, scheme, db, db_user, db_password, title, admin_user, admin_
     config = {"domain": domain, "url": f"{scheme}://{domain}", "db": db, "user": db_user, "password": db_password, "title": title,
               "admin_user": admin_user, "admin_email": admin_email, "admin_password": admin_password}
     result = f"whp-install-{ident}.json"
-    source = (PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result).replace("__ZIP__", WP_ZIP)
+    progress = f"whp-install-{ident}.progress.json"
+    source = (PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result).replace("__PROGRESS__", progress).replace("__ZIP__", WP_ZIP)
               .replace("__TAR__", WP_TAR).replace("__HARMLESS__", json.dumps(list(HARMLESS))).replace("__PLACEHOLDERS__", json.dumps(list(PLACEHOLDERS))).replace("__CONFIG__", base64.b64encode(json.dumps(config).encode()).decode()))
     return f"whp-install-{ident}.php", result, token, source
