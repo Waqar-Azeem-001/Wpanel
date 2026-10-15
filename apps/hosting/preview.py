@@ -87,6 +87,7 @@ def mu_plugin(preview_host):
         "    $whp_proto = ( isset( $_SERVER['HTTP_X_WHP_PREVIEW_PROTO'] ) && $_SERVER['HTTP_X_WHP_PREVIEW_PROTO'] === 'https' ) ? 'https' : 'http';\n"
         "    $whp_base = $whp_proto . '://' . $whp_host;\n"
         "    if ( $whp_proto === 'https' ) { $_SERVER['HTTPS'] = 'on'; }\n"
+        "    $_SERVER['HTTP_HOST'] = $whp_host; $_SERVER['SERVER_NAME'] = $whp_host; // WordPress builds its own links and redirects from the host it was asked on\n"
         "    add_filter( 'pre_option_home', function () use ( $whp_base ) { return $whp_base; } );\n"
         "    add_filter( 'pre_option_siteurl', function () use ( $whp_base ) { return $whp_base; } );\n"
         "}\n"
