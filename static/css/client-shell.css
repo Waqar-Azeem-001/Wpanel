@@ -147,3 +147,14 @@ body.shell-client { --topbar-h: 3.9rem; }
 .install-steps li { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; }
 .install-steps li.is-waiting { color: var(--muted); }
 .install-steps li.is-running { font-weight: 650; }
+
+/* The website card on Home */
+.site-tile .site-thumb { position: relative; }
+.site-thumb-kind { position: absolute; right: .6rem; bottom: .5rem; display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .55rem; border-radius: 99px; background: rgba(0, 0, 0, .45); color: #fff; font-size: .72rem; font-weight: 650; }
+.site-chips { list-style: none; margin: .1rem 0 .15rem; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem; }
+.site-chips li { display: inline-flex; align-items: center; gap: .3rem; padding: .12rem .55rem; border-radius: 99px; background: var(--surface-2); color: var(--muted); font-size: .78rem; font-weight: 600; }
+.site-chips li.is-ok { background: var(--ok-bg); color: var(--ok); }
+.site-chips li.is-warn { background: var(--accent-subtle); color: var(--danger); }
+.site-chips li.is-info { background: var(--accent-subtle); color: var(--accent-ink); }
+.site-chips li:first-child { padding: 0; background: none; }
+.min-w-0 { min-width: 0; }
