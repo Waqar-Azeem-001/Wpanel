@@ -19,9 +19,10 @@
         {% block content %}{% endblock %}
         {% if sidebar and not sidebar.workspace %}</div></div>{% endif %}
       </main>
-      {% block footer %}{% include "components/footer.html" %}{% endblock %}
     </div>
   </div>
+  {# The footer sits under the rail and the menu, full width; they stay in view (sticky) until it arrives #}
+  {% block footer %}{% include "components/footer.html" %}{% endblock %}
   {% include "components/tabbar.html" %}
 </div>
 {% include "components/quick_nav.html" %}
