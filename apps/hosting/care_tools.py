@@ -273,7 +273,7 @@ def _tidy_leftovers(io, folder):
                 pass
 
 
-def wordpress_action(user, account, action, target=""):
+def wordpress_action(user, account, action, target="", secret=""):
     """Run one WordPress action (``wp_tool.ACTIONS``) and return what is installed afterwards: {"core", "plugins", "themes"}. Raises ServiceError with WordPress's own message."""
     if action not in wp_tool.ACTIONS:
         raise ServiceError("That action is not available.", code="unknown_action")
@@ -282,7 +282,7 @@ def wordpress_action(user, account, action, target=""):
     io = care._Io(user, account)
     folder = site_apps.docroot_path(account)
     _tidy_leftovers(io, folder)
-    file_name, result_name, token, source = wp_tool.build(action, target)
+    file_name, result_name, token, source = wp_tool.build(action, target, secret)
     path = f"{folder}/{file_name}"
     io.call(Capability.FILES, "write_file", path, source.encode(), overwrite=False, audit_metadata={"path": path, "purpose": "one-time WordPress tool", "action": action})
     try:

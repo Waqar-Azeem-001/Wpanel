@@ -30,7 +30,7 @@
       <small class="text-secondary">
         {% if card.app.state == "installing" %}{% trans "Installing..." %}
         {% elif card.app.state == "failed" %}{% trans "Installation failed" %}
-        {% elif card.app.kind == "wordpress" %}{% if card.app.version %}WordPress {{ card.app.version }} &middot; {% endif %}{% trans "Administrator" %}: {{ card.app.admin_user }}
+        {% elif card.app.kind == "wordpress" %}{% if card.app.version %}WordPress {{ card.app.version }}{% endif %}
         {% else %}{% trans "Upload your files with the File manager or SFTP." %}{% endif %}
       </small>
     </div>
@@ -39,6 +39,31 @@
     {% elif card.app.kind == "wordpress" and card.app.admin_url %}
       <a class="btn btn-primary btn-sm" href="{% url 'hosting_customer:wp_admin' account.pk %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "WP Admin" %}</a>
     {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if card.app and card.app.kind == "wordpress" and card.app.state == "ready" and card.app.admin_user %}
+<section class="card mb-3 wp-signin" aria-labelledby="wp-signin-title">
+  <div class="card-body">
+    <h2 class="h6" id="wp-signin-title"><i class="bi bi-key" aria-hidden="true"></i> {% trans "WordPress sign-in" %}</h2>
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-md-5">
+        <label class="form-label small text-secondary" for="wp-user">{% trans "Username" %}</label>
+        <div class="d-flex gap-2"><input id="wp-user" class="form-control font-monospace" readonly value="{{ card.app.admin_user }}" data-select-on-click>
+          <button class="btn btn-outline-secondary" type="button" data-copy="#wp-user" aria-label="{% trans 'Copy username' %}"><i class="bi bi-clipboard" aria-hidden="true"></i> <span class="visually-hidden">{% trans "Copy" %}</span></button></div>
+      </div>
+      <div class="col-12 col-md-7">
+        <span class="form-label small text-secondary d-block">{% trans "Password" %}</span>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <form method="post" action="{% url 'hosting_customer:wp_password' account.pk %}" data-loading="{% trans 'Setting a new password...' %}">{% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> {% trans "Set a new password" %}</button>
+          </form>
+          <a class="btn btn-primary" href="{% url 'hosting_customer:wp_admin' account.pk %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Sign in without a password" %}</a>
+        </div>
+      </div>
+    </div>
+    <p class="small text-secondary mb-0 mt-2">{% trans "For your safety the password is not kept anywhere, so it cannot be shown. Set a new one and it is shown once here, ready to copy. The sign-in button above works without it." %}</p>
   </div>
 </section>
 {% endif %}

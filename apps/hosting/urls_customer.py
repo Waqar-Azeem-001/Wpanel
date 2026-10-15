@@ -9,6 +9,7 @@ urlpatterns = [
     path("websites/", views_websites.websites, name="websites"),
     path("<int:pk>/delete/", views_websites.site_delete, name="site_delete"),
     path("<int:pk>/wp-admin/", views_websites.wp_admin, name="wp_admin"),
+    path("<int:pk>/wp-admin/password/", views_websites.wp_password, name="wp_password"),
     path("<int:pk>/sites/<str:domain>/wp-admin/", views_websites.wp_admin, name="site_wp_admin"),
     path("<int:pk>/plan/", views_plan.plan, name="plan"),
     path("<int:pk>/sites/add/", views_plan.site_add, name="site_add"),

@@ -379,3 +379,42 @@ def test_without_the_proxy_key_the_feature_is_off(world, owner, account, setting
     settings.PREVIEW_DOMAIN = ""
     settings.PREVIEW_PROXY_KEY = "k" * 32
     assert not preview.enabled()
+
+
+# --- the WordPress sign-in card: username, a new password shown once -----------------------------------------------------------
+
+def test_the_dashboard_shows_the_username_and_never_a_stored_password(world, owner, account):  # noqa: F811
+    _wordpress(account)
+    html = _page(owner, "hosting_customer:detail", account.pk)
+    assert "WordPress sign-in" in html and 'value="shopadmin"' in html and "Set a new password" in html and "Sign in without a password" in html
+
+
+def test_a_new_password_is_set_through_the_tool_and_shown_once(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import care_tools
+
+    _wordpress(account)
+    seen = {}
+
+    def fake(user, acct, action, target="", secret=""):
+        seen.update(action=action, target=target, secret=secret)
+        return {}
+
+    monkeypatch.setattr(care_tools, "wordpress_action", fake)
+    monkeypatch.setattr("apps.hosting.care.can_manage_updates", lambda acct: True)
+    client = browser(owner)
+    assert client.get(reverse("hosting_customer:wp_password", args=[account.pk])).status_code == 405
+    reply = client.post(reverse("hosting_customer:wp_password", args=[account.pk]))
+    html = reply.content.decode()
+    assert reply.status_code == 200 and reply["Cache-Control"] == "no-store"
+    assert seen["action"] == "set_password" and seen["target"] == "shopadmin" and len(seen["secret"]) == 20
+    assert f'value="{seen["secret"]}"' in html  # shown once, on this page
+    assert any(c.isdigit() for c in seen["secret"]) and any(c.isupper() for c in seen["secret"]) and any(c.islower() for c in seen["secret"])
+    assert seen["secret"] not in _page(owner, "hosting_customer:detail", account.pk)  # and gone afterwards
+
+
+def test_the_wordpress_tool_can_set_a_password():
+    from apps.hosting import wp_tool
+
+    assert "set_password" in wp_tool.ACTIONS
+    source = wp_tool.build("set_password", "shopadmin", "N3w-Passw0rd-xyz")[3]
+    assert "wp_set_password" in source and "N3w-Passw0rd-xyz" not in source  # the secret travels base64 inside the file, which deletes itself on use

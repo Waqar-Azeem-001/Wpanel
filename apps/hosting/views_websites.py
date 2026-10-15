@@ -87,6 +87,35 @@ def wp_admin(request, pk, domain=""):
         "sidebar": portal.service_sidebar(request, account)})
 
 
+@require_POST
+@login_required
+def wp_password(request, pk):
+    """Give the website's WordPress administrator a new password and show it once, on this page only (never stored, emailed or put in an address)."""
+    import secrets
+    import string
+
+    from . import care, care_tools
+
+    account = _own_account(request, pk)
+    app = site_apps.current(account)
+    if app is None or app.kind != "wordpress" or app.state != "ready" or not app.admin_user or not care.can_manage_updates(account):
+        messages.error(request, "A new WordPress password can be set for a WordPress website that WHPanel set up.")
+        return redirect("hosting_customer:detail", pk=account.pk)
+    alphabet = string.ascii_letters + string.digits + "-_.!@#"
+    password = "".join(secrets.choice(alphabet) for _ in range(20))
+    password = password[:-3] + secrets.choice(string.ascii_uppercase) + secrets.choice(string.ascii_lowercase) + secrets.choice(string.digits)
+    try:
+        care_tools.wordpress_action(request.user, account, "set_password", app.admin_user, secret=password)
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        return redirect("hosting_customer:detail", pk=account.pk)
+    response = render(request, "hosting/customer/wp_password.html", {
+        "account": account, "app": app, "password": password, "admin_url": reverse("hosting_customer:wp_admin", args=[account.pk]),
+        "back_url": reverse("hosting_customer:detail", args=[account.pk]), "sidebar": portal.service_sidebar(request, account)})
+    response["Cache-Control"] = "no-store"
+    return response
+
+
 @login_required
 def site_delete(request, pk, domain=""):
     account = _own_account(request, pk)

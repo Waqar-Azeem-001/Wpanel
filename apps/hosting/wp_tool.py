@@ -10,7 +10,7 @@ import hashlib
 import json
 import secrets
 
-ACTIONS = ("inventory", "activate_plugin", "deactivate_plugin", "update_plugin", "activate_theme", "update_theme", "update_core", "flush_cache")
+ACTIONS = ("inventory", "activate_plugin", "deactivate_plugin", "update_plugin", "activate_theme", "update_theme", "update_core", "flush_cache", "set_password")
 
 PHP = r"""<?php
 /* WHPanel one-time WordPress tool. It removes itself when it starts. */
@@ -86,6 +86,12 @@ try {
         if (!is_array($updates) || !isset($updates[0]) || $updates[0]->response !== 'upgrade') { whp_finish(false, array('error' => 'WordPress is already up to date.')); }
         $r = (new Core_Upgrader(new Automatic_Upgrader_Skin()))->upgrade($updates[0]);
         if (is_wp_error($r)) { whp_finish(false, array('error' => $r->get_error_message())); }
+    } elseif ($action === 'set_password') {
+        $secret = isset($whp['secret']) ? (string)$whp['secret'] : '';
+        $who = get_user_by('login', $target);
+        if (!$who) { whp_finish(false, array('error' => 'That user does not exist.')); }
+        if (strlen($secret) < 12) { whp_finish(false, array('error' => 'The new password is too short.')); }
+        wp_set_password($secret, $who->ID);
     } elseif ($action === 'flush_cache') {
         // WordPress's own object cache, then the well-known page-cache plugins when they are present
         if (function_exists('wp_cache_flush')) { wp_cache_flush(); }
@@ -132,13 +138,13 @@ try {
 """
 
 
-def build(action, target=""):
+def build(action, target="", secret=""):
     """Returns (file name, result file name, token, PHP source). ``action`` must be one of ``ACTIONS``."""
     if action not in ACTIONS:
         raise ValueError("unknown action")
     token = secrets.token_urlsafe(32)
     suffix = secrets.token_hex(8)
     file_name, result_name = f"whp-wp-{suffix}.php", f"whp-wp-{suffix}.json"
-    config = base64.b64encode(json.dumps({"action": action, "target": str(target)[:200]}).encode()).decode()
+    config = base64.b64encode(json.dumps({"action": action, "target": str(target)[:200], "secret": str(secret)[:200]}).encode()).decode()
     source = PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__CONFIG__", config)
     return file_name, result_name, token, source
