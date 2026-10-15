@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% load ui i18n %}
-{% block title %}{% trans "Delete website" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% trans "Delete website" %} · {{ site_domain|default:account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
 {% include "hosting/customer/_header.html" with tab="" %}
 <div class="page-head"><h1>{% trans "Delete website" %}</h1>
-  <p class="page-sub">{% blocktrans with domain=account.domain %}This permanently deletes the website <strong>{{ domain }}</strong> from its hosting plan.{% endblocktrans %}</p></div>
+  <p class="page-sub">{% blocktrans with domain=site_domain|default:account.domain %}This permanently deletes the website <strong>{{ domain }}</strong> from its hosting plan.{% endblocktrans %}</p></div>
 {% if not app and not entries %}
 <section class="care-card"><p class="care-empty mt-0">{% trans "There is nothing to delete: the website folder of this hosting plan is empty." %}</p>
   <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:websites' %}">{% trans "Back to Websites" %}</a></section>
@@ -23,8 +23,8 @@
   </section>
   <section class="care-card">
     <form method="post" class="care-options" autocomplete="off">{% csrf_token %}
-      <label for="confirm">{% blocktrans with domain=account.domain %}Type <strong>{{ domain }}</strong> to confirm{% endblocktrans %}</label>
-      <input class="form-control" id="confirm" name="confirm" required placeholder="{{ account.domain }}">
+      <label for="confirm">{% blocktrans with domain=site_domain|default:account.domain %}Type <strong>{{ domain }}</strong> to confirm{% endblocktrans %}</label>
+      <input class="form-control" id="confirm" name="confirm" required placeholder="{{ site_domain|default:account.domain }}">
       <div class="d-flex flex-wrap gap-2">
         <button class="btn btn-danger" type="submit">{% trans "Delete website" %}</button>
         <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:detail' account.pk %}">{% trans "Cancel" %}</a>

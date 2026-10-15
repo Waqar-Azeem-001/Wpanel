@@ -16,16 +16,16 @@
 <ul class="site-cards" data-websites>
   {% for card in cards %}
   <li class="site-card st-{{ card.account.status }}">
-    <a class="site-card-link" href="{{ card.manage_url }}" aria-labelledby="site-{{ card.account.pk }}">
+    <a class="site-card-link" href="{{ card.plan_url }}" aria-labelledby="site-{{ card.account.pk }}">
       <span class="site-card-top">
         <span class="site-card-avatar tone-{{ card.tone }}" aria-hidden="true">{% if card.app and card.app.kind == "wordpress" %}<i class="bi bi-wordpress"></i>{% else %}{{ card.account.domain|slice:":1"|upper }}{% endif %}</span>
         <span class="site-card-state">{% status_badge card.account.status card.account.get_status_display %}</span>
       </span>
       <span class="site-card-name" id="site-{{ card.account.pk }}">{{ card.account.domain }}</span>
-      <span class="site-card-sub">{{ card.plan }}
-        {% if card.app %}&middot; {% if card.app.state == "installing" %}{% trans "Installing WordPress..." %}{% elif card.app.state == "failed" %}{% trans "Installation failed" %}{% else %}{{ card.app.get_kind_display }}{% endif %}
-        {% elif card.needs_setup %}&middot; {% trans "Not set up yet" %}{% endif %}
-      </span>
+      <span class="site-card-sub">{{ card.plan }}</span>
+      {% if card.sites %}<span class="site-card-count"><i class="bi bi-window-stack" aria-hidden="true"></i> <strong>{{ card.sites.created }}</strong>
+        {% if card.sites.allowed is None %}{% trans "websites" %}{% else %}{% blocktrans with allowed=card.sites.allowed %}of {{ allowed }} websites{% endblocktrans %}{% endif %}</span>
+      {% elif card.needs_setup %}<span class="site-card-sub">{% trans "Not set up yet" %}</span>{% endif %}
       {% if card.show_usage and card.disk.known %}
       {% if card.disk.percent is not None %}<progress class="usage-meter site-card-meter{% if card.disk.state == 'danger' %} is-danger{% elif card.disk.state == 'warning' %} is-warning{% endif %}" max="100" value="{{ card.disk.percent }}" aria-label="{% trans 'Storage used' %}">{{ card.disk.percent }}%</progress>{% endif %}
       <span class="site-card-fine">{{ card.disk.used }}{% if card.disk.limit %} {% trans "of" %} {{ card.disk.limit }}{% endif %} {% trans "used" %}</span>

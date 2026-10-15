@@ -11,6 +11,8 @@ body.has-shell { display: block; min-height: 100vh; }
 .canvas { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
 .canvas > main.page { flex: 1 0 auto; width: 100%; margin: 1.6rem auto 0; padding: 0 1.75rem; max-width: 1180px; }
 .canvas > main.page.wide { max-width: var(--container); }
+/* The page fills the first screen: the footer starts below it, never inside it, however short the page is. */
+.canvas > main.page { min-height: calc(100vh - var(--topbar-h) - 1.6rem); }
 /* A page that is one form card (settings, add client) is a single centred column, heading included */
 .canvas > main.page:has(> .card > .card-body > form):not(:has(table)):not(:has(.stat-tiles)) { max-width: 62rem; }
 .crumbs-line .breadcrumb { margin: 0 0 .9rem; font-size: .8rem; --bs-breadcrumb-divider-color: var(--muted); }

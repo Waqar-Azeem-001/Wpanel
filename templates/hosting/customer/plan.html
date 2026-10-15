@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Websites" %} · {{ account.product.name }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Hosting" %}</a></nav>
+<header class="page-head page-head-split">
+  <div>
+    <h1>{{ account.product.name }}</h1>
+    <p class="page-sub">{{ account.domain }}{% if account.expires_at %} &middot; {% trans "Renews" %} {{ account.expires_at|fdate }}{% endif %}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center">{% status_badge account.status account.get_status_display %}
+    <a class="btn btn-outline-secondary" href="{% url 'hosting_customer:information' account.pk %}">{% trans "Plan details" %}</a>
+    {% if state.allowed is not None %}<a class="btn btn-outline-secondary" href="{{ upgrade_url }}">{% trans "Upgrade" %}</a>{% endif %}</div>
+</header>
+
+<section class="plan-count" aria-label="{% trans 'Websites in this plan' %}">
+  <div class="plan-count-main">
+    <strong class="plan-count-number">{{ state.created }}</strong>
+    <span>{% if state.allowed is None %}{% trans "websites created. This plan has no limit." %}{% else %}{% blocktrans with allowed=state.allowed %}of {{ allowed }} websites created{% endblocktrans %}{% endif %}</span>
+  </div>
+  {% if state.allowed is not None %}
+  <progress class="usage-meter{% if state.attached >= state.allowed %} is-warning{% endif %}" max="{{ state.allowed }}" value="{{ state.attached }}" aria-label="{% trans 'Websites used' %}">{{ state.attached }}/{{ state.allowed }}</progress>
+  <p class="plan-count-note">{% blocktrans with used=state.attached allowed=state.allowed free=state.free %}{{ used }} of {{ allowed }} places used on this plan, {{ free }} free.{% endblocktrans %}</p>
+  {% endif %}
+</section>
+
+<section class="web-list-wrap" aria-labelledby="plan-sites">
+  <div class="ws-block-head"><h2 id="plan-sites">{% trans "Websites" %}</h2></div>
+  <ul class="web-list">
+    {% for site in state.sites %}
+    <li class="web-row">
+      <a class="web-main" href="{{ site.manage_url }}">
+        <span class="web-avatar" aria-hidden="true">{% if site.kind == "wordpress" %}<i class="bi bi-wordpress"></i>{% else %}{{ site.domain|slice:":1"|upper }}{% endif %}</span>
+        <span class="web-text"><strong>{{ site.domain }}</strong>
+          <small>{% if site.primary %}{% trans "Main domain of this plan" %} &middot; {% else %}{% trans "Added domain" %} &middot; {% endif %}
+            {% if site.app %}{% if site.state == "installing" %}{% trans "Installing WordPress..." %}{% elif site.state == "failed" %}{% trans "Installation failed" %}{% elif site.kind == "wordpress" %}WordPress{% else %}{% trans "Custom website" %}{% endif %}{% else %}{% trans "No website yet" %}{% endif %}</small></span>
+      </a>
+      <span class="web-actions">
+        {% if site.app %}
+        <a class="btn btn-primary btn-sm" href="{{ site.manage_url }}">{% trans "Dashboard" %}</a>
+        {% else %}
+        <a class="btn btn-primary btn-sm" href="{{ site.setup_url }}">{% trans "Create website" %}</a>
+        {% endif %}
+        <span class="dropdown">
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{% trans 'More actions for' %} {{ site.domain }}"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{{ site.url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Visit website" %}</a></li>
+            {% if site.app and site.app.kind == "wordpress" and site.app.state == "ready" and site.app.admin_url %}<li><a class="dropdown-item" href="{{ site.app.admin_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-wordpress" aria-hidden="true"></i> {% trans "WordPress admin" %}</a></li>{% endif %}
+            <li><a class="dropdown-item" href="{{ site.files_url }}"><i class="bi bi-folder2-open" aria-hidden="true"></i> {% trans "File manager" %}</a></li>
+            {% if site.app or not site.primary %}<li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="{{ site.delete_url }}"><i class="bi bi-trash" aria-hidden="true"></i> {% if site.primary %}{% trans "Delete website" %}{% else %}{% trans "Remove website and domain" %}{% endif %}</a></li>{% endif %}
+          </ul>
+        </span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card mt-4" aria-labelledby="plan-add">
+  <div class="card-body">
+    <h2 class="h5" id="plan-add">{% trans "Add a website" %}</h2>
+    {% if state.can_add %}
+    <p class="text-secondary">{% trans "Enter the domain for the new website. It is added to this plan with its own folder, then you choose WordPress or a custom website." %}</p>
+    <form method="post" action="{{ add_url }}" class="row g-2 align-items-end" data-loading="{% trans 'Adding the domain...' %}">{% csrf_token %}
+      <div class="col-12 col-md-7"><label class="form-label" for="new-domain">{% trans "Domain" %}</label><input class="form-control" id="new-domain" name="domain" placeholder="shop.example.com" autocomplete="off" required></div>
+      <div class="col-12 col-md-auto"><button class="btn btn-primary" type="submit">{% trans "Add website" %}</button></div>
+    </form>
+    {% else %}
+    <p class="site-note mb-3"><i class="bi bi-info-circle" aria-hidden="true"></i>{{ state.reason }}</p>
+    {% if state.allowed is not None and account.status == "active" %}<a class="btn btn-primary" href="{{ upgrade_url }}">{% trans "Upgrade this plan for more websites" %}</a>{% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

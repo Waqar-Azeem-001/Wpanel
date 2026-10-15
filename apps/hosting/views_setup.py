@@ -10,6 +10,7 @@ import secrets
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.exceptions import ServiceError
@@ -64,10 +65,22 @@ def _suggestion():
     return "".join(secrets.choice(ALPHABET) for _ in range(20))
 
 
-def _page(request, account, **extra):
+def _urls(account, domain=""):
+    """Where the steps of one website lead: the plan's own website, or one added to the plan (then the plan's Websites page is home)."""
+    from django.urls import reverse
+
+    if domain:
+        return {"setup_url": reverse("hosting_customer:site_setup", args=[account.pk, domain]), "status_url": reverse("hosting_customer:site_setup_status", args=[account.pk, domain]),
+                "done_url": reverse("hosting_customer:plan", args=[account.pk]), "site_domain": domain, "visit_url": site_apps.site_url(account, domain)}
+    return {"setup_url": reverse("hosting_customer:setup", args=[account.pk]), "status_url": reverse("hosting_customer:setup_status", args=[account.pk]),
+            "done_url": reverse("hosting_customer:detail", args=[account.pk]), "site_domain": account.domain, "visit_url": account.site_url}
+
+
+def _page(request, account, domain="", **extra):
     from apps.core import portal
 
-    context = {"account": account, "sidebar": portal.service_sidebar(request, account), "steps": STEPS, "can_wordpress": site_apps.can_install_wordpress(account), **extra}
+    context = {"account": account, "sidebar": portal.service_sidebar(request, account), "steps": STEPS, "can_wordpress": site_apps.can_install_wordpress(account),
+               **_urls(account, domain), **extra}
     response = render(request, "hosting/customer/setup.html", context)
     response["Cache-Control"] = "no-store"  # the page may hold a password suggestion
     return response
@@ -83,52 +96,72 @@ def create(request):
     return render(request, "hosting/customer/create.html", {"waiting": waiting})
 
 
+def _site_redirect(name, account, domain):
+    if domain:
+        return redirect("hosting_customer:site_" + name, pk=account.pk, domain=domain)
+    return redirect("hosting_customer:" + name, pk=account.pk)
+
+
+def _owns_domain(request, account, domain):
+    """A domain added to this plan: one of its websites, or one the plan's server lists for it."""
+    from . import plan_sites
+    from .models import WebsiteApp
+
+    if WebsiteApp.objects.filter(account=account, domain=domain).exists():
+        return True
+    return domain in {s["domain"] for s in plan_sites.summary(request.user, account)["sites"]}
+
+
 @login_required
-def setup(request, pk):
+def setup(request, pk, domain=""):
     account = _own(request, pk)
-    existing = site_apps.current(account)
+    domain = "" if (domain or account.domain).lower() == account.domain.lower() else domain.lower()
+    existing = site_apps.current(account, domain)
+    if domain and not _owns_domain(request, account, domain):
+        raise Http404
     if existing is not None and existing.state != AppState.FAILED:
-        return redirect("hosting_customer:setup_status", pk=account.pk)
+        return _site_redirect("setup_status", account, domain)
     if account.status != HostingStatus.ACTIVE:
         messages.error(request, "This website is not active yet, so it cannot be set up.")
         return redirect("hosting_customer:detail", pk=account.pk)
     kind = request.POST.get("type") or request.GET.get("type") or ""
     if request.method == "POST" and kind == "custom":
         try:
-            site_apps.start_custom(request.user, account, request=request)
+            site_apps.start_custom(request.user, account, domain=domain, request=request)
         except ServiceError as exc:
             messages.error(request, exc.message)
-            return redirect("hosting_customer:setup", pk=account.pk)
+            return _site_redirect("setup", account, domain)
         messages.success(request, "Your custom website is ready. Upload your files with the File manager or SFTP.")
-        return redirect("hosting_customer:detail", pk=account.pk)
+        return redirect(_urls(account, domain)["done_url"])
     if kind != "wordpress":
-        return _page(request, account, step="type", done=[], error=existing.error if existing else "")
+        return _page(request, account, domain, step="type", done=[], error=existing.error if existing else "")
     if request.method == "POST":
         form = WordPressForm(request.POST)
         if form.is_valid():
             try:
-                site_apps.start_wordpress(request.user, account, request=request, title=form.cleaned_data["title"], admin_user=form.cleaned_data["admin_user"],
+                site_apps.start_wordpress(request.user, account, request=request, domain=domain, title=form.cleaned_data["title"], admin_user=form.cleaned_data["admin_user"],
                                           admin_email=form.cleaned_data["admin_email"], admin_password=form.cleaned_data["admin_password"])
             except ServiceError as exc:
                 form.add_error(None, exc.message)
             else:
-                return redirect("hosting_customer:setup_status", pk=account.pk)
+                return _site_redirect("setup_status", account, domain)
     else:
-        form = WordPressForm(initial={"title": account.domain, "admin_user": "siteadmin", "admin_email": request.user.email, "admin_password": _suggestion()})
-    return _page(request, account, step="details", done=["type"], form=form)
+        form = WordPressForm(initial={"title": domain or account.domain, "admin_user": "siteadmin", "admin_email": request.user.email, "admin_password": _suggestion()})
+    return _page(request, account, domain, step="details", done=["type"], form=form)
 
 
 @login_required
-def setup_status(request, pk):
+def setup_status(request, pk, domain=""):
     account = _own(request, pk)
-    app = site_apps.poll(request.user, account)
+    domain = "" if (domain or account.domain).lower() == account.domain.lower() else domain.lower()
+    app = site_apps.poll(request.user, account, domain)
     if app is None:
-        return redirect("hosting_customer:setup", pk=account.pk)
+        return _site_redirect("setup", account, domain)
     extra = {}
     if app.state == AppState.READY:
         from urllib.parse import urlencode
 
         from django.urls import reverse
 
-        extra = {"domain_state": domain_check.check(account), "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": account.domain})}
-    return _page(request, account, step="install", done=["type", "details"] if app.kind == "wordpress" else ["type", "details", "install"], app=app, **extra)
+        extra = {"domain_state": domain_check.check(account, domain), "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": domain or account.domain})}
+    return _page(request, account, domain, step="install", done=["type", "details"] if app.kind == "wordpress" else ["type", "details", "install"], app=app, **extra)

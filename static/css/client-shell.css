@@ -70,3 +70,28 @@
 .todo.is-danger .todo-icon { background: var(--danger-bg); color: var(--danger); }
 .todo.is-warn .todo-icon { background: var(--accent-subtle); color: var(--accent-ink); }
 .todo-text { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 550; }
+
+/* The page fills the first screen: the footer always starts below it, never inside it, however short the page is */
+.cbody > .canvas > main.page { min-height: calc(100vh - var(--topbar-h) - 1.6rem); }
+@supports (height: 100dvh) { .cbody > .canvas > main.page { min-height: calc(100dvh - var(--topbar-h) - 1.6rem); } }
+@media (max-width: 991.98px) {
+  .cbody > .canvas > main.page { min-height: calc(100vh - var(--topbar-h) - 1rem); }
+  @supports (height: 100dvh) { .cbody > .canvas > main.page { min-height: calc(100dvh - var(--topbar-h) - 1rem); } }
+}
+
+/* A plan and its websites */
+.plan-count { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.3rem; margin-bottom: 1.5rem; }
+.plan-count-main { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+.plan-count-number { font-size: 2rem; line-height: 1; letter-spacing: -.03em; }
+.plan-count .usage-meter { width: 100%; margin-top: .7rem; }
+.plan-count-note { margin: .5rem 0 0; color: var(--muted); font-size: .85rem; }
+.plan-group { margin-bottom: 1.75rem; }
+.plan-group-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+.plan-group-head h2 { font-size: 1.1rem; margin: 0; }
+.plan-group-head h2 a { color: inherit; text-decoration: none; }
+.plan-group-head p { margin: .1rem 0 0; color: var(--muted); font-size: .88rem; }
+.plan-group-add { margin: .6rem .3rem 0; font-size: .88rem; }
+.site-card-count { display: block; margin-top: .5rem; font-size: .9rem; color: var(--muted); }
+.site-card-count strong { color: var(--text); }
+.ws-block-head { margin-bottom: .6rem; }
+.ws-block-head h2 { font-size: 1.1rem; margin: 0; }

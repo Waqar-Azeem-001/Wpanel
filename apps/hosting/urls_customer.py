@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_ssl, views_tools, views_usage
+from . import views, views_setup, views_wizard, views_databases, views_domains, views_backups, views_cron, views_email, views_files, views_cpanel_access, views_php, views_security, views_care, views_websites, views_plan, views_ssl, views_tools, views_usage
 
 app_name = "hosting_customer"
 
@@ -8,6 +8,11 @@ urlpatterns = [
     path("", views.my_hosting_list, name="list"),
     path("websites/", views_websites.websites, name="websites"),
     path("<int:pk>/delete/", views_websites.site_delete, name="site_delete"),
+    path("<int:pk>/plan/", views_plan.plan, name="plan"),
+    path("<int:pk>/sites/add/", views_plan.site_add, name="site_add"),
+    path("<int:pk>/sites/<str:domain>/setup/", views_setup.setup, name="site_setup"),
+    path("<int:pk>/sites/<str:domain>/setup/status/", views_setup.setup_status, name="site_setup_status"),
+    path("<int:pk>/sites/<str:domain>/delete/", views_websites.site_delete, name="site_remove"),
     path("<int:pk>/staging/", views_websites.staging_page, name="staging"),
     path("<int:pk>/staging/do/", views_websites.staging_action, name="staging_action"),
     path("new/", views_wizard.new_website, name="new"),

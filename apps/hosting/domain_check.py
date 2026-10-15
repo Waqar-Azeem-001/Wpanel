@@ -19,8 +19,8 @@ def _addresses(name):
         return set()
 
 
-def check(account):
-    name = account.domain.lower()
+def check(account, domain=""):
+    name = (domain or account.domain).lower()
     rows = Domain.objects.filter(client_id=account.client_id, name__iexact=name, status__in=[DomainStatus.ACTIVE, DomainStatus.PENDING_TRANSFER_IN])
     ours = rows.filter(status=DomainStatus.ACTIVE).exists()
     transferring = rows.filter(status=DomainStatus.PENDING_TRANSFER_IN).exists()

@@ -117,7 +117,7 @@ def test_the_one_file_scanner_is_written_called_and_its_result_read_and_removed(
     account = script_server
     seen = {}
 
-    def reach(acct, path, token, purpose=""):
+    def reach(acct, path, token, purpose="", domain=""):
         seen.update(path=path, token=token)
         return None
 
@@ -138,7 +138,7 @@ def test_the_one_file_scanner_is_written_called_and_its_result_read_and_removed(
 def test_a_website_that_cannot_be_reached_fails_the_scan_and_removes_the_script(world, owner, script_server, monkeypatch):  # noqa: F811
     account = script_server
 
-    def unreachable(acct, path, token, purpose=""):
+    def unreachable(acct, path, token, purpose="", domain=""):
         raise ServiceError(f"WHPanel could not reach your website {purpose} (ConnectTimeout).", code="unreachable")
 
     monkeypatch.setattr(site_apps, "reach", unreachable)
@@ -149,7 +149,7 @@ def test_a_website_that_cannot_be_reached_fails_the_scan_and_removes_the_script(
 
 def test_a_scan_that_never_reports_back_is_called_failed(world, owner, script_server, monkeypatch):  # noqa: F811
     account = script_server
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": None)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": None)
     scan = care.start_scan(owner, account)
     SiteScan.objects.filter(pk=scan.pk).update(started_at=timezone.now() - timedelta(minutes=20))
     assert care.poll_scan(owner, account).state == "failed"
@@ -509,7 +509,7 @@ def test_the_wordpress_manager_runs_one_action_and_returns_what_is_installed(wor
               "themes": [{"slug": "twentytwentyfive", "name": "Twenty", "version": "1", "active": True, "update": ""}]}
     seen = {}
 
-    def reach(acct, path, token, purpose=""):
+    def reach(acct, path, token, purpose="", domain=""):
         seen.update(path=path)
         return answer
 
@@ -518,7 +518,7 @@ def test_the_wordpress_manager_runs_one_action_and_returns_what_is_installed(wor
     assert data["core"]["update"] == "6.9" and data["plugins"][0]["name"] == "A" and seen["path"].startswith("whp-wp-")
     with pytest.raises(ServiceError):
         care_tools.wordpress_action(owner, account, "format_disk")
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": False, "error": "That plugin is not installed."})
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": {"ok": False, "error": "That plugin is not installed."})
     with pytest.raises(ServiceError) as err:
         care_tools.wordpress_action(owner, account, "activate_plugin", "x/x.php")
     assert "not installed" in err.value.message
@@ -606,7 +606,7 @@ def test_staging_is_created_published_and_deleted(world, owner, account, monkeyp
     _wordpress(account)
     seen = []
 
-    def reach(acct, path, token, purpose=""):
+    def reach(acct, path, token, purpose="", domain=""):
         seen.append(purpose)
         return {"ok": True, "files": 12, "tables": 12, "rows": 340}
 
@@ -633,13 +633,13 @@ def test_a_failed_staging_copy_leaves_nothing_behind(world, owner, account, monk
 
     _wordpress(account)
     before_dbs = {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")}
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": False, "error": "Could not connect to the database."})
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": {"ok": False, "error": "Could not connect to the database."})
     stage = staging.create(owner, account)
     assert stage.state == "failed" and "connect" in stage.error
     assert {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")} == before_dbs
     assert stage.domain not in {d.name.lower() for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
 
-    def unreachable(a, p, t, purpose=""):
+    def unreachable(a, p, t, purpose="", domain=""):
         raise ServiceError("WHPanel could not reach your website " + purpose + " (ConnectTimeout).", code="unreachable")
 
     monkeypatch.setattr(site_apps, "reach", unreachable)
@@ -653,7 +653,7 @@ def test_publishing_needs_a_backup_or_the_customers_own(world, owner, account, m
     from apps.hosting import staging
 
     _wordpress(account)
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": True})
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": {"ok": True})
     staging.create(owner, account)
     monkeypatch.setattr(staging, "backup_before_push", lambda user, acct: "unsupported")
     with pytest.raises(ServiceError) as err:
@@ -668,7 +668,7 @@ def test_publishing_needs_a_backup_or_the_customers_own(world, owner, account, m
 
 def test_the_staging_page_and_its_actions(world, owner, account, monkeypatch):  # noqa: F811
     _wordpress(account)
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": {"ok": True})
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": {"ok": True})
     client = browser(owner)
     url = reverse("hosting_customer:staging", args=[account.pk])
     assert "Create staging website" in client.get(url).content.decode()

@@ -113,7 +113,9 @@ class WebsiteApp(TimeStampedModel):
 
     KIND_CHOICES = [("wordpress", "WordPress"), ("custom", "Custom website")]
 
-    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="site_app")
+    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="site_apps")
+    # "" is the plan's own (primary) domain; another value is a domain added to the plan (an addon domain with its own folder)
+    domain = models.CharField(max_length=253, blank=True, default="")
     kind = models.CharField(max_length=16, choices=KIND_CHOICES)
     state = models.CharField(max_length=12, choices=AppState.choices, default=AppState.READY)
     title = models.CharField(max_length=100, blank=True)
@@ -128,8 +130,15 @@ class WebsiteApp(TimeStampedModel):
     db_name = models.CharField(max_length=80, blank=True)
     db_user = models.CharField(max_length=80, blank=True)
 
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["account", "domain"], name="one_website_per_domain")]
+
+    @property
+    def site_domain(self):
+        return self.domain or self.account.domain
+
     def __str__(self):
-        return f"{self.get_kind_display()} on {self.account.domain}"
+        return f"{self.get_kind_display()} on {self.site_domain}"
 
 
 class SiteCare(TimeStampedModel):

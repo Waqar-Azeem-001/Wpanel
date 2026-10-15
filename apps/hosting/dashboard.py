@@ -65,6 +65,17 @@ def _quick_actions(account, capabilities):
             if capability.value in capabilities]
 
 
+def _site_counts(user, account):
+    """How many websites the plan allows and has: {"allowed": int or None, "created": int}. Never raises (a card must draw even when the server does not answer)."""
+    from . import plan_sites
+
+    try:
+        state = plan_sites.summary(user, account)
+    except Exception:  # noqa: BLE001
+        return None
+    return {"allowed": state["allowed"], "created": state["created"], "attached": state["attached"], "can_add": state["can_add"]}
+
+
 def website_card(user, account):
     try:
         capabilities = control.capabilities_for(account)
@@ -92,6 +103,8 @@ def website_card(user, account):
         "capabilities": capabilities,
         "tone": sum(ord(c) for c in account.domain) % 6,  # which of the six preview-tile colours this website gets
         "manage_url": reverse("hosting_customer:detail", args=[account.pk]),
+        "plan_url": reverse("hosting_customer:plan", args=[account.pk]),
+        "sites": _site_counts(user, account) if account.status == HostingStatus.ACTIVE else None,
         "quick": _quick_actions(account, capabilities) if live else [],
         "upgrade_url": (reverse("renewals_customer:hosting_upgrade", args=[account.pk])
                         if account.status == HostingStatus.ACTIVE else ""),
@@ -193,7 +206,8 @@ def workspace_groups(request, account, *, app=None, live=True):
 
     care = reverse("hosting_customer:care", args=[pk])
     wordpress = app is not None and app.kind == "wordpress" and app.state == "ready"
-    plan = [make("Plan details", reverse("hosting_customer:information", args=[pk]), "bi-info-circle"),
+    plan = [make("Websites in this plan", reverse("hosting_customer:plan", args=[pk]), "bi-window-stack"),
+            make("Plan details", reverse("hosting_customer:information", args=[pk]), "bi-info-circle"),
             make("Add-ons", reverse("hosting_customer:addons", args=[pk]), "bi-plus-square")]
     if account.status == "active":
         plan.append(make("Upgrade / downgrade", reverse("renewals_customer:hosting_upgrade", args=[pk]), "bi-arrow-up-circle"))

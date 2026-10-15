@@ -46,7 +46,7 @@ def test_the_database_and_installer_are_made_and_the_result_is_read_later(world,
     _folder(owner, account)
     seen = {}
 
-    def reach(acct, path, token):
+    def reach(acct, path, token, purpose="", domain=""):
         seen.update(path=path, token=token)
         return None  # still running: the answer comes through the result file
 
@@ -69,7 +69,7 @@ def test_the_database_and_installer_are_made_and_the_result_is_read_later(world,
 
 def test_a_failure_reported_by_the_installer_undoes_what_was_made(world, owner, account, monkeypatch):  # noqa: F811
     _folder(owner, account)
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t: None)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": None)
     app = site_apps.start_wordpress(owner, account, title="Acme", admin_user="siteadmin", admin_email="o@gmail.example.com", admin_password=WP["admin_password"])
     db = app.db_name
     _leave_result(owner, account, {"ok": False, "error": "A download did not match its published checksum, so nothing was installed."})
@@ -82,7 +82,7 @@ def test_a_failure_reported_by_the_installer_undoes_what_was_made(world, owner, 
 def test_a_website_that_cannot_be_reached_fails_cleanly_with_a_reason(world, owner, account, monkeypatch):  # noqa: F811
     _folder(owner, account)
 
-    def unreachable(acct, path, token):
+    def unreachable(acct, path, token, purpose="", domain=""):
         raise ServiceError("WHPanel could not reach your website to finish the installation (ConnectTimeout).", code="unreachable")
 
     monkeypatch.setattr(site_apps, "reach", unreachable)
@@ -97,7 +97,7 @@ def test_a_website_that_cannot_be_reached_fails_cleanly_with_a_reason(world, own
 def test_it_does_not_install_over_existing_files(world, owner, account, monkeypatch):  # noqa: F811
     _folder(owner, account)
     control.perform(owner, account, Capability.FILES, "write_file", "public_html/mine.php", b"<?php // mine", overwrite=False)
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t: pytest.fail("must not be called"))
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": pytest.fail("must not be called"))
     with pytest.raises(ServiceError) as err:
         site_apps.start_wordpress(owner, account, title="Acme", admin_user="siteadmin", admin_email="o@gmail.example.com", admin_password=WP["admin_password"])
     assert err.value.code == "not_empty" and _names(owner, account) == ["mine.php"]
@@ -109,7 +109,7 @@ def test_an_installation_that_never_reports_back_is_called_failed_after_ten_minu
     from django.utils import timezone
 
     _folder(owner, account)
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t: None)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": None)
     app = site_apps.start_wordpress(owner, account, title="Acme", admin_user="siteadmin", admin_email="o@gmail.example.com", admin_password=WP["admin_password"])
     WebsiteApp.objects.filter(pk=app.pk).update(updated_at=timezone.now() - timedelta(minutes=11))
     assert site_apps.poll(owner, account).state == AppState.FAILED
@@ -117,7 +117,7 @@ def test_an_installation_that_never_reports_back_is_called_failed_after_ten_minu
 
 def test_the_screens_poll_for_the_result(world, owner, account, monkeypatch):  # noqa: F811
     _folder(owner, account)
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t: None)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": None)
     client = browser(owner)
     assert client.post(reverse("hosting_customer:setup", args=[account.pk]), WP).status_code == 302
     page = client.get(reverse("hosting_customer:setup_status", args=[account.pk])).content.decode()
@@ -151,7 +151,7 @@ def test_a_fresh_hosting_folder_with_the_servers_own_files_is_still_empty_enough
             control.perform(owner, account, Capability.FILES, "make_directory", "public_html/cgi-bin")
             continue
         control.perform(owner, account, Capability.FILES, "write_file", f"public_html/{name}", b"x", overwrite=False)
-    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="": None)
+    monkeypatch.setattr(site_apps, "reach", lambda a, p, t, purpose="", domain="": None)
     app = site_apps.start_wordpress(owner, account, title="Acme", admin_user="siteadmin", admin_email="o@gmail.example.com", admin_password=WP["admin_password"])
     assert app.state == AppState.INSTALLING
 
