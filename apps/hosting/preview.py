@@ -49,7 +49,7 @@ def mu_plugin(real_domain, preview_host):
     return (
         "<?php\n"
         "/* Managed by WHPanel. Lets this website answer on its preview address as well as on its own domain. Edits to this file are replaced. */\n"
-        "$whp_host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( preg_replace( '/:\d+$/', '', (string) $_SERVER['HTTP_HOST'] ) ) : '';\n"
+        "$whp_host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( preg_replace( '/:\\d+$/', '', (string) $_SERVER['HTTP_HOST'] ) ) : '';\n"
         f"if ( in_array( $whp_host, array( {hosts} ), true ) ) {{\n"
         "    $whp_base = ( is_ssl() ? 'https' : 'http' ) . '://' . $whp_host;\n"
         "    add_filter( 'pre_option_home', function () use ( $whp_base ) { return $whp_base; } );\n"
