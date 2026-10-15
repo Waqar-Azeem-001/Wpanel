@@ -1,6 +1,8 @@
 """MySQL databases on a cPanel server, through UAPI's ``Mysql`` module. Looking inside a database (tables, rows, SQL) is not offered here."""
+from urllib.parse import urlsplit
+
 from .base import HostingError
-from .capabilities import (DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabasesCapability, DatabaseUserInfo)
+from .capabilities import (DatabaseAdminAccess, DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabasesCapability, DatabaseUserInfo)
 from .cpanel_api import CpanelApi, plan_limit
 
 PRIVILEGES = {"SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER", "INDEX", "REFERENCES", "LOCK TABLES",
@@ -79,9 +81,15 @@ class CpanelMysql(CpanelApi, DatabasesCapability):
                 grants.append(DatabaseGrant(user=user.name, database=database, privileges=[str(p) for p in got]))
         return grants
 
-    # Looking inside a database needs a direct SQL connection or phpMyAdmin's one-time session; neither is built yet.
+    # Looking inside a database is phpMyAdmin's job: WHM makes a short-lived, single-use sign-in for this account's phpMyAdmin and the browser is sent there.
+    # No password is involved and the address is never logged or shown; WHPanel's own table browser stays for providers without phpMyAdmin.
     def database_admin_access(self, username, database):
-        self._unsupported("The database manager")
+        data = (self._call("create_user_session", {"user": username, "service": "cpaneld", "app": "Database_phpMyAdmin"}).get("data") or {})
+        url = str(data.get("url") or "")
+        parts = urlsplit(url)
+        if parts.scheme not in ("http", "https") or not parts.netloc:
+            raise HostingError("The server did not give a usable phpMyAdmin sign-in link.")
+        return DatabaseAdminAccess(kind="external", url=url)
 
     def list_tables(self, username, database):
         self._unsupported("Browsing tables")

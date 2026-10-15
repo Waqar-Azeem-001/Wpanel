@@ -243,11 +243,21 @@ def test_grants_validate_the_privileges_and_can_revoke():
         real.grant_database_access(USER, "shop", "app", ["SELECT", "FILE"])
 
 
-def test_looking_inside_a_database_is_honestly_not_offered():
+def test_looking_inside_a_database_is_phpmyadmin_through_a_one_time_session():
+    answers = {**MYSQL, "create_user_session": {"url": "https://whm.test:2083/cpsess1234/3rdparty/phpMyAdmin/index.php", "expires": 1900000000}}
+    real, fake = adapter(answers)
+    access = real.database_admin_access(USER, "shop")
+    assert access.kind == "external" and access.url.startswith("https://whm.test:2083/")
+    assert fake.calls[-1][:2] == ("create_user_session", {"user": USER, "service": "cpaneld", "app": "Database_phpMyAdmin"})
+    bad, _ = adapter({**MYSQL, "create_user_session": {"url": "javascript:alert(1)"}})
+    with pytest.raises(HostingError, match="usable"):
+        bad.database_admin_access(USER, "shop")
+
+
+def test_the_table_browser_stays_unavailable_on_a_real_server():
     real, _ = adapter(MYSQL)
     for call in (lambda: real.list_tables(USER, "shop"), lambda: real.run_query(USER, "shop", "select 1"),
-                 lambda: real.browse_table(USER, "shop", "t", 0, 10), lambda: real.database_admin_access(USER, "shop"),
-                 lambda: real.insert_row(USER, "shop", "t", {})):
+                 lambda: real.browse_table(USER, "shop", "t", 0, 10), lambda: real.insert_row(USER, "shop", "t", {})):
         with pytest.raises(CapabilityNotSupported):
             call()
 
