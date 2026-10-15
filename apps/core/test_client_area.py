@@ -212,9 +212,11 @@ def test_view_panels_and_pages_keep_the_filter_when_paging(world, owner):
     assert 'aria-current="page"' in page and "?status=suspended" in page
 
 
-def test_the_sidebar_sits_after_the_page_on_a_phone_and_before_it_on_a_desktop(world, owner):
+def test_the_page_filters_are_one_strip_above_the_page_not_a_third_column(world, owner):
     page = browser(owner).get(reverse("hosting_customer:list")).content.decode()
-    assert re.search(r'<aside class="col-lg-3 order-2 order-lg-1"', page) and 'class="col-lg-9 order-1 order-lg-2"' in page
+    assert '<nav class="cs-filters"' in page and "cs-chip" in page
+    assert '<aside class="col-lg-3' not in page and 'class="col-lg-9' not in page
+    assert page.index('<nav class="cs-filters"') < page.index("<h1")  # the strip comes before the page itself
 
 
 def test_a_page_without_a_sidebar_is_still_a_single_column(world, owner):

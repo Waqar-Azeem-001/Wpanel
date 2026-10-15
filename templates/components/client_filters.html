@@ -1,0 +1,21 @@
+{% load i18n %}
+{# The customer page's own filters and shortcuts as one strip above the page (never a third column beside it): {% include "components/client_filters.html" with panels=sidebar %} #}
+{% for panel in panels %}
+<nav class="cs-filters" aria-label="{{ panel.title }}">
+  <span class="cs-filters-title">{{ panel.title }}</span>
+  {% if panel.lines %}<span class="cs-filters-text">{% for line in panel.lines %}{{ line }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</span>{% endif %}
+  <ul class="cs-filters-list">
+    {% for l in panel.links %}
+    <li>
+      {% if l.disabled %}
+      <span class="cs-chip is-disabled">{% if l.icon %}<i class="bi {{ l.icon }}" aria-hidden="true"></i> {% endif %}{{ l.label }} <small>{% trans "Soon" %}</small></span>
+      {% elif l.post %}
+      <form method="post" action="{{ l.url }}">{% csrf_token %}<button type="submit" class="cs-chip">{% if l.icon %}<i class="bi {{ l.icon }}" aria-hidden="true"></i> {% endif %}{{ l.label }}</button></form>
+      {% else %}
+      <a class="cs-chip{% if l.active %} is-active{% endif %}" href="{{ l.url }}"{% if l.active %} aria-current="page"{% endif %}>{% if l.icon %}<i class="bi {{ l.icon }}" aria-hidden="true"></i> {% endif %}{{ l.label }}{% if l.count is not None %}<span class="cs-chip-count">{{ l.count }}</span>{% endif %}</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+{% endfor %}
