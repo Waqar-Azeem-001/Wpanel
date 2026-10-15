@@ -14,7 +14,7 @@ from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabasesCapability, DnsCapability, DomainsCapability, EmailCapability,
-                           AccessCapability, AppsCapability, BackupsCapability, InsightsCapability, CpanelAccessCapability, CpanelAccessSession, NodeCapability, CronCapability, SecurityCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
+                           AccessCapability, AppsCapability, BackupsCapability, InsightsCapability, CpanelAccessCapability, CpanelAccessSession, NodeCapability, CronCapability, SecurityCapability, SshCapability, FilesCapability, FtpCapability, LogsCapability, PhpCapability, SslCapability, WebmailAccess)
 from .demo_databases import DemoDatabases
 from .demo_backups import DemoBackups
 from .demo_cron import DemoCron
@@ -180,7 +180,7 @@ def sandbox_for(username):
 
 
 class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapability, DatabasesCapability, FilesCapability, SslCapability,
-                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, InsightsCapability, CpanelAccessCapability, NodeCapability, ManualAdapter):
+                  PhpCapability, CronCapability, LogsCapability, FtpCapability, AccessCapability, BackupsCapability, SecurityCapability, InsightsCapability, CpanelAccessCapability, SshCapability, NodeCapability, ManualAdapter):
     def get_usage(self, username):
         seed = _seed(username)
         disk_limit = 20480
@@ -577,6 +577,20 @@ class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapabil
     def delete_ssh_key(self, username, fingerprint):
         security_for(username).delete_key(fingerprint)
 
+    # --- SSH access (the same sandbox state the Security page shows) -----------------------------------------------
+
+    def ssh_access_status(self, username):
+        return security_for(username).ssh_status()
+
+    def set_ssh_access(self, username, enabled):
+        security_for(username).set_ssh(enabled)
+
+    def add_ssh_access_key(self, username, label, public_key):
+        return security_for(username).add_key(label, public_key)
+
+    def remove_ssh_access_key(self, username, key_id):
+        security_for(username).delete_key(key_id)
+
     def integrity_status(self, username):
         return security_for(username).integrity_status()
 
@@ -593,6 +607,9 @@ class DemoAdapter(AppsCapability, DomainsCapability, DnsCapability, EmailCapabil
 
     def performance_stats(self, username):
         return DemoInsights(_seed(username), lambda: self.get_usage(username)).performance()
+
+    def statistics_access(self, username, domain):
+        raise HostingError("A demo server has no visitor statistics. A real server's own statistics open here.")
 
     # --- The machine itself --------------------------------------------------------------------------------------
 

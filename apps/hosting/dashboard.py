@@ -233,7 +233,7 @@ def workspace_groups(request, account, *, app=None, live=True):
         ("Databases", "bi-database", "", [section("databases")]),
         ("Advanced", "bi-gear", "", [section("php"), section("cron"), section("logs"),
                                      *([make(title, reverse("hosting_customer:advanced", args=[pk, key]), icon)
-                                        for key, (title, icon) in ADVANCED_TOOLS if key != "activity" and "files" in supported] if live else []),
+                                        for key, (title, icon) in ADVANCED_TOOLS if key != "activity" and (("ssh" if key == "ssh" else "files") in supported)] if live else []),
                                      make("Activity log", reverse("hosting_customer:advanced", args=[pk, "activity"]), "bi-clock-history") if live else None,
                                      section("cpanel")]),
     ]
@@ -248,7 +248,7 @@ def workspace_groups(request, account, *, app=None, live=True):
     return groups
 
 
-ADVANCED_TOOLS = (("protect", ("Password protect directories", "bi-lock")), ("hotlink", ("Hotlink protection", "bi-link-45deg")),
+ADVANCED_TOOLS = (("ssh", ("SSH access", "bi-terminal")), ("protect", ("Password protect directories", "bi-lock")), ("hotlink", ("Hotlink protection", "bi-link-45deg")),
                   ("indexes", ("Folder index manager", "bi-folder-symlink")), ("ips", ("IP manager", "bi-slash-circle")),
                   ("phpinfo", ("PHP info", "bi-info-square")), ("permissions", ("Fix file permissions", "bi-wrench-adjustable")),
                   ("activity", ("Activity log", "bi-clock-history")))

@@ -70,6 +70,7 @@ urlpatterns = [
     path("<int:pk>/care/", views_care.my_hosting_care, name="care"),
     path("<int:pk>/care/do/", views_care.my_hosting_care_action, name="care_action"),
     path("<int:pk>/care/traffic/", views_care.my_hosting_care_traffic, name="care_traffic"),
+    path("<int:pk>/care/statistics/", views_care.my_hosting_statistics, name="statistics"),
     path("<int:pk>/care/wordpress/", views_care.my_hosting_care_wordpress, name="care_wordpress"),
     path("<int:pk>/cache/clear/", views_care.my_hosting_cache_clear, name="cache_clear"),
     path("<int:pk>/wordpress/", views_wordpress.wordpress_overview, name="wordpress"),

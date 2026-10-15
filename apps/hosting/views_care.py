@@ -98,10 +98,34 @@ def my_hosting_care_action(request, pk):
 
 @login_required
 def my_hosting_care_traffic(request, pk):
+    from . import control
+
     account = _own_account(request, pk)
+    try:
+        has_statistics = "insights" in control.capabilities_for(account)
+    except ServiceError:
+        has_statistics = False
     return render(request, "hosting/customer/care_traffic.html", {
         "account": account, "sidebar": portal.service_sidebar(request, account), "traffic": care_tools.traffic(request.user, account),
-        "care_url": _url(account)})
+        "care_url": _url(account), "statistics_url": reverse("hosting_customer:statistics", args=[account.pk]) if has_statistics else ""})
+
+
+@login_required
+def my_hosting_statistics(request, pk):
+    """Open the hosting server's own visitor statistics (AWStats) for the main domain through a single-use sign-in."""
+    from urllib.parse import urlsplit
+
+    from . import control
+
+    account = _own_account(request, pk)
+    try:
+        url = control.perform(request.user, account, "insights", "statistics_access", account.domain, request=request, audit_metadata={"domain": account.domain})
+        if urlsplit(url).scheme not in ("http", "https"):
+            raise ServiceError("The statistics address was not valid.", code="bad_statistics_url")
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        return redirect("hosting_customer:care_traffic", pk=account.pk)
+    return redirect(url)
 
 
 @login_required

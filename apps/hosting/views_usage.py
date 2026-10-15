@@ -12,6 +12,7 @@ from django.urls import reverse
 from apps.core import portal
 from apps.core.exceptions import ServiceError
 
+from . import insights
 from .dashboard import DANGER_AT, WARN_AT, format_mb, website_card
 from .views import _own_account
 from .views_domains import _read, _supports
@@ -110,7 +111,7 @@ def my_hosting_usage(request, pk):
     if not card["show_usage"]:
         messages.info(request, "Usage appears here once your hosting is active.")
     return render(request, "hosting/customer/usage.html", {
-        "account": account, "sidebar": sidebar, "card": card, "resources": resources, "performance": performance,
+        "account": account, "sidebar": sidebar, "card": card, "resources": resources, "performance": performance, "last_day": insights.series(account, 24),
         "warnings": warnings, "days": days, "ranges": [(d, reverse("hosting_customer:usage", args=[account.pk]) + f"?days={d}") for d in RANGES],
         "disk_chart": _chart(points, "disk_mb") if points else None, "bandwidth_chart": _chart(points, "bandwidth_mb") if points else None,
         "points": list(reversed(points))[:14], "chart_w": CHART_W, "chart_h": CHART_H,

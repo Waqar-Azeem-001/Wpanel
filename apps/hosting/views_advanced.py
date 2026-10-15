@@ -18,6 +18,7 @@ from .adapters.capabilities import Capability
 from .views import _own_account
 
 TOOLS = {
+    "ssh": ("SSH access", "bi-terminal"),
     "protect": ("Password protect directories", "bi-lock"),
     "hotlink": ("Hotlink protection", "bi-link-45deg"),
     "indexes": ("Folder index manager", "bi-folder-symlink"),
@@ -26,7 +27,7 @@ TOOLS = {
     "permissions": ("Fix file permissions", "bi-wrench-adjustable"),
     "activity": ("Activity log", "bi-clock-history"),
 }
-NEEDS_FILES = set(TOOLS) - {"activity"}
+NEEDS_FILES = set(TOOLS) - {"activity", "ssh"}
 
 ACTION_WORDS = {
     "hosting.control": "Changed a setting", "hosting.site_ready": "Website created", "hosting.site_failed": "Website could not be created",
@@ -34,9 +35,9 @@ ACTION_WORDS = {
 }
 
 
-def _files_ok(account):
+def _files_ok(account, capability="files"):
     try:
-        return "files" in control.capabilities_for(account)
+        return capability in control.capabilities_for(account)
     except ServiceError:
         return False
 
@@ -71,7 +72,18 @@ def advanced_tool(request, pk, tool):
     title, icon = TOOLS[tool]
     context = {"account": account, "sidebar": portal.service_sidebar(request, account), "tool": tool, "title": title, "icon": icon,
                "do_url": reverse("hosting_customer:advanced_do", args=[account.pk]), "supported": True, "page_url": reverse("hosting_customer:advanced", args=[account.pk, tool])}
-    if tool in NEEDS_FILES and not _files_ok(account):
+    if tool == "ssh":
+        if not _files_ok(account, "ssh"):
+            context["supported"] = False
+        else:
+            try:
+                status = control.perform(request.user, account, "ssh", "ssh_access_status")
+                context.update({"ssh": status, "ssh_command": f"ssh {account.username}@{status.host or account.server.hostname}" + (f" -p {status.port}" if status.port != 22 else ""),
+                                "password_url": reverse("hosting_customer:information", args=[account.pk])})
+            except ServiceError as exc:
+                messages.error(request, exc.message)
+                context["supported"] = False
+    elif tool in NEEDS_FILES and not _files_ok(account):
         context["supported"] = False
     elif tool in ("protect", "hotlink", "indexes", "ips"):
         try:
@@ -131,6 +143,20 @@ def advanced_do(request, pk):
         elif action == "unblock_ip":
             site_tools.unblock_ip(request.user, account, post.get("ip", ""))
             messages.success(request, "That address can open your website again.")
+        elif action in ("ssh_on", "ssh_off"):
+            control.perform(request.user, account, "ssh", "set_ssh_access", action == "ssh_on", request=request,
+                            audit_metadata={"enabled": action == "ssh_on"})
+            messages.success(request, "SSH access is on. Sign in with the command shown and your hosting password." if action == "ssh_on" else "SSH access is off.")
+            tool = "ssh"
+        elif action == "ssh_add_key":
+            control.perform(request.user, account, "ssh", "add_ssh_access_key", post.get("label", ""), post.get("public_key", ""), request=request,
+                            audit_metadata={"label": post.get("label", "")[:40]})
+            messages.success(request, "The key was added.")
+            tool = "ssh"
+        elif action == "ssh_remove_key":
+            control.perform(request.user, account, "ssh", "remove_ssh_access_key", post.get("key_id", ""), request=request, audit_metadata={"key": post.get("key_id", "")[:60]})
+            messages.success(request, "The key was removed.")
+            tool = "ssh"
         elif action == "permissions":
             result = server_tools.run(request.user, account, "permissions")
             messages.success(request, f"Checked {result['folders']} folders and {result['files']} files; {result['fixed']} were put back to safe permissions."

@@ -42,7 +42,7 @@ from .services import can_self_service, get_adapter, visible_hosting_accounts_fo
 # seconds: ``read_cache_seconds`` on the adapter. Any change to the account makes everything remembered for it stale at once. These are never
 # remembered: file and mail contents, one-time links and database rows.
 NOT_CACHED = frozenset({"read_file", "read_message", "list_messages", "message_folders", "webmail_access", "browse_table", "database_admin_access",
-                        "read_log", "open_cpanel_access"})
+                        "read_log", "open_cpanel_access", "statistics_access"})
 
 
 def _cache_version(account):

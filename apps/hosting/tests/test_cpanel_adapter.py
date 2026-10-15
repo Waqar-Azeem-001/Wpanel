@@ -368,6 +368,66 @@ def test_row_changes_are_prepared_statements_on_checked_columns_and_keys():
     assert "That row could not be identified." in source and "LIMIT 1" in source
 
 
+USAGES = [{"id": "disk_usage", "usage": 1, "maximum": 2},
+          {"id": "lvecpu", "usage": 12, "maximum": 100, "description": "CPU Usage"},
+          {"id": "lvememphy", "usage": 268435456, "maximum": 1073741824, "formatter": "format_bytes"},
+          {"id": "lvenproc", "usage": 4, "maximum": 100},
+          {"id": "lveio", "usage": 2048, "maximum": 1048576, "formatter": "format_bytes_per_second"},
+          {"id": "lveep", "usage": 0, "maximum": None}]
+
+
+def test_live_resource_use_is_read_from_the_servers_own_figures():
+    real, _ = adapter({("uapi_cpanel", "ResourceUsage::get_usages"): USAGES})
+    stats = {s.key: s for s in real.performance_stats(USER)}
+    assert set(stats) == {"cpu", "memory", "processes", "io"}  # an entry without a limit is left out, not invented
+    assert (stats["cpu"].used, stats["cpu"].limit, stats["cpu"].unit) == (12.0, 100.0, "%")
+    assert (stats["memory"].used, stats["memory"].limit, stats["memory"].unit) == (256.0, 1024.0, "MB")
+    assert (stats["io"].used, stats["io"].limit, stats["io"].unit) == (2.0, 1024.0, "KB/s")
+    assert real.usage_history(USER, 7) == []  # WHPanel keeps its own readings
+
+
+def test_a_server_without_resource_limits_reports_nothing():
+    real, _ = adapter({("uapi_cpanel", "ResourceUsage::get_usages"): [{"id": "disk_usage", "usage": 1, "maximum": 2}]})
+    assert real.performance_stats(USER) == []
+
+
+def test_visitor_statistics_open_through_a_one_time_session_to_the_report_of_the_domain():
+    real, fake = adapter({"create_user_session": {"url": "https://whm.test:2083/cpsess1/login/?session=abc", "expires": 1900000000}})
+    url = real.statistics_access(USER, "Acme.com")
+    assert url.startswith("https://whm.test:2083/cpsess1/login/?session=abc&goto_uri=") and url.endswith("%2Fawstats.pl%3Fconfig%3Dacme.com")
+    assert fake.calls[-1][:2] == ("create_user_session", {"user": USER, "service": "cpaneld"})
+    with pytest.raises(HostingError, match="not a domain"):
+        real.statistics_access(USER, "acme.com/../x")
+    bad, _ = adapter({"create_user_session": {"url": "javascript:alert(1)"}})
+    with pytest.raises(HostingError, match="usable"):
+        bad.statistics_access(USER, "acme.com")
+
+
+def test_shell_access_is_the_accounts_login_shell_through_whm(monkeypatch):
+    real, fake = adapter({"accountsummary": {"acct": [{"shell": "/usr/local/cpanel/bin/noshell", "domain": "acme.com"}]}, ("uapi_cpanel", "SSH::get_port"): {"port": "2200"}})
+    status = real.ssh_access_status(USER)
+    assert status.enabled is False and status.port == 2200 and status.host == "whm.test"
+    real.set_ssh_access(USER, True)
+    assert fake.calls[-1][:2] == ("modifyacct", {"user": USER, "HASSHELL": 1})
+    real.set_ssh_access(USER, False)
+    assert fake.calls[-1][:2] == ("modifyacct", {"user": USER, "HASSHELL": 0})
+    on, _ = adapter({"accountsummary": {"acct": [{"shell": "/bin/bash", "domain": "acme.com"}]}})
+    assert on.ssh_access_status(USER).enabled is True
+
+
+def test_ssh_keys_need_the_public_key_form_and_are_authorised_by_name():
+    real, fake = adapter({})
+    with pytest.raises(HostingError, match="public key"):
+        real.add_ssh_access_key(USER, "bad", "-----BEGIN OPENSSH PRIVATE KEY-----\nabc")
+    with pytest.raises(HostingError, match="public key"):
+        real.add_ssh_access_key(USER, "bad", "not a key")
+    name = real.add_ssh_access_key(USER, "my laptop!", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKQ0cGZz me@laptop")
+    assert name == "my-laptop-"
+    assert [c[1]["cpanel.function"] for c in fake.calls if c[0] == "uapi_cpanel"][-2:] == ["import_key", "authkey"]
+    with pytest.raises(HostingError, match="not valid"):
+        real.remove_ssh_access_key(USER, "../x")
+
+
 # --- Email ----------------------------------------------------------------------------------------------------------------
 
 EMAIL = {("uapi_cpanel", "Email::list_pops_with_disk"): [{"email": "Info@acme.com", "diskused": "12.5", "diskquota": "1024"},

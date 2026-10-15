@@ -220,6 +220,21 @@ class SiteScan(TimeStampedModel):
         return f"Scan of {self.account.domain} ({self.state})"
 
 
+class ResourceReading(models.Model):
+    """What a website's account was using at one moment (CPU, memory, processes, input/output), as the server reported it. Kept for a week so the last 24 hours can be drawn."""
+
+    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="resource_readings")
+    taken_at = models.DateTimeField(db_index=True)
+    values = models.JSONField(default=dict)  # {"cpu": {"used": 3.0, "limit": 100.0, "unit": "%"}, ...}
+
+    class Meta:
+        ordering = ["-taken_at"]
+        indexes = [models.Index(fields=["account", "-taken_at"])]
+
+    def __str__(self):
+        return f"{self.account_id} at {self.taken_at:%Y-%m-%d %H:%M}"
+
+
 class SpeedTest(TimeStampedModel):
     """One speed test of a website's home page, measured from the panel. Figures only."""
 

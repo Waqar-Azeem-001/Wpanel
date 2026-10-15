@@ -31,11 +31,13 @@ from .cpanel_dns import CpanelDns
 from .cpanel_domains import CpanelDomains
 from .cpanel_email import CpanelEmail
 from .cpanel_files import CpanelFiles
+from .cpanel_insights import CpanelInsights
 from .cpanel_ftp import CpanelFtp
 from .cpanel_logs import CpanelLogs
 from .cpanel_mysql import CpanelMysql
 from .cpanel_access import CpanelAccess
 from .cpanel_php import CpanelPhp
+from .cpanel_ssh import CpanelSsh
 from .cpanel_ssl import CpanelSsl
 
 # (key, label, WHM service names): the node is reported as running only when every named service is
@@ -43,7 +45,7 @@ SERVICES = [("web", "Web server", ["httpd"]), ("database", "Database", ["mysql"]
             ("dns", "DNS", ["named"])]
 
 
-class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelAccess,
+class WhmApiAdapter(CpanelFiles, CpanelFtp, CpanelLogs, CpanelDomains, CpanelDns, CpanelSsl, CpanelMysql, CpanelEmail, CpanelPhp, CpanelCron, CpanelBackups, CpanelAccess, CpanelInsights, CpanelSsh,
                     NodeCapability, HostingAdapter):
     read_cache_seconds = 45  # a real server is slow to answer, so what the gateway has just read is remembered for a few seconds
 

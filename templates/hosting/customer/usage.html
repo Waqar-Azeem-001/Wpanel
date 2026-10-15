@@ -51,6 +51,20 @@
 </section>
 {% endif %}
 
+{% if last_day %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Last 24 hours" %}</h3>
+  <p class="small text-secondary">{% trans "What your hosting account used, read from the server every ten minutes." %}</p>
+  <div class="row g-4">
+    {% for key, c in last_day.items %}
+    <div class="col-lg-6"><h4 class="h6">{{ c.label }} <span class="text-secondary fw-normal">&middot; {% trans "now" %} {{ c.now }}{% if c.unit %} {{ c.unit }}{% endif %}{% if c.limit %} / {{ c.limit }}{% if c.unit %} {{ c.unit }}{% endif %}{% endif %}</span></h4>
+      <svg class="use-chart" viewBox="0 0 300 80" role="img" aria-label="{{ c.label }}" preserveAspectRatio="none"><polygon class="use-area" points="{{ c.area }}"/><polyline class="use-line" points="{{ c.line }}" fill="none"/></svg>
+      <div class="d-flex justify-content-between small text-secondary"><span>{{ c.since|fdatetime }}</span><span>{% trans "highest" %} {{ c.peak }}{% if c.unit %} {{ c.unit }}{% endif %}</span><span>{% trans "now" %}</span></div></div>
+    {% endfor %}
+  </div>
+</div></section>
+{% endif %}
+
 {% if performance %}
 <section class="card mb-3"><div class="card-body">
   <h3 class="h6">{% trans "Right now" %} <span class="text-secondary fw-normal small">· {% trans "what your website is using against what your plan allows; it changes every few minutes" %}</span></h3>

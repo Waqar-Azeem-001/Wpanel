@@ -11,6 +11,49 @@
 {% if not supported %}
 <section class="card"><div class="card-body text-secondary">{% trans "This tool needs file access on the hosting server, which this server does not offer yet." %}</div></section>
 
+{% elif tool == "ssh" %}
+<section class="card mb-3"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h3 class="h6 mb-0">{% trans "Shell access to your hosting" %}</h3>
+    <span class="site-pill {% if ssh.enabled %}is-ok{% endif %}">{% if ssh.enabled %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</span>
+  </div>
+  <p class="small text-secondary">{% trans "SSH lets a developer sign in to the server's command line to run tools such as Composer, WP-CLI or Git. Leave it off if you do not need it." %}</p>
+  <form method="post" action="{{ do_url }}" data-plain>{% csrf_token %}<input type="hidden" name="tool" value="ssh">
+    {% if ssh.enabled %}<button class="btn btn-outline-danger" type="submit" name="action" value="ssh_off">{% trans "Turn off SSH access" %}</button>
+    {% else %}<button class="btn btn-primary" type="submit" name="action" value="ssh_on">{% trans "Turn on SSH access" %}</button>{% endif %}
+  </form>
+  {% if ssh.enabled %}
+  <hr>
+  <p class="small text-secondary mb-1">{% trans "Sign in with" %}</p>
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <input id="ssh-cmd" class="form-control font-monospace flex-grow-1" readonly value="{{ ssh_command }}" data-select-on-click>
+    <button class="btn btn-outline-primary" type="button" data-copy="#ssh-cmd"><i class="bi bi-clipboard" aria-hidden="true"></i> <span>{% trans "Copy" %}</span></button>
+  </div>
+  <p class="small text-secondary mb-0">{% trans "The password is your hosting account's password, which is never shown here. Set a new one on" %} <a href="{{ password_url }}">{% trans "Plan details" %}</a>.</p>
+  {% endif %}
+</div></section>
+{% if ssh.enabled %}
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "Public keys" %}</h3>
+  {% if ssh.max_keys %}
+  <p class="small text-secondary">{% trans "A key lets you sign in without typing the password. Paste only the public key (the file ending in .pub); never a private key." %}</p>
+  <form method="post" action="{{ do_url }}" class="row g-2 align-items-end" data-plain>{% csrf_token %}
+    <input type="hidden" name="tool" value="ssh"><input type="hidden" name="action" value="ssh_add_key">
+    <div class="col-lg-3"><label class="form-label small" for="ssh-label">{% trans "Name" %}</label><input class="form-control" id="ssh-label" name="label" maxlength="40" placeholder="laptop" required></div>
+    <div class="col-lg-7"><label class="form-label small" for="ssh-key">{% trans "Public key" %}</label><input class="form-control font-monospace" id="ssh-key" name="public_key" placeholder="ssh-ed25519 AAAA..." required autocomplete="off"></div>
+    <div class="col-lg-2"><button class="btn btn-primary w-100" type="submit">{% trans "Add key" %}</button></div>
+  </form>
+  {% if ssh.keys %}<ul class="list-group list-group-flush mt-3">{% for k in ssh.keys %}<li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+    <span><i class="bi bi-key" aria-hidden="true"></i> <code>{{ k.label }}</code> <span class="text-secondary small">{{ k.key_type }}</span></span>
+    <form method="post" action="{{ do_url }}">{% csrf_token %}<input type="hidden" name="tool" value="ssh"><input type="hidden" name="action" value="ssh_remove_key"><input type="hidden" name="key_id" value="{{ k.fingerprint }}">
+      <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Remove" %}</button></form></li>{% endfor %}</ul>
+  {% else %}<p class="text-secondary small mt-3 mb-0">{% trans "No keys yet." %}</p>{% endif %}
+  {% else %}
+  <p class="text-secondary mb-0">{% trans "Keys cannot be managed from here on this hosting yet. You can still sign in with your hosting password." %}</p>
+  {% endif %}
+</div></section>
+{% endif %}
+
 {% elif tool == "protect" %}
 <section class="card mb-3"><div class="card-body">
   <h3 class="h6">{% trans "Ask for a password before a folder opens" %}</h3>

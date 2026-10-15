@@ -219,3 +219,16 @@ Home page with hero, plans, domain search, FAQs, footer with columns (Hosting, D
   it has been tried on the live test account.
 - Hostinger runs its own platform (its own caching, AI services, builder). We reproduce the **experience** on cPanel; some switches simply do not exist on a standard cPanel server
   and will not be shown rather than faked.
+
+---
+
+## Phase 6 results (2026-10-16, checked on the live server with the test account)
+
+| Feature | Result | What was built |
+|---|---|---|
+| **Resource usage** | **Works.** `ResourceUsage::get_usages` answers with CloudLinux figures (CPU, memory, processes, entry processes, I/O, IOPS). cPanel keeps no history. | A reading every ten minutes (Celery beat), kept a week; the Usage page draws the last 24 hours and shows nothing when there are no readings. |
+| **Visitor analytics** | **Works through AWStats.** Raw logs stay out of reach, but cPanel's AWStats answers for the main domain (`/awstats.pl?config=<domain>`). | "Open visitor statistics" on the Traffic page: a one-time sign-in goes straight to the report. Updated by the server once a day. |
+| **SSH access** | **Works.** Port 22 is open; the account's shell can be switched with WHM `modifyacct HASSHELL` (tried on and off on the test account, restored). Key import needs the cPanel feature "ssh", which is not in the feature list, so keys show as "not manageable from here" until it is. | Advanced > SSH access: on/off, the `ssh` command, keys when the feature exists. |
+| **Git deployment** | **Not available.** "You do not have the feature version_control". | Nothing built; it needs the feature enabled in WHM > Feature Manager first. |
+| **LiteSpeed cache** | **Not available** (Apache). | Nothing built. |
+| **phpMyAdmin** | One-time session works, but phpMyAdmin then fails inside the server (`cpses_...` MySQL user is refused). | WHPanel's own table browser instead (tables, rows, typed SQL, single-row edit) through a one-time tool. |

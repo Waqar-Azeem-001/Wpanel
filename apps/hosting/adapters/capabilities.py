@@ -45,6 +45,7 @@ class Capability(str, Enum):
     SECURITY = "security"
     INSIGHTS = "insights"
     CPANEL_ACCESS = "cpanel_access"
+    SSH = "ssh"
     BACKUPS = "backups"
     USAGE = "usage"
     APPS = "apps"
@@ -958,6 +959,31 @@ class InsightsCapability(ABC):
     def performance_stats(self, username: str) -> list:
         """``PerformanceStat`` rows for what the account is using right now against its plan's allowance."""
 
+    @abstractmethod
+    def statistics_access(self, username: str, domain: str) -> str:
+        """A short-lived, single-use address of the provider's own visitor statistics for ``domain`` (never logged or stored)."""
+
+
+class SshCapability(ABC):
+    """
+    Shell access for the account: turn it on or off, and the public keys that may sign in. Passwords are never read or shown here: signing in uses the hosting account's own
+    password, which the customer sets on the plan page. Only public keys are accepted.
+    """
+
+    @abstractmethod
+    def ssh_access_status(self, username: str) -> SshStatus:
+        """Whether shell access is on, the server address and port, and the keys (``max_keys`` 0 when the server does not let keys be managed from here)."""
+
+    @abstractmethod
+    def set_ssh_access(self, username: str, enabled: bool) -> None: ...
+
+    @abstractmethod
+    def add_ssh_access_key(self, username: str, label: str, public_key: str) -> str:
+        """Returns the key's name or fingerprint."""
+
+    @abstractmethod
+    def remove_ssh_access_key(self, username: str, key_id: str) -> None: ...
+
 
 class SecurityCapability(ABC):
     """
@@ -1067,6 +1093,7 @@ CONTRACTS = {
     Capability.SECURITY: SecurityCapability,
     Capability.INSIGHTS: InsightsCapability,
     Capability.CPANEL_ACCESS: CpanelAccessCapability,
+    Capability.SSH: SshCapability,
     Capability.BACKUPS: BackupsCapability,
     Capability.APPS: AppsCapability,
 }
@@ -1107,15 +1134,16 @@ OPERATIONS = {
                                     "list_protected_dirs", "protect_directory", "unprotect_directory", "ssh_status",
                                     "set_ssh_enabled", "add_ssh_key", "delete_ssh_key", "integrity_status",
                                     "create_integrity_baseline", "check_integrity"}),
-    Capability.INSIGHTS: frozenset({"usage_history", "performance_stats"}),
+    Capability.INSIGHTS: frozenset({"usage_history", "performance_stats", "statistics_access"}),
     Capability.APPS: frozenset({"install_wordpress"}),
     Capability.CPANEL_ACCESS: frozenset({"open_cpanel_access"}),
+    Capability.SSH: frozenset({"ssh_access_status", "set_ssh_access", "add_ssh_access_key", "remove_ssh_access_key"}),
     Capability.BACKUPS: frozenset({"backup_options", "list_backups", "create_backup", "verify_backup", "restore_backup",
                                    "delete_backup", "set_backup_schedule", "set_backup_offsite"}),
 }
 
 # Operations that only read; everything else changes something and needs the stronger permission and an audit entry.
-READ_OPERATIONS = frozenset({"home_path", "get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
+READ_OPERATIONS = frozenset({"ssh_access_status", "home_path", "statistics_access", "get_status", "get_usage", "database_limits", "database_admin_access", "list_tables", "browse_table", "describe_table",
                              "list_database_grants", "list_files", "read_file", "search_files", "list_trash", "list_databases",
                              "list_database_users", "list_mailboxes", "list_forwarders", "domain_limits", "email_limits", "list_autoresponders",
                              "get_mail_routing", "get_spam_settings", "webmail_access", "list_messages", "read_message", "message_folders",

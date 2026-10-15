@@ -286,6 +286,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
     "panel-database-backup": {"task": "apps.core.tasks.panel_backup_task", "schedule": crontab(hour=1, minute=30)},
     "website-care": {"task": "apps.hosting.tasks.run_site_care_task", "schedule": crontab(hour=3, minute=15)},
+    "resource-readings": {"task": "apps.hosting.tasks.record_resource_readings_task", "schedule": crontab(minute="*/10")},
     "sync-tld-prices": {"task": "apps.domains.tasks.sync_tld_prices_task", "schedule": crontab(hour=2, minute=10)},
     "generate-renewal-invoices": {
         "task": "apps.renewals.tasks.generate_renewal_invoices_task",

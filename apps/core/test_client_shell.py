@@ -754,3 +754,125 @@ def test_the_advanced_group_lists_the_tools_and_unknown_tools_are_404(world, own
     for label in ("Password protect directories", "Hotlink protection", "Folder index manager", "IP manager", "PHP info", "Fix file permissions", "Activity log"):
         assert label in menu
     assert browser(owner).get(reverse("hosting_customer:advanced", args=[account.pk, "nothing"])).status_code == 404
+
+
+# --- Phase 6: resource readings and visitor statistics -----------------------------------------------------------------------
+
+def test_readings_are_kept_and_drawn_for_the_last_24_hours(world, owner, account):  # noqa: F811
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.hosting import insights
+    from apps.hosting.models import ResourceReading
+
+    now = timezone.now()
+    for minutes, cpu in ((120, 5), (60, 40), (10, 20)):
+        ResourceReading.objects.create(account=account, taken_at=now - timedelta(minutes=minutes), values={
+            "cpu": {"used": cpu, "limit": 100, "unit": "%", "label": "CPU"}, "memory": {"used": 100 + cpu, "limit": 1024, "unit": "MB", "label": "Memory"}})
+    ResourceReading.objects.create(account=account, taken_at=now - timedelta(days=3), values={"cpu": {"used": 99, "limit": 100, "unit": "%", "label": "CPU"}})
+    series = insights.series(account, 24)
+    assert set(series) == {"cpu", "memory"} and series["cpu"]["now"] == 20 and series["cpu"]["peak"] == 40 and series["cpu"]["count"] == 3
+    assert series["cpu"]["line"].count(",") == 3  # three points, nothing from three days ago
+    html = _page(owner, "hosting_customer:usage", account.pk)
+    assert "Last 24 hours" in html and "CPU" in html and "Memory" in html
+
+
+def test_no_chart_without_readings(world, owner, account):  # noqa: F811
+    from apps.hosting import insights
+
+    assert insights.series(account, 24) == {}
+    assert "Last 24 hours" not in _page(owner, "hosting_customer:usage", account.pk)
+
+
+def test_recording_skips_a_server_that_reports_nothing_and_prunes_old_readings(world, account, monkeypatch):  # noqa: F811
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.hosting import insights
+    from apps.hosting.adapters.capabilities import PerformanceStat
+    from apps.hosting.models import ResourceReading
+
+    class Fake:
+        def performance_stats(self, username):
+            return [PerformanceStat(key="cpu", label="CPU", used=7, limit=100, unit="%")]
+
+    monkeypatch.setattr(insights, "get_adapter", lambda server: Fake())
+    monkeypatch.setattr(insights, "supported_capabilities", lambda adapter: {insights.Capability.INSIGHTS})
+    old = ResourceReading.objects.create(account=account, taken_at=timezone.now() - timedelta(days=9), values={})
+    assert insights.record(account).values["cpu"]["used"] == 7
+    assert insights.record_all() >= 1
+    assert not ResourceReading.objects.filter(pk=old.pk).exists()
+    monkeypatch.setattr(insights, "supported_capabilities", lambda adapter: set())
+    assert insights.record(account) is None
+
+
+def test_visitor_statistics_open_the_servers_own_report_and_a_failure_comes_back_to_the_page(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import control
+
+    real = control.perform
+    seen = {}
+
+    def spy(user, acct, capability, operation, *args, **kwargs):
+        if operation == "statistics_access":
+            seen["args"] = args
+            return "https" + "://whm.test:2083/cpsess1/login/?session=x&goto_uri=%2Fawstats.pl"
+        return real(user, acct, capability, operation, *args, **kwargs)
+
+    monkeypatch.setattr(control, "perform", spy)
+    reply = browser(owner).get(reverse("hosting_customer:statistics", args=[account.pk]))
+    assert reply.status_code == 302 and "awstats" in reply["Location"] and seen["args"] == (account.domain,)
+
+    def refuse(user, acct, capability, operation, *args, **kwargs):
+        if operation == "statistics_access":
+            raise __import__("apps.core.exceptions", fromlist=["ServiceError"]).ServiceError("Statistics are off.", code="no")
+        return real(user, acct, capability, operation, *args, **kwargs)
+
+    monkeypatch.setattr(control, "perform", refuse)
+    reply = browser(owner).get(reverse("hosting_customer:statistics", args=[account.pk]))
+    assert reply.status_code == 302 and reply["Location"] == reverse("hosting_customer:care_traffic", args=[account.pk])
+
+
+# --- Phase 6: SSH access ------------------------------------------------------------------------------------------------------
+
+def _public_key(seed=0):
+    import base64
+    import struct
+
+    blob = struct.pack(">I", 11) + b"ssh-ed25519" + struct.pack(">I", 32) + bytes([seed]) * 32
+    return "ssh-ed25519 " + base64.b64encode(blob).decode() + " me@laptop"
+
+
+def test_ssh_access_is_turned_on_and_off_and_shows_the_command(world, owner, account):  # noqa: F811
+    client = browser(owner)
+    do = reverse("hosting_customer:advanced_do", args=[account.pk])
+    page = reverse("hosting_customer:advanced", args=[account.pk, "ssh"])
+    client.post(do, {"action": "ssh_add_key", "tool": "ssh", "label": "first", "public_key": _public_key(1)})  # the demo server signs in with keys only
+    client.post(do, {"action": "ssh_off", "tool": "ssh"})  # the demo server keeps its state between tests
+    html = client.get(page).content.decode()
+    assert "Shell access to your hosting" in html and "Turn on SSH access" in html
+    client.post(do, {"action": "ssh_on", "tool": "ssh"})
+    html = client.get(page).content.decode()
+    assert "Turn off SSH access" in html and f"ssh {account.username}@" in html and "Public keys" in html
+    client.post(do, {"action": "ssh_off", "tool": "ssh"})
+    assert "Turn on SSH access" in client.get(page).content.decode()
+
+
+def test_a_public_key_is_added_and_removed_and_a_private_key_is_refused(world, owner, account):  # noqa: F811
+    client = browser(owner)
+    do = reverse("hosting_customer:advanced_do", args=[account.pk])
+    page = reverse("hosting_customer:advanced", args=[account.pk, "ssh"])
+    client.post(do, {"action": "ssh_add_key", "tool": "ssh", "label": "first", "public_key": _public_key(1)})
+    client.post(do, {"action": "ssh_on", "tool": "ssh"})
+    client.post(do, {"action": "ssh_add_key", "tool": "ssh", "label": "work-laptop", "public_key": _public_key(2)})
+    assert "work-laptop" in client.get(page).content.decode()
+    client.post(do, {"action": "ssh_add_key", "tool": "ssh", "label": "bad", "public_key": "-----BEGIN OPENSSH PRIVATE KEY----- abc"})
+    assert "-----BEGIN" not in client.get(page).content.decode()
+    from apps.hosting import control
+
+    keys = control.perform(owner, account, "ssh", "ssh_access_status").keys
+    gone = next(k.fingerprint for k in keys if k.label == "work-laptop")
+    client.post(do, {"action": "ssh_remove_key", "tool": "ssh", "key_id": gone})
+    assert "work-laptop" not in client.get(page).content.decode()
+    client.post(do, {"action": "ssh_off", "tool": "ssh"})

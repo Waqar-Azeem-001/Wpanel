@@ -12,6 +12,14 @@ def run_site_care_task():
 
 
 @shared_task
+def record_resource_readings_task():
+    """Every ten minutes: one reading of what each active account is using (CPU, memory, processes), for the last-24-hours chart."""
+    from . import insights
+
+    return insights.record_all()
+
+
+@shared_task
 def sync_hosting_usage_task():
     """Daily (only when HOSTING_USAGE_SYNC_ENABLED is on): refresh disk and bandwidth figures from the servers."""
     return services.sync_all_usage()
