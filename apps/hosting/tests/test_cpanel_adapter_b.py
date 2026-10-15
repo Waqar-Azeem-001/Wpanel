@@ -122,7 +122,7 @@ def test_adding_and_removing_each_kind_of_domain_uses_its_own_cpanel_function():
     assert (sub["domain"], sub["rootdomain"], sub["dir"]) == ("shop", "acme.com", "public_html/shop")
     real.add_domain(USER, "acme.org", "alias", "")
     park = fake.api2_calls("Park", "park")[0][0]
-    assert park["domain"] == "acme.org" and park["topdomain"] == "acme.com"
+    assert park["domain"] == "acme.org" and "topdomain" not in park
     real.remove_domain(USER, "acme-shop.com")
     assert fake.api2_calls("AddonDomain", "deladdondomain")[0][0]["subdomain"] == "acme-shop_com.acme.com"
     real.remove_domain(USER, "blog.acme.com")

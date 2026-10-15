@@ -64,7 +64,7 @@ class CpanelDomains(CpanelApi, DomainsCapability):
                 raise HostingError("A subdomain must sit under a domain you have.")
             self._api2(username, "SubDomain", "addsubdomain", {"domain": name[: -len(parent) - 1], "rootdomain": parent, "dir": root, "disallowdot": 1})
         else:
-            self._api2(username, "Park", "park", {"domain": name, "topdomain": main})
+            self._api2(username, "Park", "park", {"domain": name})  # no topdomain: cPanel then points it at the main website (a main domain given as topdomain is read as a label and becomes main.main)
 
     def remove_domain(self, username, name):
         name = clean_domain(name)
