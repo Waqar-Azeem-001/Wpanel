@@ -247,7 +247,7 @@ def test_looking_inside_a_database_is_phpmyadmin_through_a_one_time_session():
     answers = {**MYSQL, "create_user_session": {"url": "https://whm.test:2083/cpsess1234/3rdparty/phpMyAdmin/index.php", "expires": 1900000000}}
     real, fake = adapter(answers)
     access = real.database_admin_access(USER, "shop")
-    assert access.kind == "external" and access.url.startswith("https://whm.test:2083/")
+    assert access.kind == "external" and access.url.startswith("https://whm.test:2083/") and access.url.endswith("goto_uri=/3rdparty/phpMyAdmin/index.php")
     assert fake.calls[-1][:2] == ("create_user_session", {"user": USER, "service": "cpaneld", "app": "Database_phpMyAdmin"})
     bad, _ = adapter({**MYSQL, "create_user_session": {"url": "javascript:alert(1)"}})
     with pytest.raises(HostingError, match="usable"):

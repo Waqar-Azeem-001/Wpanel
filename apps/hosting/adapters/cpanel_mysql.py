@@ -89,6 +89,8 @@ class CpanelMysql(CpanelApi, DatabasesCapability):
         parts = urlsplit(url)
         if parts.scheme not in ("http", "https") or not parts.netloc:
             raise HostingError("The server did not give a usable phpMyAdmin sign-in link.")
+        if "goto_uri=" not in parts.query:  # the session link lands on cPanel's home; this sends it on to phpMyAdmin
+            url += ("&" if parts.query else "?") + "goto_uri=/3rdparty/phpMyAdmin/index.php"
         return DatabaseAdminAccess(kind="external", url=url)
 
     def list_tables(self, username, database):
