@@ -31,6 +31,9 @@ SITE_URL = env("SITE_URL", default="http://localhost:8000")
 STORE_CURRENCY = env("STORE_CURRENCY", default="USD")
 # A domain whose wildcard DNS (*.<this>) leads to the hosting server: every website gets <name>.<this> as a preview address before its own domain leads there. "" = off.
 PREVIEW_DOMAIN = env("PREVIEW_DOMAIN", default="")
+# The secret the panel's web server sends when it asks which website a preview host belongs to (apps/hosting/preview.py); empty = preview off. PREVIEW_SECURE: the preview host has a certificate.
+PREVIEW_PROXY_KEY = env("PREVIEW_PROXY_KEY", default="")
+PREVIEW_SECURE = env.bool("PREVIEW_SECURE", default=False)
 # The built-in test payment gateway simulates a hosted checkout page and signs its own webhooks. It moves no
 # money, so it must never be usable in production: off by default, on in dev/test settings only.
 ALLOW_TEST_PAYMENT_GATEWAY = env.bool("ALLOW_TEST_PAYMENT_GATEWAY", default=False)

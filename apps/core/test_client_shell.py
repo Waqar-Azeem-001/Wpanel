@@ -265,33 +265,64 @@ def test_the_installer_reports_each_step_and_the_page_shows_steps_and_percent(wo
     assert "42%" in html and "Unpacking the WordPress files" in html and "Downloading WordPress" in html and "<progress" in html
 
 
-def test_the_preview_plugin_only_trusts_the_domain_its_www_and_the_preview_address():
+def test_the_preview_plugin_trusts_only_a_request_with_the_right_host_and_token():
     from apps.hosting import preview
 
-    code = preview.mu_plugin("acme.com", "acme-com.preview.example.net")
-    assert "'acme.com', 'www.acme.com', 'acme-com.preview.example.net'" in code and "in_array( $whp_host" in code and "pre_option_home" in code
+    code = preview.mu_plugin("acme-com.preview.example.net")
+    assert "$whp_expect_host = 'acme-com.preview.example.net'" in code and preview.token("acme-com.preview.example.net") in code
+    assert "hash_equals" in code and "HTTP_X_WHP_PREVIEW_TOKEN" in code and "pre_option_home" in code
+    assert preview.token("a.preview.example.net") != preview.token("b.preview.example.net")  # a token is good for one host only
 
 
-def test_a_preview_address_is_set_up_and_offered_when_the_feature_is_on(world, owner, account, settings):  # noqa: F811
+def _preview_on(settings):
+    settings.PREVIEW_DOMAIN = "preview.example.net"
+    settings.PREVIEW_PROXY_KEY = "k" * 32
+
+
+def test_the_preview_plugin_is_written_and_the_gate_offers_the_preview_address(world, owner, account, settings):  # noqa: F811
     from apps.hosting import control, preview
     from apps.hosting.adapters.capabilities import Capability
 
-    settings.PREVIEW_DOMAIN = "preview.example.net"
+    _preview_on(settings)
     WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com", admin_url="https" + "://site/wp-admin/")
     control.perform(owner, account, Capability.FILES, "make_directory", "public_html/wp-content")  # a real WordPress has it
     expected = preview.host(account)
     assert expected.endswith(".preview.example.net") and "." not in expected.split(".preview.")[0]
     html = _page(owner, "hosting_customer:wp_admin", account.pk)
     assert "Open it now on your preview address" in html and f"http://{expected}/wp-admin/" in html
-    assert expected in {d.name for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
     plugin = control.perform(owner, account, Capability.FILES, "read_file", "public_html/wp-content/mu-plugins/whp-preview-host.php", max_bytes=5000)
-    assert expected.encode() in plugin
-    preview.ensure(owner, account)  # again: nothing breaks, nothing is added twice
-    assert [d.name for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")].count(expected) == 1
+    assert expected.encode() in plugin and preview.token(expected).encode() in plugin
+    domains = {d.name for d in control.perform(owner, account, Capability.DOMAINS, "list_domains")}
+    assert expected not in domains  # nothing is added to the hosting account's domains
 
 
-def test_without_the_preview_domain_the_feature_is_off(world, owner, account, settings):  # noqa: F811
+def test_the_resolver_answers_only_the_panels_own_web_server(world, owner, account, settings):  # noqa: F811
+    from django.test import Client
+
     from apps.hosting import preview
 
-    settings.PREVIEW_DOMAIN = ""
+    _preview_on(settings)
+    name = preview.host(account)
+    url = reverse("preview_resolve")
+    client = Client()
+    assert client.get(url, HTTP_X_PREVIEW_HOST=name).status_code == 403  # no key
+    assert client.get(url, HTTP_X_PREVIEW_HOST=name, HTTP_X_PREVIEW_KEY="wrong").status_code == 403
+    assert client.get(url, HTTP_X_PREVIEW_HOST="nobody." + preview.base(), HTTP_X_PREVIEW_KEY="k" * 32).status_code == 403  # a name that is nobody's
+    assert client.get(url, HTTP_X_PREVIEW_HOST="evil.example.org", HTTP_X_PREVIEW_KEY="k" * 32).status_code == 403  # outside the preview domain
+    account.server.ip_address = "198.51.100.7"
+    account.server.save(update_fields=["ip_address"])
+    reply = client.get(url, HTTP_X_PREVIEW_HOST=name, HTTP_X_PREVIEW_KEY="k" * 32)
+    assert reply.status_code == 204 and reply["X-Real-Host"] == account.domain.lower() and reply["X-Backend"] == "198.51.100.7"
+    assert reply["X-Preview-Token"] == preview.token(name)
+    assert client.post(url, HTTP_X_PREVIEW_HOST=name, HTTP_X_PREVIEW_KEY="k" * 32).status_code == 405
+
+
+def test_without_the_proxy_key_the_feature_is_off(world, owner, account, settings):  # noqa: F811
+    from apps.hosting import preview
+
+    settings.PREVIEW_DOMAIN = "preview.example.net"
+    settings.PREVIEW_PROXY_KEY = ""
     assert not preview.enabled() and preview.host(account) == "" and preview.url(account) == ""
+    settings.PREVIEW_DOMAIN = ""
+    settings.PREVIEW_PROXY_KEY = "k" * 32
+    assert not preview.enabled()

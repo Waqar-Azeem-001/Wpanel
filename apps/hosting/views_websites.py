@@ -71,7 +71,7 @@ def wp_admin(request, pk, domain=""):
         except ServiceError:
             pass  # the server refused (for example a plan with no alias domains): the hosts-file way below still works, and the refusal is in the audit log
         else:
-            preview_admin = "http" + f"://{host}/wp-admin/" if host else ""
+            preview_admin = preview.url(account) + "wp-admin/" if host else ""
     return render(request, "hosting/customer/wp_admin.html", {
         "preview_admin": preview_admin, "preview_site": preview.url(account) if preview_admin else "",
         "account": account, "name": name, "ip": state["ip"], "hosts_line": state["hosts_line"], "ours": state["ours"], "admin_url": app.admin_url,

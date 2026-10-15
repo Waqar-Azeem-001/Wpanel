@@ -1,0 +1,52 @@
+# The preview proxy for the HOST nginx (the same machine that terminates TLS for the panel).
+#
+# *.preview.example.com (DNS wildcard A record -> this server) opens a customer's real website and WordPress admin before its own domain leads to the hosting.
+# nginx asks the panel (auth_request) who the name belongs to and where the hosting server is, then forwards the request there with the website's real domain as Host.
+# The panel answers only when the request carries the shared key below; the same key is PREVIEW_PROXY_KEY in the panel's .env.
+#
+# Install:  copy to /etc/nginx/sites-available/whpanel-preview, replace the three CHANGE-ME values, symlink into sites-enabled, `nginx -t && systemctl reload nginx`.
+# Names under preview.example.com that the panel does not know are answered 404; nothing else on this machine is touched.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name *.preview.example.com;   # CHANGE-ME: your PREVIEW_DOMAIN
+
+    client_max_body_size 64m;
+
+    location = /_whp_resolve {
+        internal;
+        proxy_pass http://127.0.0.1:8010/_preview/resolve/;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Host whpanel.example.com;           # CHANGE-ME: a host name the panel accepts (DJANGO_ALLOWED_HOSTS)
+        proxy_set_header X-Preview-Host $host;
+        proxy_set_header X-Preview-Key "CHANGE-ME-same-as-PREVIEW_PROXY_KEY";
+    }
+
+    location / {
+        auth_request /_whp_resolve;
+        auth_request_set $whp_real_host $upstream_http_x_real_host;
+        auth_request_set $whp_backend $upstream_http_x_backend;
+        auth_request_set $whp_token $upstream_http_x_preview_token;
+        error_page 401 403 = @whp_unknown;
+
+        proxy_pass https://$whp_backend;
+        proxy_ssl_server_name on;
+        proxy_ssl_name $whp_real_host;
+        proxy_ssl_verify off;                     # reached by the server's address; the website's own certificate is for its domain
+        proxy_http_version 1.1;
+        proxy_set_header Host $whp_real_host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-WHP-Preview-Host $host;
+        proxy_set_header X-WHP-Preview-Token $whp_token;
+        proxy_set_header X-WHP-Preview-Proto $scheme;
+        proxy_redirect ~^https?://[^/]+(.*)$ $scheme://$host$1;
+        proxy_read_timeout 120s;
+        proxy_buffering off;
+    }
+
+    location @whp_unknown {
+        return 404 "Unknown preview address.\n";
+    }
+}

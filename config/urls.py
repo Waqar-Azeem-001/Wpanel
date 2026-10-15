@@ -4,6 +4,7 @@ from django.urls import include, path
 
 from apps.clients.views_dashboard import dashboard
 from apps.core.redirects import retired_urlpatterns
+from apps.hosting.views_preview import resolve as preview_resolve
 from apps.notifications import views as notification_views
 from apps.products.views import public_home
 
@@ -22,6 +23,7 @@ def home(request):
 urlpatterns = [
     path("", home, name="home"),
     path("account/", dashboard, name="dashboard"),
+    path("_preview/resolve/", preview_resolve, name="preview_resolve"),
     path("staff/", include("apps.console.urls")),
     *retired_urlpatterns(),
     path("admin/", admin.site.urls),
