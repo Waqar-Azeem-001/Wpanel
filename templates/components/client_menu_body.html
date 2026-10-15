@@ -1,0 +1,28 @@
+{% load i18n %}
+{% if sidebar.switcher %}
+<details class="cmenu-switch">
+  <summary><span class="cmenu-cap">{% trans "Website" %}</span><strong>{{ sidebar.heading }}</strong></summary>
+  <ul>{% for domain, url, current in sidebar.switcher %}<li><a href="{{ url }}"{% if current %} class="is-current" aria-current="true"{% endif %}>{{ domain }}</a></li>{% endfor %}</ul>
+</details>
+{% elif sidebar.heading %}<p class="cmenu-title">{{ sidebar.heading }}</p>{% endif %}
+{% if sidebar.groups %}
+<ul class="cmenu-list">
+  {% for g in sidebar.groups %}
+  <li>
+    {% if g.url %}
+    <a class="cmenu-link{% if g.active %} is-current{% endif %}" href="{{ g.url }}"{% if g.active %} aria-current="page"{% endif %}><i class="bi {{ g.icon }}" aria-hidden="true"></i>{{ g.label }}</a>
+    {% else %}
+    <details class="cmenu-group"{% if g.open %} open{% endif %}>
+      <summary class="cmenu-link{% if g.active %} is-current{% endif %}"><i class="bi {{ g.icon }}" aria-hidden="true"></i>{{ g.label }}<i class="bi bi-chevron-right cmenu-caret" aria-hidden="true"></i></summary>
+      <ul>{% for c in g.children %}<li><a class="{% if c.active %}is-current{% endif %}" href="{{ c.url }}"{% if c.active %} aria-current="page"{% endif %}>{{ c.label }}</a></li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+{% for panel in sidebar %}
+<p class="cmenu-title">{{ panel.title }}</p>
+<ul class="cmenu-list">{% for l in panel.links %}<li><a class="cmenu-link{% if l.active %} is-current{% endif %}" href="{{ l.url }}"{% if l.active %} aria-current="page"{% endif %}>{% if l.icon %}<i class="bi {{ l.icon }}" aria-hidden="true"></i>{% endif %}{{ l.label }}</a></li>{% endfor %}</ul>
+{% endfor %}
+{% endif %}

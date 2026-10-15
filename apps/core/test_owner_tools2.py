@@ -353,12 +353,12 @@ def test_a_super_admin_hides_renames_and_reorders_customer_menu_entries(boss, ow
                               "client.home": {"label": "", "visible": False, "order": None}})
     menus = navigation.build(request_for(owner_user), "client")
     names = [e.label for e in menus["main"]]
-    assert "Affiliates" not in names and "Help desk" in names and names[0] == "Dashboard"  # the way home is never hidden
-    assert names.index("Help desk") < names.index("Services")  # order 5 comes before the others
+    assert "Refer & earn" not in names and "Help desk" in names and names[0] == "Home"  # the way home is never hidden
+    assert names.index("Help desk") < names.index("More services")  # order 5 comes before the others
     services = next(e for e in menus["main"] if e.key == "client.services")
     assert "client.services.cat.vps" not in [c.key for c in services.children]
     branding.reset_menu(boss)
-    assert "Affiliates" in [e.label for e in navigation.build(request_for(owner_user), "client")["main"]]
+    assert "Refer & earn" in [e.label for e in navigation.build(request_for(owner_user), "client")["main"]]
 
 
 def test_only_people_who_manage_settings_change_the_customer_menu(boss, manager, owner_user):

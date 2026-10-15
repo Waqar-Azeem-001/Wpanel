@@ -1,0 +1,9 @@
+{% load i18n %}
+{# The slim icon rail: one entry per place a customer goes. Every entry comes from the menu registry (apps/core/navigation.py). #}
+<nav class="crail" aria-label="{% trans 'Main' %}">
+  {% for e in nav.main %}
+  <a class="crail-link{% if e.active %} is-current{% endif %}" href="{% if e.is_group %}{{ e.landing }}{% else %}{{ e.url }}{% endif %}"{% if e.active %} aria-current="page"{% endif %}>
+    <i class="bi {{ e.icon|default:'bi-circle' }}" aria-hidden="true"></i><span>{{ e.label }}</span>{% if e.badge %}<b class="crail-badge">{{ e.badge }}</b>{% endif %}
+  </a>
+  {% endfor %}
+</nav>

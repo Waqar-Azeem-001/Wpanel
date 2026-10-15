@@ -95,12 +95,12 @@ def test_the_manage_menu_links_only_the_sections_the_provider_supports(client, o
     account = HostingAccount.objects.get(domain="demo-shop.example.com")
     client.force_login(owner)
     page = client.get(f"/account/hosting/{account.pk}/").content.decode()
-    for group in ("Files", "Databases", "Email", "Domains", "Advanced"):
-        assert f'class="sidebar-group" aria-hidden="true">{group}<' in page
+    for group in ("Dashboard", "Hosting plan", "Performance", "Security", "Domains", "Files", "Databases", "Advanced"):
+        assert f'aria-hidden="true"></i>{group}' in page, group  # the ten-group website menu
     # the demo provider supports files, databases, email, domains, dns, ssl, php and usage; everything else is shown muted and has no address
     for label in ("File manager", "MySQL databases", "Email accounts", "Domains", "DNS records", "SSL certificate", "PHP settings", "Usage"):
         assert f'href="/account/hosting/{account.pk}/manage/' in page and label in page
-    assert page.count('class="sidebar-soon"') == 0  # every section of the menu now has a real screen
+    assert page.count('sidebar-soon') == 0  # every section of the menu now has a real screen
     assert f"/account/hosting/{account.pk}/manage/backups/" in page
 
 

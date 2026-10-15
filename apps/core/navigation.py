@@ -65,9 +65,9 @@ ITEMS = [
          requires="anonymous"),
 
     # --- Customer area: the left rail; five of its entries are also the phone's bottom bar -------------------------
-    item("client.home", _("Dashboard"), "dashboard", areas=CLIENT, icon="bi-house-door", mobile_tab=True),
-    item("client.services", _("Services"), areas=CLIENT, requires="client_contact", icon="bi-hdd-rack", mobile_tab=True),
-    item("client.services.websites", _("Websites"), "hosting_customer:websites", areas=CLIENT, parent="client.services"),
+    item("client.home", _("Home"), "dashboard", areas=CLIENT, icon="bi-house-door", mobile_tab=True),
+    item("client.websites", _("Websites"), "hosting_customer:websites", areas=CLIENT, requires="client_contact", icon="bi-window-stack", mobile_tab=True),
+    item("client.services", _("More services"), areas=CLIENT, requires="client_contact", icon="bi-grid"),
     item("client.services.hosting", _("My hosting"), "hosting_customer:list", areas=CLIENT, parent="client.services"),
     item("client.services.order", _("Order new services"), "catalog:product_list", areas=CLIENT,
          parent="client.services"),
@@ -89,7 +89,7 @@ ITEMS = [
     item("client.support.tickets", _("Tickets"), "support_customer:list", areas=CLIENT, parent="client.support"),
     item("client.support.new", _("Open a ticket"), "support_customer:new", areas=CLIENT, parent="client.support"),
     item("client.support.kb", _("Help articles"), "help:index", areas=CLIENT, parent="client.support"),
-    item("client.affiliates", _("Affiliates"), "affiliates_customer:dashboard", areas=CLIENT, requires="client_contact",
+    item("client.affiliates", _("Refer & earn"), "affiliates_customer:dashboard", areas=CLIENT, requires="client_contact",
          icon="bi-share"),
     item("client.plans", _("Plans"), "catalog:product_list", areas=CLIENT, requires="no_client_contact",
          icon="bi-box-seam"),
@@ -347,7 +347,10 @@ def build(request, area):
                 same_screen_family[top.position].append(group)
             menus[top.position].append(group)
         elif is_visible(user, top, has_client=has_client):
-            menus[top.position].append(leaf(top))
+            entry = leaf(top)
+            if current_namespace and top.url_name.split(":")[0] == current_namespace and ":" in top.url_name:
+                same_screen_family[top.position].append(entry)  # a leaf owns its own namespace too (Websites owns every website page)
+            menus[top.position].append(entry)
     # A page that is not itself an entry (an invoice, a ticket) keeps the first group of its family lit, and only one:
     # several groups can share a namespace (billing pages appear under Billing, Settings and Providers).
     for position, groups in same_screen_family.items():

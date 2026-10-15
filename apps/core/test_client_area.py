@@ -268,7 +268,7 @@ def test_the_menu_marks_the_current_page(world, owner):
 def test_a_phone_gets_the_same_menu_from_a_button_in_the_header(world, owner):
     live = world.objects["accounts"]["active"]
     page = browser(owner).get(reverse("hosting_customer:detail", args=[live.pk])).content.decode()
-    assert 'data-bs-target="#ws-menu"' in page and 'id="ws-menu"' in page and "d-none d-lg-block" in page
+    assert 'data-menu-open' in page and 'id="topnav"' in page and 'class="cdrawer"' in page and "cmenu-group" in page  # the shell's drawer carries the website menu
     assert "Manage your website" in page or "Billing term" in page  # the overview content is still there
 
 
@@ -331,7 +331,7 @@ def test_a_domain_has_a_workspace_menu_like_a_website_and_every_entry_opens(worl
     assert sidebar.workspace and [p.title for p in sidebar] == ["Domain", "Registration"]
     assert [l.label for l in sidebar[0].links] == ["Overview", "DNS records", "Nameservers", "Auto renew", "Registrar lock"]
     assert [l.label for l in sidebar[1].links] == ["Renew", "Request cancellation", "Open a ticket"]
-    assert 'data-bs-target="#ws-menu"' in response.content.decode()  # a phone opens the same menu from a button
+    assert 'class="cdrawer"' in response.content.decode()  # a phone opens the same menu from the header button
     for panel in sidebar:
         for link in panel.links:
             assert client.get(link.url).status_code == 200, link.label

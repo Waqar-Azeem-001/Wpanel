@@ -23,6 +23,17 @@
   {% include "components/empty_state.html" with message=_("You do not have a client account yet. Browse our plans to get started.") action_url=plans_url action_label=_("Browse plans") icon="bi-box" %}
 {% else %}
 
+{% if todos %}
+<section class="panel mb-4" aria-labelledby="home-todos">
+  <div class="panel-head"><h2 id="home-todos"><i class="bi bi-check2-square" aria-hidden="true"></i> {% trans "To-dos" %} <span class="badge text-bg-secondary">{{ todos|length }}</span></h2></div>
+  <ul class="todo-list">
+    {% for t in todos %}<li class="todo{% if t.tone %} is-{{ t.tone }}{% endif %}"><span class="todo-icon" aria-hidden="true"><i class="bi {{ t.icon }}"></i></span><span class="todo-text">{{ t.text }}</span><a class="btn btn-sm btn-outline-primary" href="{{ t.url }}">{{ t.action }}</a></li>{% endfor %}
+  </ul>
+</section>
+{% elif client %}
+<section class="panel mb-4"><div class="panel-body d-flex align-items-center gap-2 text-secondary"><i class="bi bi-check-circle text-success" aria-hidden="true"></i> {% trans "You are all caught up. Nothing needs your attention." %}</div></section>
+{% endif %}
+
 {% if overdue_count %}
 <div class="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4" role="alert">
   <span><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>

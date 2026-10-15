@@ -22,10 +22,27 @@ class Link:
     disabled: bool = False  # shown muted with a "Soon" tag and no address: nothing to open yet
 
 
+@dataclass
+class MenuGroup:
+    """One entry of the grouped workspace menu: a link on its own (``url``) or a group that opens to its ``children``."""
+
+    label: str
+    icon: str = ""
+    url: str = ""
+    children: list = field(default_factory=list)
+    active: bool = False  # this link, or one of the children, is the page you are on
+    open: bool = False
+
+
 class WorkspaceMenu(list):
-    """The panels of one website's workspace. The layout reads ``.workspace``: on a phone this menu is opened from a button in the page header instead of sitting under the page."""
+    """The panels of one website's workspace. The layout reads ``.workspace``: on a phone this menu is opened from a button in the page header instead of sitting under the page.
+
+    ``groups`` is the same menu as Hostinger-style groups with sub-menus (what the desktop shell draws next to the rail); ``switcher`` lists the customer's websites so one can jump to another."""
 
     workspace = True
+    groups = ()
+    switcher = ()
+    heading = ""
 
 
 @dataclass
@@ -136,7 +153,19 @@ def service_sidebar(request, account):
     staging = link(request, "Staging", "hosting_customer:staging", account.pk, icon="bi-copy") if app is not None and app.kind == "wordpress" and app.state == "ready" else None
     if live and (app is None or app.state != "installing"):
         plan.append(link(request, "Delete website", "hosting_customer:site_delete", account.pk, icon="bi-trash", active=False))
-    return WorkspaceMenu([Panel("Website", [overview, *([care] if care else []), *([staging] if staging else []), *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
+    menu = WorkspaceMenu([Panel("Website", [overview, *([care] if care else []), *([staging] if staging else []), *dashboard.workspace_links(request, account)]), Panel("Plan", plan)])
+    menu.heading = account.domain
+    menu.groups = dashboard.workspace_groups(request, account, app=app, live=live)
+    menu.switcher = _switcher(request, account)
+    return menu
+
+
+def _switcher(request, account):
+    """The customer's websites, for the dropdown at the top of the website menu: [(domain, url, is_current)]."""
+    from apps.hosting import services as hosting_services
+
+    rows = hosting_services.visible_hosting_accounts_for_user(request.user).filter(status__in=("active", "suspended")).order_by("domain")[:25]
+    return [(a.domain, reverse("hosting_customer:detail", args=[a.pk]), a.pk == account.pk) for a in rows]
 
 
 def domain_sidebar(request, domain):

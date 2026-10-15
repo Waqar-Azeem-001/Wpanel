@@ -167,6 +167,63 @@ def workspace_links(request, account):
     return links
 
 
+def workspace_groups(request, account, *, app=None, live=True):
+    """The website menu in the ten Hostinger-style groups: [MenuGroup]. Only what this account's server can do and what this website is (WordPress or not) is listed."""
+    from django.urls import reverse
+
+    from apps.core.portal import MenuGroup
+
+    try:
+        supported = set(control.capabilities_for(account))
+    except ServiceError:
+        supported = set()
+    path = request.path
+    pk = account.pk
+
+    def make(label, url, icon=""):
+        from apps.core.portal import Link
+
+        return Link(label, url, active=bool(url) and path == url.split("#")[0] and "#" not in url, icon=icon)
+
+    def section(key):
+        _group, label, icon, capability, _about = SECTION_BY_KEY[key]
+        if capability.value not in supported:
+            return None
+        return make(label, reverse("hosting_customer:section", args=[pk, key]), icon)
+
+    care = reverse("hosting_customer:care", args=[pk])
+    wordpress = app is not None and app.kind == "wordpress" and app.state == "ready"
+    plan = [make("Plan details", reverse("hosting_customer:information", args=[pk]), "bi-info-circle"),
+            make("Add-ons", reverse("hosting_customer:addons", args=[pk]), "bi-plus-square")]
+    if account.status == "active":
+        plan.append(make("Upgrade / downgrade", reverse("renewals_customer:hosting_upgrade", args=[pk]), "bi-arrow-up-circle"))
+    spec = [
+        ("Dashboard", "bi-grid-1x2", reverse("hosting_customer:detail", args=[pk]), []),
+        ("WordPress", "bi-wordpress", "", [make("Plugins and themes", reverse("hosting_customer:care_wordpress", args=[pk])),
+                                           make("Staging", reverse("hosting_customer:staging", args=[pk])),
+                                           make("Website options", care + "#care-options")] if wordpress else []),
+        ("Hosting plan", "bi-hdd-rack", "", plan),
+        ("Performance", "bi-speedometer", "", [make("Speed test", care + "#care-speed"), make("Faster pages", care + "#care-performance"), section("usage")] if live else [section("usage")]),
+        ("Analytics", "bi-graph-up", reverse("hosting_customer:care_traffic", args=[pk]) if live else "", []),
+        ("Security", "bi-shield-check", "", [make("Malware scan", care + "#care-scan") if live else None, section("ssl"), section("access"), section("security")]),
+        ("Domains", "bi-globe2", "", [section("domains"), section("dns")]),
+        ("Website", "bi-window", "", [make("Website care", care) if live else None,
+                                      make("Delete website", reverse("hosting_customer:site_delete", args=[pk]), "bi-trash") if live and (app is None or app.state != "installing") else None]),
+        ("Files", "bi-folder2-open", "", [section("files"), section("ftp"), section("backups")]),
+        ("Databases", "bi-database", "", [section("databases")]),
+        ("Advanced", "bi-gear", "", [section("php"), section("cron"), section("logs"), section("cpanel")]),
+    ]
+    groups = []
+    for label, icon, url, children in spec:
+        children = [c for c in children if c is not None]
+        if not url and not children:
+            continue
+        here = bool(url) and path == url
+        opened = any(c.active for c in children) or (not url and any(path == c.url.split("#")[0] for c in children))
+        groups.append(MenuGroup(label=label, icon=icon, url=url, children=children, active=here or opened, open=opened))
+    return groups
+
+
 ESSENTIALS = (("databases", "Open"), ("backups", "Open"), ("files", "Open"), ("email", "Open"), ("ssl", "Open"))
 
 

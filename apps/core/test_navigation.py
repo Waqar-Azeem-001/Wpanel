@@ -112,10 +112,10 @@ def test_every_menu_link_reverses_to_an_internal_path():
 
 def test_a_customer_with_an_account_sees_the_full_customer_menu(owner):
     menus = navigation.build(request_for(owner), "client")
-    assert labels(menus, "main") == ["Dashboard", "Services", "Domains", "Orders", "Billing", "Support", "Affiliates"]
+    assert labels(menus, "main") == ["Home", "Websites", "More services", "Domains", "Orders", "Billing", "Support", "Refer & earn"]
     services = next(e for e in menus["main"] if e.key == "client.services")
-    assert [c.label for c in services.children][:4] == ["Websites", "My hosting", "Order new services", "Add-ons"]
-    assert [c.label for c in services.children][4:7] == ["WordPress hosting", "Shared hosting", "Business hosting"]  # store categories
+    assert [c.label for c in services.children][:3] == ["My hosting", "Order new services", "Add-ons"]
+    assert [c.label for c in services.children][3:6] == ["WordPress hosting", "Shared hosting", "Business hosting"]  # store categories
     assert labels(menus, "right") == ["Cart", "Notifications"]
     account = menus["account"][0]
     assert [c.label for c in account.children] == ["Profile & security", "Your account", "Contacts", "Cancellation requests",
@@ -125,13 +125,13 @@ def test_a_customer_with_an_account_sees_the_full_customer_menu(owner):
 
 def test_a_customer_without_an_account_sees_the_fallback_not_the_account_menus(loner):
     menus = navigation.build(request_for(loner), "client")
-    assert labels(menus, "main") == ["Dashboard", "Plans", "Help"]
+    assert labels(menus, "main") == ["Home", "Plans", "Help"]
     assert labels(menus, "right") == ["Notifications"]  # no cart without a client account
 
 
 def test_the_phone_bottom_bar_holds_the_five_things_customers_do_most(owner, loner, client):
     assert [e.label for e in navigation.build(request_for(owner), "client")["main"] if e.mobile_tab] == [
-        "Dashboard", "Services", "Domains", "Billing", "Support"]
+        "Home", "Websites", "Domains", "Billing", "Support"]
     client.force_login(owner)
     assert 'class="tabbar"' in client.get(reverse("dashboard"), HTTP_HOST="localhost").content.decode()
     client.force_login(loner)  # one place to go is not a bar

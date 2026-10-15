@@ -1,0 +1,9 @@
+{% load i18n %}
+{# The second menu. A website's workspace: its switcher and its ten groups. Otherwise: the pages of the rail entry you are in (when it has more than one). #}
+{% if sidebar.workspace %}
+<aside class="cmenu" aria-label="{{ sidebar.heading|default:_('Menu') }}">{% include "components/client_menu_body.html" %}</aside>
+{% else %}{% for e in nav.main %}{% if e.active and e.is_group and e.children|length > 1 %}
+<aside class="cmenu" aria-label="{{ e.label }}"><p class="cmenu-title">{{ e.label }}</p>
+  <ul class="cmenu-list">{% for c in e.children %}<li><a class="cmenu-link{% if c.active %} is-current{% endif %}" href="{{ c.url }}"{% if c.active %} aria-current="page"{% endif %}>{{ c.label }}</a></li>{% endfor %}</ul>
+</aside>
+{% endif %}{% endfor %}{% endif %}

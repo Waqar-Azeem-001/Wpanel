@@ -113,7 +113,10 @@ def test_signed_in_people_get_the_header_the_menus_and_the_search(world):
     for who, area in (("customer owner", "client"), ("support agent", "staff"), ("technical staff", "staff"),
                       ("manager", "staff"), ("admin", "staff"), ("super admin", "staff")):
         html = page_of(world.people[who], "home", follow=True).content.decode()
-        assert f"shell-{area}" in html and '<header class="chrome">' in html and 'class="topnav"' in html, who
+        if area == "client":  # the customer shell: top bar, labelled icon rail, phone drawer
+            assert "shell-client" in html and '<header class="chrome cs-top">' in html and 'class="crail"' in html and 'class="cdrawer"' in html, who
+        else:
+            assert f"shell-{area}" in html and '<header class="chrome">' in html and 'class="topnav"' in html, who
         assert 'id="quick-nav"' in html and "data-menu-open" in html and 'id="rail"' not in html, who
         assert "navbar-client" not in html and "navbar-staff" not in html, who
         assert ('data-search-url="' + reverse("console:search") + '"' in html) == (area == "staff"), who
@@ -153,8 +156,8 @@ def test_a_module_with_one_page_has_no_strip_and_a_person_sees_only_their_own_pa
 
 def test_the_customer_strip_lists_only_customer_pages(world):
     page = page_of(world.people["customer owner"], "billing_customer:invoice_list").content.decode()
-    strip = page.split('<nav class="groupnav"')[1].split("</nav>")[0]
-    assert re.findall(r'>([^<]+)</a></li>', strip) == ["Invoices", "Quotes", "Payment methods"]
+    menu = page.split('<aside class="cmenu"')[1].split("</aside>")[0]  # the pages of the rail entry you are in
+    assert re.findall(r'>([^<]+)</a></li>', menu) == ["Invoices", "Quotes", "Payment methods"]
 
 
 def test_the_brand_in_the_header_is_the_mark_and_the_name(world):

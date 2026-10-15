@@ -37,6 +37,43 @@ def overdue_summary(invoices):
     return overdue, sorted(totals.items())
 
 
+def _todos(user, hosting, domains, tickets, quotes):
+    """What needs the customer's attention, most urgent first (at most six): [{icon, text, url, action}]."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.hosting import site_apps
+
+    now = timezone.now()
+    items = []
+    waiting = []
+    for account in hosting.filter(status=HostingStatus.ACTIVE).order_by("expires_at", "id")[:20]:
+        if site_apps.needs_setup(account):
+            waiting.append(account)
+        if account.expires_at and account.expires_at <= now + timedelta(days=14):
+            items.append({"icon": "bi-calendar-event", "tone": "warn", "text": f"{account.domain} hosting renews on {account.expires_at:%d %b %Y}", "action": "Open",
+                          "url": reverse("hosting_customer:detail", args=[account.pk])})
+    if len(waiting) > 2:
+        items.insert(0, {"icon": "bi-rocket-takeoff", "tone": "", "text": f"{len(waiting)} hosting plans have no website yet", "action": "See plans",
+                         "url": reverse("hosting_customer:websites")})
+    else:
+        for account in waiting:
+            items.insert(0, {"icon": "bi-rocket-takeoff", "tone": "", "text": f"Create the website for {account.domain}", "action": "Create website",
+                             "url": reverse("hosting_customer:setup", args=[account.pk])})
+    for domain in domains.filter(status=DomainStatus.ACTIVE, expires_at__lte=now + timedelta(days=30)).order_by("expires_at")[:5]:
+        items.append({"icon": "bi-globe2", "tone": "warn", "text": f"{domain.name} expires on {domain.expires_at:%d %b %Y}", "action": "Renew",
+                      "url": reverse("domains_customer:detail", args=[domain.pk])})
+    for ticket in tickets.filter(status=TicketStatus.AGENT_REPLY).order_by("-last_activity_at")[:3]:
+        items.append({"icon": "bi-chat-left-text", "tone": "", "text": f"Support replied to: {ticket.subject}", "action": "Read",
+                      "url": reverse("support_customer:ticket", args=[ticket.pk])})
+    sent = quotes.filter(status=QuoteStatus.SENT).count()
+    if sent:
+        items.append({"icon": "bi-file-earmark-text", "tone": "", "text": f"{sent} quote(s) waiting for your answer", "action": "View",
+                      "url": reverse("billing_customer:quote_list") + "?status=sent"})
+    return items[:6]
+
+
 @login_required
 def dashboard(request):
     user = request.user
@@ -72,6 +109,7 @@ def dashboard(request):
             {"label": "Invoices", "value": unpaid.count(), "icon": "bi-receipt",
              "url": reverse("billing_customer:invoice_list") + "?status=unpaid"},
         ],
+        "todos": _todos(user, hosting, domains, tickets, quotes),
         "overdue_count": overdue.count(),
         "overdue_totals": overdue_totals,
         "overdue_first": overdue.order_by("due_date", "id").first(),

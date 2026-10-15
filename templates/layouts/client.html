@@ -1,2 +1,28 @@
-{% extends "layouts/app.html" %}
-{# The customer area: the light rail, the top bar and, on a phone, the bottom bar. #}
+{% extends "layouts/_root.html" %}
+{% load i18n static %}
+{# The customer area (Hostinger-style): a top bar, a slim icon rail with labels, a second menu when the page has one (a website's groups, or the pages of the rail entry you are in), then the page. On a phone the rail and the second menu become one drawer and the bottom bar keeps the few main places. Staff keep layouts/staff.html. #}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/client-shell.css' %}">{% endblock %}
+{% block body_class %}has-shell shell-client{% endblock %}
+{% block frame %}
+<div class="shell cshell">
+  {% include "components/client_topbar.html" %}
+  <div class="cbody">
+    {% include "components/client_rail.html" %}
+    {% include "components/client_menu.html" with where="desk" %}
+    <div class="canvas">
+      <main id="main" class="page {% block container %}{% endblock %}{% if sidebar and not sidebar.workspace %} wide{% endif %}" tabindex="-1">
+        {% if breadcrumbs and not sidebar.workspace %}
+        <nav class="cs-crumbs" aria-label="{% trans 'Breadcrumb' %}"><ol>{% for label, url in breadcrumbs %}<li>{% if url and not forloop.last %}<a href="{{ url }}">{{ label }}</a>{% else %}<span aria-current="page">{{ label }}</span>{% endif %}</li>{% endfor %}</ol></nav>
+        {% endif %}
+        {% include "components/messages.html" %}
+        {% if sidebar and not sidebar.workspace %}<div class="row g-4"><aside class="col-lg-3 order-2 order-lg-1" aria-label="{% trans 'Sidebar' %}">{% include "components/sidebar.html" with panels=sidebar %}</aside><div class="col-lg-9 order-1 order-lg-2">{% endif %}
+        {% block content %}{% endblock %}
+        {% if sidebar and not sidebar.workspace %}</div></div>{% endif %}
+      </main>
+      {% block footer %}{% include "components/footer.html" %}{% endblock %}
+    </div>
+  </div>
+  {% include "components/tabbar.html" %}
+</div>
+{% include "components/quick_nav.html" %}
+{% endblock %}
