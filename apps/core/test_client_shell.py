@@ -490,3 +490,17 @@ def test_the_tool_installs_by_name_with_a_checked_shape():
     assert {"install_plugin", "install_theme"} <= set(wp_tool.ACTIONS)
     source = wp_tool.build("install_plugin", "wordpress-seo")[3]
     assert "plugins_api" in source and "Plugin_Upgrader" in source and "[a-z0-9-]{1,60}" in source
+
+
+# --- Websites list: Tools and Import website -----------------------------------------------------------------------------------
+
+def test_the_websites_list_has_a_tools_menu_and_an_import_entry(world, owner, account):  # noqa: F811
+    html = _page(owner, "hosting_customer:websites")
+    assert "Tools" in html and reverse("hosting_customer:section", args=[account.pk, "files"]) in html and "Databases" in html
+    assert reverse("hosting_customer:import_site", args=[account.pk]) in html and "Import website" in html
+
+
+def test_the_import_page_names_the_three_ways(world, owner, account):  # noqa: F811
+    html = _page(owner, "hosting_customer:import_site", account.pk)
+    assert "We move it for you" in html and "I will do it myself" in html and "I have a backup file" in html
+    assert reverse("support_customer:new") in html

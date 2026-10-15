@@ -26,6 +26,7 @@
     </div>
     <div class="d-flex flex-wrap gap-2">
       {% status_badge group.account.status group.account.get_status_display %}
+      {% if group.account.status == "active" %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'hosting_customer:import_site' group.account.pk %}"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> {% trans "Import website" %}</a>{% endif %}
       <a class="btn btn-outline-secondary btn-sm" href="{{ group.plan_url }}">{% trans "Manage plan" %}</a>
     </div>
   </header>
@@ -45,6 +46,19 @@
         {% if row.staging %}<span class="site-pill"><i class="bi bi-copy" aria-hidden="true"></i> {% trans "Staging" %}</span>{% endif %}
       </span>
       <span class="web-actions">
+        {% if not row.extra and row.account.status == "active" %}
+        <span class="dropdown">
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-tools" aria-hidden="true"></i> {% trans "Tools" %}</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{% url 'hosting_customer:section' row.account.pk 'files' %}"><i class="bi bi-folder2-open" aria-hidden="true"></i> {% trans "File manager" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'hosting_customer:section' row.account.pk 'databases' %}"><i class="bi bi-database" aria-hidden="true"></i> {% trans "Databases" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'hosting_customer:section' row.account.pk 'email' %}"><i class="bi bi-envelope" aria-hidden="true"></i> {% trans "Email accounts" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'hosting_customer:section' row.account.pk 'backups' %}"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Backups" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'hosting_customer:section' row.account.pk 'php' %}"><i class="bi bi-filetype-php" aria-hidden="true"></i> {% trans "PHP settings" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'hosting_customer:section' row.account.pk 'logs' %}"><i class="bi bi-journal-text" aria-hidden="true"></i> {% trans "Logs" %}</a></li>
+          </ul>
+        </span>
+        {% endif %}
         {% if row.needs_setup %}
         <a class="btn btn-primary btn-sm" href="{{ row.setup_url }}">{% trans "Create website" %}</a>
         {% else %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Import a website" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+<nav class="ws-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'hosting_customer:websites' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> {% trans "Websites" %}</a></nav>
+<header class="page-head">
+  <h1>{% trans "Import a website" %}</h1>
+  <p class="page-sub">{% blocktrans with plan=account.product.name domain=account.domain %}Bring a website you already have onto {{ plan }} ({{ domain }}). Choose the way that suits you.{% endblocktrans %}</p>
+</header>
+
+<div class="import-ways">
+  <section class="card" aria-labelledby="imp-help">
+    <div class="card-body">
+      <span class="essential-icon" aria-hidden="true"><i class="bi bi-life-preserver"></i></span>
+      <h2 class="h5" id="imp-help">{% trans "We move it for you" %}</h2>
+      <p class="text-secondary">{% trans "Open a ticket with the address of your current website and, if you have it, a way to reach its files and database. Our team copies it here and tells you when it is ready to check." %}</p>
+      <a class="btn btn-primary" href="{{ ticket_url }}">{% trans "Open a migration ticket" %}</a>
+    </div>
+  </section>
+  <section class="card" aria-labelledby="imp-self">
+    <div class="card-body">
+      <span class="essential-icon" aria-hidden="true"><i class="bi bi-upload"></i></span>
+      <h2 class="h5" id="imp-self">{% trans "I will do it myself" %}</h2>
+      <ol class="text-secondary ps-3">
+        <li>{% trans "Upload your website's files into the website's folder with the File manager (or FTP)." %}</li>
+        <li>{% trans "Create a database and import your database file." %}</li>
+        <li>{% trans "Update the database details in your website's configuration file." %}</li>
+        <li>{% trans "Preview it, then point your domain here." %}</li>
+      </ol>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" href="{{ files_url }}">{% trans "File manager" %}</a>
+        <a class="btn btn-outline-secondary" href="{{ databases_url }}">{% trans "Databases" %}</a>
+      </div>
+    </div>
+  </section>
+  <section class="card" aria-labelledby="imp-backup">
+    <div class="card-body">
+      <span class="essential-icon" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i></span>
+      <h2 class="h5" id="imp-backup">{% trans "I have a backup file" %}</h2>
+      <p class="text-secondary">{% trans "If you have a full backup of a website from another hosting company, upload it and open a ticket naming the file: we restore it into this plan." %}</p>
+      <a class="btn btn-outline-secondary" href="{{ files_url }}">{% trans "Upload a backup" %}</a>
+    </div>
+  </section>
+</div>
+{% endblock %}
