@@ -170,3 +170,42 @@ def test_the_hosting_list_shows_the_count_and_opens_the_plan(world, owner, accou
 def test_a_domain_that_is_not_on_the_plan_cannot_be_set_up_through_it(world, owner, account):  # noqa: F811
     response = browser(owner).get(reverse("hosting_customer:site_setup", args=[account.pk, "stranger.example-test.com"]))
     assert response.status_code == 404
+
+
+# --- the website dashboard: Essentials, Performance, plan use -----------------------------------------------------------------
+
+def test_the_dashboard_shows_essentials_performance_and_plan_use(world, owner, account):  # noqa: F811
+    from apps.hosting.models import SpeedTest
+
+    WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com")
+    SpeedTest.objects.create(account=account, url="x", ok=True, kind="pagespeed", score=93, report={"strategy": "desktop", "figures": {}})
+    SpeedTest.objects.create(account=account, url="x", ok=True, kind="pagespeed", score=41, report={"strategy": "mobile", "figures": {}})
+    html = _page(owner, "hosting_customer:detail", account.pk)
+    assert "Essentials" in html and "File manager" in html and "Clear cache" in html and "Preview without cache" in html
+    assert re.search(r'perf-score is-good"><span class="perf-ring">93<', html) and re.search(r'perf-score is-poor"><span class="perf-ring">41<', html)
+    assert "plan-use" in html and "Websites" in html
+
+
+def test_a_plain_website_has_no_cache_button(world, owner, account):  # noqa: F811
+    WebsiteApp.objects.create(account=account, kind="custom", state="ready")
+    html = _page(owner, "hosting_customer:detail", account.pk)
+    assert "File manager" in html and "Clear cache" not in html
+
+
+def test_clearing_the_cache_runs_the_wordpress_tool_and_comes_back(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import care_tools
+
+    WebsiteApp.objects.create(account=account, kind="wordpress", state="ready", title="Shop", admin_user="a", admin_email="a@gmail.example.com")
+    seen = []
+    monkeypatch.setattr(care_tools, "wordpress_action", lambda user, acct, action, target="": seen.append(action) or {})
+    reply = browser(owner).post(reverse("hosting_customer:cache_clear", args=[account.pk]))
+    assert reply.status_code == 302 and reply["Location"] == reverse("hosting_customer:detail", args=[account.pk]) and seen == ["flush_cache"]
+    assert browser(owner).get(reverse("hosting_customer:cache_clear", args=[account.pk])).status_code == 405
+
+
+def test_the_wordpress_tool_knows_the_flush_cache_action():
+    from apps.hosting import wp_tool
+
+    assert "flush_cache" in wp_tool.ACTIONS
+    source = wp_tool.build("flush_cache")[3]
+    assert "wp_cache_flush" in source and "litespeed_purge_all" in source

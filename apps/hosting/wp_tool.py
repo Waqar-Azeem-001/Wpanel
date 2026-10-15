@@ -10,7 +10,7 @@ import hashlib
 import json
 import secrets
 
-ACTIONS = ("inventory", "activate_plugin", "deactivate_plugin", "update_plugin", "activate_theme", "update_theme", "update_core")
+ACTIONS = ("inventory", "activate_plugin", "deactivate_plugin", "update_plugin", "activate_theme", "update_theme", "update_core", "flush_cache")
 
 PHP = r"""<?php
 /* WHPanel one-time WordPress tool. It removes itself when it starts. */
@@ -86,6 +86,15 @@ try {
         if (!is_array($updates) || !isset($updates[0]) || $updates[0]->response !== 'upgrade') { whp_finish(false, array('error' => 'WordPress is already up to date.')); }
         $r = (new Core_Upgrader(new Automatic_Upgrader_Skin()))->upgrade($updates[0]);
         if (is_wp_error($r)) { whp_finish(false, array('error' => $r->get_error_message())); }
+    } elseif ($action === 'flush_cache') {
+        // WordPress's own object cache, then the well-known page-cache plugins when they are present
+        if (function_exists('wp_cache_flush')) { wp_cache_flush(); }
+        if (function_exists('w3tc_flush_all')) { w3tc_flush_all(); }
+        if (function_exists('rocket_clean_domain')) { rocket_clean_domain(); }
+        if (function_exists('wp_cache_clear_cache')) { wp_cache_clear_cache(); }
+        if (function_exists('sg_cachepress_purge_cache')) { sg_cachepress_purge_cache(); }
+        do_action('litespeed_purge_all');
+        do_action('wpfc_clear_all_cache');
     } elseif ($action !== 'inventory') {
         whp_finish(false, array('error' => 'Unknown action.'));
     }

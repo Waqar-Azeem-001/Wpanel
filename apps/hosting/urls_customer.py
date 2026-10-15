@@ -63,6 +63,7 @@ urlpatterns = [
     path("<int:pk>/care/do/", views_care.my_hosting_care_action, name="care_action"),
     path("<int:pk>/care/traffic/", views_care.my_hosting_care_traffic, name="care_traffic"),
     path("<int:pk>/care/wordpress/", views_care.my_hosting_care_wordpress, name="care_wordpress"),
+    path("<int:pk>/cache/clear/", views_care.my_hosting_cache_clear, name="cache_clear"),
     path("<int:pk>/care/wordpress/do/", views_care.my_hosting_care_wordpress_action, name="care_wordpress_action"),
     path("<int:pk>/manage/cpanel/", views_cpanel_access.my_hosting_cpanel_access, name="cpanel_access"),
     path("<int:pk>/manage/cpanel/open/", views_cpanel_access.my_hosting_cpanel_access_open, name="cpanel_access_open"),

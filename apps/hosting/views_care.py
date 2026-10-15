@@ -121,6 +121,19 @@ def my_hosting_care_wordpress(request, pk):
 
 @require_POST
 @login_required
+def my_hosting_cache_clear(request, pk):
+    """Clear the website's caches (WordPress's own and the well-known page-cache plugins) from the dashboard's Essentials card."""
+    account = _own_account(request, pk)
+    try:
+        care_tools.wordpress_action(request.user, account, "flush_cache")
+        messages.success(request, "The cache was cleared. Your visitors get fresh pages from now on.")
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+    return redirect("hosting_customer:detail", pk=account.pk)
+
+
+@require_POST
+@login_required
 def my_hosting_care_wordpress_action(request, pk):
     account = _own_account(request, pk)
     action, target = request.POST.get("action", ""), request.POST.get("target", "")

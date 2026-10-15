@@ -17,7 +17,7 @@ from apps.core.decorators import portal_permission_required
 from apps.core.exceptions import ServiceError
 from apps.orders.models import ItemKind, OrderItem
 
-from . import admin_access, care, dashboard, domain_check, forms, services
+from . import admin_access, care, dashboard, domain_check, forms, services, site_dashboard
 from .models import HostingAccount, HostingStatus
 
 
@@ -78,6 +78,7 @@ def my_hosting_detail(request, pk):
         "domain_state": domain_check.check(account) if account.status == "active" and card["app"] is not None else None,
         "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": account.domain}),
         "usage_url": reverse("hosting_customer:usage", args=[account.pk]) if any(t["key"] == "usage" for t in tiles) else "",
+        **site_dashboard.build(request, account, card),
         "sidebar": portal.service_sidebar(request, account)})
 
 

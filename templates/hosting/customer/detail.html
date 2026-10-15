@@ -45,6 +45,44 @@
 
 {% include "hosting/customer/_domain_note.html" %}
 
+<div class="row g-4 mb-4">
+  {% if essentials %}
+  <div class="col-lg-6">
+    <section class="card h-100" aria-labelledby="ess-title">
+      <div class="card-header"><h2 class="h6 mb-0" id="ess-title">{% trans "Essentials" %}</h2></div>
+      <ul class="essentials">
+        {% for e in essentials %}
+        <li>
+          {% if e.kind == "post" %}
+          <form method="post" action="{{ e.url }}" data-loading="{% trans 'Clearing the cache...' %}">{% csrf_token %}
+            <button type="submit" class="essential"><span class="essential-icon" aria-hidden="true"><i class="bi {{ e.icon }}"></i></span><span class="essential-text"><strong>{{ e.label }}</strong><small>{{ e.note }}</small></span></button>
+          </form>
+          {% else %}
+          <a class="essential" href="{{ e.url }}"{% if e.kind == "external" %} target="_blank" rel="noopener noreferrer"{% endif %}><span class="essential-icon" aria-hidden="true"><i class="bi {{ e.icon }}"></i></span><span class="essential-text"><strong>{{ e.label }}</strong><small>{{ e.note }}</small></span></a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+  {% endif %}
+  {% if perf %}
+  <div class="col-lg-6">
+    <section class="card h-100" aria-labelledby="perf-title">
+      <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h6 mb-0" id="perf-title">{% trans "Performance" %}</h2><a class="small" href="{{ perf_url }}">{% trans "Run a test" %}</a></div>
+      <div class="card-body">
+        <div class="perf-scores">
+          <div class="perf-score is-{% if perf.desktop %}{{ perf.desktop.band }}{% else %}none{% endif %}"><span class="perf-ring">{% if perf.desktop %}{{ perf.desktop.score }}{% else %}&ndash;{% endif %}</span><span class="perf-label"><i class="bi bi-display" aria-hidden="true"></i> {% trans "Desktop" %}</span></div>
+          <div class="perf-score is-{% if perf.mobile %}{{ perf.mobile.band }}{% else %}none{% endif %}"><span class="perf-ring">{% if perf.mobile %}{{ perf.mobile.score }}{% else %}&ndash;{% endif %}</span><span class="perf-label"><i class="bi bi-phone" aria-hidden="true"></i> {% trans "Mobile" %}</span></div>
+        </div>
+        {% if perf.server %}<p class="text-secondary small mt-3 mb-0">{% blocktrans with fb=perf.server.first_byte_ms total=perf.server.total_ms %}Last speed check: first byte in {{ fb }} ms, page in {{ total }} ms.{% endblocktrans %}</p>
+        {% elif not perf.desktop and not perf.mobile %}<p class="text-secondary small mt-3 mb-0">{% trans "No test yet. Run one to see how fast your website is on desktop and on a phone." %}</p>{% endif %}
+      </div>
+    </section>
+  </div>
+  {% endif %}
+</div>
+
 {% if care_rows %}
 <section class="ws-block" aria-labelledby="care-title">
   <div class="ws-block-head"><h2 id="care-title">{% trans "Website care" %}</h2><a href="{% url 'hosting_customer:care' account.pk %}">{% trans "Open" %}</a></div>
@@ -86,6 +124,10 @@
           {% include "hosting/customer/_meter.html" with label=_("Disk") meter=card.disk %}
           {% include "hosting/customer/_meter.html" with label=_("Bandwidth") meter=card.bandwidth %}
         </div>
+        {% if plan_use %}<ul class="plan-use">
+          {% for r in plan_use %}<li><span>{{ r.label }}</span><strong>{{ r.used }}{% if r.unit %} {{ r.unit }}{% endif %}{% if r.limit %} / {{ r.limit }}{% if r.unit %} {{ r.unit }}{% endif %}{% else %} <small class="text-secondary fw-normal">{% trans "no limit" %}</small>{% endif %}</strong>
+            {% if r.percent is not None %}<progress class="usage-meter{% if r.state != 'ok' %} is-warning{% endif %}" max="100" value="{{ r.percent }}" aria-label="{{ r.label }}">{{ r.percent }}%</progress>{% endif %}</li>{% endfor %}
+        </ul>{% endif %}
         <dl class="row mb-0 small">
           <dt class="col-5 text-secondary fw-normal">{% trans "SSL" %}</dt>
           <dd class="col-7">{% if card.ssl %}{% if card.ssl.active %}<i class="bi bi-shield-lock-fill text-success" aria-hidden="true"></i> {% trans "Active" %}{% else %}<i class="bi bi-shield-exclamation text-warning" aria-hidden="true"></i> {% trans "Not active" %}{% endif %}{% else %}<span class="text-secondary">{% trans "Not reported" %}</span>{% endif %}</dd>
