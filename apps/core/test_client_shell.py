@@ -270,7 +270,7 @@ def test_the_preview_plugin_trusts_only_a_request_with_the_right_host_and_token(
 
     code = preview.mu_plugin("acme-com.preview.example.net")
     assert "$whp_expect_host = 'acme-com.preview.example.net'" in code and preview.token("acme-com.preview.example.net") in code
-    assert "hash_equals" in code and "HTTP_X_WHP_PREVIEW_TOKEN" in code and "pre_option_home" in code and "$_SERVER['HTTP_HOST'] = $whp_host" in code
+    assert "hash_equals" in code and "HTTP_X_WHP_PREVIEW_TOKEN" in code and "pre_option_home" in code and "$_SERVER['HTTP_HOST'] = $whp_host" in code and "unset( $_SERVER['HTTPS'] )" in code
     assert preview.token("a.preview.example.net") != preview.token("b.preview.example.net")  # a token is good for one host only
 
 
