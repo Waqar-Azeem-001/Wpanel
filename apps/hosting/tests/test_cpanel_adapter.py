@@ -243,21 +243,108 @@ def test_grants_validate_the_privileges_and_can_revoke():
         real.grant_database_access(USER, "shop", "app", ["SELECT", "FILE"])
 
 
-def test_looking_inside_a_database_is_phpmyadmin_through_a_one_time_session():
-    answers = {**MYSQL, "create_user_session": {"url": "https://whm.test:2083/cpsess1234/3rdparty/phpMyAdmin/index.php", "expires": 1900000000}}
-    real, fake = adapter(answers)
-    access = real.database_admin_access(USER, "shop")
-    assert access.kind == "external" and access.url.startswith("https://whm.test:2083/") and access.url.endswith("goto_uri=/3rdparty/phpMyAdmin/index.php")
-    assert fake.calls[-1][:2] == ("create_user_session", {"user": USER, "service": "cpaneld", "app": "Database_phpMyAdmin"})
-    bad, _ = adapter({**MYSQL, "create_user_session": {"url": "javascript:alert(1)"}})
-    with pytest.raises(HostingError, match="usable"):
-        bad.database_admin_access(USER, "shop")
+class _Reply:
+    def __init__(self, data):
+        self._data = data
+
+    def json(self):
+        return self._data
 
 
-def test_the_table_browser_stays_unavailable_on_a_real_server():
+def _tool(real, monkeypatch, answers):
+    """Stand in for the server: writing/deleting the tool file, the address lookup and the HTTP call. ``answers`` are the JSON bodies, in order."""
+    import socket
+
+    import requests
+
+    seen = {"written": [], "deleted": [], "calls": [], "configs": []}
+    monkeypatch.setattr(real, "write_file", lambda user, path, content, overwrite=False: seen["written"].append((path, content.decode())))
+    monkeypatch.setattr(real, "delete_path", lambda user, path: seen["deleted"].append(path))
+    monkeypatch.setattr(real, "_account_domains", lambda user: ("acme.com", [], [], []))
+    monkeypatch.setattr(socket, "gethostbyname", lambda host: "198.51.100.7")
+    queue = list(answers)
+
+    def get(url, params=None, headers=None, timeout=None, allow_redirects=True):
+        seen["calls"].append((url, headers))
+        import base64
+        import json
+        import re
+        source = seen["written"][-1][1]
+        seen["configs"].append(json.loads(base64.b64decode(re.search(r"base64_decode\('([^']+)'\)", source).group(1))))
+        return _Reply(queue.pop(0))
+
+    monkeypatch.setattr(requests, "get", get)
+    return seen
+
+
+def test_tables_come_from_the_one_time_tool_with_the_wordpress_credentials(monkeypatch):
     real, _ = adapter(MYSQL)
-    for call in (lambda: real.list_tables(USER, "shop"), lambda: real.run_query(USER, "shop", "select 1"),
-                 lambda: real.browse_table(USER, "shop", "t", 0, 10), lambda: real.insert_row(USER, "shop", "t", {})):
+    seen = _tool(real, monkeypatch, [{"ok": True, "tables": [{"name": "wp_posts", "rows": 12, "size_kb": 96}]}])
+    tables = real.list_tables(USER, "acme_shop")
+    assert [(t.name, t.rows, t.size_kb) for t in tables] == [("wp_posts", 12, 96)]
+    assert seen["calls"] == [("http" + "://198.51.100.7/" + seen["written"][0][0].split("/")[-1], {"Host": "acme.com"})]
+    assert seen["configs"][0]["mode"] == "wpconfig" and seen["configs"][0]["db"] == "acme_shop"
+    assert "password" not in seen["configs"][0]  # the website's own credentials are read there, never sent
+    assert seen["deleted"] == [seen["written"][0][0]]  # tidied up even though the tool removes itself
+
+
+def test_another_database_uses_a_temporary_user_that_is_always_deleted(monkeypatch):
+    real, _ = adapter(MYSQL)
+    seen = _tool(real, monkeypatch, [{"ok": False, "code": "no_wpconfig"}, {"ok": True, "columns": [{"name": "id", "type": "int(11)", "nullable": False, "primary_key": True, "default": None}]}])
+    made, grants, dropped = [], [], []
+    monkeypatch.setattr(real, "create_database_user", lambda user, name, password: made.append((name, password)))
+    monkeypatch.setattr(real, "grant_database_access", lambda user, database, name, privileges: grants.append((database, name, privileges)))
+    monkeypatch.setattr(real, "delete_database_user", lambda user, name: dropped.append(name))
+    columns = real.describe_table(USER, "acme_shop", "orders")
+    assert [(c.name, c.type, c.nullable, c.primary_key) for c in columns] == [("id", "int(11)", False, True)]
+    assert len(made) == 1 and made[0][0].startswith("whp") and len(made[0][1]) >= 12
+    assert grants == [("acme_shop", "acme_" + made[0][0], ["ALL"])] and dropped == ["acme_" + made[0][0]]
+    assert seen["configs"][1]["mode"] == "user" and seen["configs"][1]["user"] == "acme_" + made[0][0]
+
+
+def test_the_temporary_user_is_deleted_even_when_the_tool_fails(monkeypatch):
+    real, _ = adapter(MYSQL)
+    _tool(real, monkeypatch, [{"ok": False, "code": "no_wpconfig"}, {"ok": False, "code": "connect", "error": "The database refused the connection (1045)."}])
+    dropped = []
+    monkeypatch.setattr(real, "create_database_user", lambda *a: None)
+    monkeypatch.setattr(real, "grant_database_access", lambda *a: None)
+    monkeypatch.setattr(real, "delete_database_user", lambda user, name: dropped.append(name))
+    with pytest.raises(HostingError, match="refused"):
+        real.list_tables(USER, "acme_shop")
+    assert len(dropped) == 1
+
+
+def test_rows_and_typed_sql_are_read_with_limits(monkeypatch):
+    real, _ = adapter(MYSQL)
+    seen = _tool(real, monkeypatch, [{"ok": True, "columns": ["id", "title"], "rows": [["1", "Hello"]], "total": 41},
+                                     {"ok": True, "columns": ["n"], "rows": [["3"]], "truncated": False, "affected": 0},
+                                     {"ok": True, "columns": [], "rows": [], "truncated": False, "affected": 2}])
+    page = real.browse_table(USER, "acme_shop", "wp_posts", 20, 5000)
+    assert page.columns == ["id", "title"] and page.rows == [["1", "Hello"]] and page.total == 41 and page.key_columns == []
+    assert seen["configs"][0]["offset"] == 20 and seen["configs"][0]["limit"] == 100  # never more than a page of 100
+    result = real.run_query(USER, "acme_shop", "SELECT COUNT(*) AS n FROM wp_posts;")
+    assert result.columns == ["n"] and result.rows == [["3"]] and seen["configs"][1]["sql"] == "SELECT COUNT(*) AS n FROM wp_posts"
+    changed = real.run_query(USER, "acme_shop", "UPDATE wp_options SET option_value = 'x' WHERE option_id = 0")
+    assert changed.affected == 2 and "2 row(s)" in changed.message
+    with pytest.raises(HostingError, match="one statement"):
+        real.run_query(USER, "acme_shop", "SELECT 1; DROP TABLE wp_posts")
+    with pytest.raises(HostingError, match="Type one SQL"):
+        real.run_query(USER, "acme_shop", "  ;  ")
+
+
+def test_the_tool_checks_its_token_removes_itself_and_whitelists_tables():
+    from apps.hosting.adapters import cpanel_dbtool
+
+    name, token, source = cpanel_dbtool._build({"mode": "wpconfig", "db": "x", "action": "tables"})
+    assert name.startswith("whp-db-") and token not in source  # only the hash is in the file
+    assert "hash_equals" in source and "@unlink(__FILE__)" in source and "in_array($table, $names, true)" in source
+    assert "str_replace('`', '``'" in source
+
+
+def test_database_browsing_is_whpanels_own_and_row_editing_is_not_offered(monkeypatch):
+    real, _ = adapter(MYSQL)
+    assert real.database_admin_access(USER, "acme_shop").kind == "embedded"
+    for call in (lambda: real.insert_row(USER, "shop", "t", {}), lambda: real.update_row(USER, "shop", "t", {}, {}), lambda: real.delete_row(USER, "shop", "t", {})):
         with pytest.raises(CapabilityNotSupported):
             call()
 
@@ -417,7 +504,7 @@ def test_the_gateway_turns_an_unsupported_cpanel_operation_into_a_clear_501(monk
     assert control.capabilities_for(account) == ["account", "databases", "dns", "usage"] or set(control.capabilities_for(account)) == {"account", "databases", "dns", "usage"}
     assert [d.name for d in control.perform(owner, account, "databases", "list_databases")] == ["acme_shop"]
     with pytest.raises(ServiceError) as unsupported:
-        control.perform(owner, account, "databases", "list_tables", "acme_shop")
+        control.perform(owner, account, "databases", "insert_row", "acme_shop", "t", {"a": "1"})
     assert unsupported.value.code == "capability_not_supported" and unsupported.value.status_code == 501
     with pytest.raises(ServiceError):
         control.perform(owner, account, "email", "list_mailboxes")  # not enabled in this test's settings

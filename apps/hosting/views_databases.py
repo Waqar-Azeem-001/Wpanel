@@ -55,10 +55,8 @@ def my_hosting_databases(request, pk):
     total_mb = round(sum(d.size_mb or 0 for d in databases), 1)
     biggest = max([d.size_mb or 0 for d in databases] or [0]) or 1
     usage = [{"name": d.name, "size_mb": d.size_mb, "percent": round((d.size_mb or 0) * 100 / biggest)} for d in databases]
-    # Which manager the "Browse data" button leads to, without making a sign-in session just to find out: a real server has phpMyAdmin, the demo has WHPanel's own browser.
-    admin_kind = ""
-    if databases and account.server is not None:
-        admin_kind = "embedded" if account.server.kind == "demo" else "external"
+    # The "Browse data" button leads to WHPanel's own table browser on every server (a provider-supplied manager is followed when the adapter says "external" at open time).
+    admin_kind = "embedded" if databases else ""
     return render(request, "hosting/customer/databases.html", {
         "account": account, "sidebar": sidebar, "limits": limits, "databases": databases, "users": users,
         "grants": grants, "privileges": DATABASE_PRIVILEGES, "total_mb": total_mb, "usage": usage,

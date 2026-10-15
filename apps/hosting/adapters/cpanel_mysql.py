@@ -1,15 +1,14 @@
-"""MySQL databases on a cPanel server, through UAPI's ``Mysql`` module. Looking inside a database (tables, rows, SQL) is not offered here."""
-from urllib.parse import urlsplit
-
+"""MySQL databases on a cPanel server, through UAPI's ``Mysql`` module. Looking inside a database (tables, rows, typed SQL) is ``cpanel_dbtool``; editing single rows is not offered."""
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabasesCapability, DatabaseUserInfo)
 from .cpanel_api import CpanelApi, plan_limit
+from .cpanel_dbtool import CpanelDbTool
 
 PRIVILEGES = {"SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER", "INDEX", "REFERENCES", "LOCK TABLES",
               "CREATE TEMPORARY TABLES", "CREATE ROUTINE", "ALTER ROUTINE", "EXECUTE", "CREATE VIEW", "SHOW VIEW", "TRIGGER", "EVENT"}
 
 
-class CpanelMysql(CpanelApi, DatabasesCapability):
+class CpanelMysql(CpanelDbTool, CpanelApi, DatabasesCapability):
     def _prefix(self, user):
         restrictions = self._remember(("restrictions", user), lambda: self._uapi(user, "Mysql", "get_restrictions") or {})
         return str(restrictions.get("prefix") or f"{user}_")
@@ -81,29 +80,10 @@ class CpanelMysql(CpanelApi, DatabasesCapability):
                 grants.append(DatabaseGrant(user=user.name, database=database, privileges=[str(p) for p in got]))
         return grants
 
-    # Looking inside a database is phpMyAdmin's job: WHM makes a short-lived, single-use sign-in for this account's phpMyAdmin and the browser is sent there.
-    # No password is involved and the address is never logged or shown; WHPanel's own table browser stays for providers without phpMyAdmin.
+    # Looking inside a database is WHPanel's own table browser, served by a one-time tool on the server (see cpanel_dbtool.py): tables, columns, rows and typed SQL.
+    # phpMyAdmin's one-time session is not used because it depends on a temporary MySQL user that the server has to create itself.
     def database_admin_access(self, username, database):
-        data = (self._call("create_user_session", {"user": username, "service": "cpaneld", "app": "Database_phpMyAdmin"}).get("data") or {})
-        url = str(data.get("url") or "")
-        parts = urlsplit(url)
-        if parts.scheme not in ("http", "https") or not parts.netloc:
-            raise HostingError("The server did not give a usable phpMyAdmin sign-in link.")
-        if "goto_uri=" not in parts.query:  # the session link lands on cPanel's home; this sends it on to phpMyAdmin
-            url += ("&" if parts.query else "?") + "goto_uri=/3rdparty/phpMyAdmin/index.php"
-        return DatabaseAdminAccess(kind="external", url=url)
-
-    def list_tables(self, username, database):
-        self._unsupported("Browsing tables")
-
-    def browse_table(self, username, database, table, offset, limit):
-        self._unsupported("Browsing tables")
-
-    def describe_table(self, username, database, table):
-        self._unsupported("Browsing tables")
-
-    def run_query(self, username, database, sql):
-        self._unsupported("Running SQL")
+        return DatabaseAdminAccess(kind="embedded")
 
     def insert_row(self, username, database, table, values):
         self._unsupported("Editing rows")
