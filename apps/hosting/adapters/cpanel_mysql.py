@@ -1,4 +1,4 @@
-"""MySQL databases on a cPanel server, through UAPI's ``Mysql`` module. Looking inside a database (tables, rows, typed SQL) is ``cpanel_dbtool``; editing single rows is not offered."""
+"""MySQL databases on a cPanel server, through UAPI's ``Mysql`` module. Looking inside a database (tables, rows, typed SQL, single-row changes) is ``cpanel_dbtool``."""
 from .base import HostingError
 from .capabilities import (DatabaseAdminAccess, DatabaseGrant, DatabaseInfo, DatabaseLimits, DatabasesCapability, DatabaseUserInfo)
 from .cpanel_api import CpanelApi, plan_limit
@@ -85,11 +85,3 @@ class CpanelMysql(CpanelDbTool, CpanelApi, DatabasesCapability):
     def database_admin_access(self, username, database):
         return DatabaseAdminAccess(kind="embedded")
 
-    def insert_row(self, username, database, table, values):
-        self._unsupported("Editing rows")
-
-    def update_row(self, username, database, table, key, values):
-        self._unsupported("Editing rows")
-
-    def delete_row(self, username, database, table, key):
-        self._unsupported("Editing rows")

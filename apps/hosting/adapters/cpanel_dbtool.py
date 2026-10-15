@@ -6,7 +6,7 @@ called once with a secret token and removing itself first. It connects from insi
 It connects with the WordPress website's own credentials when the database is that website's (read from its ``wp-config.php`` there, so no new user is needed). For any other
 database a temporary MySQL user is made, given access to just that database and deleted again straight after, whatever happens.
 
-Only reading and typed SQL are offered; changing single rows is not (the table's key columns are reported empty, so the screen offers no row editing).
+Reading, typed SQL and single-row add/change/delete are offered. Rows are changed with prepared statements, only by the table's primary key, and only on columns that exist.
 """
 import base64
 import hashlib
@@ -125,7 +125,61 @@ if ($action === 'browse') {
     foreach ($res->fetch_fields() as $f) { $cols[] = $f->name; }
     $rows = array();
     while ($row = $res->fetch_row()) { $rows[] = array_map('whp_cell', $row); }
-    whp_out(array('ok' => true, 'columns' => $cols, 'rows' => $rows, 'total' => $total));
+    $keys = array();
+    $kres = whp_q($db, 'SHOW KEYS FROM ' . $t . " WHERE Key_name = 'PRIMARY'");
+    while ($k = $kres->fetch_assoc()) { $keys[] = $k['Column_name']; }
+    whp_out(array('ok' => true, 'columns' => $cols, 'rows' => $rows, 'total' => $total, 'keys' => $keys));
+}
+
+if ($action === 'insert' || $action === 'update' || $action === 'delete') {
+    $cols = array();
+    $pk = array();
+    $res = whp_q($db, 'SHOW COLUMNS FROM ' . $t);
+    while ($r = $res->fetch_assoc()) { $cols[$r['Field']] = $r; if ($r['Key'] === 'PRI') { $pk[] = $r['Field']; } }
+    $values = (isset($cfg['values']) && is_array($cfg['values'])) ? $cfg['values'] : array();
+    $key = (isset($cfg['key']) && is_array($cfg['key'])) ? $cfg['key'] : array();
+    $clean = array();
+    foreach ($values as $name => $raw) {
+        if (!isset($cols[$name])) { whp_out(array('ok' => false, 'error' => 'That column does not exist.')); }
+        $texty = (bool)preg_match('/^(char|varchar|tinytext|text|mediumtext|longtext|enum|set|json|binary|varbinary|tinyblob|blob|mediumblob|longblob)/i', $cols[$name]['Type']);
+        $clean[$name] = ($raw === null || ($raw === '' && !$texty)) ? null : (string)$raw;
+    }
+    $id = function ($n) { return '`' . str_replace('`', '``', $n) . '`'; };
+    $params = array();
+    if ($action === 'insert') {
+        if (!$clean) { whp_out(array('ok' => false, 'error' => 'Fill in at least one value.')); }
+        $sql = 'INSERT INTO ' . $t . ' (' . implode(', ', array_map($id, array_keys($clean))) . ') VALUES (' . implode(', ', array_fill(0, count($clean), '?')) . ')';
+        $params = array_values($clean);
+    } else {
+        if (!$pk) { whp_out(array('ok' => false, 'error' => 'This table has no primary key, so its rows cannot be edited one by one. Use SQL.')); }
+        $have = array_keys($key);
+        $want = $pk;
+        sort($have);
+        sort($want);
+        if ($have !== $want) { whp_out(array('ok' => false, 'error' => 'That row could not be identified.')); }
+        $where = array();
+        $keyValues = array();
+        foreach ($pk as $name) { $where[] = $id($name) . ' = ?'; $keyValues[] = (string)$key[$name]; }
+        if ($action === 'update') {
+            if (!$clean) { whp_out(array('ok' => false, 'error' => 'Nothing to change.')); }
+            $sets = array();
+            foreach (array_keys($clean) as $name) { $sets[] = $id($name) . ' = ?'; }
+            $sql = 'UPDATE ' . $t . ' SET ' . implode(', ', $sets) . ' WHERE ' . implode(' AND ', $where) . ' LIMIT 1';
+            $params = array_merge(array_values($clean), $keyValues);
+        } else {
+            $sql = 'DELETE FROM ' . $t . ' WHERE ' . implode(' AND ', $where) . ' LIMIT 1';
+            $params = $keyValues;
+        }
+    }
+    $stmt = $db->prepare($sql);
+    if (!$stmt) { whp_out(array('ok' => false, 'error' => $db->error)); }
+    if ($params) {
+        $refs = array(str_repeat('s', count($params)));
+        foreach ($params as $i => $v) { $refs[] = &$params[$i]; }
+        call_user_func_array(array($stmt, 'bind_param'), $refs);
+    }
+    if (!$stmt->execute()) { whp_out(array('ok' => false, 'error' => $stmt->error)); }
+    whp_out(array('ok' => true, 'affected' => (int)$stmt->affected_rows));
 }
 
 whp_out(array('ok' => false, 'error' => 'Unknown action.'));
@@ -212,7 +266,23 @@ class CpanelDbTool:
 
     def browse_table(self, username, database, table, offset, limit):
         data = self._dbtool(username, database, action="browse", table=table, offset=max(0, int(offset)), limit=max(1, min(int(limit), PAGE_LIMIT)))
-        return TableData(columns=list(data.get("columns", [])), rows=[list(r) for r in data.get("rows", [])], total=int(data.get("total") or 0), key_columns=[])
+        return TableData(columns=list(data.get("columns", [])), rows=[list(r) for r in data.get("rows", [])], total=int(data.get("total") or 0),
+                         key_columns=[str(k) for k in data.get("keys", [])])
+
+    def insert_row(self, username, database, table, values):
+        if not values:
+            raise HostingError("Fill in at least one value.")
+        self._dbtool(username, database, action="insert", table=table, values=dict(values))
+
+    def update_row(self, username, database, table, key, values):
+        data = self._dbtool(username, database, action="update", table=table, key=dict(key), values=dict(values))
+        if int(data.get("affected") or 0) == 0 and not values:
+            raise HostingError("Nothing to change.")
+
+    def delete_row(self, username, database, table, key):
+        data = self._dbtool(username, database, action="delete", table=table, key=dict(key))
+        if int(data.get("affected") or 0) == 0:
+            raise HostingError("That row no longer exists.")
 
     def run_query(self, username, database, sql):
         sql = (sql or "").strip().rstrip(";").strip()

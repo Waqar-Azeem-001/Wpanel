@@ -341,12 +341,31 @@ def test_the_tool_checks_its_token_removes_itself_and_whitelists_tables():
     assert "str_replace('`', '``'" in source
 
 
-def test_database_browsing_is_whpanels_own_and_row_editing_is_not_offered(monkeypatch):
+def test_database_browsing_is_whpanels_own(monkeypatch):
     real, _ = adapter(MYSQL)
     assert real.database_admin_access(USER, "acme_shop").kind == "embedded"
-    for call in (lambda: real.insert_row(USER, "shop", "t", {}), lambda: real.update_row(USER, "shop", "t", {}, {}), lambda: real.delete_row(USER, "shop", "t", {})):
-        with pytest.raises(CapabilityNotSupported):
-            call()
+
+
+def test_single_rows_are_added_changed_and_deleted_by_the_primary_key(monkeypatch):
+    real, _ = adapter(MYSQL)
+    seen = _tool(real, monkeypatch, [{"ok": True, "affected": 1}, {"ok": True, "affected": 1}, {"ok": True, "affected": 1}, {"ok": True, "affected": 0}])
+    real.insert_row(USER, "acme_shop", "wp_links", {"link_url": "x", "link_name": ""})
+    real.update_row(USER, "acme_shop", "wp_links", {"link_id": "7"}, {"link_name": "New"})
+    real.delete_row(USER, "acme_shop", "wp_links", {"link_id": "7"})
+    assert [c["action"] for c in seen["configs"]] == ["insert", "update", "delete"]
+    assert seen["configs"][1]["key"] == {"link_id": "7"} and seen["configs"][1]["values"] == {"link_name": "New"}
+    with pytest.raises(HostingError, match="no longer exists"):
+        real.delete_row(USER, "acme_shop", "wp_links", {"link_id": "999"})
+    with pytest.raises(HostingError, match="at least one"):
+        real.insert_row(USER, "acme_shop", "wp_links", {})
+
+
+def test_row_changes_are_prepared_statements_on_checked_columns_and_keys():
+    from apps.hosting.adapters import cpanel_dbtool
+
+    source = cpanel_dbtool._build({"mode": "wpconfig", "db": "x", "action": "update"})[2]
+    assert "$db->prepare($sql)" in source and "bind_param" in source and "That column does not exist." in source
+    assert "That row could not be identified." in source and "LIMIT 1" in source
 
 
 # --- Email ----------------------------------------------------------------------------------------------------------------
@@ -482,7 +501,7 @@ def test_directives_may_come_back_as_a_mapping_and_extensions_are_not_offered():
 # --- Through the gateway --------------------------------------------------------------------------------------------------
 
 @pytest.mark.django_db
-@override_settings(HOSTING_CPANEL_CAPABILITIES=["dns", "databases"])
+@override_settings(HOSTING_CPANEL_CAPABILITIES=["dns", "databases", "backups"])
 def test_the_gateway_turns_an_unsupported_cpanel_operation_into_a_clear_501(monkeypatch, staff):
     from apps.accounts.roles import Role
     from apps.clients import services as client_services
@@ -501,10 +520,10 @@ def test_the_gateway_turns_an_unsupported_cpanel_operation_into_a_clear_501(monk
     fake = FakeWhm({**MYSQL, ("uapi_cpanel", "DomainInfo::domains_data"): DOMAINS})
     monkeypatch.setattr(WhmApiAdapter, "_call", lambda self, function, params=None, **kw: fake(function, params, sensitive=kw.get("sensitive", False)))
     owner = client.contacts.get().user
-    assert control.capabilities_for(account) == ["account", "databases", "dns", "usage"] or set(control.capabilities_for(account)) == {"account", "databases", "dns", "usage"}
+    assert set(control.capabilities_for(account)) == {"account", "backups", "databases", "dns", "usage"}
     assert [d.name for d in control.perform(owner, account, "databases", "list_databases")] == ["acme_shop"]
     with pytest.raises(ServiceError) as unsupported:
-        control.perform(owner, account, "databases", "insert_row", "acme_shop", "t", {"a": "1"})
+        control.perform(owner, account, "backups", "verify_backup", "any-backup")
     assert unsupported.value.code == "capability_not_supported" and unsupported.value.status_code == 501
     with pytest.raises(ServiceError):
         control.perform(owner, account, "email", "list_mailboxes")  # not enabled in this test's settings
