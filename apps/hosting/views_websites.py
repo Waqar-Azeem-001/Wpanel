@@ -15,7 +15,7 @@ from apps.core.exceptions import ServiceError
 
 from urllib.parse import urlencode, urlsplit
 
-from . import dashboard, domain_check, plan_sites, preview, services, site_apps, staging
+from . import dashboard, domain_check, plan_sites, preview, services, site_apps, site_copy, staging
 from .models import HostingAccount, HostingStatus
 from .views import _own_account
 
@@ -43,7 +43,9 @@ def websites(request):
             rows.append({"account": account, "app": site["app"], "domain": name, "extra": True, "plan": card["plan"], "needs_setup": site["app"] is None,
                          "manage_url": reverse("hosting_customer:site_setup_status", args=[account.pk, name]) if site["app"] else reverse("hosting_customer:site_setup", args=[account.pk, name]),
                          "setup_url": reverse("hosting_customer:site_setup", args=[account.pk, name]), "delete_url": reverse("hosting_customer:site_remove", args=[account.pk, name]),
-                         "staging": None, "can_stage": False, "visit_url": site["url"], "upgrade_url": card.get("upgrade_url", "")})
+                         "staging": staging.current(account, name) if site["app"] is not None else None, "staging_url": reverse("hosting_customer:site_staging", args=[account.pk, name]),
+                         "can_stage": site["app"] is not None and site["app"].kind == "wordpress" and site["app"].state == "ready",
+                         "visit_url": site["url"], "upgrade_url": card.get("upgrade_url", "")})
         groups.append({"account": account, "plan": card["plan"], "state": state, "rows": rows, "plan_url": reverse("hosting_customer:plan", args=[account.pk]),
                        "expires_at": account.expires_at})
     return render(request, "hosting/customer/websites.html", {"groups": groups, "sidebar": []})
@@ -141,40 +143,74 @@ def site_delete(request, pk, domain=""):
             return redirect("hosting_customer:plan", pk=account.pk) if domain else redirect("hosting_customer:websites")
     return render(request, "hosting/customer/site_delete.html", {
         "account": account, "app": app, "site_domain": name, "entries": site_apps.folder_entries(request.user, account, domain)[:30],
-        "staging": staging.current(account) if app and not domain else None,
+        "staging": staging.current(account, domain) if app else None,
         "sidebar": portal.service_sidebar(request, account),
         "backups_url": reverse("hosting_customer:section", args=[account.pk, "backups"])})
 
 
-@login_required
-def staging_page(request, pk):
+def _staged_site(request, pk, domain):
+    """(account, domain) of the website to stage: the plan's own ("") or a domain added to the plan (404 for any other name)."""
     account = _own_account(request, pk)
-    stage = staging.poll(request.user, account)
-    reason = staging.unavailable_reason(account)
+    domain = "" if (domain or account.domain).lower() == account.domain.lower() else domain.lower()
+    if domain and domain not in {s["domain"] for s in plan_sites.summary(request.user, account)["sites"]}:
+        raise Http404
+    return account, domain
+
+
+def _staging_address(account, domain):
+    return reverse("hosting_customer:site_staging", args=[account.pk, domain]) if domain else reverse("hosting_customer:staging", args=[account.pk])
+
+
+@login_required
+def staging_page(request, pk, domain=""):
+    account, domain = _staged_site(request, pk, domain)
+    stage = staging.poll(request.user, account, domain)
+    reason = staging.unavailable_reason(account, domain)
+    action = reverse("hosting_customer:site_staging_action", args=[account.pk, domain]) if domain else reverse("hosting_customer:staging_action", args=[account.pk])
     return render(request, "hosting/customer/staging.html", {
-        "account": account, "staging": stage, "reason": reason, "domain": staging.staging_domain(account), "sidebar": portal.service_sidebar(request, account),
-        "action_url": reverse("hosting_customer:staging_action", args=[account.pk]), "live_url": account.site_url})
+        "account": account, "staging": stage, "reason": reason, "domain": staging.staging_domain(account, domain), "sidebar": portal.service_sidebar(request, account),
+        "site_domain": site_apps.site_domain(account, domain), "visit_url": site_apps.site_url(account, domain),
+        "action_url": action, "live_url": site_apps.site_url(account, domain)})
+
+
+@login_required
+def copy_page(request, pk, domain=""):
+    """Copy Website: a WordPress website of the plan copied onto another domain of the plan that has no website yet."""
+    account, domain = _staged_site(request, pk, domain)
+    if request.method == "POST":
+        try:
+            made = site_copy.copy(request.user, account, request.POST.get("target", ""), request=request, domain=domain)
+        except ServiceError as exc:
+            messages.error(request, exc.message)
+        else:
+            messages.success(request, f"{made.site_domain} is being created as a copy of {site_apps.site_domain(account, domain)}." if made.state == "installing" else f"{made.site_domain} is ready.")
+            return redirect("hosting_customer:site_setup_status", pk=account.pk, domain=made.domain)
+    reason = site_copy.unavailable_reason(account, domain)
+    return render(request, "hosting/customer/copy.html", {
+        "account": account, "site_domain": site_apps.site_domain(account, domain), "visit_url": site_apps.site_url(account, domain), "reason": reason,
+        "targets": [] if reason else site_copy.targets(request.user, account, domain), "sidebar": portal.service_sidebar(request, account),
+        "add_url": reverse("hosting_customer:site_add", args=[account.pk])})
 
 
 @require_POST
 @login_required
-def staging_action(request, pk):
-    account = _own_account(request, pk)
+def staging_action(request, pk, domain=""):
+    account, domain = _staged_site(request, pk, domain)
     action = request.POST.get("action", "")
     try:
         if action == "create":
-            result = staging.create(request.user, account, request=request)
+            result = staging.create(request.user, account, request=request, domain=domain)
             messages.success(request, "The staging website is ready." if result.state == "ready" else "The staging website is being created. This page updates when it is ready.")
         elif action == "push":
             if request.POST.get("confirm", "").strip().lower() != "publish":
                 raise ServiceError("Type PUBLISH to confirm.", code="confirm_mismatch")
-            result = staging.push(request.user, account, acknowledged=request.POST.get("own_backup") == "1", request=request)
+            result = staging.push(request.user, account, acknowledged=request.POST.get("own_backup") == "1", request=request, domain=domain)
             messages.success(request, "The staging website was published to your live website." if result.state == "ready" else "Publishing has started. This page updates when it is done.")
         elif action == "delete":
-            staging.delete(request.user, account, request=request)
+            staging.delete(request.user, account, request=request, domain=domain)
             messages.success(request, "The staging website was deleted.")
         else:
             raise ServiceError("That action is not available.", code="unknown_action")
     except ServiceError as exc:
         messages.error(request, exc.message)
-    return redirect("hosting_customer:staging", pk=account.pk)
+    return redirect(_staging_address(account, domain))

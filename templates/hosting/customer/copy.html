@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Copy website" %} · {{ site_domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="page-head"><h1>{% trans "Copy website" %}</h1>
+  <p class="page-sub">{% blocktrans %}Make a new WordPress website from {{ site_domain }}: its files and database are copied to another domain of your plan. {{ site_domain }} itself is not changed.{% endblocktrans %}</p></div>
+
+<div class="care-stack">
+  <section class="care-card">
+    {% if reason %}
+    <p class="care-empty is-bad mt-0">{{ reason }}</p>
+    {% elif targets %}
+    <div class="care-head">
+      <span class="care-icon" aria-hidden="true"><i class="bi bi-files"></i></span>
+      <div class="care-title"><h2>{% trans "Where should the copy go?" %}</h2>
+        <p>{% trans "Choose a domain of your plan that has no website yet. Its folder must be empty." %}</p></div>
+    </div>
+    <form method="post" class="care-options" data-loading="{% trans 'Starting the copy...' %}">{% csrf_token %}
+      <label for="copy-target">{% trans "Copy to" %}</label>
+      <select class="form-select" id="copy-target" name="target">{% for t in targets %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
+      <div><button class="btn btn-primary" type="submit">{% trans "Copy website" %}</button></div>
+    </form>
+    <p class="care-foot">{% trans "Copying a large website can take a few minutes; the next page shows how it is going." %}</p>
+    {% else %}
+    <p class="care-empty mt-0">{% trans "Every domain of your plan already has a website. Add another domain to the plan first, then come back here to copy this website onto it." %}</p>
+    <a class="btn btn-primary" href="{{ add_url }}">{% trans "Add a website to the plan" %}</a>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

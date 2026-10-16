@@ -185,7 +185,7 @@ try {
     }
     $out->query('SET FOREIGN_KEY_CHECKS = 1');
 
-    $public = $push ? $keepPublic : '0';
+    $public = $push ? $keepPublic : (empty($whp['index']) ? '0' : null);  // a staging copy asks search engines to stay away; a copy meant to live keeps the source's choice
     if ($public !== null) {
         $out->query("UPDATE `" . $prefix . "options` SET option_value = '" . $out->real_escape_string($public) . "' WHERE option_name = 'blog_public'");
     }
@@ -206,14 +206,14 @@ try {
 """
 
 
-def build(*, action, src, dst, from_url, to_url, exclude=(), dst_db=None):
+def build(*, action, src, dst, from_url, to_url, exclude=(), dst_db=None, index=False):
     """Returns (file name, result file name, token, PHP source). ``src`` and ``dst`` are folders relative to where the file is written."""
     if action not in ("create", "push"):
         raise ValueError("unknown action")
     token = secrets.token_urlsafe(32)
     suffix = secrets.token_hex(8)
     file_name, result_name = f"whp-clone-{suffix}.php", f"whp-clone-{suffix}.json"
-    config = {"action": action, "src": src, "dst": dst, "from_url": from_url, "to_url": to_url, "exclude": list(exclude), "dst_db": dst_db or {}}
+    config = {"action": action, "src": src, "dst": dst, "from_url": from_url, "to_url": to_url, "exclude": list(exclude), "dst_db": dst_db or {}, "index": bool(index)}
     blob = base64.b64encode(json.dumps(config).encode()).decode()
     source = PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__CONFIG__", blob)
     return file_name, result_name, token, source

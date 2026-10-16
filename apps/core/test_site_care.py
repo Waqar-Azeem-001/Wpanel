@@ -702,3 +702,72 @@ def test_a_website_whose_installation_failed_can_be_deleted(world, owner, accoun
     assert reverse("hosting_customer:site_delete", args=[account.pk]) in page
     site_apps.delete_website(owner, account, account.domain)
     assert not WebsiteApp.objects.filter(account=account).exists()
+
+
+def test_an_added_domain_has_its_own_staging_copy_next_to_the_plans(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import staging
+    from apps.hosting.models import StagingSite
+
+    _wordpress(account)
+    control.perform(owner, account, Capability.DOMAINS, "add_domain", "shop.example-test.com", "addon", "public_html/shop.example-test.com")
+    WebsiteApp.objects.create(account=account, domain="shop.example-test.com", kind="wordpress", state="ready", title="Shop 2", admin_user="a", admin_email="a@gmail.example.com")
+    calls = []
+
+    def reach(acct, path, token, purpose="", domain=""):
+        calls.append(domain)
+        return {"ok": True, "files": 3, "tables": 3, "rows": 9}
+
+    monkeypatch.setattr(site_apps, "reach", reach)
+    main = staging.create(owner, account)
+    other = staging.create(owner, account, domain="shop.example-test.com")
+    assert main.domain == "staging." + account.domain.lower() and other.domain == "staging.shop.example-test.com"
+    assert other.site_domain == "shop.example-test.com" and other.docroot != main.docroot and calls == ["", "shop.example-test.com"]
+    assert staging.current(account, "shop.example-test.com").pk == other.pk and staging.current(account).pk == main.pk
+    with pytest.raises(ServiceError):
+        staging.create(owner, account, domain="shop.example-test.com")
+    assert staging.push(owner, account, acknowledged=True, domain="shop.example-test.com").pushed_at is not None
+    staging.delete(owner, account, domain="shop.example-test.com")
+    assert list(StagingSite.objects.filter(account=account)) == [main]
+    client = browser(owner)
+    assert client.get(reverse("hosting_customer:site_staging", args=[account.pk, "shop.example-test.com"])).status_code == 200
+    assert client.get(reverse("hosting_customer:site_staging", args=[account.pk, "nobody.example-test.org"])).status_code == 404
+
+
+def test_a_website_is_copied_onto_an_empty_domain_of_the_plan(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import site_copy
+
+    _wordpress(account)
+    control.perform(owner, account, Capability.DOMAINS, "add_domain", "clone.example-test.com", "addon", "public_html/clone.example-test.com")
+    seen = []
+
+    def reach(acct, path, token, purpose="", domain=""):
+        seen.append((purpose, domain))
+        return {"ok": True, "files": 5, "tables": 5, "rows": 50}
+
+    monkeypatch.setattr(site_apps, "reach", reach)
+    assert "clone.example-test.com" in site_copy.targets(owner, account)
+    with pytest.raises(ServiceError) as err:
+        site_copy.copy(owner, account, "somewhere.example-test.org")
+    assert err.value.code == "bad_target"
+    made = site_copy.copy(owner, account, "clone.example-test.com")
+    assert made.state == "ready" and made.kind == "wordpress" and made.domain == "clone.example-test.com" and made.db_name and made.admin_url.endswith("/wp-admin/")
+    assert seen == [("to copy the website", "clone.example-test.com")]
+    assert not [e.name for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html/clone.example-test.com") if e.name.startswith("whp-clone-")]
+    assert "clone.example-test.com" not in site_copy.targets(owner, account)  # it now has a website
+    client = browser(owner)
+    assert client.get(reverse("hosting_customer:copy", args=[account.pk])).status_code == 200
+    assert client.get(reverse("hosting_customer:site_copy", args=[account.pk, "clone.example-test.com"])).status_code == 200
+
+
+def test_a_failed_copy_leaves_nothing_behind(world, owner, account, monkeypatch):  # noqa: F811
+    from apps.hosting import site_copy
+    from apps.hosting.models import AppState
+
+    _wordpress(account)
+    control.perform(owner, account, Capability.DOMAINS, "add_domain", "bad.example-test.com", "addon", "public_html/bad.example-test.com")
+    before = {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")}
+    monkeypatch.setattr(site_apps, "reach", lambda *a, **k: {"ok": False, "error": "disk full"})
+    made = site_copy.copy(owner, account, "bad.example-test.com")
+    assert made.state == AppState.FAILED and "disk full" in made.error
+    assert {d.name for d in control.perform(owner, account, Capability.DATABASES, "list_databases")} == before
+    assert not [e.name for e in control.perform(owner, account, Capability.FILES, "list_files", "public_html/bad.example-test.com") if e.name.startswith("whp-")]

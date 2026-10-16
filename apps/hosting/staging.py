@@ -15,7 +15,7 @@ from django.utils import timezone
 from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
-from . import care, site_apps, wp_clone
+from . import care, plan_sites, site_apps, wp_clone
 from .adapters.capabilities import Capability
 from .models import AppState, StagingSite, WebsiteApp
 
@@ -23,17 +23,34 @@ TIMEOUT = timedelta(minutes=12)
 PRIVILEGES = ["select", "insert", "update", "delete", "create", "alter", "drop", "index"]
 
 
-def current(account):
-    return StagingSite.objects.filter(account=account).first()
+def _own(account, domain):
+    """"" for the plan's own website, else the added domain's name."""
+    domain = (domain or "").strip().lower()
+    return "" if domain == account.domain.lower() else domain
 
 
-def staging_domain(account):
-    return "staging." + account.domain.lower()
+def current(account, domain=""):
+    return StagingSite.objects.filter(account=account, site_domain=_own(account, domain)).first()
 
 
-def unavailable_reason(account):
+def staging_domain(account, domain=""):
+    return "staging." + site_apps.site_domain(account, domain)
+
+
+def _others(account, user, live, root, domain):
+    """Folder names inside the live folder that are not part of this website: the other websites of the plan and the other staging copies."""
+    names = set()
+    if live == "public_html":
+        names |= {s["domain"] for s in plan_sites.summary(user, account)["sites"] if s["domain"] != account.domain.lower()}
+        names |= {posixpath.basename(s.docroot) for s in StagingSite.objects.filter(account=account) if s.docroot}
+    if root.startswith(live + "/"):
+        names.add(posixpath.basename(root))
+    return sorted(n for n in names if n)
+
+
+def unavailable_reason(account, domain=""):
     """Why this website cannot have a staging copy, or "" when it can."""
-    app = WebsiteApp.objects.filter(account=account, domain="").first()
+    app = WebsiteApp.objects.filter(account=account, domain=_own(account, domain)).first()
     if app is None or app.kind != "wordpress" or app.state != AppState.READY:
         return "Staging is for WordPress websites that are installed and ready."
     try:
@@ -48,8 +65,8 @@ def unavailable_reason(account):
     return ""
 
 
-def _scheme(user, account):
-    return "https" if site_apps._ssl_active(user, account) else "http"
+def _scheme(user, account, domain=""):
+    return "https" if site_apps._ssl_active(user, account, site_apps.site_domain(account, domain)) else "http"
 
 
 def _url(scheme, host):
@@ -59,10 +76,11 @@ def _url(scheme, host):
 def _cleanup(io, account, staging, folder_made):
     """Put the account back as it was after a failed or removed staging site: the files, the database and its user, the subdomain. Each step is best effort."""
     steps = []
+    live = site_apps.docroot_path(account, staging.site_domain)
     if staging.script_ref:
-        steps.append(lambda: io.call(Capability.FILES, "delete_path", f"{site_apps.docroot_path(account)}/{staging.script_ref}"))
+        steps.append(lambda: io.call(Capability.FILES, "delete_path", f"{live}/{staging.script_ref}"))
     if staging.result_ref:
-        steps.append(lambda: io.call(Capability.FILES, "delete_path", f"{site_apps.docroot_path(account)}/{staging.result_ref}"))
+        steps.append(lambda: io.call(Capability.FILES, "delete_path", f"{live}/{staging.result_ref}"))
     if staging.made_domain:
         steps.append(lambda: io.call(Capability.DOMAINS, "remove_domain", staging.domain))
     if folder_made and staging.docroot:
@@ -78,22 +96,23 @@ def _cleanup(io, account, staging, folder_made):
             pass
 
 
-def create(user, account, request=None):
-    reason = unavailable_reason(account)
+def create(user, account, request=None, domain=""):
+    domain = _own(account, domain)
+    reason = unavailable_reason(account, domain)
     if reason:
         raise ServiceError(reason, code="not_available")
-    existing = current(account)
+    existing = current(account, domain)
     if existing is not None and existing.state != "failed":
         raise ServiceError("This website already has a staging copy.", code="exists")
     if existing is not None:
         existing.delete()
     io = care._Io(user, account)
-    live = site_apps.docroot_path(account)
-    sub = staging_domain(account)
+    live = site_apps.docroot_path(account, domain)
+    sub = staging_domain(account, domain)
     if sub in {d.name.lower() for d in io.call(Capability.DOMAINS, "list_domains")}:
         raise ServiceError(f"{sub} already exists on this hosting account, so a staging site was not created.", code="domain_exists")
-    staging = StagingSite.objects.create(account=account, domain=sub, state="creating")
-    root = "public_html/staging"
+    staging = StagingSite.objects.create(account=account, site_domain=domain, domain=sub, state="creating")
+    root = "public_html/staging" if not domain else "public_html/" + sub
     try:
         io.call(Capability.DOMAINS, "add_domain", sub, "subdomain", root, audit_metadata={"domain": sub, "purpose": "staging"})
         staging.made_domain = True
@@ -121,16 +140,16 @@ def create(user, account, request=None):
         staging.db_name, staging.db_user = db_name, db_user
         staging.save()
         io.call(Capability.DATABASES, "grant_database_access", db_name, db_user, PRIVILEGES)
-        scheme = _scheme(user, account)
+        scheme = _scheme(user, account, domain)
         file_name, result_name, token, source = wp_clone.build(
-            action="create", src=".", dst=posixpath.relpath(root, live), from_url=_url(scheme, account.domain.lower()), to_url=_url(scheme, sub),
-            exclude=[posixpath.basename(root)] if root.startswith(live + "/") else [], dst_db={"name": db_name, "user": db_user, "password": password})
+            action="create", src=".", dst=posixpath.relpath(root, live), from_url=_url(scheme, site_apps.site_domain(account, domain)), to_url=_url(scheme, sub),
+            exclude=_others(account, user, live, root, domain), dst_db={"name": db_name, "user": db_user, "password": password})
         path = f"{live}/{file_name}"
         io.call(Capability.FILES, "write_file", path, source.encode(), overwrite=False, audit_metadata={"path": path, "purpose": "one-time staging copy"})
         staging.script_ref, staging.result_ref = file_name, result_name
         staging.save()
         audit.record("hosting.staging_started", actor=user, target=account, metadata={"domain": sub}, request=request)
-        outcome = site_apps.reach(account, file_name, token, purpose="to create the staging website")
+        outcome = site_apps.reach(account, file_name, token, purpose="to create the staging website", domain=domain)
     except ServiceError as exc:
         _cleanup(io, account, staging, folder_made=True)
         staging.delete()
@@ -142,7 +161,7 @@ def create(user, account, request=None):
 
 def _apply(user, account, staging, data):
     io = care._Io(user, account)
-    live = site_apps.docroot_path(account)
+    live = site_apps.docroot_path(account, staging.site_domain)
     was_push = staging.state == "pushing"
     if data.get("ok"):
         staging.state, staging.error = "ready", ""
@@ -169,12 +188,12 @@ def _apply(user, account, staging, data):
     staging.save()
 
 
-def poll(user, account):
-    staging = current(account)
+def poll(user, account, domain=""):
+    staging = current(account, domain)
     if staging is None or staging.state not in ("creating", "pushing") or not staging.result_ref:
         return staging
     io = care._Io(user, account)
-    live = site_apps.docroot_path(account)
+    live = site_apps.docroot_path(account, staging.site_domain)
     try:
         raw = io.call(Capability.FILES, "read_file", f"{live}/{staging.result_ref}", max_bytes=20_000)
         data = json.loads(raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw))
@@ -197,8 +216,8 @@ def backup_before_push(user, account):
     return "made"
 
 
-def push(user, account, acknowledged=False, request=None):
-    staging = current(account)
+def push(user, account, acknowledged=False, request=None, domain=""):
+    staging = current(account, domain)
     if staging is None or staging.state != "ready":
         raise ServiceError("There is no staging website ready to publish.", code="not_ready")
     try:
@@ -208,18 +227,19 @@ def push(user, account, acknowledged=False, request=None):
     if outcome == "unsupported" and not acknowledged:
         raise ServiceError("This server cannot make a backup for you. Confirm that you have your own backup to publish.", code="needs_acknowledgement")
     io = care._Io(user, account)
-    live = site_apps.docroot_path(account)
-    scheme = _scheme(user, account)
+    domain = staging.site_domain
+    live = site_apps.docroot_path(account, domain)
+    scheme = _scheme(user, account, domain)
     file_name, result_name, token, source = wp_clone.build(
-        action="push", src=posixpath.relpath(staging.docroot, live), dst=".", from_url=_url(scheme, staging.domain), to_url=_url(scheme, account.domain.lower()),
-        exclude=[posixpath.basename(staging.docroot)] if staging.docroot.startswith(live + "/") else [])
+        action="push", src=posixpath.relpath(staging.docroot, live), dst=".", from_url=_url(scheme, staging.domain), to_url=_url(scheme, site_apps.site_domain(account, domain)),
+        exclude=_others(account, user, live, staging.docroot, domain))
     path = f"{live}/{file_name}"
     io.call(Capability.FILES, "write_file", path, source.encode(), overwrite=False, audit_metadata={"path": path, "purpose": "one-time publish from staging"})
     staging.state, staging.script_ref, staging.result_ref, staging.error = "pushing", file_name, result_name, ""
     staging.save()
     audit.record("hosting.staging_push_started", actor=user, target=account, metadata={"domain": staging.domain, "backup": outcome}, request=request)
     try:
-        answer = site_apps.reach(account, file_name, token, purpose="to publish the staging website")
+        answer = site_apps.reach(account, file_name, token, purpose="to publish the staging website", domain=domain)
     except ServiceError as exc:
         try:
             io.call(Capability.FILES, "delete_path", path)
@@ -233,8 +253,8 @@ def push(user, account, acknowledged=False, request=None):
     return staging
 
 
-def delete(user, account, request=None):
-    staging = current(account)
+def delete(user, account, request=None, domain=""):
+    staging = current(account, domain)
     if staging is None:
         return
     io = care._Io(user, account)

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load ui i18n %}
-{% block title %}{% trans "Staging website" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% trans "Staging website" %} · {{ site_domain|default:account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
 {% if staging and staging.state == "creating" or staging and staging.state == "pushing" %}<meta http-equiv="refresh" content="8">{% endif %}

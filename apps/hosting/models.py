@@ -177,13 +177,14 @@ class SiteCare(TimeStampedModel):
 
 class StagingSite(TimeStampedModel):
     """
-    A private copy of a WordPress website to try changes on before they go live: its own subdomain, folder and database. One per hosting account.
+    A private copy of a WordPress website to try changes on before they go live: its own subdomain, folder and database. One per website ("" is the plan's own).
     Only paths and names are kept, never passwords (the staging database password lives in the copied wp-config.php on the server).
     """
 
     STATES = [("creating", "Creating"), ("ready", "Ready"), ("pushing", "Publishing"), ("failed", "Failed")]
 
-    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="staging")
+    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="staging_sites")
+    site_domain = models.CharField(max_length=253, blank=True, default="")  # which website of the plan is copied; "" = the plan's own
     state = models.CharField(max_length=10, choices=STATES, default="creating")
     domain = models.CharField(max_length=253)
     docroot = models.CharField(max_length=300, blank=True)
@@ -194,6 +195,9 @@ class StagingSite(TimeStampedModel):
     error = models.CharField(max_length=500, blank=True)
     pushed_at = models.DateTimeField(null=True, blank=True)
     made_domain = models.BooleanField(default=False)  # WHPanel added the subdomain, so it removes it again
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["account", "site_domain"], name="one_staging_per_website")]
 
     def __str__(self):
         return f"Staging of {self.account.domain} ({self.state})"

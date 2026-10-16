@@ -61,7 +61,7 @@
 {% else %}
 <section class="card" aria-labelledby="inst-title"><div class="card-body">
   {% if app.state == "installing" %}
-  <h2 class="h5" id="inst-title"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {% trans "Installing WordPress..." %}</h2>
+  <h2 class="h5" id="inst-title"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {% if progress.copying %}{% trans "Copying your website..." %}{% else %}{% trans "Installing WordPress..." %}{% endif %}</h2>
   <p class="text-secondary">{% trans "This page refreshes by itself. You can also leave: we will have it ready and you will find it on your website's dashboard." %}</p>
   <progress class="install-bar" max="100" value="{{ progress.percent }}" aria-label="{% trans 'Installation progress' %}">{{ progress.percent }}%</progress>
   <p class="install-percent"><strong>{{ progress.percent }}%</strong></p>
@@ -74,7 +74,7 @@
     {% endfor %}
   </ul>
   {% elif app.state == "failed" %}
-  <h2 class="h5 text-danger" id="inst-title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "WordPress could not be installed" %}</h2>
+  <h2 class="h5 text-danger" id="inst-title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% if progress.copying %}{% trans "The website could not be copied" %}{% else %}{% trans "WordPress could not be installed" %}{% endif %}</h2>
   <p>{{ app.error }}</p>
   <p class="text-secondary">{% trans "Nothing was left half-done. You can try again, or open a ticket and we will look at it." %}</p>
   <a class="btn btn-primary" href="{{ setup_url }}?type=wordpress">{% trans "Try again" %}</a>

@@ -292,14 +292,22 @@ def _cleanup(user, account, folder, installer_name, db_name, db_user, made_db, m
 def _apply(user, account, app, data):
     """Take the installer's answer: ready, or failed with its reason (and everything it made removed)."""
     folder = docroot_path(account, app.domain)
+    copying = is_copy(app)
     if data.get("ok"):
-        app.state, app.admin_url, app.version, app.error = AppState.READY, data.get("admin_url", ""), data.get("version", ""), ""
-        audit.record("hosting.site_ready", target=account, metadata={"kind": "wordpress", "version": app.version})
+        app.state, app.admin_url, app.version, app.error = AppState.READY, data.get("admin_url") or "https" + "://" + app.site_domain + "/wp-admin/", data.get("version", ""), ""
+        audit.record("hosting.site_ready", target=account, metadata={"kind": "wordpress", "version": app.version, "copy": copying})
     else:
-        app.state, app.error = AppState.FAILED, str(data.get("error") or "WordPress could not be installed.")[:500]
-        audit.record("hosting.site_failed", target=account, metadata={"kind": "wordpress", "error": app.error})
+        app.state, app.error = AppState.FAILED, str(data.get("error") or ("The website could not be copied." if copying else "WordPress could not be installed."))[:500]
+        audit.record("hosting.site_failed", target=account, metadata={"kind": "wordpress", "error": app.error, "copy": copying})
         _cleanup(user, account, folder, app.installer_ref, app.db_name, app.db_user, bool(app.db_name), bool(app.db_user), "")
-    for leftover in (app.job_ref, app.job_ref.replace(".json", ".progress.json") if app.job_ref else ""):
+        if copying:  # the folder was empty before the copy began, so whatever is in it now is half a copy
+            for entry in _perform(user, account, Capability.FILES, "list_files", folder):
+                if entry.name not in KEEP_ON_DELETE:
+                    try:
+                        _perform(user, account, Capability.FILES, "delete_path", f"{folder}/{entry.name}")
+                    except Exception:  # noqa: BLE001
+                        pass
+    for leftover in (app.job_ref, app.job_ref.replace(".json", ".progress.json") if app.job_ref else "", app.installer_ref if copying else ""):
         if leftover:
             try:
                 _perform(user, account, Capability.FILES, "delete_path", f"{folder}/{leftover}")
@@ -315,6 +323,18 @@ def _apply(user, account, app, data):
             pass
 
 
+COPY_STEPS = (
+    ("database", "Database and its user created"),
+    ("copy", "Copying the files and the database"),
+    ("finish", "Final touches"),
+)
+
+
+def is_copy(app):
+    """A website made by copying another one (its script is the copy tool, not the installer)."""
+    return bool(app.installer_ref) and app.installer_ref.startswith("whp-clone-")
+
+
 INSTALL_STEPS = (
     ("database", "Database and its user created"),
     ("download", "Downloading WordPress"),
@@ -328,17 +348,21 @@ INSTALL_STEPS = (
 
 def install_progress(app):
     """What the installation page shows: the percentage and each step as done, running or waiting."""
-    order = [key for key, _ in INSTALL_STEPS]
+    copying = is_copy(app)
+    steps = COPY_STEPS if copying else INSTALL_STEPS
+    order = [key for key, _ in steps]
     current = app.progress_step if app.progress_step in order else "database"
     index = order.index(current) if app.progress_step in order else 0
     if app.progress_step == "start":
         index = 0
+    if copying:
+        index = 1  # the copy tool reports only when it is done
     rows = []
-    for position, (key, label) in enumerate(INSTALL_STEPS):
+    for position, (key, label) in enumerate(steps):
         state = "done" if app.state == AppState.READY or position < index else "running" if position == index else "waiting"
         rows.append({"key": key, "label": label, "state": state})
     percent = 100 if app.state == AppState.READY else max(app.progress_percent, 3)
-    return {"percent": percent, "steps": rows}
+    return {"percent": percent, "steps": rows, "copying": copying}
 
 
 def _read_progress(user, account, app, folder):
@@ -402,8 +426,8 @@ def delete_website(user, account, confirm_domain, domain="", request=None):
     if app is not None and app.state == AppState.INSTALLING:
         raise ServiceError("This website is still being installed. Wait for it to finish, then delete it.", code="busy")
     report = {"files": 0, "staging": False, "database": False, "left": []}
-    if not extra and staging.current(account) is not None:
-        staging.delete(user, account, request=request)
+    if staging.current(account, domain) is not None:
+        staging.delete(user, account, request=request, domain=domain)
         report["staging"] = True
     io = care._Io(user, account)
     folder = docroot_path(account, domain)
