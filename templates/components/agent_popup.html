@@ -1,0 +1,7 @@
+{% load static i18n %}
+{# The AI Agent pop-up: the header button opens it on any customer page. The chat is fetched the first time it opens. #}
+<link rel="stylesheet" href="{% static 'css/assistant.css' %}">
+<section class="agent-pop" id="agent-pop" role="dialog" aria-label="{% trans 'AI Agent' %}" data-panel="{% url 'assistant:panel' %}" hidden>
+  <div class="agent-body"><p class="asst-event p-3 mb-0">{% trans "Opening the chat..." %}</p></div>
+</section>
+<script src="{% static 'js/agent.js' %}" defer></script>

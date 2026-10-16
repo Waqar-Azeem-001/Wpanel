@@ -10,6 +10,7 @@ class AssistantSettings(TimeStampedModel):
     enabled = models.BooleanField(default=False, help_text="Off = the assistant answers nobody. The kill switch.")
     model = models.CharField(max_length=80, default="claude-sonnet-5-5")
     daily_limit = models.PositiveSmallIntegerField(default=30, help_text="Messages one client may send per day; it keeps the cost in hand.")
+    change_hours = models.PositiveSmallIntegerField(default=24, help_text="How long the team needs for a change the Agent asks for on the server; the Agent tells the customer this.")
 
     class Meta:
         verbose_name_plural = "assistant settings"

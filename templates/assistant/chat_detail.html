@@ -2,7 +2,7 @@
 {% load static ui %}
 {% block title %}Chat with {{ c.client }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
 {% block content %}
 <div class="page-head page-head-split"><div><h1>{{ c.client }}</h1>
   <p class="page-sub"><a href="{% url 'livechat:list' %}">All chats</a> · {{ c.user.email }} ·

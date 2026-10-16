@@ -37,6 +37,7 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:copy": "Copy website of the plan's own WordPress website; the crawl world has none ready (tested in apps/core/test_site_care.py)",
     "hosting_customer:site_copy": "the same for a website on an added domain (tested in apps/core/test_site_care.py)",
     "livechat:detail": "one chat in the staff dashboard; the crawl world has no chats (tested in apps/core/test_assistant.py)",
+    "assistant:panel": "the chat shown in the pop-up of the header button, fetched by script (tested in apps/core/test_assistant.py)",
     "assistant:poll": "the data feed of the customer chat page (tested in apps/core/test_assistant.py)",
     "livechat:poll": "the data feed of one chat (tested in apps/core/test_assistant.py)",
     "livechat:action": "an action on one chat (tested in apps/core/test_assistant.py)",

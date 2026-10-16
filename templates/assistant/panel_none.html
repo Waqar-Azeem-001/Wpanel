@@ -1,0 +1,4 @@
+{% load i18n %}
+<header class="agent-head"><div class="agent-title"><i class="bi bi-stars" aria-hidden="true"></i> <strong>{% trans "AI Agent" %}</strong></div>
+  <div class="agent-tools"><button class="agent-tool" type="button" data-agent-close title="{% trans 'Close' %}"><i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">{% trans "Close" %}</span></button></div></header>
+<p class="asst-note mb-0">{% trans "The AI Agent is for customers with a hosting account." %} <a href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a> {% trans "if you need help." %}</p>

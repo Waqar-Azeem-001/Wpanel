@@ -1,0 +1,12 @@
+{% load i18n %}
+{# What the pop-up shows: its own little header with the chat actions, then the chat. Fetched when the pop-up opens. #}
+<header class="agent-head">
+  <div class="agent-title"><i class="bi bi-stars" aria-hidden="true"></i> <strong>{% trans "AI Agent" %}</strong></div>
+  <div class="agent-tools">
+    <button class="agent-tool" type="button" data-agent-post="{% url 'assistant:new' %}" title="{% trans 'New chat' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i><span class="visually-hidden">{% trans "New chat" %}</span></button>
+    <button class="agent-tool" type="button" data-agent-post="{% url 'assistant:handoff' %}" title="{% trans 'Talk to a person' %}"{% if waiting or with_person %} disabled{% endif %}><i class="bi bi-person-lines-fill" aria-hidden="true"></i><span class="visually-hidden">{% trans "Talk to a person" %}</span></button>
+    <a class="agent-tool" href="{% url 'assistant:chat' %}" title="{% trans 'Open full page' %}"><i class="bi bi-arrows-angle-expand" aria-hidden="true"></i><span class="visually-hidden">{% trans "Open full page" %}</span></a>
+    <button class="agent-tool" type="button" data-agent-close title="{% trans 'Close' %}"><i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">{% trans "Close" %}</span></button>
+  </div>
+</header>
+{% include "assistant/_chat.html" %}

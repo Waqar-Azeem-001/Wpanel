@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "AI assistant" %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% trans "AI Agent" %} · {{ SITE_NAME }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{% trans "AI assistant" %}</h1></div>
-<section class="card"><div class="card-body text-secondary">{% trans "The assistant is for customers with a hosting account. Please" %} <a href="{% url 'support_customer:new' %}">{% trans "open a ticket" %}</a> {% trans "if you need help." %}</div></section>
+<div class="page-head"><h1>{% trans "AI Agent" %}</h1></div>
+<section class="card"><div class="card-body text-secondary">{% trans "The AI Agent is for customers with a hosting account. Please" %} <a href="{% url 'support_customer:new' %}">{% trans "open a ticket" %}</a> {% trans "if you need help." %}</div></section>
 {% endblock %}

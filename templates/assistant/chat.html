@@ -1,39 +1,14 @@
 {% extends "base.html" %}
 {% load static i18n %}
-{% block title %}{% trans "AI assistant" %} · {{ SITE_NAME }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
+{% block title %}{% trans "AI Agent" %} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
 {% block content %}
-<div class="page-head page-head-split"><div><h1>{% trans "AI assistant" %}</h1>
-  <p class="page-sub">{% trans "Ask about your website, email, SSL or invoices. The assistant looks things up on your own account and can open a ticket for you. It cannot change anything yet." %}</p></div>
+<div class="page-head page-head-split"><div><h1>{% trans "AI Agent" %}</h1>
+  <p class="page-sub">{% trans "Ask about your website, email, SSL, domains or invoices, or how to do something in the panel. The Agent looks at your own account. For a change on the server it asks our team, who do it within the time it tells you." %}</p></div>
   <div class="d-flex gap-2 flex-wrap">
     <form method="post" action="{% url 'assistant:new' %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "New chat" %}</button></form>
     <form method="post" action="{% url 'assistant:handoff' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit"{% if waiting or with_person %} disabled{% endif %}><i class="bi bi-person-lines-fill" aria-hidden="true"></i> {% trans "Talk to a person" %}</button></form>
   </div></div>
-
-<section class="asst" aria-label="{% trans 'Chat' %}">
-  <div class="asst-log" id="asst-log" role="log" aria-live="polite" data-poll="{% url 'assistant:poll' %}" data-last="{{ last_id }}" data-status="{{ conversation.status }}">
-    {% if not rows %}<p class="asst-hello">{% trans "Hello! How can I help? For example: Why is my website down? Is my SSL working?" %}</p>{% endif %}
-    {% for m in rows %}
-      {% if m.sender == "event" %}<p class="asst-event">{% if m.kind %}{{ m.body }}{% else %}<i class="bi bi-search" aria-hidden="true"></i> {% trans "Checked" %}: {{ m.tool }}{% endif %}</p>
-      {% else %}<div class="asst-msg is-{% if m.sender == 'client' %}client{% else %}ai{% endif %}"><div class="asst-bubble">{% if m.sender == "staff" %}<strong>{{ m.who }}</strong><br>{% endif %}{{ m.body|linebreaksbr }}</div></div>{% endif %}
-    {% endfor %}
-  </div>
-  {% if waiting %}
-  <p class="asst-note mb-0"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {% trans "Connecting you to our support team. You can keep writing; they will see everything." %}
-    {% if offer_ticket %}<form method="post" action="{% url 'assistant:ticket' %}" class="d-inline">{% csrf_token %}<button class="btn btn-link p-0 align-baseline" type="submit">{% trans "Taking long? Leave a ticket instead." %}</button></form>{% endif %}</p>
-  {% elif with_person and not ready %}
-  <p class="asst-note mb-0">{% blocktrans with name=person.get_full_name %}{{ name }} from our team is with you.{% endblocktrans %}</p>
-  {% endif %}
-  {% if not ready and not waiting and not with_person %}
-  <p class="asst-note mb-0">{% trans "The assistant is not switched on yet." %} <a href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a> {% trans "and our team will help." %}</p>
-  {% elif ready or waiting or with_person %}
-  <form method="post" action="{% url 'assistant:send' %}" class="asst-form" id="asst-form">{% csrf_token %}
-    <label class="visually-hidden" for="asst-input">{% trans "Your message" %}</label>
-    <textarea class="form-control" id="asst-input" name="message" rows="2" maxlength="2000" placeholder="{% trans 'Write your message...' %}" required></textarea>
-    <button class="btn btn-primary" type="submit"><i class="bi bi-send" aria-hidden="true"></i> {% trans "Send" %}</button>
-  </form>
-  <p class="asst-note mb-0">{% if with_person %}{% blocktrans with name=person.get_full_name %}{{ name }} from our team is with you.{% endblocktrans %}{% else %}{% blocktrans with n=left %}{{ n }} messages left today.{% endblocktrans %}{% endif %} {% trans "Never share a password or card number in the chat." %}</p>
-  {% endif %}
-</section>
+<section class="asst" aria-label="{% trans 'Chat' %}">{% include "assistant/_chat.html" %}</section>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/chatpoll.js' %}" defer></script><script src="{% static 'js/assistant.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/agent.js' %}" defer></script>{% endblock %}

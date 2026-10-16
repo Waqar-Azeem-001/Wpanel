@@ -198,7 +198,7 @@ def test_the_daily_limit_and_message_size_are_enforced(world, owner, account, sw
 def test_the_chat_page_and_its_send_endpoint_work_for_a_customer(world, owner, account, switched_on, ask):  # noqa: F811
     client = browser(owner)
     page = client.get(reverse("assistant:chat"))
-    assert page.status_code == 200 and "AI assistant" in page.content.decode()
+    assert page.status_code == 200 and "AI Agent" in page.content.decode()
     ask.script = [_say("Hi there")]
     reply = client.post(reverse("assistant:send"), {"message": "Hello"}, HTTP_X_REQUESTED_WITH="fetch")
     assert reply.status_code == 200 and reply.json()["messages"][-1]["body"] == "Hi there"
@@ -220,11 +220,11 @@ def test_staff_set_the_switches_and_read_the_record_but_customers_cannot(world, 
     staff.force_login(world.people["super admin"])
     page = staff.get(reverse("assistant_staff:settings"))
     assert page.status_code == 200 and "API key found on the server" in page.content.decode()
-    saved = staff.post(reverse("assistant_staff:settings"), {"model": "claude-sonnet-5-5", "daily_limit": "12"})
+    saved = staff.post(reverse("assistant_staff:settings"), {"model": "claude-sonnet-5-5", "daily_limit": "12", "change_hours": "24"})
     assert saved.status_code == 302
     row = AssistantSettings.load()
     assert row.enabled is False and row.daily_limit == 12  # the box was not ticked: off
-    staff.post(reverse("assistant_staff:settings"), {"model": "bad model name", "daily_limit": "12", "enabled": "on"})
+    staff.post(reverse("assistant_staff:settings"), {"model": "bad model name", "daily_limit": "12", "change_hours": "24", "enabled": "on"})
     assert AssistantSettings.load().model == "claude-sonnet-5-5"
     ask.script = [_say("hi")]
     row.enabled = True
@@ -233,3 +233,39 @@ def test_staff_set_the_switches_and_read_the_record_but_customers_cannot(world, 
     chat = Conversation.objects.first()
     assert staff.get(reverse("assistant_staff:chat", args=[chat.pk])).status_code == 200
     assert browser(owner).get(reverse("assistant_staff:settings")).status_code in (302, 403)
+
+
+def test_the_agent_knows_the_panel_and_tells_the_customer_how_long_a_server_change_takes(world, owner, account, switched_on, ask):  # noqa: F811
+    Department.objects.get_or_create(slug="technical", defaults={"name": "Technical"})
+    switched_on.change_hours = 36
+    switched_on.save()
+    ask.script = [_use("request_server_change", summary="Raise PHP memory", details="Set memory_limit to 512M on " + account.domain, domain=account.domain), _say("Done, within 36 hours.")]
+    conversation = _conversation(owner)
+    agent.send(owner, conversation, "Please raise my PHP memory")
+    system = ask.requests[0]["system"]
+    assert "Website care" in system and "Staging" in system and "36 hours" in system and "request_server_change" in system
+    result = ask.requests[1]["messages"][-1]["content"][0]["content"]
+    assert "requested" in result and "36 hours" in result
+    from apps.support.models import Ticket
+
+    ticket = Ticket.objects.filter(subject__startswith="Change requested by the AI Agent").first()
+    assert ticket is not None and "memory_limit" in ticket.messages.first().body
+
+
+def test_the_agent_searches_the_help_articles(world, owner, account, switched_on):  # noqa: F811
+    from apps.support.models import KBArticle, KBCategory
+
+    category = KBCategory.objects.create(name="Phone setup guides", slug="email-test", is_active=True)
+    KBArticle.objects.create(category=category, title="Set up email on a phone", slug="phone-email", body="Use IMAP with the mail server name.", is_published=True)
+    out = tools.run(tools.Context(owner, _conversation(owner)), "search_help", {"query": "phone"})
+    assert out["articles"] and out["articles"][0]["title"] == "Set up email on a phone" and out["articles"][0]["path"] == "/help/email-test/phone-email/"
+
+
+def test_the_pop_up_chat_is_served_as_a_fragment_and_the_header_opens_it(world, owner, account, switched_on, ask):  # noqa: F811
+    client = browser(owner)
+    fragment = client.get(reverse("assistant:panel"))
+    assert fragment.status_code == 200 and b"<html" not in fragment.content and b"data-agent-root" in fragment.content
+    page = client.get(reverse("hosting_customer:websites")).content.decode()
+    assert "data-agent-open" in page and 'id="agent-pop"' in page and "client-shell.css" in page
+    assert "client-shell.css" in client.get(reverse("assistant:chat")).content.decode()  # the page keeps the layout's own styles
+    assert client.post(reverse("assistant:new"), HTTP_X_REQUESTED_WITH="fetch").json() == {"ok": True}

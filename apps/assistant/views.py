@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -28,19 +29,32 @@ def _rows(conversation):
             for m in conversation.messages.select_related("staff").order_by("-id")[:SHOWN][::-1]]
 
 
+def _context(request, client):
+    config = AssistantSettings.load()
+    conversation = agent.current_conversation(request.user, client)
+    rows = _rows(conversation)
+    waited = (timezone.now() - conversation.handoff_requested_at) if conversation.handoff_requested_at and conversation.status == ConversationStatus.WAITING else None
+    return {
+        "conversation": conversation, "rows": rows, "last_id": rows[-1]["id"] if rows else 0, "ready": agent.available(config), "left": max(0, config.daily_limit - agent.used_today(client)),
+        "waiting": conversation.status == ConversationStatus.WAITING, "with_person": conversation.status == ConversationStatus.WITH_STAFF, "person": conversation.assigned_to,
+        "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60}
+
+
 @login_required
 def chat(request):
     client = _client(request.user)
     if client is None:
         return render(request, "assistant/unavailable.html")
-    config = AssistantSettings.load()
-    conversation = agent.current_conversation(request.user, client)
-    rows = _rows(conversation)
-    waited = (timezone.now() - conversation.handoff_requested_at) if conversation.handoff_requested_at and conversation.status == ConversationStatus.WAITING else None
-    return render(request, "assistant/chat.html", {
-        "conversation": conversation, "rows": rows, "last_id": rows[-1]["id"] if rows else 0, "ready": agent.available(config), "left": max(0, config.daily_limit - agent.used_today(client)),
-        "waiting": conversation.status == ConversationStatus.WAITING, "with_person": conversation.status == ConversationStatus.WITH_STAFF, "person": conversation.assigned_to,
-        "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60})
+    return render(request, "assistant/chat.html", _context(request, client))
+
+
+@login_required
+def panel(request):
+    """The chat for the pop-up (no page around it)."""
+    client = _client(request.user)
+    if client is None:
+        return render(request, "assistant/panel_none.html")
+    return render(request, "assistant/panel.html", _context(request, client))
 
 
 @require_POST
@@ -76,6 +90,8 @@ def handoff(request):
         messages.error(request, exc.message)
     else:
         messages.success(request, "We told our team. Someone will join this chat shortly." if out.get("status") == "waiting" else "A person is already on this chat.")
+    if request.headers.get("X-Requested-With") == "fetch":
+        return JsonResponse({"ok": True})
     return redirect("assistant:chat")
 
 
@@ -109,7 +125,11 @@ def ticket_instead(request):
         messages.error(request, exc.message)
     else:
         messages.success(request, f"Done: ticket {ticket.reference}. Our team will reply there and by email.")
+        if request.headers.get("X-Requested-With") == "fetch":
+            return JsonResponse({"ok": True, "url": reverse("support_customer:ticket", args=[ticket.pk])})
         return redirect("support_customer:ticket", pk=ticket.pk)
+    if request.headers.get("X-Requested-With") == "fetch":
+        return JsonResponse({"ok": False})
     return redirect("assistant:chat")
 
 
@@ -120,6 +140,8 @@ def new_chat(request):
     if client is None:
         raise PermissionDenied
     Conversation.objects.filter(user=request.user, client=client).exclude(status=ConversationStatus.CLOSED).update(status=ConversationStatus.CLOSED, updated_at=timezone.now())
+    if request.headers.get("X-Requested-With") == "fetch":
+        return JsonResponse({"ok": True})
     return redirect("assistant:chat")
 
 
@@ -142,14 +164,17 @@ def staff_settings(request):
         try:
             model = (request.POST.get("model") or "").strip()
             limit = int(request.POST.get("daily_limit") or 0)
+            hours = int(request.POST.get("change_hours") or 0)
             if not model or len(model) > 80 or any(c.isspace() for c in model):
                 raise ServiceError("Write the model name as Claude's documentation gives it, for example claude-sonnet-5-5.", code="model_invalid")
             if not 1 <= limit <= 500:
                 raise ServiceError("The daily limit is a number from 1 to 500.", code="limit_invalid")
+            if not 1 <= hours <= 168:
+                raise ServiceError("The hours for a change are a number from 1 to 168.", code="hours_invalid")
         except (ServiceError, ValueError) as exc:
             messages.error(request, getattr(exc, "message", "The daily limit is a number from 1 to 500."))
         else:
-            config.enabled, config.model, config.daily_limit = request.POST.get("enabled") == "on", model, limit
+            config.enabled, config.model, config.daily_limit, config.change_hours = request.POST.get("enabled") == "on", model, limit, hours
             config.save()
             audit.record("assistant.settings_saved", actor=request.user, target=config, metadata={"enabled": config.enabled, "model": model, "daily_limit": limit}, request=request)
             messages.success(request, "The assistant settings were saved.")
