@@ -191,5 +191,7 @@ def staff_settings(request):
 def staff_chat(request, pk):
     _staff(request)
     conversation = get_object_or_404(Conversation.objects.select_related("client", "user", "ticket"), pk=pk)
+    if request.user.has_perm(perm("view_support")):  # the live chat page shows the same record and lets support take, reply and close
+        return redirect("livechat:detail", pk=conversation.pk)
     return render(request, "assistant/transcript.html", {"conversation": conversation, "rows": [{"sender": m.sender, "body": m.body, "tool": (m.tool_call or {}), "at": m.created_at}
                                                                                               for m in conversation.messages.all()]})

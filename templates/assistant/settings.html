@@ -3,7 +3,7 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>AI Agent</h1>
-  <p class="page-sub"><a href="{% url 'assistant_staff:knowledge' %}">Knowledge</a> · A chat in the customer area that looks things up on the customer's own services (website, SSL, disk, email, DNS, invoices) and opens a ticket when a person is needed. In this version it only reads: it cannot change anything.</p></div>
+  <p class="page-sub"><a href="{% url 'livechat:list' %}">Live chats</a> · <a href="{% url 'assistant_staff:knowledge' %}">Knowledge</a> · A chat in the customer area that looks things up on the customer's own services (website, SSL, disk, email, DNS, invoices) and opens a ticket when a person is needed. In this version it only reads: it cannot change anything.</p></div>
 <form method="post" class="card mb-4" novalidate>{% csrf_token %}
   <div class="card-body vstack gap-3">
     <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="enabled"{% if config.enabled %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label"><strong>AI Agent on</strong>. Turn it off at any time and it answers nobody.</span></label>
@@ -26,7 +26,7 @@
 <section class="card"><div class="card-header"><h2 class="h6 mb-0">Recent chats</h2></div>
   {% if chats %}<div class="table-responsive"><table class="table align-middle mb-0">
     <thead><tr><th>Chat</th><th>Customer</th><th>Status</th><th>Ticket</th><th>Last activity</th></tr></thead>
-    <tbody>{% for c in chats %}<tr><td><a href="{% url 'assistant_staff:chat' c.pk %}">#{{ c.pk }}</a></td><td>{{ c.client }} <span class="text-secondary">({{ c.user }})</span></td><td>{{ c.get_status_display }}</td>
+    <tbody>{% for c in chats %}<tr><td><a href="{% url 'livechat:detail' c.pk %}">#{{ c.pk }}</a></td><td>{{ c.client }} <span class="text-secondary">({{ c.user }})</span></td><td>{{ c.get_status_display }}</td>
       <td>{% if c.ticket %}{{ c.ticket.reference }}{% else %}-{% endif %}</td><td>{{ c.updated_at|date:"j M Y, H:i" }}</td></tr>{% endfor %}</tbody></table></div>
   {% else %}<div class="card-body text-secondary">No chats yet.</div>{% endif %}
 </section>

@@ -231,7 +231,7 @@ def test_staff_set_the_switches_and_read_the_record_but_customers_cannot(world, 
     row.save()
     agent.send(owner, _conversation(owner), "hello")
     chat = Conversation.objects.first()
-    assert staff.get(reverse("assistant_staff:chat", args=[chat.pk])).status_code == 200
+    assert staff.get(reverse("assistant_staff:chat", args=[chat.pk])).status_code == 302  # to the live chat page, where support can take it
     assert browser(owner).get(reverse("assistant_staff:settings")).status_code in (302, 403)
 
 
