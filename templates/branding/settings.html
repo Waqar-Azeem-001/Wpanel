@@ -80,6 +80,16 @@
   </section>
 
   <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-share"></i></span><div class="grow"><h2 class="shop-title">Social media</h2><p class="text-secondary mb-0">Your pages on social networks. They appear as icons in the footer; the icon follows the address (Facebook, Instagram, X, LinkedIn, YouTube, TikTok, WhatsApp and so on).</p></div></header>
+    <input type="hidden" name="social_form" value="1">
+    <div data-rows>
+      <div data-rows-body>{% for row in social_rows %}{% include "branding/_social_row.html" with title=row.title url=row.url %}{% endfor %}</div>
+      <template data-rows-template>{% include "branding/_social_row.html" with title="" url="" %}</template>
+      {% if can_manage %}<button class="btn btn-outline-primary btn-sm mt-1" type="button" data-rows-add><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a social link</button>{% endif %}
+    </div>
+  </section>
+
+  <section class="shop-card">
     <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-cone-striped"></i></span><div class="grow"><h2 class="shop-title">Maintenance</h2><p class="text-secondary mb-0">Show visitors and customers a "be right back" page while you work. Staff can still sign in and use the portal as usual; the API is not affected.</p></div></header>
     <div class="row g-3">
       {% include "orders/_field.html" with field=form.maintenance_mode %}

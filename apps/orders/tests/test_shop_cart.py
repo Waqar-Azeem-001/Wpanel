@@ -74,8 +74,8 @@ def test_ssl_and_whois_are_listed_from_addon_kinds(shop, ssl, whois):
     assert "Backups" not in ssl_page + whois_page  # a general add-on has no category of its own
 
 
-def test_the_home_page_has_a_tile_for_each_category(shop, ssl):
-    page = visitor().get("/").content.decode()
+def test_the_hosting_page_has_a_tile_for_each_category(shop, ssl):
+    page = visitor().get("/hosting/").content.decode()
     assert page.count("cat-tile") >= 10 and "SSL certificates" in page and "Search now" in page
 
 

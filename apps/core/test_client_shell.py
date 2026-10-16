@@ -934,6 +934,44 @@ def test_the_public_bar_has_no_developers_entry_while_the_api_reference_is_staff
     assert "Developers" not in bar and client.get("/api/v1/docs/").status_code == 401
 
 
-def test_the_home_page_shows_the_cheapest_domain_extensions(client, world):  # noqa: F811
-    html = client.get("/").content.decode()
+def test_the_hosting_page_shows_the_cheapest_domain_extensions(client, world):  # noqa: F811
+    html = client.get("/hosting/").content.decode()
     assert "tld-strip" in html and "All domain prices" in html
+
+
+def test_the_new_front_page_has_its_sections_real_prices_and_one_heading(client, world):  # noqa: F811
+    from django.urls import reverse as rev
+
+    response = client.get("/")
+    html = response.content.decode()
+    assert response.status_code == 200 and html.count("<h1") == 1 and "Your idea, online." in html
+    for section in ("Plans and prices", "Tools for every online project", "Set up the essentials to go online", "Choose the plan that matches what you need",
+                    "More power when you need it", "Frequently asked questions", "Now make it real."):
+        assert section in html
+    assert rev("domains_public:search") in html and 'name="domain"' in html and rev("pricing") in html
+    assert 'aria-label="Breadcrumb"' not in html
+    assert "page-home" in html  # the footer's own call to start is hidden on this page by CSS: the page ends with its own
+
+
+def test_the_hosting_link_opens_the_old_front_page_and_is_in_the_bar(client, world):  # noqa: F811
+    from django.urls import reverse as rev
+
+    html = client.get("/").content.decode()
+    bar = html.split('<nav class="navbar navbar-expand-lg app-navbar navbar-public"')[1].split("</nav>")[0]
+    assert rev("hosting") in bar
+    page = client.get(rev("hosting")).content.decode()
+    assert "Web hosting and domains that just work" in page and "cat-tile" in page
+
+
+def test_the_footer_is_expanded_and_shows_social_links_when_the_owner_set_them(client, world):  # noqa: F811
+    from apps.branding import services as branding
+
+    html = client.get("/").content.decode()
+    foot = html.split('<footer class="app-footer site-footer">')[1]
+    for heading in ("Hosting", "Domains", "Information", "Support", "Your account"):
+        assert f"<h2>{heading}</h2>" in foot
+    assert "foot-social" not in foot
+    branding.save_settings(world.people["super admin"], social_links=[{"title": "Facebook", "url": "https" + "://facebook.com/webhostera"}, {"title": "Chat", "url": "https" + "://wa.me/923001234567"}])
+    foot = client.get("/").content.decode().split('<footer class="app-footer site-footer">')[1]
+    assert "foot-social" in foot and "bi-facebook" in foot and "bi-whatsapp" in foot and 'aria-label="Facebook"' in foot
+    assert "Prices are shown in" in foot

@@ -132,6 +132,7 @@ class Brand:
     has_logo_dark: bool = False
     has_mark_dark: bool = False
     policy_links: tuple = ()
+    social_links: tuple = ()
     theme: str = "signature"
     look: str = "signature"  # the structure in use: the ready-made look, or the one a custom brand borrows
     maintenance_mode: bool = False
@@ -152,7 +153,8 @@ def _brand_from(row, has_logo, has_favicon, has_logo_dark=False, has_mark_dark=F
         accent=accent, accent_text=readable_text(accent), support_email=row["support_email"], footer_text=row["footer_text"],
         date_format=row["date_format"], money_format=row["money_format"], has_logo=has_logo,
         has_favicon=has_favicon, version=row["version"], has_logo_dark=has_logo_dark, has_mark_dark=has_mark_dark,
-        policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()), theme=theme, look=look,
+        policy_links=tuple((p["title"], p["url"]) for p in row.get("policy_links") or ()),
+        social_links=tuple((p["title"], p["url"], social_icon(p["url"])) for p in row.get("social_links") or ()), theme=theme, look=look,
         maintenance_mode=bool(row.get("maintenance_mode")), currency=(row.get("currency") or settings.STORE_CURRENCY))
 
 
@@ -172,7 +174,7 @@ def get():
             cached = {**{f: getattr(row, f) for f in TEXT_FIELDS}, "version": row.version, "has_logo": has_logo,
                       "has_favicon": has_favicon, "has_logo_dark": bool(row.logo_dark_type) or packaged_file("logo_dark") is not None,
                       "has_mark_dark": bool(row.mark_dark_type) or packaged_file("mark_dark") is not None,
-                      "policy_links": list(row.policy_links or [])}
+                      "policy_links": list(row.policy_links or []), "social_links": list(row.social_links or [])}
             cache.set(CACHE_KEY, cached, 300)
         return _brand_from(cached, cached["has_logo"], cached["has_favicon"], cached.get("has_logo_dark", False),
                            cached.get("has_mark_dark", False))
@@ -225,6 +227,24 @@ def validate_image(kind, data):
 
 
 MAX_POLICY_LINKS = 12
+MAX_SOCIAL_LINKS = 10
+SOCIAL_ICONS = (("facebook", "bi-facebook"), ("instagram", "bi-instagram"), ("twitter", "bi-twitter-x"), ("x.com", "bi-twitter-x"), ("linkedin", "bi-linkedin"),
+                ("youtube", "bi-youtube"), ("tiktok", "bi-tiktok"), ("whatsapp", "bi-whatsapp"), ("wa.me", "bi-whatsapp"), ("github", "bi-github"),
+                ("pinterest", "bi-pinterest"), ("telegram", "bi-telegram"), ("t.me", "bi-telegram"), ("discord", "bi-discord"), ("reddit", "bi-reddit"))
+
+
+def social_icon(url):
+    """The Bootstrap icon of the network a link points to (by its address), or a plain link icon."""
+    host = (url or "").lower()
+    return next((icon for key, icon in SOCIAL_ICONS if key in host), "bi-link-45deg")
+
+
+def clean_social_links(rows):
+    """The same rules as the policy links (a title, a web address, no repeats), with a lower limit."""
+    clean = clean_policy_links([{"title": r.get("title"), "url": r.get("url")} for r in rows or ()]) if rows else []
+    if len(clean) > MAX_SOCIAL_LINKS:
+        raise ValidationError(f"At most {MAX_SOCIAL_LINKS} social links.")
+    return clean
 
 
 def clean_policy_links(rows):
@@ -293,7 +313,7 @@ def _check_colors(values):
 
 @transaction.atomic
 def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=False, remove_favicon=False,
-                  logo_dark=None, mark_dark=None, remove_logo_dark=False, remove_mark_dark=False, policy_links=None, request=None):
+                  logo_dark=None, mark_dark=None, remove_logo_dark=False, remove_mark_dark=False, policy_links=None, social_links=None, request=None):
     """Staff (``manage_settings``): change the brand. ``logo`` / ``favicon`` are the uploaded file bytes."""
     if not actor.has_perm(perm("manage_settings")):
         raise ServiceError("You do not have permission to perform this action.", code="permission_denied",
@@ -324,6 +344,11 @@ def save_settings(actor, *, values=None, logo=None, favicon=None, remove_logo=Fa
         if links != list(row.policy_links or []):
             row.policy_links = links
             changed.append("policy links")
+    if social_links is not None:
+        links = clean_social_links(social_links)
+        if links != list(row.social_links or []):
+            row.social_links = links
+            changed.append("social links")
     if changed:
         row.version += 1
         row.save()

@@ -86,6 +86,8 @@ class BrandSettings(models.Model):
     mark_dark_type = models.CharField(max_length=30, blank=True, editable=False)
     # The policy pages the store links to (terms, refunds...): [{"title": "...", "url": "..."}], in the order shown.
     policy_links = models.JSONField(default=list, blank=True, editable=False)
+    # The company's pages on social networks: [{"title": "Facebook", "url": <web address>}], shown as icons in the footer.
+    social_links = models.JSONField(default=list, blank=True, editable=False)
     maintenance_mode = models.BooleanField(
         default=False, help_text="Show visitors and customers the \"be right back\" page while you work. "
                                  "Staff can still sign in and use the portal as usual; the API is not affected.")

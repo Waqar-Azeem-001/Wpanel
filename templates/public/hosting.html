@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Hosting" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide flush{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container-xxl">
+    <span class="eyebrow">{% trans "Secure · Fast · Reliable" %}</span>
+    <h1>{% trans "Web hosting and domains that just work" %}</h1>
+    <p class="lead">{% trans "Search for your domain name, pick a plan, and get online. We take care of the servers so you can take care of your business." %}</p>
+    <form method="get" action="{% url 'domains_public:search' %}" class="hero-search mt-4" role="search">
+      <input type="hidden" name="years" value="1">
+      <label class="visually-hidden" for="home_domain">{% trans "Domain name" %}</label>
+      <input id="home_domain" type="text" name="domain" placeholder="{% trans 'yourbusiness.com' %}" required>
+      <button class="btn btn-primary btn-lg" type="submit"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Search" %}</button>
+    </form>
+    <ul class="hero-points">
+      <li><i class="bi bi-shield-check" aria-hidden="true"></i>{% trans "Free SSL certificate" %}</li>
+      <li><i class="bi bi-arrow-left-right" aria-hidden="true"></i>{% trans "Free website migration" %}</li>
+      <li><i class="bi bi-headset" aria-hidden="true"></i>{% trans "Support through your panel, any time" %}</li>
+      <li><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>{% trans "7-day refund on hosting" %}</li>
+    </ul>
+  </div>
+</section>
+
+<div class="container-xxl hero-overlap">
+  <div class="row g-4">
+    {% for product in products %}
+    <div class="col-md-6 col-xl-3">{% include "products/_plan_card.html" with product=product featured=False %}</div>
+    {% empty %}
+    <div class="col-12"><div class="card"><div class="card-body text-secondary">{% trans "Our plans are coming soon." %}</div></div></div>
+    {% endfor %}
+  </div>
+  {% if products %}<p class="text-center mt-4"><a class="btn btn-outline-primary" href="{% url 'catalog:product_list' %}">{% trans "See all plans" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a></p>{% endif %}
+</div>
+
+<section class="container-xxl mt-5" aria-labelledby="explore-h">
+  <h2 id="explore-h" class="h3 mb-1">{% trans "Everything you need to get online" %}</h2>
+  <p class="text-secondary mb-4">{% trans "Hosting for every kind of site, servers when you outgrow it, and the security and domains that go with it." %}</p>
+  <div class="cat-grid">
+    {% for tile in tiles %}
+    <a class="cat-tile" href="{% if tile.category.url_name %}{% url tile.category.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ tile.category.slug }}{% endif %}">
+      <span class="chip" aria-hidden="true"><i class="bi {{ tile.category.icon }}"></i></span>
+      <strong>{{ tile.category.name }}</strong>
+      <span class="text-secondary">{{ tile.category.blurb }}</span>
+      <span class="cat-from">{% if tile.from %}{% trans "From" %} {{ tile.from.price|money:STORE_CURRENCY }}{% elif tile.category.url_name %}{% trans "Search now" %}{% else %}{% trans "Coming soon" %}{% endif %}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% if tld_teaser %}
+<section class="container-xxl mt-5" aria-labelledby="tld-h">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div><h2 id="tld-h" class="h3 mb-1">{% trans "Domains from" %} {{ tld_teaser.0.register_price|money:STORE_CURRENCY }}</h2>
+      <p class="text-secondary mb-0">{% trans "A few of our most affordable extensions." %}</p></div>
+    <a class="btn btn-outline-primary" href="{% url 'pricing' %}#domains">{% trans "All domain prices" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+  </div>
+  <ul class="tld-strip">
+    {% for t in tld_teaser %}<li><a href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&years=1"><strong>{{ t.tld }}</strong><span>{{ t.register_price|money:STORE_CURRENCY }}<small>/{% trans "yr" %}</small></span></a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="container-xxl py-5 mt-4">
+  <div class="row g-4">
+    <div class="col-md-4 feature-tile"><i class="bi bi-lock" aria-hidden="true"></i><div><h2 class="h5">{% trans "Secure" %}</h2><p class="text-secondary mb-0">{% trans "SSL on every site, DDoS protection and regular updates keep your website and your visitors safe." %}</p></div></div>
+    <div class="col-md-4 feature-tile"><i class="bi bi-lightning-charge" aria-hidden="true"></i><div><h2 class="h5">{% trans "Fast" %}</h2><p class="text-secondary mb-0">{% trans "Modern NVMe storage and well-connected servers, so your pages load quickly." %}</p></div></div>
+    <div class="col-md-4 feature-tile"><i class="bi bi-hdd-network" aria-hidden="true"></i><div><h2 class="h5">{% trans "Reliable" %}</h2><p class="text-secondary mb-0">{% trans "Managed servers and a support team that answers, so you are never left on your own." %}</p></div></div>
+  </div>
+</section>
+{% endblock %}

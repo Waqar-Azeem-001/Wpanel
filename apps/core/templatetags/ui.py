@@ -28,13 +28,20 @@ def public_menu():
 @register.simple_tag
 def footer_info():
     """What the store footer lists, all of it real: the store categories, the ways to pay and the company's contact details."""
-    info = {"categories": [], "methods": [], "phone": "", "address": ""}
+    info = {"categories": [], "addons": [], "help": [], "methods": [], "phone": "", "address": ""}
     try:
         from apps.billing.models import BillingSettings, PaymentMethod
         from apps.products import categories
         from apps.products.models import CategoryKind
 
-        info["categories"] = [c for c in categories.active() if c.kind == CategoryKind.PLANS][:7]
+        info["categories"] = [c for c in categories.active() if c.kind == CategoryKind.PLANS][:8]
+        info["addons"] = [c for c in categories.active() if c.kind == CategoryKind.ADDONS][:4]
+        try:
+            from apps.support import kb
+
+            info["help"] = list(kb.public_categories()[:4])
+        except Exception:  # noqa: BLE001
+            pass
         icons = {"bank": "bi-bank", "jazzcash": "bi-phone", "easypaisa": "bi-phone"}
         info["methods"] = [{"name": name, "icon": icons.get(kind, "bi-credit-card")} for name, kind in
                            PaymentMethod.objects.filter(is_active=True).order_by("sort_order", "name").values_list("name", "kind")[:8]]

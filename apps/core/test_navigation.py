@@ -142,7 +142,7 @@ def test_an_anonymous_visitor_sees_the_public_menu():
     from django.contrib.auth.models import AnonymousUser
 
     menus = navigation.build(request_for(AnonymousUser(), reverse("accounts:login")), "public")
-    assert labels(menus, "main") == ["Pricing", "Products", "Domains", "Resources"] and labels(menus, "right") == ["Cart", "Sign in", "Create account"]
+    assert labels(menus, "main") == ["Pricing", "Hosting", "Products", "Domains", "Resources"] and labels(menus, "right") == ["Cart", "Sign in", "Create account"]
 
 
 def test_the_public_sign_in_entries_are_hidden_from_signed_in_people(owner):

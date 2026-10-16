@@ -1,73 +1,248 @@
 {% extends "base.html" %}
-{% load ui i18n %}
+{% load static ui i18n %}
 {% block title %}{{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/home.css' %}">{% endblock %}
+{% block body_class %}page-home{% endblock %}
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content %}
-<section class="hero">
+{# ---- 1. The first screen: one idea, one search, a few real things to look at ---------------------------------------------------- #}
+<section class="hx-hero">
   <div class="container-xxl">
-    <span class="eyebrow">{% trans "Secure · Fast · Reliable" %}</span>
-    <h1>{% trans "Web hosting and domains that just work" %}</h1>
-    <p class="lead">{% trans "Search for your domain name, pick a plan, and get online. We take care of the servers so you can take care of your business." %}</p>
-    <form method="get" action="{% url 'domains_public:search' %}" class="hero-search mt-4" role="search">
+    <form method="get" action="{% url 'domains_public:search' %}" class="hx-search" role="search">
       <input type="hidden" name="years" value="1">
-      <label class="visually-hidden" for="home_domain">{% trans "Domain name" %}</label>
-      <input id="home_domain" type="text" name="domain" placeholder="{% trans 'yourbusiness.com' %}" required>
-      <button class="btn btn-primary btn-lg" type="submit"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Search" %}</button>
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <label class="visually-hidden" for="hx_domain">{% trans "Domain name" %}</label>
+      <input id="hx_domain" type="text" name="domain" placeholder="{% trans 'Type the domain you want' %}" required autocomplete="off">
+      <button class="btn btn-light" type="submit">{% trans "Search" %}</button>
+      {% if cheapest_domain %}<span class="hx-search-note">{% blocktrans with price=cheapest_domain.register_price|money:STORE_CURRENCY ext=cheapest_domain.tld %}Domains from {{ price }} a year{% endblocktrans %}</span>{% endif %}
     </form>
-    <ul class="hero-points">
-      <li><i class="bi bi-shield-check" aria-hidden="true"></i>{% trans "Free SSL certificate" %}</li>
-      <li><i class="bi bi-arrow-left-right" aria-hidden="true"></i>{% trans "Free website migration" %}</li>
-      <li><i class="bi bi-headset" aria-hidden="true"></i>{% trans "Support through your panel, any time" %}</li>
-      <li><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>{% trans "7-day refund on hosting" %}</li>
-    </ul>
+
+    <div class="hx-hero-copy">
+      <h1>{% trans "Your idea, online." %}<br>{% trans "Made easy." %}</h1>
+      <p>{% trans "Domains, hosting and support for your business, all in one place. Pick a name, pick a plan and be live today." %}</p>
+      <a class="btn btn-light hx-btn-light" href="{% url 'catalog:product_list' %}">{% trans "Get started" %}</a>
+      <p class="hx-guarantee"><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "7-day refund on hosting" %}</p>
+    </div>
+
+    <div class="hx-stage" aria-hidden="true">
+      <div class="hx-card hx-card-site">
+        <div class="hx-browser"><i></i><i></i><i></i></div>
+        <div class="hx-site-lines"><b></b><b></b><b></b></div>
+        <span class="hx-live"><i class="bi bi-circle-fill"></i> {% trans "Online" %}</span>
+        <small>{% trans "SSL active" %}</small>
+      </div>
+      <div class="hx-card hx-card-domain">
+        <span class="hx-badge"><i class="bi bi-stars"></i> {% trans "Find your name" %}</span>
+        <div class="hx-domain-row"><strong>launchsitetoday</strong><span>{% if popular_tlds %}{{ popular_tlds.0.tld }}{% else %}.com{% endif %} <i class="bi bi-chevron-down"></i></span></div>
+        <ul class="hx-tld-list">
+          {% for t in popular_tlds|slice:":3" %}<li><strong>{{ t.tld }}</strong><span>{{ t.register_price|money:STORE_CURRENCY }}</span></li>{% endfor %}
+        </ul>
+      </div>
+      <div class="hx-card hx-card-plan">
+        {% if lowest_plan %}
+        <small>{{ lowest_plan.get_type_display }}</small><strong>{{ lowest_plan.name }}</strong>
+        {% with lowest=lowest_plan.prices.all|dictsort:"price"|first %}{% if lowest %}<span class="hx-plan-price">{{ lowest.price|money:STORE_CURRENCY }}</span>{% endif %}{% endwith %}
+        {% endif %}
+        <ul><li><i class="bi bi-check2"></i> {% trans "Free SSL" %}</li><li><i class="bi bi-check2"></i> {% trans "Email accounts" %}</li><li><i class="bi bi-check2"></i> {% trans "Daily care" %}</li></ul>
+      </div>
+      <div class="hx-card hx-card-help">
+        <strong>{% trans "Hello" %} <span aria-hidden="true">&#128075;</span></strong>
+        <p>{% trans "How can we help you today?" %}</p>
+        <span class="hx-bubble"><i class="bi bi-arrow-up-right"></i> {% trans "I want to move my website" %}</span>
+        <span class="hx-bubble"><i class="bi bi-arrow-up-right"></i> {% trans "I need a domain" %}</span>
+      </div>
+    </div>
   </div>
 </section>
 
-<div class="container-xxl hero-overlap">
-  <div class="row g-4">
-    {% for product in products %}
-    <div class="col-md-6 col-xl-3">{% include "products/_plan_card.html" with product=product featured=False %}</div>
-    {% empty %}
-    <div class="col-12"><div class="card"><div class="card-body text-secondary">{% trans "Our plans are coming soon." %}</div></div></div>
-    {% endfor %}
-  </div>
-  {% if products %}<p class="text-center mt-4"><a class="btn btn-outline-primary" href="{% url 'catalog:product_list' %}">{% trans "See all plans" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a></p>{% endif %}
-</div>
-
-<section class="container-xxl mt-5" aria-labelledby="explore-h">
-  <h2 id="explore-h" class="h3 mb-1">{% trans "Everything you need to get online" %}</h2>
-  <p class="text-secondary mb-4">{% trans "Hosting for every kind of site, servers when you outgrow it, and the security and domains that go with it." %}</p>
-  <div class="cat-grid">
-    {% for tile in tiles %}
-    <a class="cat-tile" href="{% if tile.category.url_name %}{% url tile.category.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ tile.category.slug }}{% endif %}">
-      <span class="chip" aria-hidden="true"><i class="bi {{ tile.category.icon }}"></i></span>
-      <strong>{{ tile.category.name }}</strong>
-      <span class="text-secondary">{{ tile.category.blurb }}</span>
-      <span class="cat-from">{% if tile.from %}{% trans "From" %} {{ tile.from.price|money:STORE_CURRENCY }}{% elif tile.category.url_name %}{% trans "Search now" %}{% else %}{% trans "Coming soon" %}{% endif %}</span>
-    </a>
-    {% endfor %}
+{# ---- 2. Plans and prices ------------------------------------------------------------------------------------------------------------ #}
+<section class="container-xxl hx-section hx-tight">
+  <div class="hx-duo">
+    <article class="hx-feature-card hx-purple">
+      <span class="hx-chip">{% trans "Pricing" %}</span>
+      <h2>{% trans "Plans and prices" %}</h2>
+      <p>{% trans "Every plan comes with the tools you need on day one: SSL, email, backups and a panel to run it all. See every price, nothing hidden." %}</p>
+      <a class="btn btn-light hx-btn-light" href="{% url 'pricing' %}">{% trans "Explore all offers" %}</a>
+    </article>
+    <div class="hx-stack">
+      <a class="hx-mini" href="{% url 'pricing' %}#domains"><span class="hx-chip hx-chip-soft">{% trans "Domains" %}</span><i class="bi bi-arrow-up-right"></i>
+        <strong>{% if cheapest_domain %}{% blocktrans with price=cheapest_domain.register_price|money:STORE_CURRENCY %}Domains from {{ price }}{% endblocktrans %}{% else %}{% trans "Find your domain" %}{% endif %}</strong>
+        <small>{% trans "Register the name for your business and manage it from your account." %}</small></a>
+      <a class="hx-mini" href="{% url 'help:index' %}"><span class="hx-chip hx-chip-soft">{% trans "Moving?" %}</span><i class="bi bi-arrow-up-right"></i>
+        <strong>{% trans "Free website migration" %}</strong>
+        <small>{% trans "Already have a website? We move it for you." %}</small></a>
+    </div>
   </div>
 </section>
 
-{% if tld_teaser %}
-<section class="container-xxl mt-5" aria-labelledby="tld-h">
-  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
-    <div><h2 id="tld-h" class="h3 mb-1">{% trans "Domains from" %} {{ tld_teaser.0.register_price|money:STORE_CURRENCY }}</h2>
-      <p class="text-secondary mb-0">{% trans "A few of our most affordable extensions." %}</p></div>
-    <a class="btn btn-outline-primary" href="{% url 'pricing' %}#domains">{% trans "All domain prices" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-  </div>
-  <ul class="tld-strip">
-    {% for t in tld_teaser %}<li><a href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&years=1"><strong>{{ t.tld }}</strong><span>{{ t.register_price|money:STORE_CURRENCY }}<small>/{% trans "yr" %}</small></span></a></li>{% endfor %}
+{# ---- 3. Share your idea ------------------------------------------------------------------------------------------------------------- #}
+<section class="container-xxl hx-section hx-center">
+  <h2 class="hx-h2">{% trans "Share your idea." %} <span>{% trans "We take care of the rest." %}</span></h2>
+  <form method="get" action="{% url 'domains_public:search' %}" class="hx-ask" role="search">
+    <input type="hidden" name="years" value="1">
+    <label class="visually-hidden" for="hx_ask">{% trans "What is your business called?" %}</label>
+    <input id="hx_ask" type="text" name="domain" placeholder="{% trans 'What is your business called?' %}" required autocomplete="off">
+    <button class="btn btn-primary" type="submit" aria-label="{% trans 'Search' %}"><i class="bi bi-arrow-right"></i></button>
+  </form>
+  <ul class="hx-tld-chips">
+    {% for t in popular_tlds %}<li><a href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&years=1"><strong>{{ t.tld }}</strong> <span>{{ t.register_price|money:STORE_CURRENCY }}</span></a></li>{% endfor %}
   </ul>
 </section>
-{% endif %}
 
-<section class="container-xxl py-5 mt-4">
-  <div class="row g-4">
-    <div class="col-md-4 feature-tile"><i class="bi bi-lock" aria-hidden="true"></i><div><h2 class="h5">{% trans "Secure" %}</h2><p class="text-secondary mb-0">{% trans "SSL on every site, DDoS protection and regular updates keep your website and your visitors safe." %}</p></div></div>
-    <div class="col-md-4 feature-tile"><i class="bi bi-lightning-charge" aria-hidden="true"></i><div><h2 class="h5">{% trans "Fast" %}</h2><p class="text-secondary mb-0">{% trans "Modern NVMe storage and well-connected servers, so your pages load quickly." %}</p></div></div>
-    <div class="col-md-4 feature-tile"><i class="bi bi-hdd-network" aria-hidden="true"></i><div><h2 class="h5">{% trans "Reliable" %}</h2><p class="text-secondary mb-0">{% trans "Managed servers and a support team that answers, so you are never left on your own." %}</p></div></div>
+{# ---- 4. Tools for every online project (tabs) ------------------------------------------------------------------------------------- #}
+<section class="container-xxl hx-section" aria-labelledby="hx-tools">
+  <div class="hx-center">
+    <h2 class="hx-h2" id="hx-tools">{% trans "Tools for every online project" %}</h2>
+    <p class="hx-lead">{% trans "A personal page, a business site, an online shop or your own server: start with the right foundation." %}</p>
+  </div>
+  <ul class="nav hx-tabs" role="tablist">
+    <li role="presentation"><button class="active" id="t-sites" data-bs-toggle="tab" data-bs-target="#p-sites" type="button" role="tab" aria-controls="p-sites" aria-selected="true">{% trans "Websites" %}</button></li>
+    <li role="presentation"><button id="t-business" data-bs-toggle="tab" data-bs-target="#p-business" type="button" role="tab" aria-controls="p-business" aria-selected="false">{% trans "Business" %}</button></li>
+    <li role="presentation"><button id="t-shop" data-bs-toggle="tab" data-bs-target="#p-shop" type="button" role="tab" aria-controls="p-shop" aria-selected="false">{% trans "Online shop" %}</button></li>
+    <li role="presentation"><button id="t-dev" data-bs-toggle="tab" data-bs-target="#p-dev" type="button" role="tab" aria-controls="p-dev" aria-selected="false">{% trans "Developers" %}</button></li>
+  </ul>
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="p-sites" role="tabpanel" aria-labelledby="t-sites" tabindex="0">
+      <div class="hx-showcase">
+        <div class="hx-showcase-art hx-art-1" aria-hidden="true"><i class="bi bi-wordpress"></i><span></span><span></span></div>
+        <div class="hx-showcase-body">
+          <h3>{% trans "Build it yourself" %}</h3>
+          <p>{% trans "WordPress or a simple website, installed for you in minutes with SSL switched on. Change it from one dashboard." %}</p>
+          <ul class="hx-links">
+            {% if cat.wordpress %}<li><a href="{% url 'catalog:product_list' %}?category=wordpress">{{ cat.wordpress.category.name }}{% if cat.wordpress.from %} <small>{% trans "from" %} {{ cat.wordpress.from.price|money:STORE_CURRENCY }}</small>{% endif %}</a></li>{% endif %}
+            {% if cat.shared %}<li><a href="{% url 'catalog:product_list' %}?category=shared">{{ cat.shared.category.name }}{% if cat.shared.from %} <small>{% trans "from" %} {{ cat.shared.from.price|money:STORE_CURRENCY }}</small>{% endif %}</a></li>{% endif %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="p-business" role="tabpanel" aria-labelledby="t-business" tabindex="0">
+      <div class="hx-showcase">
+        <div class="hx-showcase-art hx-art-2" aria-hidden="true"><i class="bi bi-briefcase"></i><span></span><span></span></div>
+        <div class="hx-showcase-body">
+          <h3>{% trans "A home for your business" %}</h3>
+          <p>{% trans "More power and room to grow: more websites, more email, more storage, and a team that answers when you ask." %}</p>
+          <ul class="hx-links">
+            {% if cat.business %}<li><a href="{% url 'catalog:product_list' %}?category=business">{{ cat.business.category.name }}{% if cat.business.from %} <small>{% trans "from" %} {{ cat.business.from.price|money:STORE_CURRENCY }}</small>{% endif %}</a></li>{% endif %}
+            {% if cat.reseller %}<li><a href="{% url 'catalog:product_list' %}?category=reseller">{{ cat.reseller.category.name }}{% if cat.reseller.from %} <small>{% trans "from" %} {{ cat.reseller.from.price|money:STORE_CURRENCY }}</small>{% endif %}</a></li>{% endif %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="p-shop" role="tabpanel" aria-labelledby="t-shop" tabindex="0">
+      <div class="hx-showcase">
+        <div class="hx-showcase-art hx-art-3" aria-hidden="true"><i class="bi bi-bag-check"></i><span></span><span></span></div>
+        <div class="hx-showcase-body">
+          <h3>{% trans "Sell online" %}</h3>
+          <p>{% trans "Hosting built for online shops: fast pages, safe checkouts and the space your products need." %}</p>
+          <ul class="hx-links">
+            {% if cat.ecommerce %}<li><a href="{% url 'catalog:product_list' %}?category=ecommerce">{{ cat.ecommerce.category.name }}{% if cat.ecommerce.from %} <small>{% trans "from" %} {{ cat.ecommerce.from.price|money:STORE_CURRENCY }}</small>{% endif %}</a></li>{% endif %}
+            {% if cat.ssl %}<li><a href="{% url 'catalog:product_list' %}?category=ssl">{{ cat.ssl.category.name }}</a></li>{% endif %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="p-dev" role="tabpanel" aria-labelledby="t-dev" tabindex="0">
+      <div class="hx-showcase">
+        <div class="hx-showcase-art hx-art-4" aria-hidden="true"><i class="bi bi-terminal"></i><span></span><span></span></div>
+        <div class="hx-showcase-body">
+          <h3>{% trans "Your own server" %}</h3>
+          <p>{% trans "When a website is not enough: a virtual server with full control, or a whole machine of your own." %}</p>
+          <ul class="hx-links">
+            {% if cat.vps %}<li><a href="{% url 'catalog:product_list' %}?category=vps">{{ cat.vps.category.name }}{% if cat.vps.from %} <small>{% trans "from" %} {{ cat.vps.from.price|money:STORE_CURRENCY }}</small>{% endif %}</a></li>{% endif %}
+            {% if cat.dedicated %}<li><a href="{% url 'catalog:product_list' %}?category=dedicated">{{ cat.dedicated.category.name }}{% if cat.dedicated.from %} <small>{% trans "from" %} {{ cat.dedicated.from.price|money:STORE_CURRENCY }}</small>{% endif %}</a></li>{% endif %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ---- 5. The essentials ------------------------------------------------------------------------------------------------------------------ #}
+<section class="container-xxl hx-section" aria-labelledby="hx-essentials">
+  <div class="hx-center"><h2 class="hx-h2" id="hx-essentials">{% trans "Set up the essentials to go online" %}</h2></div>
+  <div class="hx-essentials">
+    <a class="hx-ess hx-ess-1" href="{% url 'catalog:product_list' %}"><span class="hx-ess-art" aria-hidden="true"><i class="bi bi-hdd-rack"></i></span><strong>{% trans "Hosting" %}</strong><small>{% trans "Fast, secure space for your website." %}</small></a>
+    <a class="hx-ess hx-ess-2" href="{% url 'domains_public:search' %}"><span class="hx-ess-art" aria-hidden="true"><i class="bi bi-globe2"></i></span><strong>{% trans "Domains" %}</strong><small>{% trans "The name your customers will type." %}</small></a>
+    <a class="hx-ess hx-ess-3" href="{% if cat.ssl %}{% url 'catalog:product_list' %}?category=ssl{% else %}{% url 'catalog:addons' %}{% endif %}"><span class="hx-ess-art" aria-hidden="true"><i class="bi bi-shield-lock"></i></span><strong>{% trans "SSL certificates" %}</strong><small>{% trans "Show the padlock and keep visitors safe." %}</small></a>
+    <a class="hx-ess hx-ess-4" href="{% url 'help:index' %}"><span class="hx-ess-art" aria-hidden="true"><i class="bi bi-headset"></i></span><strong>{% trans "Support" %}</strong><small>{% trans "Answers in your account, any time." %}</small></a>
+  </div>
+</section>
+
+{# ---- 6. Choose a plan ------------------------------------------------------------------------------------------------------------------ #}
+<section class="hx-band hx-band-light" aria-labelledby="hx-plans">
+  <div class="container-xxl">
+    <div class="hx-center">
+      <h2 class="hx-h2" id="hx-plans">{% trans "Choose the plan that matches what you need" %}</h2>
+      <p class="hx-lead">{% trans "Start small and move up when your website grows. Every price is on show." %}</p>
+    </div>
+    <div class="row g-4 justify-content-center">
+      {% for product in plans %}<div class="col-md-6 col-lg-4">{% if forloop.counter == 2 %}{% include "products/_plan_card.html" with product=product featured=True %}{% else %}{% include "products/_plan_card.html" with product=product featured=False %}{% endif %}</div>{% empty %}
+      <div class="col-12 text-center text-secondary">{% trans "Our plans are coming soon." %}</div>{% endfor %}
+    </div>
+    <p class="text-center mt-4"><a class="btn btn-outline-primary" href="{% url 'pricing' %}">{% trans "See all plans and prices" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a></p>
+  </div>
+</section>
+
+{# ---- 7. More power ------------------------------------------------------------------------------------------------------------------- #}
+<section class="hx-band hx-band-dark" aria-labelledby="hx-power">
+  <div class="container-xxl">
+    <div class="hx-center"><h2 class="hx-h2" id="hx-power">{% trans "More power when you need it" %}</h2>
+      <p class="hx-lead">{% trans "Servers and hosting for projects that outgrow the basics." %}</p></div>
+    <div class="hx-power">
+      {% if cat.vps %}<a class="hx-pow" href="{% url 'catalog:product_list' %}?category=vps"><i class="bi {{ cat.vps.category.icon }}"></i><strong>{{ cat.vps.category.name }}</strong><small>{{ cat.vps.category.blurb }}</small>{% if cat.vps.from %}<em>{% trans "from" %} {{ cat.vps.from.price|money:STORE_CURRENCY }}</em>{% endif %}</a>{% endif %}
+      {% if cat.dedicated %}<a class="hx-pow" href="{% url 'catalog:product_list' %}?category=dedicated"><i class="bi {{ cat.dedicated.category.icon }}"></i><strong>{{ cat.dedicated.category.name }}</strong><small>{{ cat.dedicated.category.blurb }}</small>{% if cat.dedicated.from %}<em>{% trans "from" %} {{ cat.dedicated.from.price|money:STORE_CURRENCY }}</em>{% endif %}</a>{% endif %}
+      {% if cat.reseller %}<a class="hx-pow" href="{% url 'catalog:product_list' %}?category=reseller"><i class="bi {{ cat.reseller.category.icon }}"></i><strong>{{ cat.reseller.category.name }}</strong><small>{{ cat.reseller.category.blurb }}</small>{% if cat.reseller.from %}<em>{% trans "from" %} {{ cat.reseller.from.price|money:STORE_CURRENCY }}</em>{% endif %}</a>{% endif %}
+      {% if cat.ecommerce %}<a class="hx-pow" href="{% url 'catalog:product_list' %}?category=ecommerce"><i class="bi {{ cat.ecommerce.category.icon }}"></i><strong>{{ cat.ecommerce.category.name }}</strong><small>{{ cat.ecommerce.category.blurb }}</small>{% if cat.ecommerce.from %}<em>{% trans "from" %} {{ cat.ecommerce.from.price|money:STORE_CURRENCY }}</em>{% endif %}</a>{% endif %}
+    </div>
+  </div>
+</section>
+
+{# ---- 8. Why us ----------------------------------------------------------------------------------------------------------------------------- #}
+<section class="container-xxl hx-section" aria-labelledby="hx-why">
+  <div class="hx-center"><h2 class="hx-h2" id="hx-why">{% trans "Everything taken care of" %}</h2></div>
+  <div class="hx-why">
+    <div><i class="bi bi-shield-check"></i><strong>{% trans "Free SSL certificate" %}</strong><p>{% trans "Every website opens with the padlock, so visitors trust it." %}</p></div>
+    <div><i class="bi bi-arrow-left-right"></i><strong>{% trans "Free website migration" %}</strong><p>{% trans "Bring your existing website over; we move it for you." %}</p></div>
+    <div><i class="bi bi-headset"></i><strong>{% trans "Support through your panel" %}</strong><p>{% trans "Open a ticket from your account, any time, and follow the answer there." %}</p></div>
+    <div><i class="bi bi-arrow-counterclockwise"></i><strong>{% trans "7-day refund on hosting" %}</strong><p>{% trans "Try it. If it is not for you, you get your money back." %}</p></div>
+  </div>
+</section>
+
+{# ---- 9. Questions ------------------------------------------------------------------------------------------------------------------------- #}
+{% footer_info as foot %}
+<section class="container-xxl hx-section hx-narrow" aria-labelledby="hx-faq">
+  <div class="hx-center"><h2 class="hx-h2" id="hx-faq">{% trans "Frequently asked questions" %}</h2></div>
+  <div class="accordion hx-faq" id="faq">
+    <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#q1" aria-expanded="false" aria-controls="q1">{% trans "How do I get started?" %}</button></h3>
+      <div id="q1" class="accordion-collapse collapse" data-bs-parent="#faq"><div class="accordion-body">{% trans "Search for the domain you want, pick a plan, and create your account. After you pay, your website is set up from your account, where you can install WordPress with one click." %}</div></div></div>
+    <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#q2" aria-expanded="false" aria-controls="q2">{% trans "Can you move my existing website?" %}</button></h3>
+      <div id="q2" class="accordion-collapse collapse" data-bs-parent="#faq"><div class="accordion-body">{% trans "Yes. Migration is free: open a ticket from your account with the address of your current website and we copy it over and tell you when it is ready to check." %}</div></div></div>
+    <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#q3" aria-expanded="false" aria-controls="q3">{% trans "How can I pay?" %}</button></h3>
+      <div id="q3" class="accordion-collapse collapse" data-bs-parent="#faq"><div class="accordion-body">{% if foot.methods %}{% trans "You can pay by" %} {% for m in foot.methods %}{{ m.name }}{% if not forloop.last %}, {% endif %}{% endfor %}. {% endif %}{% trans "Prices are shown in" %} {{ STORE_CURRENCY }}. {% trans "Your invoice and receipts are in your account." %}</div></div></div>
+    <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#q4" aria-expanded="false" aria-controls="q4">{% trans "Is there a money-back guarantee?" %}</button></h3>
+      <div id="q4" class="accordion-collapse collapse" data-bs-parent="#faq"><div class="accordion-body">{% trans "Hosting comes with a 7-day refund. If it is not what you wanted, tell us in the first week." %}</div></div></div>
+    <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#q5" aria-expanded="false" aria-controls="q5">{% trans "Can I manage everything in one place?" %}</button></h3>
+      <div id="q5" class="accordion-collapse collapse" data-bs-parent="#faq"><div class="accordion-body">{% trans "Yes. Your websites, domains, email, invoices and support tickets are all in your account. Each website has its own dashboard with files, databases, backups and WordPress tools." %}</div></div></div>
+    <div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#q6" aria-expanded="false" aria-controls="q6">{% trans "Where can I get help?" %}</button></h3>
+      <div id="q6" class="accordion-collapse collapse" data-bs-parent="#faq"><div class="accordion-body">{% trans "Start with the" %} <a href="{% url 'help:index' %}">{% trans "help centre" %}</a>. {% trans "If you need a person, open a ticket from your account and our team replies there." %}</div></div></div>
+  </div>
+</section>
+
+{# ---- 10. The last call --------------------------------------------------------------------------------------------------------------------- #}
+<section class="container-xxl hx-section">
+  <div class="hx-cta">
+    <div>
+      <h2>{% trans "Imagined it." %}<br>{% trans "Now make it real." %}</h2>
+      <p>{% trans "Find your domain, pick a plan and be online today. We migrate your existing site for free." %}</p>
+      <a class="btn btn-light hx-btn-light" href="{% url 'catalog:product_list' %}">{% trans "Get started" %}</a>
+    </div>
+    <form method="get" action="{% url 'domains_public:search' %}" class="hx-ask hx-ask-on-dark" role="search">
+      <input type="hidden" name="years" value="1">
+      <label class="visually-hidden" for="hx_cta">{% trans "Domain name" %}</label>
+      <input id="hx_cta" type="text" name="domain" placeholder="{% trans 'Find a domain for your business' %}" required autocomplete="off">
+      <button class="btn btn-primary" type="submit" aria-label="{% trans 'Search' %}"><i class="bi bi-arrow-right"></i></button>
+    </form>
   </div>
 </section>
 {% endblock %}

@@ -56,6 +56,7 @@ BOTH = ("client", "staff")
 ITEMS = [
     # --- Public (the storefront keeps its top bar) -------------------------------------------------------------------
     item("public.pricing", _("Pricing"), "pricing", areas=("public",)),
+    item("public.hosting", _("Hosting"), "hosting", areas=("public",)),
     item("public.products", _("Products"), "catalog:product_list", areas=("public",)),  # drawn as a mega menu from the store categories (apps/products/public_menu.py)
     item("public.domains", _("Domains"), "domains_public:search", areas=("public",)),
     item("public.help", _("Resources"), "help:index", areas=("public",)),  # drawn as a menu of the help centre and its categories

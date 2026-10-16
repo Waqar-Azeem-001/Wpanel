@@ -909,3 +909,12 @@ html[data-bs-theme="dark"] .auth-center .auth-panel::before, html[data-bs-theme=
 /* Two-factor sign-in: the recovery codes, shown once */
 .recovery-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem 1.5rem; margin: 0 0 1.25rem; padding: 1rem 1.25rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-panel, 10px); font-size: 1rem; }
 @media (max-width: 480px) { .recovery-codes { grid-template-columns: 1fr; } }
+
+/* The expanded footer: brand block, five columns, social icons and a note on prices */
+.foot-grid { grid-template-columns: 1.5fr repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1199.98px) { .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .foot-brand { grid-column: 1 / -1; } }
+@media (max-width: 575.98px) { .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.foot-social { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 0; padding: 0; }
+.foot-social a { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 1px solid var(--foot-line); color: var(--foot-text); text-decoration: none; transition: background .15s ease, color .15s ease; }
+.foot-social a:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.foot-note { margin-left: .5rem; opacity: .75; }

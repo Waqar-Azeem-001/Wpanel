@@ -56,7 +56,7 @@ def test_staff_add_a_category_and_put_a_plan_in_it(manager):
     assert "Game servers" in store and "Minecraft 4G" in store
     only = visitor.get("/products/?category=game-servers").content.decode()
     assert "Minecraft 4G" in only and "Low-latency" in only
-    assert visitor.get("/").content.decode().count("cat-tile") == 11  # the home page gets its tile too
+    assert visitor.get("/hosting/").content.decode().count("cat-tile") == 11  # the hosting page gets its tile too
 
 
 def test_a_category_can_be_renamed_reordered_and_hidden(manager):

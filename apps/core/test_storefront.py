@@ -23,8 +23,8 @@ def store(settings):
 
 # --- The front page ---------------------------------------------------------------------------------------------------
 
-def test_a_visitor_sees_the_storefront_on_the_home_page(client, store):
-    response = client.get("/")
+def test_a_visitor_sees_the_storefront_on_the_hosting_page(client, store):
+    response = client.get(reverse("hosting"))
     page = response.content.decode()
     assert response.status_code == 200 and "Web hosting and domains that just work" in page
     assert reverse("domains_public:search") in page and 'name="domain"' in page and 'name="years" value="1"' in page
@@ -32,8 +32,8 @@ def test_a_visitor_sees_the_storefront_on_the_home_page(client, store):
     assert page.count("<h1") == 1
 
 
-def test_the_home_page_shows_the_four_cheapest_plans_cheapest_first(client, store):
-    plans = client.get("/").context["products"]
+def test_the_hosting_page_shows_the_four_cheapest_plans_cheapest_first(client, store):
+    plans = client.get(reverse("hosting")).context["products"]
     assert [p.name for p in plans] == ["Shared Starter", "WordPress Hosting", "Business Hosting", "Shared Grow"]
     prices = [min(x.price for x in p.prices.all()) for p in plans]
     assert prices == sorted(prices)

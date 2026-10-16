@@ -41,21 +41,33 @@
             {% if foot.phone %}<li><i class="bi bi-telephone" aria-hidden="true"></i><a href="tel:{{ foot.phone|cut:' ' }}">{{ foot.phone }}</a></li>{% endif %}
             {% if foot.address %}<li><i class="bi bi-geo-alt" aria-hidden="true"></i><span>{{ foot.address|linebreaksbr }}</span></li>{% endif %}
           </ul>
+          {% if brand.social_links %}<ul class="foot-social" aria-label="{% trans 'Follow us' %}">{% for title, url, icon in brand.social_links %}<li><a href="{{ url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ title }}" title="{{ title }}"><i class="bi {{ icon }}" aria-hidden="true"></i></a></li>{% endfor %}</ul>{% endif %}
         </div>
         <nav class="foot-col" aria-label="{% trans 'Hosting' %}">
           <h2>{% trans "Hosting" %}</h2>
           <ul>
-            {% for category in foot.categories %}<li><a href="{% url 'catalog:product_list' %}?category={{ category.slug }}">{{ category.name }}</a></li>{% empty %}<li><a href="{% url 'catalog:product_list' %}">{% trans "Hosting plans" %}</a></li>{% endfor %}
+            {% for category in foot.categories %}<li><a href="{% url 'catalog:product_list' %}?category={{ category.slug }}">{{ category.name }}</a></li>{% endfor %}
+            <li><a href="{% url 'hosting' %}">{% trans "All hosting" %}</a></li>
           </ul>
         </nav>
-        <nav class="foot-col" aria-label="{% trans 'Domains and more' %}">
-          <h2>{% trans "Domains and more" %}</h2>
+        <nav class="foot-col" aria-label="{% trans 'Domains' %}">
+          <h2>{% trans "Domains" %}</h2>
           <ul>
+            <li><a href="{% url 'domains_public:search' %}">{% trans "Domain name search" %}</a></li>
             <li><a href="{% url 'domains_public:search' %}">{% trans "Register a domain" %}</a></li>
             <li><a href="{% url 'pricing' %}#domains">{% trans "Domain prices" %}</a></li>
-            <li><a href="{% url 'catalog:addons' %}">{% trans "Add-ons" %}</a></li>
-            <li><a href="{% url 'catalog:product_list' %}">{% trans "All plans" %}</a></li>
+            {% for category in foot.addons %}<li><a href="{% url 'catalog:product_list' %}?category={{ category.slug }}">{{ category.name }}</a></li>{% endfor %}
+            <li><a href="{% url 'catalog:addons' %}">{% trans "All add-ons" %}</a></li>
+          </ul>
+        </nav>
+        <nav class="foot-col" aria-label="{% trans 'Information' %}">
+          <h2>{% trans "Information" %}</h2>
+          <ul>
             <li><a href="{% url 'pricing' %}">{% trans "Pricing" %}</a></li>
+            <li><a href="{% url 'catalog:product_list' %}">{% trans "All plans" %}</a></li>
+            <li><a href="{% url 'help:index' %}">{% trans "Knowledge base" %}</a></li>
+            {% for category in foot.help %}<li><a href="{% url 'help:category' category.slug %}">{{ category.name }}</a></li>{% endfor %}
+            {% if user.is_authenticated %}<li><a href="{% url 'affiliates_customer:dashboard' %}">{% trans "Affiliate programme" %}</a></li>{% endif %}
           </ul>
         </nav>
         <nav class="foot-col" aria-label="{% trans 'Support' %}">
@@ -65,19 +77,22 @@
             {% if user.is_authenticated %}<li><a href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a></li>
             <li><a href="{% url 'support_customer:list' %}">{% trans "My tickets" %}</a></li>{% endif %}
             {% if brand.support_email %}<li><a href="mailto:{{ brand.support_email }}">{% trans "Email us" %}</a></li>{% endif %}
+            {% if foot.phone %}<li><a href="tel:{{ foot.phone|cut:' ' }}">{% trans "Call us" %}</a></li>{% endif %}
           </ul>
         </nav>
-        <nav class="foot-col" aria-label="{% trans 'Account' %}">
+        <nav class="foot-col" aria-label="{% trans 'Your account' %}">
           <h2>{% trans "Your account" %}</h2>
           <ul>
             {% if user.is_authenticated %}
             <li><a href="{% url 'dashboard' %}">{% trans "Dashboard" %}</a></li>
+            <li><a href="{% url 'hosting_customer:websites' %}">{% trans "Websites" %}</a></li>
+            <li><a href="{% url 'domains_customer:list' %}">{% trans "My domains" %}</a></li>
             <li><a href="{% url 'orders_customer:list' %}">{% trans "Orders" %}</a></li>
             <li><a href="{% url 'billing_customer:invoice_list' %}">{% trans "Invoices" %}</a></li>
-            <li><a href="{% url 'affiliates_customer:dashboard' %}">{% trans "Affiliate programme" %}</a></li>
             {% else %}
             <li><a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a></li>
             <li><a href="{% url 'accounts:register' %}">{% trans "Create an account" %}</a></li>
+            <li><a href="{% url 'orders_customer:cart' %}">{% trans "Your cart" %}</a></li>
             {% endif %}
           </ul>
         </nav>
@@ -89,7 +104,7 @@
       </div>
       {% endif %}
       <div class="foot-base">
-        <span>{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}. {% trans "All rights reserved." %}{% endif %}</span>
+        <span>{% if brand.footer_text %}{{ brand.footer_text }}{% else %}&copy; {% now "Y" %} {{ SITE_NAME }}. {% trans "All rights reserved." %}{% endif %} <span class="foot-note">{% trans "Prices are shown in" %} {{ STORE_CURRENCY }}.</span></span>
         <span class="foot-tools">
           <span class="foot-theme" role="group" aria-label="{% trans 'Theme' %}">
             <button type="button" data-theme-choice="light" aria-pressed="false" title="{% trans 'Light' %}"><i class="bi bi-sun" aria-hidden="true"></i><span class="visually-hidden">{% trans "Light" %}</span></button>
