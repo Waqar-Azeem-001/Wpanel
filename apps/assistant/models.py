@@ -1,3 +1,5 @@
+import datetime as dt
+
 from django.conf import settings
 from django.db import models
 
@@ -13,6 +15,12 @@ class AssistantSettings(TimeStampedModel):
     mode = models.CharField(max_length=10, choices=MODES, default="knowledge", help_text="Knowledge base: answers from the entries you keep in Setup and checks the customer's own account. Claude: free conversation (needs the key).")
     model = models.CharField(max_length=80, default="claude-sonnet-5-5")
     daily_limit = models.PositiveSmallIntegerField(default=30, help_text="Messages one client may send per day; it keeps the cost in hand.")
+    offline_ticket = models.BooleanField(default=False, help_text="When nobody on the team is online (or it is outside working hours), a request for a person becomes a ticket straight away instead of waiting.")
+    hours_enabled = models.BooleanField(default=False, help_text="Count only the working hours below as 'team available'.")
+    hours_start = models.TimeField(default=dt.time(9, 0))
+    hours_end = models.TimeField(default=dt.time(18, 0))
+    hours_days = models.CharField(max_length=20, default="0,1,2,3,4,5", help_text="Weekdays the team works, 0 = Monday.")
+    hours_timezone = models.CharField(max_length=60, default="Asia/Karachi")
     changes_enabled = models.BooleanField(default=True, help_text="Off = the Agent can no longer propose changes (SSL, mailbox size, PHP, scans, backups). The kill switch for changes.")
     change_hours = models.PositiveSmallIntegerField(default=24, help_text="How long the team needs for a change the Agent asks for on the server; the Agent tells the customer this.")
 
@@ -62,6 +70,7 @@ class Message(TimeStampedModel):
     sender = models.CharField(max_length=8, choices=SenderType.choices)
     staff = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     action = models.ForeignKey("assistant.PendingAction", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    feedback = models.SmallIntegerField(default=0)  # the customer's thumb on an answer: 1 helped, -1 did not
     body = models.TextField(blank=True)
     tool_call = models.JSONField(null=True, blank=True)  # for an event line: which tool the assistant used (name and what it looked at, never secrets)
 
@@ -140,3 +149,11 @@ class VerificationCode(TimeStampedModel):
     expires_at = models.DateTimeField()
     attempts = models.PositiveSmallIntegerField(default=0)
     last_sent_at = models.DateTimeField()
+
+
+class StaffAvailability(TimeStampedModel):
+    """Whether a support person says they are online for live chats. It counts only while they keep a chat page open (the pages refresh it)."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_availability")
+    online = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(null=True, blank=True)

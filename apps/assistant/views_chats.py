@@ -13,7 +13,7 @@ from apps.hosting.models import HostingAccount
 from apps.support import services as support
 
 from . import live
-from .models import Conversation, ConversationStatus, Message, SenderType
+from .models import Conversation, ConversationStatus, Message, SenderType, StaffAvailability
 
 TABS = [("all", "All"), ("waiting", "Waiting"), ("ai", "AI"), ("with_staff", "With staff"), ("closed", "Closed")]
 
@@ -29,9 +29,21 @@ def serialise(m):
             "who": ((m.staff.get_full_name() or m.staff.email.split("@")[0]) if m.staff_id else ""), "at": m.created_at.isoformat()}
 
 
+@require_POST
+@login_required
+def availability(request):
+    try:
+        row = live.set_online(request.user, request.POST.get("online") == "1")
+        messages.success(request, "You are online for live chats. Keep a chat page open to stay online." if row.online else "You are offline for live chats.")
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+    return redirect(request.POST.get("next") if request.POST.get("next", "").startswith("/staff/chats/") else "livechat:list")
+
+
 @login_required
 def chat_list(request):
     _see(request)
+    live.touch(request.user)
     tab = request.GET.get("tab", "all")
     term = (request.GET.get("q") or "").strip()
     rows = Conversation.objects.select_related("client", "user", "assigned_to").order_by("-updated_at")
@@ -47,13 +59,15 @@ def chat_list(request):
         row.last = row.messages.exclude(sender=SenderType.EVENT).order_by("-id").first()
         row.domain = HostingAccount.objects.filter(client=row.client).values_list("domain", flat=True).first() or ""
     counts = live.counts()
-    return render(request, "assistant/chats.html", {"rows": rows, "tab": tab, "q": term, "tabs": [(k, label, counts.get(k, 0)) for k, label in TABS], "waiting": counts.get("waiting", 0),
+    me = StaffAvailability.objects.filter(user=request.user).first()
+    return render(request, "assistant/chats.html", {"online": bool(me and me.online), "colleagues_online": len(live.staff_online()), "rows": rows, "tab": tab, "q": term, "tabs": [(k, label, counts.get(k, 0)) for k, label in TABS], "waiting": counts.get("waiting", 0),
                                                     "can_act": support.can_manage(request.user)})
 
 
 @login_required
 def chat_detail(request, pk):
     _see(request)
+    live.touch(request.user)
     conversation = get_object_or_404(Conversation.objects.select_related("client", "user", "assigned_to", "ticket"), pk=pk)
     rows = list(conversation.messages.select_related("staff").all())
     accounts = list(HostingAccount.objects.filter(client=conversation.client).select_related("product")[:5])
@@ -67,6 +81,7 @@ def chat_detail(request, pk):
 @login_required
 def chat_poll(request, pk):
     _see(request)
+    live.touch(request.user)
     conversation = get_object_or_404(Conversation, pk=pk)
     try:
         after = int(request.GET.get("after", 0))

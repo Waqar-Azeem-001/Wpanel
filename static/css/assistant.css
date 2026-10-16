@@ -50,3 +50,11 @@
 .verify-icon { width: 3.2rem; height: 3.2rem; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 1rem; background: color-mix(in srgb, var(--bs-primary) 14%, var(--bs-body-bg)); color: var(--bs-primary); font-size: 1.4rem; }
 .verify-action { padding: .65rem .8rem; border-radius: .6rem; background: var(--bs-tertiary-bg); font-weight: 600; }
 .asst-action.needs-code { border-style: dashed; }
+
+.asst-msg.is-ai { flex-direction: column; align-items: flex-start; gap: .15rem; }
+.asst-feedback { display: inline-flex; gap: .1rem; margin-left: .35rem; opacity: .55; }
+.asst-feedback:hover, .asst-feedback:focus-within { opacity: 1; }
+.asst-feedback button { border: 0; background: none; color: var(--bs-secondary-color); padding: .1rem .3rem; border-radius: .4rem; font-size: .85rem; cursor: pointer; }
+.asst-feedback button:hover { background: var(--bs-secondary-bg); }
+.asst-feedback button.is-picked { color: var(--bs-primary); }
+.asst-log[data-staff-view] .asst-feedback { display: none; }

@@ -178,6 +178,8 @@ def request_human_handoff(ctx, reason):
     from . import live
 
     out = live.ask_person(ctx.user, ctx.conversation, reason, request=ctx.request)
+    if out["status"] == "ticket":
+        return {"status": "ticket_opened", "ticket": out["ticket"], "note": "Nobody on the team is online, so a ticket was opened with the chat attached. Tell the client the ticket number and that the team replies there and by email."}
     return {"status": "waiting_for_staff" if out["status"] == "waiting" else out["status"], "note": "A person has been asked to join this chat. Tell the client to wait here a moment."}
 
 

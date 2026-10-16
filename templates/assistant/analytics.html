@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Agent analytics · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Agent analytics</h1>
+  <p class="page-sub"><a href="{% url 'assistant_staff:settings' %}">AI Agent</a> · <a href="{% url 'livechat:list' %}">Live chats</a> · <a href="{% url 'assistant_staff:knowledge' %}">Knowledge</a></p></div>
+<ul class="nav nav-pills mb-3">{% for d in choices %}<li class="nav-item"><a class="nav-link{% if r.days == d %} active{% endif %}" href="?days={{ d }}">Last {{ d }} days</a></li>{% endfor %}</ul>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><section class="card h-100"><div class="card-body"><div class="text-secondary small">Chats</div><div class="h2 mb-0">{{ r.chats }}</div><div class="small text-secondary">{{ r.asked }} customer messages</div></div></section></div>
+  <div class="col-6 col-lg-3"><section class="card h-100"><div class="card-body"><div class="text-secondary small">Solved by the Agent alone</div><div class="h2 mb-0">{{ r.alone_percent }}%</div><div class="small text-secondary">{{ r.alone }} of {{ r.chats }} never needed a person</div></div></section></div>
+  <div class="col-6 col-lg-3"><section class="card h-100"><div class="card-body"><div class="text-secondary small">Went to a person</div><div class="h2 mb-0">{{ r.with_person }}</div><div class="small text-secondary">{{ r.tickets }} became tickets{% if r.average_wait is not None %} · waited {{ r.average_wait }} s on average{% endif %}</div></div></section></div>
+  <div class="col-6 col-lg-3"><section class="card h-100"><div class="card-body"><div class="text-secondary small">Answers that helped</div><div class="h2 mb-0">{% if r.helpful_percent is None %}-{% else %}{{ r.helpful_percent }}%{% endif %}</div><div class="small text-secondary">{{ r.up }} helped · {{ r.down }} did not</div></div></section></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h2 class="h6 mb-0">Chats per day</h2></div>
+    <div class="table-responsive"><table class="table align-middle mb-0"><tbody>{% for day, n in r.per_day %}<tr><td class="text-nowrap">{{ day|date:"D j M" }}</td><td class="w-100"><progress max="{{ r.per_day_max }}" value="{{ n }}" aria-label="Chats on {{ day|date:'j M' }}">{{ n }}</progress></td><td>{{ n }}</td></tr>{% endfor %}</tbody></table></div></section></div>
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h2 class="h6 mb-0">Changes the Agent proposed</h2></div>
+    <div class="card-body"><dl class="row mb-0"><dt class="col-7">Proposed</dt><dd class="col-5">{{ r.changes.proposed }}</dd><dt class="col-7">Done after approval</dt><dd class="col-5">{{ r.changes.done }}</dd><dt class="col-7">Failed</dt><dd class="col-5">{{ r.changes.failed }}</dd>
+      <dt class="col-7">Cancelled or expired</dt><dd class="col-5">{{ r.changes.cancelled }} / {{ r.changes.expired }}</dd><dt class="col-7">Needed a security code</dt><dd class="col-5">{{ r.changes.with_code }}</dd><dt class="col-7">Locked after wrong codes</dt><dd class="col-5">{{ r.changes.locked }}</dd></dl></div></section></div>
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h2 class="h6 mb-0">What customers ask most (entries used)</h2></div>
+    <div class="table-responsive"><table class="table align-middle mb-0"><tbody>{% for e in r.top_entries %}<tr><td><a href="{% url 'assistant_staff:knowledge_edit' e.pk %}">{{ e.title }}</a></td><td class="text-end">{{ e.hits }}</td></tr>{% empty %}<tr><td class="text-secondary">Nothing used yet.</td></tr>{% endfor %}</tbody></table></div></section></div>
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header d-flex justify-content-between"><h2 class="h6 mb-0">Questions it could not answer</h2><a href="{% url 'assistant_staff:knowledge' %}">{{ r.gap_total }} in all</a></div>
+    <div class="table-responsive"><table class="table align-middle mb-0"><tbody>{% for g in r.gaps %}<tr><td>{{ g.text }}</td><td class="text-end">{{ g.count }}</td></tr>{% empty %}<tr><td class="text-secondary">None. {{ r.entries }} entries are active.</td></tr>{% endfor %}</tbody></table></div></section></div>
+  <div class="col-12"><section class="card"><div class="card-header"><h2 class="h6 mb-0">Checks the Agent ran on customers' accounts</h2></div>
+    <div class="table-responsive"><table class="table align-middle mb-0"><tbody>{% for t in r.tools %}<tr><td>{{ t.body }}</td><td class="text-end">{{ t.n }}</td></tr>{% empty %}<tr><td class="text-secondary">None yet.</td></tr>{% endfor %}</tbody></table></div></section></div>
+</div>
+{% endblock %}

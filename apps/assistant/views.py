@@ -1,3 +1,6 @@
+import datetime as dt
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -40,7 +43,8 @@ def _context(request, client):
         "waiting": conversation.status == ConversationStatus.WAITING, "with_person": conversation.status == ConversationStatus.WITH_STAFF, "person": conversation.assigned_to,
         "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60,
         "act_base": reverse("assistant:act", args=[0, "approve"]).replace("0/approve/", ""),
-        "verify_base": reverse("assistant:verify", args=[0]).replace("0/", "")}
+        "verify_base": reverse("assistant:verify", args=[0]).replace("0/", ""),
+        "feedback_base": reverse("assistant:feedback", args=[0, "up"]).replace("0/up/", "")}
 
 
 @login_required
@@ -113,7 +117,7 @@ def handoff(request):
     except ServiceError as exc:
         messages.error(request, exc.message)
     else:
-        messages.success(request, "We told our team. Someone will join this chat shortly." if out.get("status") == "waiting" else "A person is already on this chat.")
+        messages.success(request, live.describe(out))
     if request.headers.get("X-Requested-With") == "fetch":
         return JsonResponse({"ok": True})
     return redirect("assistant:chat")
@@ -159,6 +163,18 @@ def ticket_instead(request):
 
 @require_POST
 @login_required
+def feedback(request, pk, vote):
+    """The customer's thumb on an answer."""
+    message = Message.objects.filter(pk=pk, sender=SenderType.AI, conversation__user=request.user).first()
+    if message is None or vote not in ("up", "down"):
+        raise Http404
+    message.feedback = 1 if vote == "up" else -1
+    message.save(update_fields=["feedback", "updated_at"])
+    return JsonResponse({"ok": True, "vote": vote})
+
+
+@require_POST
+@login_required
 def new_chat(request):
     client = _client(request.user)
     if client is None:
@@ -195,12 +211,25 @@ def staff_settings(request):
                 raise ServiceError("The daily limit is a number from 1 to 500.", code="limit_invalid")
             if not 1 <= hours <= 168:
                 raise ServiceError("The hours for a change are a number from 1 to 168.", code="hours_invalid")
+            try:
+                opens = dt.datetime.strptime(request.POST.get("hours_start") or config.hours_start.strftime("%H:%M"), "%H:%M").time()
+                closes = dt.datetime.strptime(request.POST.get("hours_end") or config.hours_end.strftime("%H:%M"), "%H:%M").time()
+                zone = (request.POST.get("hours_timezone") or config.hours_timezone).strip()
+                ZoneInfo(zone)
+            except (ValueError, ZoneInfoNotFoundError):
+                raise ServiceError("Write the hours as HH:MM and a time zone such as Asia/Karachi.", code="working_hours_invalid") from None
+            if closes <= opens:
+                raise ServiceError("The closing time must be after the opening time.", code="hours_order")
         except (ServiceError, ValueError) as exc:
             messages.error(request, getattr(exc, "message", "The daily limit is a number from 1 to 500."))
         else:
             config.enabled, config.model, config.daily_limit, config.change_hours = request.POST.get("enabled") == "on", model, limit, hours
             config.mode = "claude" if request.POST.get("mode") == "claude" else "knowledge"
             config.changes_enabled = request.POST.get("changes_enabled") == "on"
+            config.offline_ticket = request.POST.get("offline_ticket") == "on"
+            config.hours_enabled = request.POST.get("hours_enabled") == "on"
+            config.hours_start, config.hours_end, config.hours_timezone = opens, closes, zone
+            config.hours_days = ",".join(d for d in "0123456" if request.POST.get(f"day_{d}") == "on")
             config.save()
             audit.record("assistant.settings_saved", actor=request.user, target=config, metadata={"enabled": config.enabled, "mode": config.mode, "model": model, "daily_limit": limit}, request=request)
             messages.success(request, "The assistant settings were saved.")
@@ -209,7 +238,21 @@ def staff_settings(request):
     return render(request, "assistant/settings.html", {
         "config": config, "can_manage": can_manage, "key_set": bool(agent.api_key()), "today": Message.objects.filter(sender=SenderType.CLIENT, created_at__gte=start).count(),
         "chats": Conversation.objects.select_related("client", "user", "ticket").order_by("-updated_at")[:25],
-        "entries": KnowledgeEntry.objects.filter(is_active=True).count(), "gaps": Unanswered.objects.count()})
+        "entries": KnowledgeEntry.objects.filter(is_active=True).count(), "gaps": Unanswered.objects.count(),
+        "days": [(str(i), name, str(i) in config.hours_days.split(",")) for i, name in enumerate(live.DAYS)], "online_now": len(live.staff_online())})
+
+
+@login_required
+def staff_analytics(request):
+    _staff(request)
+    from . import analytics
+
+    try:
+        days = int(request.GET.get("days", 7))
+    except ValueError:
+        days = 7
+    days = days if days in (7, 30, 90) else 7
+    return render(request, "assistant/analytics.html", {"r": analytics.report(days), "choices": (7, 30, 90)})
 
 
 @login_required

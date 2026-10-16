@@ -237,7 +237,7 @@ def reply(user, conversation, text, request=None):
 
     if any(p in normal for p in PERSON):
         out = live.ask_person(user, conversation, "The customer asked for a person: " + clean[:150], request=request)
-        return finish("Of course. I asked someone from our team to join this chat; please keep this window open." if out["status"] == "waiting" else "A person is already on this chat.")
+        return finish("Of course. " + live.describe(out))
     if tokens and tokens <= GREETING | {"there", "team", "sir", "madam"}:
         return finish("Hello! I am your AI Agent. Ask me about your website, email, SSL, domains, invoices, or how to do something in the panel. For example: Is my SSL working? Why is my website slow? How do I create an email?")
     if tokens and tokens <= THANKS | {"you", "so", "much", "a", "lot", "bohat", "bahut"}:
@@ -263,7 +263,7 @@ def reply(user, conversation, text, request=None):
     action = entry.action
     if action == "handoff":
         out = live.ask_person(user, conversation, entry.title + ": " + clean[:150], request=request)
-        return finish(answer if out["status"] == "waiting" else "A person is already on this chat.")
+        return finish(answer if out["status"] == "waiting" else live.describe(out))
     if action == "ticket":
         try:
             ticket = tools._open(ctx, "Help from the AI Agent chat", "The customer asked for a ticket in the AI Agent chat.\n\n" + tools.transcript(conversation, limit=12))

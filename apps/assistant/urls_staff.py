@@ -5,6 +5,7 @@ from . import views, views_knowledge
 app_name = "assistant_staff"
 urlpatterns = [
     path("", views.staff_settings, name="settings"),
+    path("analytics/", views.staff_analytics, name="analytics"),
     path("knowledge/", views_knowledge.knowledge, name="knowledge"),
     path("knowledge/new/", views_knowledge.entry_form, name="knowledge_new"),
     path("knowledge/<int:pk>/", views_knowledge.entry_form, name="knowledge_edit"),

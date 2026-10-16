@@ -125,9 +125,9 @@ def test_signed_in_people_get_the_header_the_menus_and_the_search(world):
 def test_the_header_marks_the_section_and_the_area_you_are_in(world):
     page = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
     menus = nav_of(page)
-    assert re.search(r'<button class="topnav-link is-current" type="button" aria-expanded="false" aria-controls="mega-commerce" data-mega>Commerce', menus)
-    assert re.search(r'<a class="mega-head is-current" href="/staff/billing/">', menus)
-    assert menus.count("topnav-link is-current") == 1 and menus.count("mega-head is-current") == 1  # one section, one area
+    # Billing has more than five pages, so it is a menu of its own in the header, not an area inside Commerce
+    assert re.search(r'<button class="topnav-link is-current" type="button" aria-expanded="false" aria-controls="mega-staffbilling" data-mega>Billing', menus)
+    assert menus.count("topnav-link is-current") == 1 and menus.count("mega-head is-current") == 0  # one menu lit
     assert 'class="is-current" aria-current="page">Invoices' in menus
 
 
@@ -179,7 +179,9 @@ def test_the_menus_list_only_what_the_person_can_open(world):
 
 def test_the_sections_are_the_menus_and_their_areas_are_listed_inside(world):
     menus = nav_of(page_of(world.people["admin"], "console:dashboard").content.decode())
-    assert re.findall(r'data-mega>([^<]+)<i', menus) == ["People", "Commerce", "Operations", "Insights", "System"]
+    found = re.findall(r'data-mega>([^<]+)<i', menus)
+    assert [m for m in found if m in ("People", "Commerce", "Operations", "Insights", "System")] == ["People", "Commerce", "Operations", "Insights", "System"]
+    assert {"Billing", "Support", "Settings"} <= set(found)  # areas with more than five pages are menus of their own
     people = menus.split('id="mega-people"')[1].split('id="mega-commerce"')[0]
     assert re.findall(r'class="mega-head[^"]*" href="[^"]+"><i class="bi [a-z0-9-]+" aria-hidden="true"></i>([^<]+)</a>', people) == ["Clients", "Users", "Affiliates"]
     assert 'href="/staff/clients/new/"' in people and 'href="/staff/affiliates/payouts/"' in people  # the pages under each area
@@ -189,7 +191,7 @@ def test_the_sections_are_the_menus_and_their_areas_are_listed_inside(world):
 def test_a_detail_page_keeps_exactly_one_menu_lit(world):
     invoice = world.objects["invoices"]["unpaid"]
     menus = nav_of(page_of(world.people["manager"], "billing_staff:invoice_detail", invoice.pk).content.decode())
-    assert menus.count("topnav-link is-current") == 1 and 'mega-head is-current" href="/staff/billing/"' in menus
+    assert menus.count("topnav-link is-current") == 1 and re.search(r'topnav-link is-current" type="button" aria-expanded="false" aria-controls="mega-staffbilling"', menus)
 
 
 def test_the_profile_menu_shows_who_you_are_and_signs_out_with_a_post(world):

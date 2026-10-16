@@ -3,7 +3,7 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>AI Agent</h1>
-  <p class="page-sub"><a href="{% url 'livechat:list' %}">Live chats</a> · <a href="{% url 'assistant_staff:knowledge' %}">Knowledge</a> · A chat in the customer area that looks things up on the customer's own services (website, SSL, disk, email, DNS, invoices) and opens a ticket when a person is needed. In this version it only reads: it cannot change anything.</p></div>
+  <p class="page-sub"><a href="{% url 'livechat:list' %}">Live chats</a> · <a href="{% url 'assistant_staff:analytics' %}">Analytics</a> · <a href="{% url 'assistant_staff:knowledge' %}">Knowledge</a> · A chat in the customer area that looks things up on the customer's own services (website, SSL, disk, email, DNS, invoices) and opens a ticket when a person is needed. In this version it only reads: it cannot change anything.</p></div>
 <form method="post" class="card mb-4" novalidate>{% csrf_token %}
   <div class="card-body vstack gap-3">
     <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="enabled"{% if config.enabled %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label"><strong>AI Agent on</strong>. Turn it off at any time and it answers nobody.</span></label>
@@ -18,6 +18,16 @@
         <div class="form-text">Each message costs a little. This keeps the bill in hand.</div></div>
       <div class="col-md-6"><label class="form-label" for="hours">Hours the team needs for a change on the server</label><input class="form-control" id="hours" name="change_hours" type="number" min="1" max="168" value="{{ config.change_hours }}"{% if not can_manage %} disabled{% endif %}>
         <div class="form-text">When the Agent cannot make a change itself it opens a ticket and tells the customer the team will do it within this time.</div></div>
+    </div>
+    <div class="border rounded p-3 vstack gap-2">
+      <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="offline_ticket"{% if config.offline_ticket %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label"><strong>Open a ticket when nobody is online</strong>. A request for a person becomes a ticket straight away (the chat attached) instead of waiting. {{ online_now }} of the team online now; each person switches themselves online on the Live chats page.</span></label>
+      <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="hours_enabled"{% if config.hours_enabled %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label">Only count these working hours as "team available"</span></label>
+      <div class="row g-2 align-items-end">
+        <div class="col-6 col-md-2"><label class="form-label" for="hs">From</label><input class="form-control" id="hs" name="hours_start" type="time" value="{{ config.hours_start|time:'H:i' }}"{% if not can_manage %} disabled{% endif %}></div>
+        <div class="col-6 col-md-2"><label class="form-label" for="he">To</label><input class="form-control" id="he" name="hours_end" type="time" value="{{ config.hours_end|time:'H:i' }}"{% if not can_manage %} disabled{% endif %}></div>
+        <div class="col-md-3"><label class="form-label" for="tz">Time zone</label><input class="form-control" id="tz" name="hours_timezone" value="{{ config.hours_timezone }}"{% if not can_manage %} disabled{% endif %}></div>
+        <div class="col-md-5 d-flex flex-wrap gap-2">{% for value, name, on in days %}<label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" name="day_{{ value }}"{% if on %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label">{{ name|slice:":3" }}</span></label>{% endfor %}</div>
+      </div>
     </div>
     <p class="mb-0">{% if key_set %}<span class="badge text-bg-success">API key found on the server</span>{% else %}<span class="badge text-bg-secondary">No API key on the server</span> Only Claude mode needs <code>ANTHROPIC_API_KEY</code> in the server's environment; it is never typed here.{% endif %}
       <span class="text-secondary ms-2">{{ today }} customer message{{ today|pluralize }} today.</span></p>

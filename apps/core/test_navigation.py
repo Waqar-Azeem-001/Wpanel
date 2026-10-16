@@ -287,3 +287,14 @@ def test_the_old_navigation_bars_are_gone():
     assert "perms.accounts" not in base and "client_contacts" not in base
     for name in ("navbar_public", "topnav"):
         assert "perms.accounts" not in (TEMPLATES / "components" / f"{name}.html").read_text(encoding="utf-8")
+
+
+def test_an_area_with_more_than_five_pages_becomes_a_menu_of_its_own_in_the_header(admin):
+    sections = navigation.sections(navigation.build(request_for(admin), "staff")["main"])
+    labelled = [s for s in sections if s["label"]]
+    for section in labelled:  # no heading's panel holds an area longer than five pages
+        assert all(len(e.children or []) <= navigation.MENU_GROUP_LIMIT for e in section["entries"] if e.is_group)
+    lifted = {e.label: len(e.children) for s in sections if not s["label"] for e in s["entries"] if e.is_group}
+    assert lifted.get("Settings", 0) > navigation.MENU_GROUP_LIMIT and lifted.get("Support", 0) > navigation.MENU_GROUP_LIMIT
+    names = [s["label"] or s["entries"][0].label for s in sections]
+    assert names.index("Support") == names.index("Operations") + 1 or "Operations" not in names  # next to the heading it came from

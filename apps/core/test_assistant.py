@@ -599,3 +599,83 @@ def test_the_verification_page_checks_the_code_and_runs_the_change(world, owner,
     assert any("blog" in n for n in names)
     other = browser(owner)
     assert other.get(reverse("assistant:verify", args=[card.pk + 999])).status_code == 404
+
+
+# --- Phase 5: availability, working hours, analytics, feedback -------------------------------------------------------------------------------
+
+def test_with_nobody_online_a_request_for_a_person_becomes_a_ticket_and_with_someone_online_it_waits(world, owner, account, knowledge_on):  # noqa: F811
+    from apps.assistant import live
+
+    Department.objects.get_or_create(slug="technical", defaults={"name": "Technical"})
+    knowledge_on.offline_ticket = True
+    knowledge_on.save()
+    staff = world.people["super admin"]
+    text, conversation = _ask(owner, "I want to talk to a real person")
+    conversation.refresh_from_db()
+    assert "not online" in text and "ticket" in text.lower() and conversation.status == "closed" and conversation.ticket_id
+    live.set_online(staff, True)
+    second = agent.current_conversation(owner, conversation.client)
+    text, second = _ask_in(owner, second, "I want to talk to a real person")
+    second.refresh_from_db()
+    assert second.status == "waiting" and "asked someone" in text
+    live.set_online(staff, False)
+    assert live.staff_online() == []
+
+
+def test_working_hours_decide_who_counts_as_available(world, knowledge_on):  # noqa: F811
+    import datetime as dt
+
+    from apps.assistant import live
+
+    knowledge_on.hours_enabled, knowledge_on.hours_timezone = True, "Asia/Karachi"
+    knowledge_on.hours_start, knowledge_on.hours_end, knowledge_on.hours_days = dt.time(9, 0), dt.time(18, 0), "0,1,2,3,4"
+    knowledge_on.save()
+    monday_noon = dt.datetime(2026, 10, 19, 7, 0, tzinfo=dt.timezone.utc)  # 12:00 in Karachi, a Monday
+    monday_night = dt.datetime(2026, 10, 19, 20, 0, tzinfo=dt.timezone.utc)  # 01:00 on Tuesday there
+    sunday = dt.datetime(2026, 10, 18, 7, 0, tzinfo=dt.timezone.utc)
+    assert live.in_hours(knowledge_on, monday_noon) and not live.in_hours(knowledge_on, monday_night) and not live.in_hours(knowledge_on, sunday)
+    assert "Mon-Fri 09:00-18:00" in live.hours_text(knowledge_on)
+    knowledge_on.hours_enabled = False
+    assert live.in_hours(knowledge_on, sunday)
+
+
+def test_a_person_goes_online_from_the_chat_page_and_the_settings_hold_the_hours(world, knowledge_on):  # noqa: F811
+    from django.test import Client as DjangoClient
+
+    from apps.assistant import live
+
+    staff = DjangoClient()
+    staff.force_login(world.people["super admin"])
+    assert "Go online" in staff.get(reverse("livechat:list")).content.decode()
+    staff.post(reverse("livechat:availability"), {"online": "1"})
+    assert [u.pk for u in live.staff_online()] == [world.people["super admin"].pk] and "You are online" in staff.get(reverse("livechat:list")).content.decode()
+    saved = staff.post(reverse("assistant_staff:settings"), {"model": "claude-sonnet-5-5", "daily_limit": "12", "change_hours": "24", "changes_enabled": "on", "offline_ticket": "on", "hours_enabled": "on",
+                                                              "hours_start": "10:00", "hours_end": "19:30", "hours_timezone": "Asia/Karachi", "day_0": "on", "day_1": "on", "enabled": "on"})
+    assert saved.status_code == 302
+    row = AssistantSettings.load()
+    assert row.offline_ticket and row.hours_enabled and row.hours_start.hour == 10 and row.hours_end.minute == 30 and row.hours_days == "0,1"
+    staff.post(reverse("assistant_staff:settings"), {"model": "claude-sonnet-5-5", "daily_limit": "12", "change_hours": "24", "hours_start": "20:00", "hours_end": "08:00", "hours_timezone": "Asia/Karachi"})
+    assert AssistantSettings.load().hours_start.hour == 10  # an impossible day is refused
+
+
+def test_analytics_count_what_happened_and_the_thumbs_come_from_the_customer(world, owner, account, knowledge_on):  # noqa: F811
+    from django.test import Client as DjangoClient
+
+    from apps.assistant import analytics, live
+
+    Department.objects.get_or_create(slug="technical", defaults={"name": "Technical"})
+    staff_user = world.people["super admin"]
+    _, one = _ask(owner, "hello")
+    answer = Message.objects.filter(conversation=one, sender="ai").first()
+    client = browser(owner)
+    assert client.post(reverse("assistant:feedback", args=[answer.pk, "up"]), HTTP_X_REQUESTED_WITH="fetch").json() == {"ok": True, "vote": "up"}
+    assert client.post(reverse("assistant:feedback", args=[answer.pk + 9999, "up"])).status_code == 404
+    _, two = _ask_in(owner, agent.current_conversation(owner, one.client).__class__.objects.create(user=owner, client=one.client), "I want a real person")
+    live.take(staff_user, two)
+    report = analytics.report(7)
+    assert report["chats"] >= 2 and report["with_person"] >= 1 and report["up"] == 1 and report["helpful_percent"] == 100 and report["average_wait"] is not None
+    page = DjangoClient()
+    page.force_login(staff_user)
+    html = page.get(reverse("assistant_staff:analytics") + "?days=30").content.decode()
+    assert "Agent analytics" in html and "Solved by the Agent alone" in html
+    assert browser(owner).get(reverse("assistant_staff:analytics")).status_code in (302, 403)

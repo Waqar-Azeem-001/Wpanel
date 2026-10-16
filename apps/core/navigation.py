@@ -457,7 +457,29 @@ def sections(entries):
             grouped.append({"label": entry.section, "key": slugify(entry.section) or "top", "active": False, "entries": []})
         grouped[-1]["entries"].append(entry)
         grouped[-1]["active"] = grouped[-1]["active"] or entry.active
-    return grouped
+    return _lift_long_groups(grouped)
+
+
+MENU_GROUP_LIMIT = 5  # an area with more pages than this does not squeeze into a heading's panel: it becomes a menu of its own in the header
+
+
+def _lift_long_groups(grouped):
+    """A heading's panel lists its areas side by side. An area with more than ``MENU_GROUP_LIMIT`` pages would make the panel tall and uneven, so it moves up to the header as its own menu,
+    right after the heading it came from. A heading left with nothing disappears."""
+    from django.utils.text import slugify
+
+    result = []
+    for section in grouped:
+        if not section["label"]:
+            result.append(section)
+            continue
+        kept = [e for e in section["entries"] if not (e.is_group and len(e.children or []) > MENU_GROUP_LIMIT)]
+        lifted = [e for e in section["entries"] if e not in kept]
+        if kept:
+            result.append({**section, "entries": kept, "active": any(e.active for e in kept)})
+        for entry in lifted:
+            result.append({"label": "", "key": slugify(str(entry.label)) or "menu", "active": entry.active, "entries": [entry]})
+    return result
 
 
 def area_of(request):

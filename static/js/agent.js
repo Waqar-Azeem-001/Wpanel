@@ -64,7 +64,25 @@
       return el;
     }
 
-    function add(sender, text, tool, kind, who, action, state, needs) {
+    function thumbs(id) {
+      var wrap = document.createElement("span");
+      wrap.className = "asst-feedback";
+      wrap.dataset.msg = id;
+      [["up", "bi-hand-thumbs-up", "This helped"], ["down", "bi-hand-thumbs-down", "This did not help"]].forEach(function (v) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.dataset.vote = v[0];
+        b.title = v[2];
+        b.setAttribute("aria-label", v[2]);
+        var i = document.createElement("i");
+        i.className = "bi " + v[1];
+        b.appendChild(i);
+        wrap.appendChild(b);
+      });
+      return wrap;
+    }
+
+    function add(sender, text, tool, kind, who, action, state, needs, id) {
       var el;
       if (sender === "event" && kind === "action") {
         el = card(text, action, state || "pending", needs);
@@ -85,6 +103,7 @@
         }
         bubble.appendChild(document.createTextNode(text));
         el.appendChild(bubble);
+        if (sender === "ai" && id) { el.appendChild(thumbs(id)); }
       }
       var hello = log.querySelector(".asst-hello");
       if (hello) { hello.remove(); }
@@ -120,7 +139,7 @@
             res.data.messages.forEach(function (m) {
               last = Math.max(last, m.id);
               if (m.sender === "client") { return; }
-              add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state, m.needs);
+              add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state, m.needs, m.id);
             });
           })
           .catch(function () { wait.remove(); add("ai", "The connection dropped. Please try again."); })
@@ -129,6 +148,15 @@
     }
 
     box.addEventListener("click", function (e) {
+      var vote = e.target.closest(".asst-feedback button");
+      if (vote) {
+        var holderVote = vote.closest(".asst-feedback");
+        var form = new FormData();
+        form.append("csrfmiddlewaretoken", csrf(root) || csrf(document));
+        fetch(box.dataset.feedback + holderVote.dataset.msg + "/" + vote.dataset.vote + "/", { method: "POST", body: form, headers: { "X-Requested-With": "fetch" }, credentials: "same-origin" })
+          .then(function (r) { if (r.ok) { holderVote.querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-picked", b === vote); }); } });
+        return;
+      }
       var btn = e.target.closest("button[data-act]");
       var holder = btn && btn.closest(".asst-action");
       if (!btn || !holder) { return; }
@@ -163,7 +191,7 @@
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
           if (!data) { return; }
-          data.messages.forEach(function (m) { if (m.id > last) { last = m.id; add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state, m.needs); } });
+          data.messages.forEach(function (m) { if (m.id > last) { last = m.id; add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state, m.needs, m.id); } });
           if (data.status !== status) { reload(); }
         })
         .catch(function () { /* the next tick tries again */ });

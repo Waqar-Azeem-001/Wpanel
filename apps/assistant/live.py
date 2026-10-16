@@ -3,6 +3,9 @@ Live chat with a person. When the client asks for one (or the assistant decides 
 chat, talks to the client in the same window, then hands it back to the assistant, closes it or turns it into a ticket. Only one person owns a chat at a time: taking it is one
 atomic update, so two people cannot take the same chat.
 """
+from datetime import timedelta
+from zoneinfo import ZoneInfo
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
@@ -13,7 +16,7 @@ from apps.notifications import services as notifications
 from apps.support import services as support
 
 from . import tools
-from .models import Conversation, ConversationStatus, Message, SenderType
+from .models import AssistantSettings, Conversation, ConversationStatus, Message, SenderType, StaffAvailability
 
 OPEN_FOR_STAFF = (ConversationStatus.WAITING, ConversationStatus.AI, ConversationStatus.WITH_STAFF)
 WAIT_BEFORE_TICKET_OFFER_MINUTES = 5
@@ -37,10 +40,81 @@ def _summary(conversation):
     return (conversation.handoff_reason + "\n\n" if conversation.handoff_reason else "") + "Last messages:\n" + lines
 
 
+ONLINE_FOR = timedelta(minutes=10)
+DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def hours_text(config=None):
+    config = config or AssistantSettings.load()
+    days = sorted(int(d) for d in config.hours_days.split(",") if d.strip().isdigit() and int(d) < 7)
+    names = f"{DAYS[days[0]][:3]}-{DAYS[days[-1]][:3]}" if days and days == list(range(days[0], days[-1] + 1)) and len(days) > 1 else ", ".join(DAYS[d][:3] for d in days)
+    return f"{names} {config.hours_start:%H:%M}-{config.hours_end:%H:%M} ({config.hours_timezone})"
+
+
+def in_hours(config=None, now=None):
+    config = config or AssistantSettings.load()
+    if not config.hours_enabled:
+        return True
+    try:
+        local = (now or timezone.now()).astimezone(ZoneInfo(config.hours_timezone))
+    except Exception:  # noqa: BLE001 - an unknown zone must not lock customers out
+        return True
+    days = {int(d) for d in config.hours_days.split(",") if d.strip().isdigit()}
+    return local.weekday() in days and config.hours_start <= local.time().replace(tzinfo=None) < config.hours_end
+
+
+def staff_online():
+    """Support people who switched themselves online and still have a chat page open."""
+    since = timezone.now() - ONLINE_FOR
+    return [a.user for a in StaffAvailability.objects.filter(online=True, last_seen__gte=since).select_related("user") if a.user.is_active and support.can_manage(a.user)]
+
+
+def team_available(config=None):
+    """Whether a request for a person can be answered by someone now. Always true unless the owner asked for tickets when nobody is there."""
+    config = config or AssistantSettings.load()
+    if not config.offline_ticket:
+        return True
+    return in_hours(config) and bool(staff_online())
+
+
+def touch(user):
+    """A support person looked at a chat page: keep their online mark fresh."""
+    StaffAvailability.objects.filter(user=user, online=True).update(last_seen=timezone.now())
+
+
+def set_online(user, online):
+    if not support.can_manage(user):
+        raise _denied()
+    row, _ = StaffAvailability.objects.get_or_create(user=user)
+    row.online, row.last_seen = bool(online), timezone.now() if online else row.last_seen
+    row.save()
+    return row
+
+
+def describe(out):
+    """What to tell the customer after a request for a person."""
+    if out.get("status") == "ticket":
+        extra = f" Our team works {out['hours']}." if out.get("hours") else ""
+        return f"Our team is not online right now.{extra} I opened ticket {out['ticket']} with this chat attached. They will reply there and by email."
+    if out.get("status") == ConversationStatus.WAITING:
+        return "I asked someone from our team to join this chat; please keep this window open."
+    return "A person is already on this chat."
+
+
 def ask_person(user, conversation, reason, request=None):
-    """The client (or the assistant for them) asks for a person. Returns {"status": ...}."""
+    """The client (or the assistant for them) asks for a person. Returns {"status": "waiting"|"with_staff"|"ticket", ...}."""
     if conversation.status in (ConversationStatus.WAITING, ConversationStatus.WITH_STAFF):
         return {"status": conversation.status}
+    config = AssistantSettings.load()
+    if not team_available(config):
+        conversation.handoff_reason = (reason or "")[:300]
+        conversation.handoff_summary = _summary(conversation)
+        conversation.save(update_fields=["handoff_reason", "handoff_summary", "updated_at"])
+        ticket = _ticket(user, conversation, request, "Chat with support: " + (reason or "help wanted")[:80])
+        shown = hours_text(config) if config.hours_enabled else ""
+        _event(conversation, f"Our team is not online right now. Ticket {ticket.reference} was opened with this chat.", kind="ticket", ticket=ticket.reference)
+        audit.record("assistant.offline_ticket", actor=user, target=conversation, metadata={"ticket": ticket.reference}, request=request)
+        return {"status": "ticket", "ticket": ticket.reference, "hours": shown}
     conversation.status, conversation.handoff_reason = ConversationStatus.WAITING, (reason or "")[:300]
     conversation.handoff_requested_at = timezone.now()
     conversation.handoff_summary = _summary(conversation)
