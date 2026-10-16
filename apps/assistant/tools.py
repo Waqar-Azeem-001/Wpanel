@@ -154,14 +154,10 @@ def transcript(conversation, limit=14):
 
 
 def request_human_handoff(ctx, reason):
-    conversation = ctx.conversation
-    if conversation.ticket_id:
-        return {"ticket": conversation.ticket.reference, "status": "already_with_support"}
-    body = f"The client asked for a person.\nReason: {reason[:300]}\n\nChat so far:\n{transcript(conversation)}"
-    ticket = _open(ctx, "Help wanted from the assistant chat: " + reason[:80], body)
-    conversation.ticket, conversation.handoff_reason, conversation.status = ticket, reason[:300], "waiting"
-    conversation.save(update_fields=["ticket", "handoff_reason", "status", "updated_at"])
-    return {"ticket": ticket.reference, "status": "handed_to_support"}
+    from . import live
+
+    out = live.ask_person(ctx.user, ctx.conversation, reason, request=ctx.request)
+    return {"status": "waiting_for_staff" if out["status"] == "waiting" else out["status"], "note": "A person has been asked to join this chat. Tell the client to wait here a moment."}
 
 
 def _clean(props):
@@ -182,7 +178,7 @@ REGISTRY = {
     "get_invoices": ("The client's recent invoices and what is unpaid.", _clean({}), get_invoices),
     "create_ticket": ("Open a support ticket for the client with the details gathered so far.",
                       _clean({"subject": "Short subject.", "details": "What is wrong and what was already checked.", "department?": "Department name, e.g. Technical or Billing.", "domain?": "Related domain."}), create_ticket),
-    "request_human_handoff": ("Use when the client wants a person, is upset, or the problem is billing/refund/legal/suspension or could not be solved. Opens a ticket with the chat attached.",
+    "request_human_handoff": ("Use when the client wants a person, is upset, or the problem is billing/refund/legal/suspension or could not be solved. Puts the chat in the queue for a support person.",
                               _clean({"reason": "Why a person is needed."}), request_human_handoff),
 }
 

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Live chats · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block extra_head %}{% if tab == "all" or tab == "waiting" %}<meta http-equiv="refresh" content="20">{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Live chats</h1>
+  <p class="page-sub">Customers talking to the AI assistant or waiting for a person. {% if waiting %}<strong>{{ waiting }} waiting for staff.</strong>{% else %}Nobody is waiting.{% endif %} This list refreshes by itself.</p></div>
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <ul class="nav nav-pills">{% for key, label, n in tabs %}<li class="nav-item"><a class="nav-link{% if tab == key %} active{% endif %}" href="?tab={{ key }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ label }} <span class="badge text-bg-light">{{ n }}</span></a></li>{% endfor %}</ul>
+  <form method="get" class="ms-auto d-flex gap-2"><input type="hidden" name="tab" value="{{ tab }}"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Customer or domain" aria-label="Search chats"><button class="btn btn-outline-secondary" type="submit">Search</button></form>
+</div>
+<section class="card">
+  {% if rows %}<div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Customer</th><th>Last message</th><th>Status</th><th>With</th><th>Updated</th></tr></thead>
+    <tbody>{% for c in rows %}<tr>
+      <td><a href="{% url 'livechat:detail' c.pk %}">{{ c.client }}</a>{% if c.domain %}<div class="small text-secondary">{{ c.domain }}</div>{% endif %}</td>
+      <td class="text-truncate">{{ c.last.body|truncatechars:70|default:"-" }}</td>
+      <td>{% if c.status == "waiting" %}<span class="badge text-bg-warning">Waiting for staff</span>{% elif c.status == "ai" %}<span class="badge text-bg-primary">AI handling</span>{% elif c.status == "with_staff" %}<span class="badge text-bg-success">With staff</span>{% else %}<span class="badge text-bg-secondary">Closed</span>{% endif %}</td>
+      <td>{% if c.assigned_to %}{{ c.assigned_to.get_full_name|default:c.assigned_to.email }}{% else %}-{% endif %}</td>
+      <td>{{ c.updated_at|date:"j M, H:i" }}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="card-body text-secondary">No chats here.</div>{% endif %}
+</section>
+{% endblock %}

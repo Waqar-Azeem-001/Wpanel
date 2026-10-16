@@ -99,20 +99,87 @@ def test_every_read_tool_answers_on_the_demo_server(world, owner, account, switc
         assert "error" not in out, (name, out)
 
 
-def test_a_handoff_opens_one_ticket_with_the_chat_attached(world, owner, account, switched_on, ask):  # noqa: F811
-    Department.objects.get_or_create(slug="technical", defaults={"name": "Technical"})
+def test_a_request_for_a_person_puts_the_chat_in_the_queue_and_silences_the_assistant(world, owner, account, switched_on, ask):  # noqa: F811
     conversation = _conversation(owner)
-    ask.script = [_use("request_human_handoff", reason="Wants a person"), _say("I opened a ticket for you.")]
+    ask.script = [_use("request_human_handoff", reason="Wants a person"), _say("Please wait, someone will join.")]
     agent.send(owner, conversation, "I want a real person please")
     conversation.refresh_from_db()
-    assert conversation.ticket_id and conversation.status == "waiting"
-    message = conversation.ticket.messages.first().body
-    assert "I want a real person please" in message and "Wants a person" in message
-    again = tools.run(tools.Context(owner, conversation), "request_human_handoff", {"reason": "again"})
-    assert again["status"] == "already_with_support"
-    with pytest.raises(ServiceError) as err:  # the chat now belongs to the team
-        agent.send(owner, conversation, "hello?")
-    assert err.value.code == "with_staff"
+    assert conversation.status == "waiting" and conversation.handoff_reason == "Wants a person" and "I want a real person please" in conversation.handoff_summary
+    before = len(ask.requests)
+    sent = agent.send(owner, conversation, "are you there?")  # nobody answers with the model now; the message waits for the team
+    assert [m.sender for m in sent] == ["client"] and len(ask.requests) == before
+
+
+def test_staff_take_a_chat_once_reply_hand_back_and_close_it(world, owner, account, switched_on, ask):  # noqa: F811
+    from apps.assistant import live
+
+    staff, other = world.people["super admin"], world.people["support agent"] if "support agent" in world.people else None
+    conversation = _conversation(owner)
+    live.ask_person(owner, conversation, "Billing question")
+    with pytest.raises(ServiceError):  # a customer is not support staff
+        live.take(owner, conversation)
+    live.take(staff, conversation)
+    conversation.refresh_from_db()
+    assert conversation.status == "with_staff" and conversation.assigned_to_id == staff.pk
+    with pytest.raises(ServiceError) as err:  # only one owner
+        live.take(staff, conversation)
+    assert err.value.code == "taken"
+    live.reply(staff, conversation, "Hello, how can I help?")
+    assert Message.objects.filter(conversation=conversation, sender="staff", staff=staff, body="Hello, how can I help?").exists()
+    live.hand_back(staff, conversation)
+    conversation.refresh_from_db()
+    assert conversation.status == "ai" and conversation.assigned_to_id is None
+    with pytest.raises(ServiceError) as err:  # no longer theirs
+        live.reply(staff, conversation, "late")
+    assert err.value.code == "not_yours"
+    live.take(staff, conversation)
+    live.close(staff, conversation)
+    conversation.refresh_from_db()
+    assert conversation.status == "closed"
+    assert agent.current_conversation(owner, conversation.client, create=False) is None
+
+
+def test_a_chat_becomes_a_ticket_for_staff_or_when_the_customer_will_not_wait(world, owner, account, switched_on, ask):  # noqa: F811
+    from apps.assistant import live
+
+    Department.objects.get_or_create(slug="technical", defaults={"name": "Technical"})
+    staff = world.people["super admin"]
+    first = _conversation(owner)
+    Message.objects.create(conversation=first, sender="client", body="my site is slow")
+    live.ask_person(owner, first, "Slow site")
+    live.take(staff, first)
+    ticket = live.to_ticket(staff, first)
+    first.refresh_from_db()
+    assert first.ticket_id == ticket.pk and first.status == "closed" and "my site is slow" in ticket.messages.first().body
+    second = _conversation(owner)
+    live.ask_person(owner, second, "Still waiting")
+    again = live.ticket_instead(owner, second)
+    second.refresh_from_db()
+    assert second.status == "closed" and second.ticket_id == again.pk
+
+
+def test_the_staff_dashboard_lists_chats_and_the_pages_poll_for_news(world, owner, account, switched_on, ask):  # noqa: F811
+    from django.test import Client as DjangoClient
+
+    from apps.assistant import live
+
+    conversation = _conversation(owner)
+    Message.objects.create(conversation=conversation, sender="client", body="hello team")
+    live.ask_person(owner, conversation, "Help")
+    staff = DjangoClient()
+    staff.force_login(world.people["super admin"])
+    page = staff.get(reverse("livechat:list") + "?tab=waiting")
+    assert page.status_code == 200 and "Waiting for staff" in page.content.decode()
+    detail = staff.get(reverse("livechat:detail", args=[conversation.pk]))
+    assert detail.status_code == 200 and "Take chat" in detail.content.decode()
+    taken = staff.post(reverse("livechat:action", args=[conversation.pk]), {"action": "take"})
+    assert taken.status_code == 302
+    staff.post(reverse("livechat:action", args=[conversation.pk]), {"action": "reply", "message": "Hi, I am here"})
+    news = browser(owner).get(reverse("assistant:poll") + "?after=0").json()
+    assert news["status"] == "with_staff" and any(m["sender"] == "staff" and m["body"] == "Hi, I am here" and m["who"] for m in news["messages"])
+    mine = staff.get(reverse("livechat:poll", args=[conversation.pk]) + "?after=0").json()
+    assert any(m["body"] == "hello team" for m in mine["messages"])
+    assert browser(owner).get(reverse("livechat:list")).status_code == 403
 
 
 def test_the_daily_limit_and_message_size_are_enforced(world, owner, account, switched_on, ask):  # noqa: F811

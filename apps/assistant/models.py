@@ -33,6 +33,9 @@ class Conversation(TimeStampedModel):
     status = models.CharField(max_length=12, choices=ConversationStatus.choices, default=ConversationStatus.AI, db_index=True)
     ticket = models.ForeignKey("support.Ticket", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")  # where a human took over
     handoff_reason = models.CharField(max_length=300, blank=True)
+    handoff_summary = models.TextField(blank=True)  # a few lines for the person who takes the chat, so the client never repeats themselves
+    handoff_requested_at = models.DateTimeField(null=True, blank=True)
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
 
     class Meta:
         ordering = ["-updated_at", "-id"]
@@ -44,12 +47,14 @@ class Conversation(TimeStampedModel):
 class SenderType(models.TextChoices):
     CLIENT = "client", "Client"
     AI = "ai", "Assistant"
+    STAFF = "staff", "Staff"
     EVENT = "event", "Event"
 
 
 class Message(TimeStampedModel):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
     sender = models.CharField(max_length=8, choices=SenderType.choices)
+    staff = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     body = models.TextField(blank=True)
     tool_call = models.JSONField(null=True, blank=True)  # for an event line: which tool the assistant used (name and what it looked at, never secrets)
 

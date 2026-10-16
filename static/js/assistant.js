@@ -49,7 +49,11 @@
       .then(function (res) {
         wait.remove();
         if (!res.ok) { add("ai", res.data.error || "Something went wrong. Please try again."); return; }
-        res.data.messages.forEach(function (m) { add(m.sender, m.body, m.tool); });
+        res.data.messages.forEach(function (m) {
+          if (window.chatPollSeen) { window.chatPollSeen(m.id); }
+          if (m.sender === "client") { return; }
+          add(m.sender, m.body, m.tool);
+        });
       })
       .catch(function () { wait.remove(); add("ai", "The connection dropped. Please try again."); })
       .then(function () { button.disabled = false; input.focus(); });

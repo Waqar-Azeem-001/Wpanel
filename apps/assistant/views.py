@@ -11,7 +11,8 @@ from apps.audit import services as audit
 from apps.clients.models import Client
 from apps.core.exceptions import ServiceError
 
-from . import agent
+from . import agent, live
+from .views_chats import serialise
 from .models import AssistantSettings, Conversation, ConversationStatus, Message, SenderType
 
 SHOWN = 60
@@ -22,7 +23,9 @@ def _client(user):
 
 
 def _rows(conversation):
-    return [{"sender": m.sender, "body": m.body, "tool": (m.tool_call or {}).get("tool", ""), "at": m.created_at} for m in conversation.messages.order_by("-id")[:SHOWN][::-1]]
+    return [{"sender": m.sender, "body": m.body, "tool": (m.tool_call or {}).get("tool", ""), "kind": (m.tool_call or {}).get("kind", ""), "at": m.created_at,
+             "who": (m.staff.get_full_name() or m.staff.email.split("@")[0]) if m.staff_id else "", "id": m.id}
+            for m in conversation.messages.select_related("staff").order_by("-id")[:SHOWN][::-1]]
 
 
 @login_required
@@ -32,9 +35,12 @@ def chat(request):
         return render(request, "assistant/unavailable.html")
     config = AssistantSettings.load()
     conversation = agent.current_conversation(request.user, client)
+    rows = _rows(conversation)
+    waited = (timezone.now() - conversation.handoff_requested_at) if conversation.handoff_requested_at and conversation.status == ConversationStatus.WAITING else None
     return render(request, "assistant/chat.html", {
-        "conversation": conversation, "rows": _rows(conversation), "ready": agent.available(config), "left": max(0, config.daily_limit - agent.used_today(client)),
-        "with_staff": bool(conversation.ticket_id), "ticket": conversation.ticket})
+        "conversation": conversation, "rows": rows, "last_id": rows[-1]["id"] if rows else 0, "ready": agent.available(config), "left": max(0, config.daily_limit - agent.used_today(client)),
+        "waiting": conversation.status == ConversationStatus.WAITING, "with_person": conversation.status == ConversationStatus.WITH_STAFF, "person": conversation.assigned_to,
+        "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60})
 
 
 @require_POST
@@ -53,7 +59,7 @@ def send(request):
         messages.error(request, exc.message)
         return redirect("assistant:chat")
     if wants_json:
-        return JsonResponse({"messages": [{"sender": m.sender, "body": m.body, "tool": (m.tool_call or {}).get("tool", "")} for m in saved]})
+        return JsonResponse({"messages": [serialise(m) for m in saved]})
     return redirect("assistant:chat")
 
 
@@ -69,7 +75,41 @@ def handoff(request):
     except ServiceError as exc:
         messages.error(request, exc.message)
     else:
-        messages.success(request, f"Our team has your chat as ticket {out.get('ticket', '')}. They will reply there and by email.")
+        messages.success(request, "We told our team. Someone will join this chat shortly." if out.get("status") == "waiting" else "A person is already on this chat.")
+    return redirect("assistant:chat")
+
+
+@login_required
+def poll(request):
+    """What is new in the open chat since message ``after``: the team's replies and notes (the client's own messages and the assistant's answers come back with the send)."""
+    client = _client(request.user)
+    if client is None:
+        raise PermissionDenied
+    conversation = agent.current_conversation(request.user, client, create=False)
+    if conversation is None:
+        return JsonResponse({"status": "closed", "messages": []})
+    try:
+        after = int(request.GET.get("after", 0))
+    except ValueError:
+        after = 0
+    new = conversation.messages.filter(id__gt=after, sender__in=[SenderType.STAFF, SenderType.EVENT]).select_related("staff")
+    return JsonResponse({"status": conversation.status, "messages": [serialise(m) for m in new if m.sender == SenderType.STAFF or (m.tool_call or {}).get("kind")]})
+
+
+@require_POST
+@login_required
+def ticket_instead(request):
+    client = _client(request.user)
+    if client is None:
+        raise PermissionDenied
+    conversation = agent.current_conversation(request.user, client)
+    try:
+        ticket = live.ticket_instead(request.user, conversation, request=request)
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+    else:
+        messages.success(request, f"Done: ticket {ticket.reference}. Our team will reply there and by email.")
+        return redirect("support_customer:ticket", pk=ticket.pk)
     return redirect("assistant:chat")
 
 

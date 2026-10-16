@@ -111,6 +111,7 @@ EVENTS = _events(
     # --- Team alerts (staff; in-app by default, email only if a person asks for it) ------------------------------
     Event("ticket.assigned", "A ticket was assigned to you", C.TEAM, default_email=False),
     Event("ticket.unassigned", "A new ticket needs an owner", C.TEAM, default_email=False),
+    Event("chat.waiting", "A customer is waiting for a person in the chat", C.TEAM, default_email=False),
     Event("ticket.customer_reply", "A customer replied to your ticket", C.TEAM, default_email=False),
     Event("ticket.note", "A note was added to your ticket", C.TEAM, default_email=False),
     Event("payment.reported", "A customer says they have paid", C.TEAM, default_email=False),

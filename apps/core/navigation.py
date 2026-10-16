@@ -170,6 +170,8 @@ ITEMS = [
          permission="view_support"),
     item("staff.support.tickets", _("Tickets"), "support_staff:tickets", areas=STAFF, parent="staff.support",
          permission="view_support"),
+    item("staff.support.chats", _("Live chats"), "livechat:list", areas=STAFF, parent="staff.support",
+         permission="view_support"),
     item("staff.support.new", _("New ticket"), "support_staff:ticket_new", areas=STAFF, parent="staff.support",
          permission="view_support"),
     item("staff.support.replies", _("Saved replies"), "support_staff:replies", areas=STAFF, parent="staff.support",

@@ -93,14 +93,20 @@ def send(user, conversation, text, request=None):
     """The client says ``text``. Returns the new messages (events, then the assistant's answer), all saved in the conversation."""
     config = AssistantSettings.load()
     text = (text or "").strip()
+    if conversation.ticket_id and conversation.status == ConversationStatus.CLOSED:
+        raise ServiceError(f"This chat became ticket {conversation.ticket.reference}. Reply to our team there, or start a new chat.", code="with_staff")
+    if conversation.status in (ConversationStatus.WAITING, ConversationStatus.WITH_STAFF):  # a person is on it: the assistant stays quiet, the message just goes to them
+        if len(text) > MAX_INPUT:
+            raise ServiceError(f"Please keep a message under {MAX_INPUT} characters.", code="too_long")
+        if not text:
+            raise ServiceError("Write your message first.", code="empty")
+        return [Message.objects.create(conversation=conversation, sender=SenderType.CLIENT, body=text)]
     if not config.enabled or not api_key():
         raise ServiceError("The assistant is not switched on yet. Please open a ticket and our team will help.", code="assistant_off", status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
     if not text:
         raise ServiceError("Write your message first.", code="empty")
     if len(text) > MAX_INPUT:
         raise ServiceError(f"Please keep a message under {MAX_INPUT} characters.", code="too_long")
-    if conversation.status in (ConversationStatus.WITH_STAFF, ConversationStatus.WAITING) and conversation.ticket_id:
-        raise ServiceError(f"Our team has this chat as ticket {conversation.ticket.reference}. Reply to them there.", code="with_staff")
     if used_today(conversation.client) >= config.daily_limit:
         raise ServiceError("You have reached today's message limit for the assistant. Please open a ticket, or try again tomorrow.", code="daily_limit",
                            status_code=status.HTTP_429_TOO_MANY_REQUESTS)
@@ -138,9 +144,7 @@ def send(user, conversation, text, request=None):
 
 
 def handoff(user, conversation, request=None):
-    """The "Talk to a person" button: a ticket with the chat attached, whatever the assistant thinks."""
-    ctx = tools.Context(user, conversation, request)
-    out = tools.request_human_handoff(ctx, "The client pressed Talk to a person.")
-    Message.objects.create(conversation=conversation, sender=SenderType.EVENT, body="handoff", tool_call={"tool": "request_human_handoff", "ticket": out.get("ticket", "")})
-    audit.record("assistant.handoff", actor=user, target=conversation, metadata={"ticket": out.get("ticket", "")}, request=request)
-    return out
+    """The "Talk to a person" button: the chat goes to the queue for staff, whatever the assistant thinks."""
+    from . import live
+
+    return live.ask_person(user, conversation, "The client pressed Talk to a person.", request=request)
