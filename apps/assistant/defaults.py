@@ -181,3 +181,17 @@ HOWTO = {
     "restore_backup": "Do it yourself in the panel:\n1. Open your hosting plan > Backups.\n2. Find the backup you want and press Restore.\nA restore replaces your current files and data, so create a fresh backup first.",
     "delete_mailbox": "Do it yourself in the panel:\n1. Open Emails and choose the domain.\n2. Find the mailbox and press Delete.\nEvery message in it is lost, so download what you need first.",
 }
+
+
+# What the panel can and cannot do for the customer on its own, found out by looking at what the adapters offer. (title, keywords, answer, action)
+EXTRA_ENTRIES = [
+    ("Change my hosting password",
+     "hosting password\ncpanel password\nchange hosting password\nreset cpanel password\nforgot hosting password\ncpanel password bhool gaya\nhosting ka password change karna hai\npassword reset hosting",
+     "You set a new hosting password yourself, so it never passes through a chat:\n1. Open Websites and choose your hosting plan.\n2. Open the plan's Information page and press Change password.\n3. Type a strong password (at least 12 characters) and save.\nIt works for cPanel, FTP and SSH of that plan. Never send a password to anyone, including me.", ""),
+    ("Domain transfer away and the EPP code",
+     "epp code\nauth code\nauthorization code\ntransfer code\ntransfer domain away\ntransfer my domain out\nepp code chahiye\ndomain transfer out\ndomain doosri company mein transfer",
+     "The code to move a domain away is given by our team after we confirm it is you, so I cannot show it in the chat. First unlock the domain: Domains > your domain > Unlock. I am asking a person to take it from here.", "handoff"),
+    ("Lock or unlock a domain",
+     "unlock domain\nlock domain\ndomain lock\ndomain unlock karo\ndomain lock karna hai\ntransfer lock",
+     "Open Domains, choose your domain and press Lock or Unlock. A locked domain cannot be transferred away by mistake or by someone else. Unlock it only when you are about to transfer it.", ""),
+]

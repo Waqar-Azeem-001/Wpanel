@@ -8,6 +8,7 @@ from apps.branding.views_pages import contact, public_page
 from apps.hosting.views_preview import resolve as preview_resolve
 from apps.notifications import views as notification_views
 from apps.products.views import public_home, public_hosting, public_pricing
+from apps.support import views_kb as kb_views
 
 
 def home(request):
@@ -23,6 +24,8 @@ def home(request):
 
 urlpatterns = [
     path("", home, name="home"),
+    path("robots.txt", kb_views.robots, name="robots"),
+    path("sitemap.xml", kb_views.sitemap, name="sitemap"),
     path("pricing/", public_pricing, name="pricing"),
     path("contact/", contact, name="contact"),
     path("p/<slug:slug>/", public_page, name="public_page"),

@@ -133,6 +133,7 @@ class CannedReplyForm(forms.Form):
 class KBCategoryForm(forms.Form):
     name = forms.CharField(max_length=100)
     description = forms.CharField(required=False, max_length=300)
+    icon = forms.CharField(required=False, max_length=40, initial="bi-folder", help_text="A Bootstrap icon name such as bi-envelope or bi-globe2.")
     sort_order = forms.IntegerField(min_value=0, initial=0)
     is_active = forms.BooleanField(required=False, initial=True)
 
@@ -140,8 +141,10 @@ class KBCategoryForm(forms.Form):
 class KBArticleForm(forms.Form):
     category = forms.ModelChoiceField(queryset=KBCategory.objects.all())
     title = forms.CharField(max_length=200)
-    body = forms.CharField(widget=forms.Textarea(attrs={"rows": 14}), help_text="Plain text. Blank lines separate paragraphs.")
+    summary = forms.CharField(required=False, max_length=220, help_text="One or two lines for the article's card.")
+    body = forms.CharField(widget=forms.Textarea(attrs={"rows": 18}), help_text="Blank lines separate paragraphs. ## Heading, ### Smaller heading, - bullet, 1. step, > note, **bold**, `code`, [text](/page/).")
     sort_order = forms.IntegerField(min_value=0, initial=0)
+    is_featured = forms.BooleanField(required=False, label="Featured on the front page")
     is_published = forms.BooleanField(required=False, label="Published")
 
 

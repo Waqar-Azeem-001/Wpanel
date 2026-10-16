@@ -144,6 +144,7 @@ class KBCategory(TimeStampedModel):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=60, unique=True)
     description = models.CharField(max_length=300, blank=True)
+    icon = models.CharField(max_length=40, default="bi-folder", help_text="A Bootstrap icon name such as bi-envelope; it is drawn on the category's card.")
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
@@ -160,7 +161,12 @@ class KBArticle(TimeStampedModel):
     category = models.ForeignKey(KBCategory, on_delete=models.PROTECT, related_name="articles")
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=80)
-    body = models.TextField(help_text="Plain text. Blank lines separate paragraphs.")
+    summary = models.CharField(max_length=220, blank=True, help_text="One or two lines shown on the article's card.")
+    body = models.TextField(help_text="Blank lines separate paragraphs. ## Heading, ### Smaller heading, - bullet, 1. step, > note, **bold**, `code`, [text](/page/).")
+    is_featured = models.BooleanField(default=False, help_text="Shown first on the help centre's front page.")
+    views = models.PositiveIntegerField(default=0)
+    helpful_yes = models.PositiveIntegerField(default=0)
+    helpful_no = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=False)
     sort_order = models.PositiveSmallIntegerField(default=0)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,

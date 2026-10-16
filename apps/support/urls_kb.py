@@ -8,5 +8,6 @@ app_name = "help"
 urlpatterns = [
     path("", views.index, name="index"),
     path("<slug:slug>/", views.category, name="category"),
+    path("<slug:category_slug>/<slug:slug>/vote/", views.vote, name="vote"),
     path("<slug:category_slug>/<slug:slug>/", views.article, name="article"),
 ]

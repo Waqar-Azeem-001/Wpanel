@@ -1,12 +1,74 @@
 {% extends "base.html" %}
-{% load ui i18n %}
-{% block title %}{{ article.title }} · {% trans "Help centre" %} · {{ SITE_NAME }}{% endblock %}
+{% load static ui i18n %}
+{% block title %}{{ article.title }} | {{ SITE_NAME }} {% trans "Help centre" %}{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/help.css' %}">
+<meta name="description" content="{{ description }}">
+<link rel="canonical" href="{{ canonical }}">
+<meta property="og:type" content="article"><meta property="og:site_name" content="{{ SITE_NAME }}"><meta property="og:title" content="{{ article.title }}"><meta property="og:description" content="{{ description }}"><meta property="og:url" content="{{ canonical }}">
+<meta name="twitter:card" content="summary"><meta name="twitter:title" content="{{ article.title }}"><meta name="twitter:description" content="{{ description }}">
+<script type="application/ld+json">{{ json_ld|safe }}</script>{% endblock %}
 {% block content %}
-<p class="mb-2"><a href="{% url 'help:index' %}">{% trans "Help centre" %}</a> &rsaquo; <a href="{% url 'help:category' article.category.slug %}">{{ article.category.name }}</a></p>
-<article class="card mb-3"><div class="card-body">
-  <h1 class="h3">{{ article.title }}</h1>
-  {% for paragraph in paragraphs %}<p>{{ paragraph|linebreaksbr }}</p>{% endfor %}
-  <p class="text-secondary mb-0">{% trans "Updated" %} {{ article.updated_at|fdate }}</p>
-</div></article>
-<p>{% trans "Still stuck?" %} <a href="{% url 'support_customer:new' %}">{% trans "Open a support ticket" %}</a>.</p>
+<nav class="help-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'help:index' %}">{% trans "Help centre" %}</a><span aria-hidden="true">/</span><a href="{% url 'help:category' article.category.slug %}">{{ article.category.name }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ article.title|truncatechars:48 }}</span></nav>
+
+<header class="help-banner">
+  <a class="help-pill" href="{% url 'help:category' article.category.slug %}"><i class="bi {{ article.category.icon }}" aria-hidden="true"></i> {{ article.category.name }}</a>
+  <h1>{{ article.title }}</h1>
+  {% if article.summary %}<p class="help-lead">{{ article.summary }}</p>{% endif %}
+  <ul class="help-facts">
+    <li><i class="bi bi-clock" aria-hidden="true"></i> {{ minutes }} {% trans "min read" %}</li>
+    <li><i class="bi bi-calendar3" aria-hidden="true"></i> {% trans "Updated" %} {{ article.updated_at|fdate }}</li>
+    {% if faq %}<li><i class="bi bi-question-circle" aria-hidden="true"></i> {{ faq|length }} {% trans "questions answered" %}</li>{% endif %}
+  </ul>
+</header>
+
+<div class="help-article-layout">
+  <article class="help-article">
+    {% if contents|length > 2 %}
+    <details class="help-contents-mobile"><summary><i class="bi bi-list-ul" aria-hidden="true"></i> {% trans "In this article" %}</summary>
+      <ol>{% for anchor, text in contents %}<li><a href="#{{ anchor }}">{{ text }}</a></li>{% endfor %}</ol></details>
+    {% endif %}
+
+    <div class="help-body">{{ body }}</div>
+
+    <section class="help-vote" data-vote-url="{% url 'help:vote' article.category.slug article.slug %}" data-voted="{{ voted }}">{% csrf_token %}
+      <strong>{% trans "Was this article helpful?" %}</strong>
+      <span class="help-vote-buttons">
+        <button type="button" data-choice="yes"><i class="bi bi-hand-thumbs-up" aria-hidden="true"></i> {% trans "Yes" %}</button>
+        <button type="button" data-choice="no"><i class="bi bi-hand-thumbs-down" aria-hidden="true"></i> {% trans "No" %}</button>
+      </span>
+      <span class="help-vote-thanks" hidden>{% trans "Thank you for telling us." %}</span>
+      <span class="help-vote-more">{% trans "Still stuck?" %} {% if user.is_authenticated %}<a href="{% url 'assistant:chat' %}" data-agent-open>{% trans "Ask the AI Agent" %}</a> {% trans "or" %} <a href="{% url 'support_customer:new' %}">{% trans "open a ticket" %}</a>{% else %}<a href="{% url 'contact' %}">{% trans "Contact us" %}</a>{% endif %}.</span>
+    </section>
+
+    {% if before or after %}
+    <nav class="help-prevnext" aria-label="{% trans 'More in this topic' %}">
+      {% if before %}<a href="{% url 'help:article' before.category.slug before.slug %}"><small>&larr; {% trans "Previous" %}</small><strong>{{ before.title }}</strong></a>{% else %}<span></span>{% endif %}
+      {% if after %}<a class="is-next" href="{% url 'help:article' after.category.slug after.slug %}"><small>{% trans "Next" %} &rarr;</small><strong>{{ after.title }}</strong></a>{% endif %}
+    </nav>
+    {% endif %}
+
+    {% if related %}
+    <section class="help-section"><h2>{% trans "You may also need" %}</h2>
+      <div class="help-cards">{% for a in related|slice:":3" %}<a class="help-card" href="{% url 'help:article' a.category.slug a.slug %}"><strong>{{ a.title }}</strong>{% if a.summary %}<span>{{ a.summary }}</span>{% endif %}</a>{% endfor %}</div></section>
+    {% endif %}
+  </article>
+
+  <aside class="help-aside" aria-label="{% trans 'Article tools' %}">
+    {% if contents %}
+    <section class="help-box"><h2>{% trans "In this article" %}</h2>
+      <ol class="help-toc">{% for anchor, text in contents %}<li><a href="#{{ anchor }}">{{ text }}</a></li>{% endfor %}</ol></section>
+    {% endif %}
+    {% if topic|length > 1 %}
+    <section class="help-box"><h2>{% blocktrans with name=article.category.name %}More in {{ name }}{% endblocktrans %}</h2>
+      <ul class="help-topic-list">{% for a in topic %}<li><a href="{% url 'help:article' a.category.slug a.slug %}"{% if a.pk == article.pk %} class="is-current" aria-current="page"{% endif %}>{{ a.title }}</a></li>{% endfor %}</ul>
+      <a class="help-all" href="{% url 'help:index' %}">{% trans "All topics" %} &rarr;</a></section>
+    {% endif %}
+    <section class="help-box help-box-cta"><h2>{% trans "Need a hand?" %}</h2>
+      <p>{% trans "Ask our AI Agent in your own words, or speak to our team." %}</p>
+      {% if user.is_authenticated %}<a class="btn btn-primary w-100" href="{% url 'assistant:chat' %}" data-agent-open><i class="bi bi-stars" aria-hidden="true"></i> {% trans "Ask the AI Agent" %}</a>
+      <a class="btn btn-outline-primary w-100 mt-2" href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a>
+      {% else %}<a class="btn btn-primary w-100" href="{% url 'contact' %}">{% trans "Contact us" %}</a>{% endif %}</section>
+  </aside>
+</div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/help.js' %}" defer></script>{% endblock %}

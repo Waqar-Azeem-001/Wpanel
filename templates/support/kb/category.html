@@ -1,11 +1,21 @@
 {% extends "base.html" %}
-{% load i18n %}
-{% block title %}{{ category.name }} · {% trans "Help centre" %} · {{ SITE_NAME }}{% endblock %}
+{% load static i18n %}
+{% block title %}{{ category.name }} | {{ SITE_NAME }} {% trans "Help centre" %}{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/help.css' %}">
+<meta name="description" content="{% if category.description %}{{ category.description }}{% else %}{{ category.name }}: guides and how-to articles from {{ SITE_NAME }}.{% endif %}">
+<link rel="canonical" href="{{ canonical }}">
+<meta property="og:type" content="website"><meta property="og:site_name" content="{{ SITE_NAME }}"><meta property="og:title" content="{{ category.name }} | {{ SITE_NAME }}"><meta property="og:url" content="{{ canonical }}">{% endblock %}
 {% block content %}
-<p class="mb-2"><a href="{% url 'help:index' %}">&larr; {% trans "Help centre" %}</a></p>
-<h1>{{ category.name }}</h1>
-{% if category.description %}<p class="text-secondary">{{ category.description }}</p>{% endif %}
-<section class="card"><ul class="list-group list-group-flush">
-{% for a in articles %}<li class="list-group-item"><a href="{% url 'help:article' category.slug a.slug %}">{{ a.title }}</a></li>{% endfor %}
-</ul></section>
+<nav class="help-crumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'help:index' %}">{% trans "Help centre" %}</a><span aria-hidden="true">/</span><span aria-current="page">{{ category.name }}</span></nav>
+<header class="help-head"><span class="help-icon is-large"><i class="bi {{ category.icon }}" aria-hidden="true"></i></span>
+  <div><h1>{{ category.name }}</h1>{% if category.description %}<p>{{ category.description }}</p>{% endif %}</div></header>
+<div class="help-layout">
+  <div class="help-cards help-cards-one">
+    {% for a in articles %}
+    <a class="help-card" href="{% url 'help:article' category.slug a.slug %}"><strong>{{ a.title }}</strong>{% if a.summary %}<span>{{ a.summary }}</span>{% endif %}<small>{{ a.minutes }} {% trans "min read" %}</small></a>
+    {% endfor %}
+  </div>
+  <aside class="help-side" aria-label="{% trans 'Other topics' %}"><h2>{% trans "Other topics" %}</h2>
+    <ul>{% for c in others %}<li><a href="{% url 'help:category' c.slug %}"><i class="bi {{ c.icon }}" aria-hidden="true"></i> {{ c.name }}</a></li>{% endfor %}</ul></aside>
+</div>
 {% endblock %}

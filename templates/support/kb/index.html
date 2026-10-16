@@ -1,28 +1,69 @@
 {% extends "base.html" %}
-{% load i18n %}
-{% block title %}{% trans "Help centre" %} · {{ SITE_NAME }}{% endblock %}
+{% load static i18n %}
+{% block title %}{% trans "Help centre" %} | {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/help.css' %}">
+<meta name="description" content="Guides and how-to articles for your website, domain, email, hosting tools and account at {{ SITE_NAME }}.">
+<link rel="canonical" href="{{ canonical }}">{% if noindex %}
+<meta name="robots" content="noindex, follow">{% endif %}
+<meta property="og:type" content="website"><meta property="og:site_name" content="{{ SITE_NAME }}"><meta property="og:title" content="{% trans 'Help centre' %} | {{ SITE_NAME }}"><meta property="og:url" content="{{ canonical }}">{% endblock %}
 {% block content %}
-<h1>{% trans "Help centre" %}</h1>
-<form class="row g-2 align-items-end mb-4" method="get" role="search">
-  <div class="col"><label class="form-label" for="id_q">{{ form.q.label }}</label><input class="form-control" type="search" name="q" id="id_q" value="{{ term }}" placeholder="e.g. change nameservers"></div>
-  <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Search" %}</button></div>
-</form>
+<section class="help-hero">
+  <h1>{% trans "How can we help?" %}</h1>
+  <p>{% trans "Guides for your website, domain, email and account. Find the answer, or ask our AI Agent." %}</p>
+  <form class="help-search" method="get" role="search">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <label class="visually-hidden" for="id_q">{{ form.q.label }}</label>
+    <input type="search" name="q" id="id_q" value="{{ term }}" placeholder="{% trans 'Search, for example: change nameservers' %}" autocomplete="off">
+    <button class="btn btn-primary" type="submit">{% trans "Search" %}</button>
+  </form>
+</section>
+
 {% if results is not None %}
-<section class="card"><div class="card-body">
-  <h2 class="h5">{{ results|length }} result{{ results|length|pluralize }} for &ldquo;{{ term }}&rdquo;</h2>
-  <ul class="mb-0">{% for a in results %}<li><a href="{% url 'help:article' a.category.slug a.slug %}">{{ a.title }}</a> <small class="text-secondary">{{ a.category.name }}</small></li>
-  {% empty %}<li class="text-secondary">{% trans "Nothing found. Try different words, or" %} <a href="{% url 'support_customer:list' %}">{% trans "contact support" %}</a>.</li>{% endfor %}</ul>
-</div></section>
+<section class="help-section">
+  <h2>{{ results|length }} {% trans "result" %}{{ results|length|pluralize }} {% trans "for" %} &ldquo;{{ term }}&rdquo;</h2>
+  <div class="help-cards">
+    {% for a in results %}
+    <a class="help-card" href="{% url 'help:article' a.category.slug a.slug %}"><span class="help-card-tag">{{ a.category.name }}</span><strong>{{ a.title }}</strong>{% if a.summary %}<span>{{ a.summary }}</span>{% endif %}</a>
+    {% empty %}
+    <p class="help-empty">{% trans "Nothing found. Try different words, or" %} <a href="{% url 'support_customer:new' %}">{% trans "ask our team" %}</a>.</p>
+    {% endfor %}
+  </div>
+  <p><a href="{% url 'help:index' %}">&larr; {% trans "All topics" %}</a></p>
+</section>
 {% else %}
-<div class="row g-3">
-{% for c in categories %}
-  <div class="col-md-6 col-lg-4"><section class="card h-100"><div class="card-body"><h2 class="h5"><a href="{% url 'help:category' c.slug %}">{{ c.name }}</a></h2>
-    {% if c.description %}<p class="text-secondary">{{ c.description }}</p>{% endif %}
-    <p class="text-secondary mb-0">{{ c.article_count }} article{{ c.article_count|pluralize }}</p></div></section></div>
-{% empty %}
-  <div class="col-12"><section class="card"><div class="card-body"><p class="text-secondary mb-0">{% trans "The help centre is being written. In the meantime," %} <a href="{% url 'support_customer:list' %}">{% trans "contact support" %}</a>.</p></div></section></div>
-{% endfor %}
-</div>
+<section class="help-section">
+  <h2>{% trans "Browse by topic" %}</h2>
+  <div class="help-topics">
+    {% for c in categories %}
+    <a class="help-topic" href="{% url 'help:category' c.slug %}"><span class="help-icon"><i class="bi {{ c.icon }}" aria-hidden="true"></i></span><strong>{{ c.name }}</strong>
+      {% if c.description %}<span>{{ c.description }}</span>{% endif %}<small>{{ c.article_count }} {% trans "article" %}{{ c.article_count|pluralize }}</small></a>
+    {% empty %}
+    <p class="help-empty">{% trans "The help centre is being written. In the meantime," %} <a href="{% url 'support_customer:new' %}">{% trans "contact support" %}</a>.</p>
+    {% endfor %}
+  </div>
+</section>
+{% if featured %}
+<section class="help-section">
+  <h2>{% trans "Start here" %}</h2>
+  <div class="help-cards">{% for a in featured %}
+    <a class="help-card" href="{% url 'help:article' a.category.slug a.slug %}"><span class="help-card-tag">{{ a.category.name }}</span><strong>{{ a.title }}</strong>{% if a.summary %}<span>{{ a.summary }}</span>{% endif %}</a>{% endfor %}
+  </div>
+</section>
 {% endif %}
-<p class="text-secondary mt-4">{% trans "Cannot find what you need?" %} <a href="{% url 'support_customer:new' %}">{% trans "Open a support ticket" %}</a>.</p>
+{% if popular %}
+<section class="help-section">
+  <h2>{% trans "Most read" %}</h2>
+  <ol class="help-list">{% for a in popular %}<li><a href="{% url 'help:article' a.category.slug a.slug %}">{{ a.title }}</a><small>{{ a.category.name }}</small></li>{% endfor %}</ol>
+</section>
+{% endif %}
+{% endif %}
+
+<section class="help-cta">
+  <div><h2>{% trans "Still need help?" %}</h2><p>{% trans "Ask our AI Agent for an answer in your own words, open a ticket, or ask for a callback." %}</p></div>
+  <div class="help-cta-actions">
+    {% if user.is_authenticated %}<a class="btn btn-primary" href="{% url 'assistant:chat' %}" data-agent-open><i class="bi bi-stars" aria-hidden="true"></i> {% trans "Ask the AI Agent" %}</a>
+    <a class="btn btn-outline-primary" href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a>
+    {% else %}<a class="btn btn-primary" href="{% url 'contact' %}">{% trans "Contact us" %}</a>{% endif %}
+  </div>
+</section>
 {% endblock %}

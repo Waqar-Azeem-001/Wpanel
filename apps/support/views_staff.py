@@ -290,10 +290,10 @@ def kb_manage(request):
     category = KBCategory.objects.filter(pk=request.GET.get("category") or 0).first()
     article = KBArticle.objects.filter(pk=request.GET.get("article") or 0).select_related("category").first()
     can = _can_manage(request)
-    category_initial = {"name": category.name, "description": category.description,
+    category_initial = {"name": category.name, "description": category.description, "icon": category.icon,
                         "sort_order": category.sort_order, "is_active": category.is_active} if category else {}
-    article_initial = {"category": article.category_id, "title": article.title, "body": article.body,
-                       "sort_order": article.sort_order, "is_published": article.is_published} if article else {}
+    article_initial = {"category": article.category_id, "title": article.title, "summary": article.summary, "body": article.body,
+                       "sort_order": article.sort_order, "is_featured": article.is_featured, "is_published": article.is_published} if article else {}
     return render(request, "support/staff/kb.html", {
         "categories": KBCategory.objects.all(),
         "articles": KBArticle.objects.select_related("category").order_by("category__sort_order", "sort_order", "title"),
@@ -313,7 +313,7 @@ def kb_category_save(request):
             raise ServiceError("Enter a valid category.")
         data = form.cleaned_data
         kb.save_category(request.user, target, name=data["name"], description=data["description"],
-                         sort_order=data["sort_order"], is_active=data["is_active"], request=request)
+                         sort_order=data["sort_order"], is_active=data["is_active"], icon=data["icon"], request=request)
         return "Category saved."
 
     return run_action(request, action, "support_staff:kb")
@@ -330,7 +330,7 @@ def kb_article_save(request):
             raise ServiceError("Enter a valid article: " + "; ".join(f"{f}: {e[0]}" for f, e in form.errors.items()))
         data = form.cleaned_data
         kb.save_article(request.user, target, category=data["category"], title=data["title"], body=data["body"],
-                        is_published=data["is_published"], sort_order=data["sort_order"], request=request)
+                        is_published=data["is_published"], sort_order=data["sort_order"], summary=data["summary"], is_featured=data["is_featured"], request=request)
         return "Article saved."
 
     return run_action(request, action, "support_staff:kb")
