@@ -11,6 +11,8 @@
       <div class="form-text">One wording per line, in English, Urdu or Roman Urdu: <em>website down</em>, <em>site nahi khul rahi</em>. A short, specific wording works best.</div></div>
     <div><label class="form-label" for="answer">Answer</label><textarea class="form-control" id="answer" name="answer" rows="7"{% if not can_manage %} disabled{% endif %}>{{ v.answer }}</textarea>
       <div class="form-text">Say where in the panel to go, for example <em>Hosting plan &gt; SSL</em>. When the entry runs a check, its result is added under the answer.</div></div>
+    <div><label class="form-label" for="howto">How to do it in the panel (shown first)</label><textarea class="form-control" id="howto" name="howto" rows="5"{% if not can_manage %} disabled{% endif %}>{{ v.howto }}</textarea>
+      <div class="form-text">Only for an entry that makes a change. The customer is told these steps first and the Agent goes on to do it only when they ask it to or say they did not understand. Leave empty and the Agent goes straight to the change.</div></div>
     <div class="row g-3">
       <div class="col-md-6"><label class="form-label" for="action">Also do</label><select class="form-select" id="action" name="action"{% if not can_manage %} disabled{% endif %}>{% for value, label in actions %}<option value="{{ value }}"{% if v.action == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
       <div class="col-md-3"><label class="form-label" for="order">Order</label><input class="form-control" id="order" name="sort_order" type="number" min="0" max="32000" value="{{ v.sort_order }}"{% if not can_manage %} disabled{% endif %}></div>

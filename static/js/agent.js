@@ -101,7 +101,16 @@
           bubble.appendChild(strong);
           bubble.appendChild(document.createElement("br"));
         }
-        bubble.appendChild(document.createTextNode(text));
+        text.split(/(\/help\/[a-z0-9-]+\/[a-z0-9-]+\/)/).forEach(function (part) {
+          if (/^\/help\/[a-z0-9-]+\/[a-z0-9-]+\/$/.test(part)) {
+            var a = document.createElement("a");
+            a.href = part;
+            a.textContent = part;
+            bubble.appendChild(a);
+          } else {
+            bubble.appendChild(document.createTextNode(part));
+          }
+        });
         el.appendChild(bubble);
         if (sender === "ai" && id) { el.appendChild(thumbs(id)); }
       }

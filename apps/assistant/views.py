@@ -1,5 +1,8 @@
 import datetime as dt
+import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -17,7 +20,7 @@ from apps.core.exceptions import ServiceError
 
 from . import actions, agent, live
 from .views_chats import serialise
-from .models import AssistantSettings, Conversation, ConversationStatus, KnowledgeEntry, Message, SenderType, Unanswered
+from .models import AssistantSettings, CallbackRequest, Conversation, ConversationStatus, KnowledgeEntry, Message, SenderType, Unanswered
 
 SHOWN = 60
 
@@ -43,6 +46,7 @@ def _context(request, client):
         "waiting": conversation.status == ConversationStatus.WAITING, "with_person": conversation.status == ConversationStatus.WITH_STAFF, "person": conversation.assigned_to,
         "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60,
         "act_base": reverse("assistant:act", args=[0, "approve"]).replace("0/approve/", ""),
+        "whatsapp_url": (("https" + "://wa.me/" + config.whatsapp_number + "?text=" + quote(f"Hello, I am continuing chat #{conversation.pk} from the customer area.")) if config.whatsapp_number else ""),
         "verify_base": reverse("assistant:verify", args=[0]).replace("0/", ""),
         "feedback_base": reverse("assistant:feedback", args=[0, "up"]).replace("0/up/", "")}
 
@@ -227,6 +231,7 @@ def staff_settings(request):
             config.mode = "claude" if request.POST.get("mode") == "claude" else "knowledge"
             config.changes_enabled = request.POST.get("changes_enabled") == "on"
             config.offline_ticket = request.POST.get("offline_ticket") == "on"
+            config.whatsapp_number = re.sub(r"\D", "", request.POST.get("whatsapp_number", ""))[:20]
             config.hours_enabled = request.POST.get("hours_enabled") == "on"
             config.hours_start, config.hours_end, config.hours_timezone = opens, closes, zone
             config.hours_days = ",".join(d for d in "0123456" if request.POST.get(f"day_{d}") == "on")
@@ -299,3 +304,43 @@ def verify_resend(request, pk):
     except ServiceError as exc:
         messages.error(request, exc.message)
     return redirect("assistant:verify", pk=pk)
+
+
+# --- a callback at a time that suits the customer --------------------------------------------------------------------------------------------------
+
+PHONE = re.compile(r"^[0-9+()\s-]{7,20}$")
+
+
+@login_required
+def callback(request):
+    client = _client(request.user)
+    if client is None:
+        return render(request, "assistant/unavailable.html")
+    values = {"phone": client.phone, "when": "", "note": ""}
+    if request.method == "POST":
+        values = {"phone": request.POST.get("phone", "").strip(), "when": request.POST.get("when", ""), "note": request.POST.get("note", "").strip()[:300]}
+        try:
+            if not PHONE.match(values["phone"]):
+                raise ServiceError("Write a phone number we can call, for example +92 300 1234567.", code="phone_invalid")
+            try:
+                when = dt.datetime.strptime(values["when"], "%Y-%m-%dT%H:%M")
+            except ValueError:
+                raise ServiceError("Choose the day and time for the call.", code="when_invalid") from None
+            when = timezone.make_aware(when, timezone.get_current_timezone()) if timezone.is_naive(when) else when
+            if when < timezone.now() or when > timezone.now() + dt.timedelta(days=14):
+                raise ServiceError("Choose a time in the next 14 days.", code="when_range")
+            if CallbackRequest.objects.filter(user=request.user, status="requested").count() >= 3:
+                raise ServiceError("You already have three callbacks waiting. We will call you soon.", code="too_many")
+        except ServiceError as exc:
+            messages.error(request, exc.message)
+        else:
+            conversation = agent.current_conversation(request.user, client, create=False)
+            row = CallbackRequest.objects.create(client=client, user=request.user, conversation=conversation, phone=values["phone"], preferred_at=when, note=values["note"])
+            audit.record("assistant.callback_requested", actor=request.user, target=row, metadata={"at": when.isoformat()}, request=request)
+            from apps.notifications import services as notifications
+
+            notifications.notify_team("assistant.callback", "manage_support", exclude=request.user, title=f"{client} asked for a callback at {timezone.localtime(when):%a %d %b %H:%M}", body=values["note"], link="/staff/chats/callbacks/")
+            messages.success(request, f"Done. We will call {values['phone']} around {timezone.localtime(when):%A %d %B, %H:%M}.")
+            return redirect("assistant:chat")
+    mine = CallbackRequest.objects.filter(user=request.user, status="requested")
+    return render(request, "assistant/callback.html", {"v": values, "mine": mine, "soonest": timezone.localtime().strftime("%Y-%m-%dT%H:%M")})

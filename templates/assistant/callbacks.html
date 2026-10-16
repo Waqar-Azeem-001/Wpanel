@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Callbacks · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Callbacks</h1>
+  <p class="page-sub">Customers who asked the team to phone them. <a href="{% url 'livechat:list' %}">Live chats</a></p></div>
+<ul class="nav nav-pills mb-3">{% for key, label in states %}<li class="nav-item"><a class="nav-link{% if state == key %} active{% endif %}" href="?state={{ key }}">{{ label }}</a></li>{% endfor %}</ul>
+<section class="card">{% if rows %}<div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>When</th><th>Customer</th><th>Phone</th><th>About</th><th></th></tr></thead>
+  <tbody>{% for c in rows %}<tr><td class="text-nowrap">{{ c.preferred_at|date:"D j M, H:i" }}</td><td><a href="{% url 'clients_staff:detail' c.client.pk %}">{{ c.client }}</a></td><td>{{ c.phone }}</td><td>{{ c.note|default:"-" }}</td>
+    <td class="text-end text-nowrap">{% if c.status == "requested" and can_act %}<form method="post" action="{% url 'livechat:callback_done' c.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success" type="submit">Called</button>
+      <button class="btn btn-sm btn-outline-secondary" type="submit" name="cancel" value="1">Cancel</button></form>{% else %}{{ c.get_status_display }}{% if c.handled_by %} · {{ c.handled_by }}{% endif %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="card-body text-secondary">No callbacks here.</div>{% endif %}</section>
+{% endblock %}

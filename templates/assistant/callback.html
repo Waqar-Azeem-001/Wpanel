@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Request a callback" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Request a callback" %}</h1>
+  <p class="page-sub">{% trans "Tell us when to call. Someone from our team will phone you around that time." %} <a href="{% url 'assistant:chat' %}">{% trans "Back to chat" %}</a></p></div>
+<form method="post" class="card mb-4" novalidate>{% csrf_token %}
+  <div class="card-body vstack gap-3">
+    <div><label class="form-label" for="phone">{% trans "Phone number" %}</label><input class="form-control" id="phone" name="phone" value="{{ v.phone }}" maxlength="20" inputmode="tel" autocomplete="tel" required></div>
+    <div><label class="form-label" for="when">{% trans "Day and time" %}</label><input class="form-control" id="when" name="when" type="datetime-local" value="{{ v.when }}" min="{{ soonest }}" required>
+      <div class="form-text">{% trans "Within the next 14 days." %}</div></div>
+    <div><label class="form-label" for="note">{% trans "What is it about? (optional)" %}</label><input class="form-control" id="note" name="note" value="{{ v.note }}" maxlength="300"></div>
+    <div><button class="btn btn-primary" type="submit">{% trans "Request the callback" %}</button></div>
+  </div>
+</form>
+{% if mine %}<section class="card"><div class="card-header"><h2 class="h6 mb-0">{% trans "Your waiting callbacks" %}</h2></div><ul class="list-group list-group-flush">{% for c in mine %}<li class="list-group-item">{{ c.preferred_at|date:"D j M, H:i" }} · {{ c.phone }}</li>{% endfor %}</ul></section>{% endif %}
+{% endblock %}

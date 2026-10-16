@@ -26,7 +26,7 @@
       <div class="asst-log" id="asst-log" role="log" aria-live="polite" data-poll="{% url 'livechat:poll' c.pk %}" data-last="{{ last_id }}" data-status="{{ c.status }}" data-staff-view="1">
         {% for m in rows %}
           {% if m.sender == "event" %}<p class="asst-event">{% if m.tool_call.kind %}{{ m.body }}{% else %}<i class="bi bi-search" aria-hidden="true"></i> AI used {{ m.body }}{% if m.tool_call.domain %} · {{ m.tool_call.domain }}{% endif %}{% endif %}</p>
-          {% else %}<div class="asst-msg is-{{ m.sender }}"><div class="asst-bubble">{% if m.sender == "staff" %}<strong>{{ m.staff.get_full_name|default:m.staff.email }}</strong><br>{% elif m.sender == "ai" %}<strong>AI</strong><br>{% endif %}{{ m.body|linebreaksbr }}</div></div>{% endif %}
+          {% else %}<div class="asst-msg is-{{ m.sender }}"><div class="asst-bubble">{% if m.sender == "staff" %}<strong>{{ m.staff.get_full_name|default:m.staff.email }}</strong><br>{% elif m.sender == "ai" %}<strong>AI</strong><br>{% endif %}{{ m.body|linebreaksbr }}</div>{% if can_teach and m.sender == "staff" and m.question %}<a class="asst-teach" href="{% url 'assistant_staff:knowledge_new' %}?q={{ m.question|urlencode }}&answer={{ m.body|urlencode }}" title="Save this answer in the Agent's knowledge">Teach the Agent</a>{% endif %}</div>{% endif %}
         {% endfor %}
       </div>
       {% if mine %}

@@ -166,3 +166,18 @@ DANGER_ENTRIES = [
      "delete mailbox\ndelete email account\nremove mailbox\nremove email account\nmailbox delete karo\nemail account delete karo\nemail hatao",
      "I can delete that mailbox with every message in it.", "delete_mailbox"),
 ]
+
+
+# What the customer is told first, for each change the Agent can make: the steps in our own panel. Only if they ask the Agent to do it (or say they did not understand) does it go on.
+HOWTO = {
+    "renew_ssl": "Do it yourself in the panel:\n1. Open Websites and choose your hosting plan.\n2. Open SSL (Hosting plan > SSL).\n3. Find your domain and press Request or Renew certificate.\nThe certificate is free and is installed in a few minutes; it renews by itself after that.",
+    "force_https": "Do it yourself in the panel:\n1. Open your hosting plan > SSL.\n2. Find your domain.\n3. Switch on Force HTTPS.\nIt works only when the domain already has a working certificate; if it has none, request one first.",
+    "set_mailbox_quota": "Do it yourself in the panel:\n1. Open Emails and choose the domain.\n2. Find the mailbox in the list.\n3. Press Change size (quota), type the new size in MB or GB and Save.",
+    "set_php_setting": "Do it yourself in the panel:\n1. Open your hosting plan > PHP.\n2. Choose the domain.\n3. Change the Memory limit, Upload size or Maximum execution time and press Save.",
+    "scan_website": "Do it yourself in the panel:\n1. Open Websites and choose your website.\n2. Open Website care > Malware scan.\n3. Press Scan now. The result appears on the same page when it finishes.",
+    "create_backup": "Do it yourself in the panel:\n1. Open your hosting plan > Backups.\n2. Press Create backup and choose the kind.\n3. When it appears in the list you can download it.",
+    "add_dns_record": "Do it yourself in the panel:\n1. Open Domains and choose your domain.\n2. Open DNS and press Add record.\n3. Choose the type (A, CNAME, MX or TXT), write the name and the value and Save.\nA DNS change can take a while to be seen everywhere.",
+    "delete_dns_record": "Do it yourself in the panel:\n1. Open Domains, choose your domain and open DNS.\n2. Find the record in the list and press Delete.\nCareful: deleting a record can stop your website or email from working.",
+    "restore_backup": "Do it yourself in the panel:\n1. Open your hosting plan > Backups.\n2. Find the backup you want and press Restore.\nA restore replaces your current files and data, so create a fresh backup first.",
+    "delete_mailbox": "Do it yourself in the panel:\n1. Open Emails and choose the domain.\n2. Find the mailbox and press Delete.\nEvery message in it is lost, so download what you need first.",
+}

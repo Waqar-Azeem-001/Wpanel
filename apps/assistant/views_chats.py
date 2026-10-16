@@ -8,12 +8,13 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
+from apps.accounts.roles import perm
 from apps.core.exceptions import ServiceError
 from apps.hosting.models import HostingAccount
 from apps.support import services as support
 
 from . import live
-from .models import Conversation, ConversationStatus, Message, SenderType, StaffAvailability
+from .models import CallbackRequest, Conversation, ConversationStatus, Message, SenderType, StaffAvailability
 
 TABS = [("all", "All"), ("waiting", "Waiting"), ("ai", "AI"), ("with_staff", "With staff"), ("closed", "Closed")]
 
@@ -38,6 +39,27 @@ def availability(request):
     except ServiceError as exc:
         messages.error(request, exc.message)
     return redirect(request.POST.get("next") if request.POST.get("next", "").startswith("/staff/chats/") else "livechat:list")
+
+
+@login_required
+def callbacks(request):
+    _see(request)
+    live.touch(request.user)
+    state = request.GET.get("state", "requested")
+    rows = CallbackRequest.objects.select_related("client", "user", "handled_by").filter(status=state if state in ("requested", "done", "cancelled") else "requested")[:80]
+    return render(request, "assistant/callbacks.html", {"rows": rows, "state": state, "states": [("requested", "Waiting"), ("done", "Called"), ("cancelled", "Cancelled")], "can_act": support.can_manage(request.user)})
+
+
+@require_POST
+@login_required
+def callback_done(request, pk):
+    if not support.can_manage(request.user):
+        raise PermissionDenied
+    row = get_object_or_404(CallbackRequest, pk=pk)
+    row.status, row.handled_by = ("cancelled" if request.POST.get("cancel") else "done"), request.user
+    row.save(update_fields=["status", "handled_by", "updated_at"])
+    messages.success(request, "The callback was marked " + row.status + ".")
+    return redirect("livechat:callbacks")
 
 
 @login_required
@@ -70,11 +92,16 @@ def chat_detail(request, pk):
     live.touch(request.user)
     conversation = get_object_or_404(Conversation.objects.select_related("client", "user", "assigned_to", "ticket"), pk=pk)
     rows = list(conversation.messages.select_related("staff").all())
+    last_question = ""
+    for m in rows:  # so a good answer by a person can become knowledge: what the customer asked just before it
+        if m.sender == SenderType.CLIENT:
+            last_question = m.body
+        m.question = last_question if m.sender == SenderType.STAFF else ""
     accounts = list(HostingAccount.objects.filter(client=conversation.client).select_related("product")[:5])
     mine = conversation.status == ConversationStatus.WITH_STAFF and conversation.assigned_to_id == request.user.pk
     colleagues = [u for u in User.objects.filter(is_active=True).order_by("email") if support.can_manage(u) and u.pk != request.user.pk][:30] if mine else []
     return render(request, "assistant/chat_detail.html", {
-        "c": conversation, "rows": rows, "last_id": rows[-1].id if rows else 0, "accounts": accounts, "mine": mine, "can_act": support.can_manage(request.user), "colleagues": colleagues,
+        "c": conversation, "can_teach": request.user.has_perm(perm("manage_settings")), "rows": rows, "last_id": rows[-1].id if rows else 0, "accounts": accounts, "mine": mine, "can_act": support.can_manage(request.user), "colleagues": colleagues,
         "waited": (timezone.now() - conversation.handoff_requested_at) if conversation.handoff_requested_at and conversation.status == ConversationStatus.WAITING else None})
 
 

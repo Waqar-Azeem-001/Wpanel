@@ -58,3 +58,6 @@
 .asst-feedback button:hover { background: var(--bs-secondary-bg); }
 .asst-feedback button.is-picked { color: var(--bs-primary); }
 .asst-log[data-staff-view] .asst-feedback { display: none; }
+
+.asst-teach { font-size: .75rem; color: var(--bs-secondary-color); align-self: center; margin-left: .5rem; white-space: nowrap; }
+.asst-log[data-staff-view] .asst-msg.is-staff { align-items: center; }

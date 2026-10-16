@@ -15,6 +15,7 @@ class AssistantSettings(TimeStampedModel):
     mode = models.CharField(max_length=10, choices=MODES, default="knowledge", help_text="Knowledge base: answers from the entries you keep in Setup and checks the customer's own account. Claude: free conversation (needs the key).")
     model = models.CharField(max_length=80, default="claude-sonnet-5-5")
     daily_limit = models.PositiveSmallIntegerField(default=30, help_text="Messages one client may send per day; it keeps the cost in hand.")
+    whatsapp_number = models.CharField(max_length=20, blank=True, help_text="Digits with the country code, for example 923001234567. When set, the chat offers a link to continue on WhatsApp.")
     offline_ticket = models.BooleanField(default=False, help_text="When nobody on the team is online (or it is outside working hours), a request for a person becomes a ticket straight away instead of waiting.")
     hours_enabled = models.BooleanField(default=False, help_text="Count only the working hours below as 'team available'.")
     hours_start = models.TimeField(default=dt.time(9, 0))
@@ -81,7 +82,7 @@ class Message(TimeStampedModel):
 class KnowledgeEntry(TimeStampedModel):
     """One thing the Agent knows: the ways customers ask it (one per line, any language) and the answer, optionally with a live check on the customer's own account."""
 
-    ACTIONS = [("add_dns_record", "Propose with code: add a DNS record"), ("delete_dns_record", "Propose with code: delete a DNS record"),
+    ACTIONS = [("callback", "Offer a callback"), ("add_dns_record", "Propose with code: add a DNS record"), ("delete_dns_record", "Propose with code: delete a DNS record"),
                ("restore_backup", "Propose with code: restore a backup"), ("delete_mailbox", "Propose with code: delete a mailbox"),
                ("renew_ssl", "Propose: renew SSL"), ("force_https", "Propose: force HTTPS"), ("set_mailbox_quota", "Propose: change a mailbox size"),
                ("set_php_setting", "Propose: change a PHP limit"), ("scan_website", "Propose: malware scan"), ("create_backup", "Propose: backup now"),
@@ -92,6 +93,7 @@ class KnowledgeEntry(TimeStampedModel):
     title = models.CharField(max_length=120)
     keywords = models.TextField(help_text="How customers ask this, one wording per line. Add Urdu and Roman Urdu wordings too.")
     answer = models.TextField(help_text="What the Agent says. Say where in the panel to go.")
+    howto = models.TextField(blank=True, default="", help_text="For an entry that makes a change: the steps in the panel. The customer sees these first; the Agent does the change only if they ask it to or say they did not understand.")
     action = models.CharField(max_length=20, choices=ACTIONS, blank=True, default="")
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveSmallIntegerField(default=100)
@@ -157,3 +159,21 @@ class StaffAvailability(TimeStampedModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_availability")
     online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(null=True, blank=True)
+
+
+class CallbackRequest(TimeStampedModel):
+    """A customer asked the team to call at a time that suits them. A task for the team, listed under Live chats."""
+
+    STATES = [("requested", "Requested"), ("done", "Done"), ("cancelled", "Cancelled")]
+
+    client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="+")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    conversation = models.ForeignKey(Conversation, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    phone = models.CharField(max_length=32)
+    preferred_at = models.DateTimeField()
+    note = models.CharField(max_length=300, blank=True)
+    status = models.CharField(max_length=10, choices=STATES, default="requested", db_index=True)
+    handled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+
+    class Meta:
+        ordering = ["preferred_at"]

@@ -114,6 +114,7 @@ EVENTS = _events(
     Event("ticket.assigned", "A ticket was assigned to you", C.TEAM, default_email=False),
     Event("ticket.unassigned", "A new ticket needs an owner", C.TEAM, default_email=False),
     Event("assistant.locked_team", "A customer's security check was locked after wrong codes", C.TEAM, default_email=False),
+    Event("assistant.callback", "A customer asked for a callback", C.TEAM, default_email=False),
     Event("chat.waiting", "A customer is waiting for a person in the chat", C.TEAM, default_email=False),
     Event("ticket.customer_reply", "A customer replied to your ticket", C.TEAM, default_email=False),
     Event("ticket.note", "A note was added to your ticket", C.TEAM, default_email=False),

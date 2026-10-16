@@ -376,6 +376,17 @@ def test_staff_teach_the_agent_a_new_answer_from_a_question_it_missed(world, own
 
 # --- Phase 3: changes the customer approves ----------------------------------------------------------------------------------------------
 
+def _ask_do(owner, text):
+    """A customer asks for a change, is told the steps in the panel first, then says "kar do": the Agent goes on."""
+    first, conversation = _ask(owner, text)
+    return _ask_in(owner, conversation, "kar do")
+
+
+def _ask_do_in(owner, conversation, text):
+    first, conversation = _ask_in(owner, conversation, text)
+    return _ask_in(owner, conversation, "kar do")
+
+
 def _card(conversation):
     from apps.assistant.models import PendingAction
 
@@ -387,12 +398,12 @@ def test_a_change_is_proposed_and_runs_only_after_the_customer_presses_approve_a
     from apps.hosting import control
     from apps.hosting.adapters.capabilities import Capability
 
-    text, conversation = _ask(owner, f"please force https on {account.domain}")
+    text, conversation = _ask_do(owner, f"please force https on {account.domain}")
     card = _card(conversation)
     failed = actions.approve(owner, card.pk)  # no working certificate yet: the panel refuses and the Agent says why
     assert failed.status == "failed" and "certificate" in failed.result
     control.perform(owner, account, Capability.SSL, "request_ssl", account.domain)
-    text, conversation = _ask_in(owner, agent.current_conversation(owner, conversation.client), f"please force https on {account.domain}")
+    text, conversation = _ask_do_in(owner, agent.current_conversation(owner, conversation.client), f"please force https on {account.domain}")
     card = [a for a in __import__("apps.assistant.models", fromlist=["PendingAction"]).PendingAction.objects.filter(conversation=conversation, status="pending")][0]
     assert card is not None and card.status == "pending" and card.tool == "force_https" and account.domain in card.summary
     assert "Nothing happens until you press Approve" in text
@@ -412,7 +423,7 @@ def test_a_mailbox_size_and_a_php_limit_are_read_from_the_customers_words_and_ch
     from apps.hosting.adapters.capabilities import Capability
 
     control.perform(owner, account, Capability.EMAIL, "create_mailbox", "agent@" + account.domain, "Str0ng-Passw0rd-xyz", quota_mb=100)
-    text, conversation = _ask(owner, "increase mailbox size")
+    text, conversation = _ask_do(owner, "increase mailbox size")
     assert "Which mailbox" in text and _card(conversation) is None
     reply = [m for m in agent.send(owner, conversation, f"agent@{account.domain} 2 GB") if m.sender == "ai"][-1].body
     card = _card(conversation)
@@ -421,10 +432,10 @@ def test_a_mailbox_size_and_a_php_limit_are_read_from_the_customers_words_and_ch
     box = next(b for b in control.perform(owner, account, Capability.EMAIL, "list_mailboxes") if b.address == f"agent@{account.domain}")
     assert box.quota_mb == 2048
     other = agent.current_conversation(owner, conversation.client)
-    text, other = _ask_in(owner, other, f"set memory limit to 512 MB on {account.domain}")
+    text, other = _ask_do_in(owner, other, f"set memory limit to 512 MB on {account.domain}")
     php = _card(other)
     assert php is not None and php.params["key"] == "memory_limit" and php.params["value"] == "512M"
-    text, _ = _ask_in(owner, other, f"set memory limit to 99999 MB on {account.domain}")
+    text, _ = _ask_do_in(owner, other, f"set memory limit to 99999 MB on {account.domain}")
     assert "between" in text
 
 
@@ -436,7 +447,7 @@ def test_only_the_person_it_was_shown_to_can_approve_cancel_expire_and_the_kill_
     from apps.assistant import actions
     from apps.assistant.models import PendingAction
 
-    _, conversation = _ask(owner, f"scan my website {account.domain}")
+    _, conversation = _ask_do(owner, f"scan my website {account.domain}")
     card = _card(conversation)
     assert card.tool == "scan_website"
     with pytest.raises(ServiceError) as err:
@@ -445,7 +456,7 @@ def test_only_the_person_it_was_shown_to_can_approve_cancel_expire_and_the_kill_
     assert actions.cancel(owner, card.pk).status == "cancelled"
     with pytest.raises(ServiceError):
         actions.approve(owner, card.pk)
-    _, second = _ask_in(owner, agent.current_conversation(owner, conversation.client), f"take backup now {account.domain}")
+    _, second = _ask_do_in(owner, agent.current_conversation(owner, conversation.client), f"take backup now {account.domain}")
     old = _card(second)
     PendingAction.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(minutes=45))
     with pytest.raises(ServiceError) as err:
@@ -453,12 +464,12 @@ def test_only_the_person_it_was_shown_to_can_approve_cancel_expire_and_the_kill_
     assert err.value.code == "expired"
     knowledge_on.changes_enabled = False
     knowledge_on.save()
-    text, third = _ask_in(owner, agent.current_conversation(owner, conversation.client), f"renew ssl {account.domain}")
+    text, third = _ask_do_in(owner, agent.current_conversation(owner, conversation.client), f"renew ssl {account.domain}")
     assert "switched off" in text and PendingAction.objects.filter(conversation=third).count() == 2  # nothing new was prepared
 
 
 def test_the_approve_button_works_through_the_page_and_a_domain_that_is_not_yours_is_refused(world, owner, account, knowledge_on):  # noqa: F811
-    _, conversation = _ask(owner, f"renew ssl {account.domain}")
+    _, conversation = _ask_do(owner, f"renew ssl {account.domain}")
     card = _card(conversation)
     client = browser(owner)
     page = client.get(reverse("assistant:panel")).content.decode()
@@ -506,7 +517,7 @@ def test_a_sensitive_change_waits_for_the_code_that_only_the_customer_gets_by_em
     from apps.hosting.adapters.capabilities import Capability
 
     control.perform(owner, account, Capability.EMAIL, "create_mailbox", "old@" + account.domain, "Str0ng-Passw0rd-xyz", quota_mb=100)
-    text, conversation = _ask(owner, f"delete mailbox old@{account.domain}")
+    text, conversation = _ask_do(owner, f"delete mailbox old@{account.domain}")
     card = _card(conversation)
     assert card.needs == "code" and card.status == "pending" and "Verify securely" in text
     code = _last_code(owner)
@@ -534,7 +545,7 @@ def test_three_wrong_codes_lock_the_change_and_tell_the_customer_and_the_team(wo
     from apps.hosting.adapters.capabilities import Capability
 
     control.perform(owner, account, Capability.EMAIL, "create_mailbox", control_mailbox, "Str0ng-Passw0rd-xyz", quota_mb=100)
-    _, conversation = _ask(owner, f"delete mailbox {control_mailbox}")
+    _, conversation = _ask_do(owner, f"delete mailbox {control_mailbox}")
     card = _card(conversation)
     real = _last_code(owner)
     wrong = "123456" if real != "123456" else "654321"
@@ -561,7 +572,7 @@ def test_a_code_expires_can_be_sent_again_after_the_wait_and_belongs_to_its_owne
     from apps.assistant import actions
     from apps.assistant.models import VerificationCode
 
-    _, conversation = _ask(owner, f"add a record TXT @ hello-world-verification on {account.domain}")
+    _, conversation = _ask_do(owner, f"add a record TXT @ hello-world-verification on {account.domain}")
     card = _card(conversation)
     assert card.tool == "add_dns_record" and card.params["type"] == "TXT" and card.params["value"] == "hello-world-verification"
     with pytest.raises(ServiceError) as err:
@@ -585,7 +596,7 @@ def test_the_verification_page_checks_the_code_and_runs_the_change(world, owner,
     from apps.hosting import control
     from apps.hosting.adapters.capabilities import Capability
 
-    _, conversation = _ask(owner, f"add dns record A blog 203.0.113.7 on {account.domain}")
+    _, conversation = _ask_do(owner, f"add dns record A blog 203.0.113.7 on {account.domain}")
     card = _card(conversation)
     client = browser(owner)
     page = client.get(reverse("assistant:verify", args=[card.pk]))
@@ -679,3 +690,101 @@ def test_analytics_count_what_happened_and_the_thumbs_come_from_the_customer(wor
     html = page.get(reverse("assistant_staff:analytics") + "?days=30").content.decode()
     assert "Agent analytics" in html and "Solved by the Agent alone" in html
     assert browser(owner).get(reverse("assistant_staff:analytics")).status_code in (302, 403)
+
+
+# --- Phase 5, the rest: callback, teaching, test box, WhatsApp ------------------------------------------------------------------------------
+
+def test_a_customer_asks_for_a_callback_and_the_team_sees_it_and_marks_it_called(world, owner, account, knowledge_on):  # noqa: F811
+    import datetime as dt
+
+    from django.test import Client as DjangoClient
+    from django.utils import timezone
+
+    from apps.assistant.models import CallbackRequest
+    from apps.notifications.models import Notification
+
+    text, _ = _ask(owner, "please call me back")
+    assert "phone button" in text
+    client = browser(owner)
+    page = client.get(reverse("assistant:callback"))
+    assert page.status_code == 200 and "Request a callback" in page.content.decode()
+    when = (timezone.localtime() + dt.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    bad = client.post(reverse("assistant:callback"), {"phone": "abc", "when": when})
+    assert CallbackRequest.objects.count() == 0 and bad.status_code == 200
+    past = client.post(reverse("assistant:callback"), {"phone": "+92 300 1234567", "when": "2020-01-01T10:00"})
+    assert CallbackRequest.objects.count() == 0
+    ok = client.post(reverse("assistant:callback"), {"phone": "+92 300 1234567", "when": when, "note": "Email problem"})
+    assert ok.status_code == 302 and CallbackRequest.objects.filter(status="requested", phone="+92 300 1234567").count() == 1
+    assert Notification.objects.filter(event="assistant.callback").exists()
+    staff = DjangoClient()
+    staff.force_login(world.people["super admin"])
+    listing = staff.get(reverse("livechat:callbacks"))
+    assert listing.status_code == 200 and "+92 300 1234567" in listing.content.decode() and "Email problem" in listing.content.decode()
+    row = CallbackRequest.objects.get()
+    assert staff.post(reverse("livechat:callback_done", args=[row.pk])).status_code == 302
+    row.refresh_from_db()
+    assert row.status == "done" and row.handled_by_id == world.people["super admin"].pk
+    assert client.post(reverse("livechat:callback_done", args=[row.pk])).status_code in (302, 403)
+
+
+def test_a_good_answer_by_a_person_can_become_knowledge_and_the_test_box_shows_what_would_match(world, owner, account, knowledge_on):  # noqa: F811
+    from django.test import Client as DjangoClient
+
+    from apps.assistant import live
+    from apps.assistant.models import KnowledgeEntry
+
+    staff_user = world.people["super admin"]
+    conversation = _conversation(owner)
+    Message.objects.create(conversation=conversation, sender="client", body="do you offer free migration")
+    live.ask_person(owner, conversation, "Question")
+    live.take(staff_user, conversation)
+    live.reply(staff_user, conversation, "Yes, we move your website for free within 3 days.")
+    staff = DjangoClient()
+    staff.force_login(staff_user)
+    page = staff.get(reverse("livechat:detail", args=[conversation.pk])).content.decode()
+    assert "Teach the Agent" in page and "do%20you%20offer%20free%20migration" in page
+    form = staff.get(reverse("assistant_staff:knowledge_new") + "?q=do you offer free migration&answer=Yes, we move your website for free within 3 days.").content.decode()
+    assert "Yes, we move your website for free within 3 days." in form and "do you offer free migration" in form
+    staff.post(reverse("assistant_staff:knowledge_new"), {"title": "Free migration", "keywords": "free migration\nmigration free hai", "answer": "Yes, we move your website for free within 3 days.", "action": "", "is_active": "on", "sort_order": "60"})
+    assert KnowledgeEntry.objects.filter(title="Free migration").exists()
+    tried = staff.get(reverse("assistant_staff:knowledge") + "?test=is migration free").content.decode()
+    assert "Would answer" in tried and "Free migration" in tried
+    nothing = staff.get(reverse("assistant_staff:knowledge") + "?test=zzqx yyyy").content.decode()
+    assert "Nothing matches" in nothing
+
+
+def test_the_whatsapp_link_appears_only_when_a_number_is_set_and_help_paths_are_links(world, owner, account, knowledge_on):  # noqa: F811
+    client = browser(owner)
+    assert "wa.me" not in client.get(reverse("assistant:chat")).content.decode()
+    knowledge_on.whatsapp_number = "923001234567"
+    knowledge_on.save()
+    html = client.get(reverse("assistant:chat")).content.decode()
+    assert "https://wa.me/923001234567?text=" in html and "Continue on WhatsApp" in html
+    from apps.assistant.templatetags.assistant_tags import agent_text
+
+    assert 'href="/help/email/phone/"' in agent_text("Read /help/email/phone/ now <b>").replace("&lt;b&gt;", "") and "&lt;b&gt;" in agent_text("<b>")
+
+
+def test_the_customer_is_told_how_to_do_it_in_the_panel_first_and_the_agent_goes_on_only_when_asked(world, owner, account, knowledge_on):  # noqa: F811
+    from apps.assistant.models import PendingAction
+
+    text, conversation = _ask(owner, f"please renew ssl for {account.domain}")
+    assert "Do it yourself in the panel" in text and "SSL" in text and "kar do" in text
+    assert PendingAction.objects.filter(conversation=conversation).count() == 0  # nothing is prepared yet
+    done, conversation = _ask_in(owner, conversation, "ok samajh gaya")  # they understood and will do it
+    assert "Great" in done and PendingAction.objects.filter(conversation=conversation).count() == 0
+    text, conversation = _ask_in(owner, conversation, f"please renew ssl for {account.domain}")
+    assert "Do it yourself" in text
+    prepared, conversation = _ask_in(owner, conversation, "samajh nahi aya, aap kar do")  # they did not understand
+    assert "Approve" in prepared and PendingAction.objects.filter(conversation=conversation, tool="renew_ssl", status="pending").count() == 1
+    other, other_conversation = _ask_in(owner, conversation, "is my website slow")  # a new question just carries on
+    assert "Do it yourself" not in other
+
+
+def test_a_new_question_after_the_steps_are_shown_is_treated_as_a_new_question(world, owner, account, knowledge_on):  # noqa: F811
+    text, conversation = _ask(owner, f"increase mailbox size")
+    assert "Do it yourself" in text
+    other, conversation = _ask_in(owner, conversation, "what is my invoice status")
+    assert "invoice" in other.lower() and "Do it yourself" not in other
+    conversation.refresh_from_db()
+    assert conversation.pending == {}

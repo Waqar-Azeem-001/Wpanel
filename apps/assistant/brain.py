@@ -182,6 +182,17 @@ def change_params(action, text, domain):
     return params, ""
 
 
+YES = ("kar do", "kardo", "kar dein", "kar den", "kardein", "karo", "do it", "do it for me", "please do", "go ahead", "proceed", "you do it", "yes", "haan", "han ", "ji haan", "ji ", "samajh nahi", "samjh nahi", "nahi samajh",
+       "not clear", "dont understand", "don't understand", "do not understand", "didnt understand", "didn't understand", "confused", "cant do", "can't do", "you please", "aap kar do", "aap karo", "ap kar do", "mushkil")
+NO_STRONG = ("got it", "understood", "samajh gaya", "samajh gya", "main kar lunga", "main kar loon", "i will do", "rehne do", "never mind", "nahi chahiye")
+NO = ("no thanks", "no thank", "thanks", "thank you", "shukriya", "theek hai", "no")
+
+
+def _wants(text, words_list):
+    normal = normalise(text)
+    return any(" " + w.strip() + " " in normal for w in words_list)
+
+
 def _say(conversation, text):
     return Message.objects.create(conversation=conversation, sender=SenderType.AI, body=text[:6000])
 
@@ -230,6 +241,14 @@ def reply(user, conversation, text, request=None):
     if pending.get("action") in TOOL and (domain or tokens & {d.split(".")[0] for d in _owned_domains(user)}):
         picked = domain or next((d for d in _owned_domains(user) if d.split(".")[0] in tokens), "")
         return finish(_run(ctx, pending["action"], picked, saved))
+    if pending.get("offer") in CHANGES:  # we told them how to do it in the panel; did they understand?
+        if _wants(clean, NO_STRONG):
+            return finish("Great! If you get stuck on any step, tell me and I will do it for you.")
+        if _wants(clean, YES):
+            return _propose(ctx, user, conversation, pending["offer"], pending.get("text", ""), domain or pending.get("domain", ""), "", saved, finish)
+        if _wants(clean, NO):
+            return finish("Great! If you get stuck on any step, tell me and I will do it for you.")
+        conversation.pending = {}  # something else: carry on as a new question
     if pending.get("action") in CHANGES:
         text_all = (pending.get("text", "") + " " + clean).strip()
         picked = domain or pending.get("domain", "") or next((d for d in _owned_domains(user) if d.split(".")[0] in tokens), "")
@@ -270,7 +289,12 @@ def reply(user, conversation, text, request=None):
         except ServiceError as exc:
             return finish(f"I could not open a ticket: {exc.message}")
         return finish(f"{answer}\nTicket {ticket.reference}.")
+    if action == "callback":
+        return finish(answer + "\n\nPress the phone button at the top of this chat (or Request a callback on the AI Agent page) and choose a day and time.")
     if action in CHANGES:
+        if entry.howto.strip():  # first, how it is done in our own panel; the change itself only if they ask for it or do not understand
+            return finish(entry.howto.strip() + "\n\nIf this is not clear, or you would like me to do it for you, just say \"do it\" (kar do) and I will prepare it. You approve it before anything changes.",
+                          pending={"offer": action, "text": clean, "domain": domain})
         return _propose(ctx, user, conversation, action, clean, domain, answer, saved, finish)
     if action in TOOL:
         owned = _owned_domains(user)
@@ -332,3 +356,11 @@ def _backup_choices(user):
     if not lines:
         return "You have no backups to restore yet."
     return "Which backup? Reply with its id:\n" + "\n".join(lines[:8])
+
+
+def explain(text, limit=3):
+    """For the staff test box: the entries that fit what was typed, best first, with their points. Nothing is run."""
+    normal = normalise(text)
+    tokens = set(words(text))
+    ranked = sorted(((score(e, normal, tokens), e) for e in KnowledgeEntry.objects.filter(is_active=True)), key=lambda r: (-r[0], r[1].sort_order))
+    return [{"entry": e, "points": value, "wins": value >= MIN_SCORE} for value, e in ranked[:limit] if value > 0]

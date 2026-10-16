@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.roles import perm
 from apps.audit import services as audit
 
+from . import brain
 from .models import KnowledgeEntry, Unanswered
 
 
@@ -19,7 +20,8 @@ def _may(request, manage=False):
 @login_required
 def knowledge(request):
     _may(request)
-    return render(request, "assistant/knowledge.html", {"entries": KnowledgeEntry.objects.all(), "gaps": Unanswered.objects.all()[:40], "can_manage": request.user.has_perm(perm("manage_settings"))})
+    test = (request.GET.get("test") or "").strip()[:300]
+    return render(request, "assistant/knowledge.html", {"test": test, "found": brain.explain(test) if test else [], "entries": KnowledgeEntry.objects.all(), "gaps": Unanswered.objects.all()[:40], "can_manage": request.user.has_perm(perm("manage_settings"))})
 
 
 @login_required
@@ -27,15 +29,16 @@ def entry_form(request, pk=None):
     _may(request)
     can_manage = request.user.has_perm(perm("manage_settings"))
     entry = get_object_or_404(KnowledgeEntry, pk=pk) if pk else KnowledgeEntry()
-    values = {"title": entry.title, "keywords": entry.keywords, "answer": entry.answer, "action": entry.action, "is_active": entry.is_active if pk else True,
+    values = {"title": entry.title, "keywords": entry.keywords, "answer": entry.answer, "howto": entry.howto, "action": entry.action, "is_active": entry.is_active if pk else True,
               "sort_order": entry.sort_order if pk else 100}
     if not pk and request.GET.get("q"):
         values["keywords"] = request.GET["q"][:300]
         values["title"] = request.GET["q"][:60]
+        values["answer"] = request.GET.get("answer", "")[:4000]
     if request.method == "POST":
         _may(request, manage=True)
         post = request.POST
-        values = {"title": post.get("title", "").strip(), "keywords": "\n".join(l.strip() for l in post.get("keywords", "").splitlines() if l.strip()), "answer": post.get("answer", "").strip(),
+        values = {"title": post.get("title", "").strip(), "keywords": "\n".join(l.strip() for l in post.get("keywords", "").splitlines() if l.strip()), "answer": post.get("answer", "").strip(), "howto": post.get("howto", "").strip(),
                   "action": post.get("action", ""), "is_active": post.get("is_active") == "on", "sort_order": post.get("sort_order") or 100}
         try:
             if not values["title"] or not values["keywords"] or not values["answer"]:
@@ -43,6 +46,7 @@ def entry_form(request, pk=None):
             if values["action"] not in dict(KnowledgeEntry.ACTIONS):
                 raise ValidationError("Choose one of the listed actions.")
             entry.title, entry.keywords, entry.answer, entry.action = values["title"][:120], values["keywords"][:3000], values["answer"][:4000], values["action"]
+            entry.howto = values["howto"][:4000]
             entry.is_active = values["is_active"]
             entry.sort_order = max(0, min(32000, int(values["sort_order"])))
         except (ValidationError, ValueError) as exc:
