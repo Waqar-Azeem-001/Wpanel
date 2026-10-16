@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "AI assistant" %} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
+{% block content %}
+<div class="page-head page-head-split"><div><h1>{% trans "AI assistant" %}</h1>
+  <p class="page-sub">{% trans "Ask about your website, email, SSL or invoices. The assistant looks things up on your own account and can open a ticket for you. It cannot change anything yet." %}</p></div>
+  <div class="d-flex gap-2 flex-wrap">
+    <form method="post" action="{% url 'assistant:new' %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "New chat" %}</button></form>
+    <form method="post" action="{% url 'assistant:handoff' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit"{% if with_staff %} disabled{% endif %}><i class="bi bi-person-lines-fill" aria-hidden="true"></i> {% trans "Talk to a person" %}</button></form>
+  </div></div>
+
+<section class="asst" aria-label="{% trans 'Chat' %}">
+  <div class="asst-log" id="asst-log" role="log" aria-live="polite">
+    {% if not rows %}<p class="asst-hello">{% trans "Hello! How can I help? For example: Why is my website down? Is my SSL working?" %}</p>{% endif %}
+    {% for m in rows %}
+      {% if m.sender == "event" %}<p class="asst-event"><i class="bi bi-search" aria-hidden="true"></i> {% if m.tool == "request_human_handoff" %}{% trans "Handed to our team" %}{% else %}{% trans "Checked" %}: {{ m.tool }}{% endif %}</p>
+      {% else %}<div class="asst-msg is-{{ m.sender }}"><div class="asst-bubble">{{ m.body|linebreaksbr }}</div></div>{% endif %}
+    {% endfor %}
+  </div>
+  {% if with_staff %}
+  <p class="asst-note mb-0">{% blocktrans with ref=ticket.reference %}Our team has this chat as ticket {{ ref }}. Reply to them there.{% endblocktrans %} <a href="{% url 'support_customer:ticket' ticket.pk %}">{% trans "Open the ticket" %}</a></p>
+  {% elif not ready %}
+  <p class="asst-note mb-0">{% trans "The assistant is not switched on yet." %} <a href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a> {% trans "and our team will help." %}</p>
+  {% else %}
+  <form method="post" action="{% url 'assistant:send' %}" class="asst-form" id="asst-form">{% csrf_token %}
+    <label class="visually-hidden" for="asst-input">{% trans "Your message" %}</label>
+    <textarea class="form-control" id="asst-input" name="message" rows="2" maxlength="2000" placeholder="{% trans 'Write your message...' %}" required></textarea>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-send" aria-hidden="true"></i> {% trans "Send" %}</button>
+  </form>
+  <p class="asst-note mb-0">{% blocktrans with n=left %}{{ n }} messages left today. Never share a password or card number in the chat.{% endblocktrans %}</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/assistant.js' %}" defer></script>{% endblock %}

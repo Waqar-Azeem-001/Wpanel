@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}AI assistant · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>AI assistant</h1>
+  <p class="page-sub">A chat in the customer area that looks things up on the customer's own services (website, SSL, disk, email, DNS, invoices) and opens a ticket when a person is needed. In this version it only reads: it cannot change anything.</p></div>
+<form method="post" class="card mb-4" novalidate>{% csrf_token %}
+  <div class="card-body vstack gap-3">
+    <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="enabled"{% if config.enabled %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label"><strong>Assistant on</strong>. Turn it off at any time and it answers nobody.</span></label>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label" for="model">Claude model</label><input class="form-control" id="model" name="model" value="{{ config.model }}" maxlength="80"{% if not can_manage %} disabled{% endif %}>
+        <div class="form-text">The model name as Claude's documentation gives it.</div></div>
+      <div class="col-md-6"><label class="form-label" for="limit">Messages per customer per day</label><input class="form-control" id="limit" name="daily_limit" type="number" min="1" max="500" value="{{ config.daily_limit }}"{% if not can_manage %} disabled{% endif %}>
+        <div class="form-text">Each message costs a little. This keeps the bill in hand.</div></div>
+    </div>
+    <p class="mb-0">{% if key_set %}<span class="badge text-bg-success">API key found on the server</span>{% else %}<span class="badge text-bg-warning">No API key on the server</span> The assistant stays off until <code>ANTHROPIC_API_KEY</code> is set in the server's environment. It is never typed here.{% endif %}
+      <span class="text-secondary ms-2">{{ today }} customer message{{ today|pluralize }} today.</span></p>
+    {% if can_manage %}<div><button class="btn btn-primary" type="submit">Save</button></div>{% endif %}
+  </div>
+</form>
+<section class="card"><div class="card-header"><h2 class="h6 mb-0">Recent chats</h2></div>
+  {% if chats %}<div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Chat</th><th>Customer</th><th>Status</th><th>Ticket</th><th>Last activity</th></tr></thead>
+    <tbody>{% for c in chats %}<tr><td><a href="{% url 'assistant_staff:chat' c.pk %}">#{{ c.pk }}</a></td><td>{{ c.client }} <span class="text-secondary">({{ c.user }})</span></td><td>{{ c.get_status_display }}</td>
+      <td>{% if c.ticket %}{{ c.ticket.reference }}{% else %}-{% endif %}</td><td>{{ c.updated_at|date:"j M Y, H:i" }}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="card-body text-secondary">No chats yet.</div>{% endif %}
+</section>
+{% endblock %}

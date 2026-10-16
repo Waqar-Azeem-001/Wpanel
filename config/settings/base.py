@@ -33,6 +33,8 @@ STORE_CURRENCY = env("STORE_CURRENCY", default="USD")
 PREVIEW_DOMAIN = env("PREVIEW_DOMAIN", default="")
 # The secret the panel's web server sends when it asks which website a preview host belongs to (apps/hosting/preview.py); empty = preview off. PREVIEW_SECURE: the preview host has a certificate.
 PREVIEW_PROXY_KEY = env("PREVIEW_PROXY_KEY", default="")
+# The AI assistant's key: set only in the server's environment, never in the database or the browser.
+ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
 PREVIEW_SECURE = env.bool("PREVIEW_SECURE", default=False)
 # The built-in test payment gateway simulates a hosted checkout page and signs its own webhooks. It moves no
 # money, so it must never be usable in production: off by default, on in dev/test settings only.
@@ -83,6 +85,7 @@ INSTALLED_APPS = [
     "apps.reports",
     "apps.branding",
     "apps.support",
+    "apps.assistant",
     "apps.console",
     "apps.storefronts",
 ]

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Assistant chat #{{ conversation.pk }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Assistant chat #{{ conversation.pk }}</h1>
+  <p class="page-sub">{{ conversation.client }} ({{ conversation.user }}) · {{ conversation.get_status_display }}{% if conversation.ticket %} · ticket {{ conversation.ticket.reference }}{% endif %}. <a href="{% url 'assistant_staff:settings' %}">All chats</a></p></div>
+<section class="card"><div class="card-body vstack gap-2">
+  {% for m in rows %}
+    {% if m.sender == "event" %}<p class="text-secondary small mb-0"><i class="bi bi-search" aria-hidden="true"></i> {{ m.at|date:"H:i" }} · tool {{ m.tool.tool }}{% if m.tool.domain %} · {{ m.tool.domain }}{% endif %}{% if m.tool.failed %} · failed{% endif %}</p>
+    {% else %}<div><strong>{% if m.sender == "client" %}Customer{% else %}Assistant{% endif %}</strong> <span class="text-secondary small">{{ m.at|date:"j M, H:i" }}</span><div>{{ m.body|linebreaksbr }}</div></div>{% endif %}
+  {% empty %}<span class="text-secondary">Empty.</span>{% endfor %}
+</div></section>
+{% endblock %}
