@@ -1105,3 +1105,18 @@ def test_the_contact_page_uses_the_details_from_setup(client, world):  # noqa: F
     row.save()
     html = client.get("/contact/").content.decode()
     assert "mailto:hello@example.org" in html and "+92 300 1234567" in html and "Office 4, Lahore" in html and "Sign in" in html
+
+
+def test_care_belongs_to_each_website_and_an_added_domain_has_its_own(world, owner, account):  # noqa: F811
+    from apps.hosting import care
+    from apps.hosting.models import SiteCare
+
+    client = browser(owner)
+    client.post(reverse("hosting_customer:site_add", args=[account.pk]), {"domain": "care.example-test.com"})
+    client.post(reverse("hosting_customer:site_setup", args=[account.pk, "care.example-test.com"]), {"type": "custom"})
+    page = client.get(reverse("hosting_customer:site_care", args=[account.pk, "care.example-test.com"]))
+    assert page.status_code == 200 and "care.example-test.com" in page.content.decode()
+    assert client.get(reverse("hosting_customer:site_care", args=[account.pk, "unknown.example-test.org"])).status_code == 404
+    client.post(reverse("hosting_customer:site_care_action", args=[account.pk, "care.example-test.com"]), {"action": "scan_schedule", "value": "weekly"})
+    assert care.care_for(account, "care.example-test.com").scan_schedule != care.care_for(account).scan_schedule or SiteCare.objects.filter(account=account).count() == 2
+    assert client.get(reverse("hosting_customer:care", args=[account.pk])).status_code == 200

@@ -438,10 +438,9 @@ def delete_website(user, account, confirm_domain, domain="", request=None):
             io.call(Capability.FILES, "delete_path", folder)
         except ServiceError:
             pass
-    else:
-        SiteScan.objects.filter(account=account).delete()
-        SpeedTest.objects.filter(account=account).delete()
-        SiteCare.objects.filter(account=account).delete()
+    SiteScan.objects.filter(account=account, domain=domain).delete()  # what was measured and chosen for this website goes with it
+    SpeedTest.objects.filter(account=account, domain=domain).delete()
+    SiteCare.objects.filter(account=account, domain=domain).delete()
     kind = app.kind if app is not None else "unmanaged"
     if app is not None:
         app.delete()

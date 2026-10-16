@@ -34,6 +34,8 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:wp_admin": "the way into WordPress admin; goes straight there or explains the preview (tested in apps/core/test_client_shell.py)",
     "hosting_customer:site_wp_admin": "the same for a website on an added domain (tested in apps/core/test_client_shell.py)",
     "hosting_customer:site_setup_status": "the progress of a website on an added domain (tested in apps/core/test_client_shell.py)",
+    "hosting_customer:site_care": "Website care of a website on an added domain (tested in apps/core/test_client_shell.py)",
+    "hosting_customer:site_care_wordpress": "the WordPress plugins and themes of a website on an added domain (same page and view as the plan's own)",
     "hosting_customer:site_remove": "removal of a website on an added domain (tested in apps/core/test_client_shell.py)",
     "hosting_customer:setup_status": "reached after a website is set up (the progress page); the crawl world has no installation running (tested in apps/hosting)",
     "billing_customer:test_gateway": "the simulated gateway's page, reached from a redirect after starting a test payment",

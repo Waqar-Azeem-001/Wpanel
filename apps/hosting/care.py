@@ -60,18 +60,18 @@ class _Io:
             return False
 
 
-def care_for(account):
-    return SiteCare.objects.get_or_create(account=account)[0]
+def care_for(account, domain=""):
+    return SiteCare.objects.get_or_create(account=account, domain=domain)[0]
 
 
-def _wordpress_ready(account):
-    app = WebsiteApp.objects.filter(account=account, domain="").first()
+def _wordpress_ready(account, domain=""):
+    app = WebsiteApp.objects.filter(account=account, domain=domain).first()
     return app is not None and app.kind == "wordpress" and app.state == "ready"
 
 
-def can_manage_updates(account):
+def can_manage_updates(account, domain=""):
     """WordPress was set up here and is ready: only then is there something to keep up to date."""
-    return _wordpress_ready(account)
+    return _wordpress_ready(account, domain)
 
 
 # --- Speed test -------------------------------------------------------------------------------------------------------
@@ -167,26 +167,26 @@ def score(measured):
     return max(0, min(100, points)), advice
 
 
-def _addresses(account):
-    domain = account.domain.lower()
+def _addresses(account, site=""):
+    domain = site_apps.site_domain(account, site).lower()
     return ["https" + "://" + domain + "/", "http" + "://" + domain + "/"]
 
 
-def speed_test(account, now=None):
+def speed_test(account, now=None, domain=""):
     """Measure the home page now (at most one test every few seconds per website: the earlier result is returned instead). Stores and returns the ``SpeedTest``."""
     now = now or timezone.now()
-    latest = SpeedTest.objects.filter(account=account, kind="server").first()
+    latest = SpeedTest.objects.filter(account=account, domain=domain, kind="server").first()
     if latest is not None and now - latest.created_at < SPEED_PAUSE:
         return latest
     measured, error, url = None, "", ""
-    for url in _addresses(account):
+    for url in _addresses(account, domain):
         try:
             measured = _fetch(url)
             break
         except ServiceError as exc:
             error = exc.message
     if measured is None:
-        result = SpeedTest.objects.create(account=account, url=url.rstrip("/"), ok=False, error=error[:300] or "Your website could not be reached.",
+        result = SpeedTest.objects.create(account=account, domain=domain, url=url.rstrip("/"), ok=False, error=error[:300] or "Your website could not be reached.",
                                           advice=["Check that the domain points to your hosting and the website is not suspended."])
     else:
         points, advice = score(measured)
@@ -195,10 +195,10 @@ def speed_test(account, now=None):
             advice.insert(0, f"The home page answered with an error (status {measured['status']}).")
             points = 0
         result = SpeedTest.objects.create(
-            account=account, url=measured["final_url"][:300], ok=ok, status_code=measured["status"], first_byte_ms=measured["first_byte_ms"], total_ms=measured["total_ms"],
+            account=account, domain=domain, url=measured["final_url"][:300], ok=ok, status_code=measured["status"], first_byte_ms=measured["first_byte_ms"], total_ms=measured["total_ms"],
             size_bytes=measured["size"], redirects=measured["redirects"], https=measured["https"], compressed=measured["compressed"], cached=measured["cached"],
             score=points, advice=advice)
-    stale = list(SpeedTest.objects.filter(account=account, kind="server").values_list("pk", flat=True)[KEEP_RESULTS:])
+    stale = list(SpeedTest.objects.filter(account=account, domain=domain, kind="server").values_list("pk", flat=True)[KEEP_RESULTS:])
     if stale:
         SpeedTest.objects.filter(pk__in=stale).delete()
     return result
@@ -206,8 +206,8 @@ def speed_test(account, now=None):
 
 # --- Malware scan -----------------------------------------------------------------------------------------------------
 
-def last_scan(account):
-    return SiteScan.objects.filter(account=account).first()
+def last_scan(account, domain=""):
+    return SiteScan.objects.filter(account=account, domain=domain).first()
 
 
 def _store_findings(scan, data):
@@ -227,29 +227,29 @@ def _fail(scan, message):
     return scan
 
 
-def start_scan(user, account, trigger="manual"):
+def start_scan(user, account, trigger="manual", domain=""):
     """Start a scan unless one is already running. A provider that scans itself is used as is; otherwise the one-file scanner runs on the website. Returns the ``SiteScan``."""
-    running = SiteScan.objects.filter(account=account, state="running").first()
+    running = SiteScan.objects.filter(account=account, domain=domain, state="running").first()
     if running is not None:
         if timezone.now() - running.started_at < SCAN_STALE:
-            return poll_scan(user, account) or running
+            return poll_scan(user, account, domain) or running
         _fail(running, "The scan did not report back in time.")
     io = _Io(user, account)
-    scan = SiteScan.objects.create(account=account, trigger=trigger)
+    scan = SiteScan.objects.create(account=account, domain=domain, trigger=trigger)
     audit.record("hosting.scan_started", actor=user, target=account, metadata={"trigger": trigger})
     if io.supports(Capability.SECURITY):
         try:
             result = io.call(Capability.SECURITY, "run_malware_scan")
         except ServiceError as exc:
             return _fail(scan, exc.message)
-        prefix = site_apps.docroot_path(account) + "/"  # a provider names files from the account's home; the page and quarantine speak from the website's folder
+        prefix = site_apps.docroot_path(account, domain) + "/"  # a provider names files from the account's home; the page and quarantine speak from the website's folder
         found = [{**f.__dict__, "path": f.path[len(prefix):] if f.path.startswith(prefix) else f.path} for f in result.findings]
         _store_findings(scan, {"files_scanned": result.files_scanned, "findings": found})
         scan.save()
         return scan
     if not io.supports(Capability.FILES):
         return _fail(scan, "This server cannot be scanned from here yet.")
-    folder = site_apps.docroot_path(account)
+    folder = site_apps.docroot_path(account, domain)
     file_name, result_name, token, source = care_scanner.build()
     path = f"{folder}/{file_name}"
     try:
@@ -259,7 +259,7 @@ def start_scan(user, account, trigger="manual"):
     scan.script_ref, scan.result_ref = file_name, result_name
     scan.save(update_fields=["script_ref", "result_ref", "updated_at"])
     try:
-        outcome = site_apps.reach(account, file_name, token, purpose="to scan it")
+        outcome = site_apps.reach(account, file_name, token, purpose="to scan it", domain=domain)
     except ServiceError as exc:
         _remove(io, f"{folder}/{file_name}")
         return _fail(scan, exc.message)
@@ -276,7 +276,7 @@ def _remove(io, path):
 
 
 def _apply(io, scan, data):
-    folder = site_apps.docroot_path(scan.account)
+    folder = site_apps.docroot_path(scan.account, scan.domain)
     if data.get("ok"):
         _store_findings(scan, data)
         scan.save()
@@ -287,13 +287,13 @@ def _apply(io, scan, data):
         _remove(io, f"{folder}/{scan.result_ref}")
 
 
-def poll_scan(user, account):
+def poll_scan(user, account, domain=""):
     """A scan that did not answer within the wait: has the scanner left its result? Cheap; safe on every page view."""
-    scan = last_scan(account)
+    scan = last_scan(account, domain)
     if scan is None or scan.state != "running" or not scan.result_ref:
         return scan
     io = _Io(user, account)
-    folder = site_apps.docroot_path(account)
+    folder = site_apps.docroot_path(account, domain)
     try:
         raw = io.call(Capability.FILES, "read_file", f"{folder}/{scan.result_ref}", max_bytes=300_000)
         data = json.loads(raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw))
@@ -322,22 +322,22 @@ def rules_file(core, plugins, themes):
     return "\n".join(lines) + "\n"
 
 
-def save_updates(user, account, core, plugins, themes):
+def save_updates(user, account, core, plugins, themes, domain=""):
     """Remember the choice and put the rules file on the website. Returns the ``SiteCare``."""
     if core not in dict(SiteCare.CORE_CHOICES):
         raise ServiceError("Choose how WordPress should update.", code="bad_choice")
-    if not _wordpress_ready(account):
+    if not _wordpress_ready(account, domain):
         raise ServiceError("Automatic updates are for WordPress websites that WHPanel set up.", code="not_wordpress")
     io = _Io(user, account)
-    folder = f"{site_apps.docroot_path(account)}/{MU_PLUGIN_DIR}"
-    parent = f"{site_apps.docroot_path(account)}/wp-content"
+    folder = f"{site_apps.docroot_path(account, domain)}/{MU_PLUGIN_DIR}"
+    parent = f"{site_apps.docroot_path(account, domain)}/wp-content"
     names = {e.name for e in io.call(Capability.FILES, "list_files", parent)}
     if "mu-plugins" not in names:
         io.call(Capability.FILES, "make_directory", folder)
     path = f"{folder}/{MU_PLUGIN_FILE}"
     io.call(Capability.FILES, "write_file", path, rules_file(core, plugins, themes).encode(), overwrite=True,
             audit_metadata={"path": path, "core": core, "plugins": plugins, "themes": themes})
-    care = care_for(account)
+    care = care_for(account, domain)
     care.wp_core, care.wp_plugins, care.wp_themes, care.updates_written_at = core, plugins, themes, timezone.now()
     care.save()
     return care
@@ -419,12 +419,12 @@ def _ago(moment, now):
     return f"{days} day{'s' if days != 1 else ''} ago"
 
 
-def summary(user, account, now=None):
+def summary(user, account, now=None, domain=""):
     """Four short status lines for the overview: ``[{key, title, value, note, tone, icon}]``. Reads only what WHPanel stores, plus the backup options once."""
     now = now or timezone.now()
-    settings = care_for(account)
-    speed = SpeedTest.objects.filter(account=account, kind="server").first()
-    scan = SiteScan.objects.filter(account=account).first()
+    settings = care_for(account, domain)
+    speed = SpeedTest.objects.filter(account=account, domain=domain, kind="server").first()
+    scan = SiteScan.objects.filter(account=account, domain=domain).first()
     rows = []
     if speed is None:
         rows.append({"key": "speed", "title": "Speed", "value": "Not tested", "note": "Test how fast your website answers.", "tone": "idle", "icon": "bi-speedometer"})
@@ -443,7 +443,7 @@ def summary(user, account, now=None):
     else:
         rows.append({"key": "scan", "title": "Security", "value": "No problems found", "note": f"Scanned {_ago(scan.finished_at or scan.started_at, now)}", "tone": "ok",
                      "icon": "bi-shield-check"})
-    if _wordpress_ready(account):
+    if _wordpress_ready(account, domain):
         label = dict(SiteCare.CORE_CHOICES)[settings.wp_core]
         extra = " + plugins" if settings.wp_plugins else ""
         extra += " + themes" if settings.wp_themes else ""
@@ -451,7 +451,7 @@ def summary(user, account, now=None):
                      "note": (label + extra) if settings.updates_written_at else "WordPress's own default: security releases only.",
                      "tone": "ok" if settings.updates_written_at and settings.wp_core != "off" else "idle", "icon": "bi-arrow-repeat"})
     try:
-        state = backup_state(user, account)
+        state = backup_state(user, account) if not domain else None  # backups belong to the whole hosting plan: they are shown on the plan's own website
     except ServiceError:
         state = None
     if state is not None:
@@ -475,11 +475,11 @@ def run_due(now=None):
             continue
         period = PERIOD.get(care.scan_schedule)
         if period is not None:
-            last = SiteScan.objects.filter(account=account, state__in=["done", "failed"]).first()
+            last = SiteScan.objects.filter(account=account, domain=care.domain, state__in=["done", "failed"]).first()
             if last is None or now - (last.finished_at or last.started_at) >= period - timedelta(hours=1):
-                start_scan(None, account, trigger="scheduled")
+                start_scan(None, account, trigger="scheduled", domain=care.domain)
                 done["scans"] += 1
-        period = PERIOD.get(care.backup_schedule)
+        period = PERIOD.get(care.backup_schedule) if not care.domain else None  # a backup is of the whole plan: only the plan's own website schedules it
         if period is not None and (care.last_backup_at is None or now - care.last_backup_at >= period - timedelta(hours=1)):
             if _Io(None, account).supports(Capability.BACKUPS):
                 _panel_backup(account, now)

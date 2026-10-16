@@ -153,7 +153,8 @@ class SiteCare(TimeStampedModel):
     SCAN_CHOICES = [("off", "Only when I ask"), ("weekly", "Every week"), ("daily", "Every day")]
     BACKUP_CHOICES = [("off", "Off"), ("weekly", "Every week"), ("daily", "Every day")]
 
-    account = models.OneToOneField(HostingAccount, on_delete=models.CASCADE, related_name="care")
+    account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="care_rows")
+    domain = models.CharField(max_length=253, blank=True, default="")  # "" is the plan's own website; another value is a website on a domain added to the plan
     wp_core = models.CharField(max_length=8, choices=CORE_CHOICES, default="minor")
     wp_plugins = models.BooleanField(default=False)
     wp_themes = models.BooleanField(default=False)
@@ -167,8 +168,11 @@ class SiteCare(TimeStampedModel):
     performance = models.BooleanField(default=False)  # compression and browser caching rules in .htaccess
     quarantine = models.JSONField(default=list, blank=True)  # [{"path", "stored", "rule", "at"}] files moved aside by the customer
 
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["account", "domain"], name="one_care_per_website")]
+
     def __str__(self):
-        return f"Care of {self.account.domain}"
+        return f"Care of {self.domain or self.account.domain}"
 
 
 class StagingSite(TimeStampedModel):
@@ -201,6 +205,7 @@ class SiteScan(TimeStampedModel):
     STATES = [("running", "Running"), ("done", "Done"), ("failed", "Failed")]
 
     account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="scans")
+    domain = models.CharField(max_length=253, blank=True, default="")  # "" is the plan's own website
     state = models.CharField(max_length=8, choices=STATES, default="running")
     trigger = models.CharField(max_length=10, default="manual")  # "manual" or "scheduled"
     started_at = models.DateTimeField(auto_now_add=True)
@@ -239,6 +244,7 @@ class SpeedTest(TimeStampedModel):
     """One speed test of a website's home page, measured from the panel. Figures only."""
 
     account = models.ForeignKey(HostingAccount, on_delete=models.CASCADE, related_name="speed_tests")
+    domain = models.CharField(max_length=253, blank=True, default="")  # "" is the plan's own website
     url = models.CharField(max_length=300)
     ok = models.BooleanField(default=False)
     status_code = models.PositiveSmallIntegerField(default=0)

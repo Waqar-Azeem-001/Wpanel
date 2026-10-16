@@ -60,25 +60,25 @@ def options_file(maintenance, discourage_search):
     return "\n".join(lines) + "\n"
 
 
-def _mu_dir(account):
-    return f"{site_apps.docroot_path(account)}/wp-content/mu-plugins"
+def _mu_dir(account, domain=""):
+    return f"{site_apps.docroot_path(account, domain)}/wp-content/mu-plugins"
 
 
-def _ensure_mu_dir(io, account):
-    parent = f"{site_apps.docroot_path(account)}/wp-content"
+def _ensure_mu_dir(io, account, domain=""):
+    parent = f"{site_apps.docroot_path(account, domain)}/wp-content"
     if "mu-plugins" not in {e.name for e in io.call(Capability.FILES, "list_files", parent)}:
-        io.call(Capability.FILES, "make_directory", _mu_dir(account))
+        io.call(Capability.FILES, "make_directory", _mu_dir(account, domain))
 
 
-def save_site_options(user, account, maintenance, discourage_search):
-    if not care.can_manage_updates(account):
+def save_site_options(user, account, maintenance, discourage_search, domain=""):
+    if not care.can_manage_updates(account, domain):
         raise ServiceError("These options are for WordPress websites that WHPanel set up.", code="not_wordpress")
     io = care._Io(user, account)
-    _ensure_mu_dir(io, account)
-    path = f"{_mu_dir(account)}/{OPTIONS_FILE}"
+    _ensure_mu_dir(io, account, domain)
+    path = f"{_mu_dir(account, domain)}/{OPTIONS_FILE}"
     io.call(Capability.FILES, "write_file", path, options_file(maintenance, discourage_search).encode(), overwrite=True,
             audit_metadata={"path": path, "maintenance": maintenance, "discourage_search": discourage_search})
-    row = care.care_for(account)
+    row = care.care_for(account, domain)
     row.maintenance, row.discourage_search = bool(maintenance), bool(discourage_search)
     row.save()
     return row
@@ -101,11 +101,11 @@ def performance_supported(account):
     return account.server is not None
 
 
-def save_performance(user, account, enabled):
+def save_performance(user, account, enabled, domain=""):
     if not performance_supported(account):
         raise ServiceError("This server does not use .htaccess rules.", code="not_supported")
     io = care._Io(user, account)
-    path = f"{site_apps.docroot_path(account)}/.htaccess"
+    path = f"{site_apps.docroot_path(account, domain)}/.htaccess"
     try:
         raw = io.call(Capability.FILES, "read_file", path, max_bytes=200_000)
         current = raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
@@ -113,7 +113,7 @@ def save_performance(user, account, enabled):
         current = ""
     io.call(Capability.FILES, "write_file", path, merge_htaccess(current, enabled).encode(), overwrite=True,
             audit_metadata={"path": path, "performance": bool(enabled)})
-    row = care.care_for(account)
+    row = care.care_for(account, domain)
     row.performance = bool(enabled)
     row.save()
     return row
@@ -129,24 +129,24 @@ def _clean_rel(path):
     return path
 
 
-def quarantine_file(user, account, path):
+def quarantine_file(user, account, path, domain=""):
     """Move a file the last scan flagged into the quarantine folder (renamed so it cannot run). Nothing is deleted."""
     rel = _clean_rel(path)
-    scan = SiteScan.objects.filter(account=account, state="done").first()
+    scan = SiteScan.objects.filter(account=account, domain=domain, state="done").first()
     finding = next((f for f in (scan.findings if scan else []) if f["path"] == rel), None)
     if finding is None:
         raise ServiceError("Only a file the last scan flagged can be moved aside.", code="not_flagged")
     if finding["rule"] in SECURITY_CRITICAL_RULES:
         raise ServiceError("This is one of WordPress's own files. Moving it aside would break the website; reinstall WordPress core instead.", code="critical")
     io = care._Io(user, account)
-    folder = site_apps.docroot_path(account)
+    folder = site_apps.docroot_path(account, domain)
     base = f"{folder}/{QUARANTINE_DIR}"
     if QUARANTINE_DIR not in {e.name for e in io.call(Capability.FILES, "list_files", folder)}:
         io.call(Capability.FILES, "make_directory", base)
         io.call(Capability.FILES, "write_file", f"{base}/.htaccess", b"Require all denied\nDeny from all\n", overwrite=True)
     stored = f"{int(time.time())}-{rel.replace('/', '__')}.quarantined"
     io.call(Capability.FILES, "rename_path", f"{folder}/{rel}", f"{base}/{stored}", audit_metadata={"path": rel, "action": "quarantine"})
-    row = care.care_for(account)
+    row = care.care_for(account, domain)
     row.quarantine = [{"path": rel, "stored": stored, "rule": finding["rule"], "at": timezone.now().isoformat()}, *row.quarantine][:100]
     row.save()
     if scan:
@@ -155,13 +155,13 @@ def quarantine_file(user, account, path):
     return row
 
 
-def restore_file(user, account, stored):
-    row = care.care_for(account)
+def restore_file(user, account, stored, domain=""):
+    row = care.care_for(account, domain)
     entry = next((q for q in row.quarantine if q["stored"] == stored), None)
     if entry is None:
         raise ServiceError("That file is not in quarantine any more.", code="not_found")
     io = care._Io(user, account)
-    folder = site_apps.docroot_path(account)
+    folder = site_apps.docroot_path(account, domain)
     target = f"{folder}/{entry['path']}"
     parent = target.rsplit("/", 1)[0]
     existing = {e.name for e in io.call(Capability.FILES, "list_files", parent)}
@@ -225,11 +225,11 @@ METRICS = (("first-contentful-paint", "First contentful paint"), ("largest-conte
            ("cumulative-layout-shift", "Layout shift"), ("speed-index", "Speed index"))
 
 
-def pagespeed(account, strategy="mobile"):
+def pagespeed(account, strategy="mobile", domain=""):
     """Ask Google's PageSpeed service about the home page. Stored as a ``SpeedTest`` of kind "pagespeed". Raises ServiceError when Google cannot be reached or says no."""
     if strategy not in ("mobile", "desktop"):
         strategy = "mobile"
-    target = "https" + "://" + account.domain.lower() + "/"
+    target = "https" + "://" + site_apps.site_domain(account, domain).lower() + "/"
     params = {"url": target, "strategy": strategy, "category": "performance"}
     key = getattr(settings, "PAGESPEED_API_KEY", "")
     if key:
@@ -254,9 +254,9 @@ def pagespeed(account, strategy="mobile"):
         figures = {label: lighthouse["audits"][key_]["displayValue"] for key_, label in METRICS if key_ in lighthouse.get("audits", {}) and "displayValue" in lighthouse["audits"][key_]}
     except (ValueError, KeyError, TypeError) as exc:
         raise ServiceError("Google PageSpeed answered with something unexpected.", code="pagespeed_failed") from exc
-    row = SpeedTest.objects.create(account=account, url=target.rstrip("/"), ok=True, status_code=200, score=score, kind="pagespeed", report={"strategy": strategy, "figures": figures},
+    row = SpeedTest.objects.create(account=account, domain=domain, url=target.rstrip("/"), ok=True, status_code=200, score=score, kind="pagespeed", report={"strategy": strategy, "figures": figures},
                                    https=True)
-    stale = list(SpeedTest.objects.filter(account=account, kind="pagespeed").values_list("pk", flat=True)[care.KEEP_RESULTS:])
+    stale = list(SpeedTest.objects.filter(account=account, domain=domain, kind="pagespeed").values_list("pk", flat=True)[care.KEEP_RESULTS:])
     if stale:
         SpeedTest.objects.filter(pk__in=stale).delete()
     return row

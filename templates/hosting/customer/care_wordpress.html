@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load ui i18n %}
-{% block title %}{% trans "Plugins and themes" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% trans "Plugins and themes" %} · {{ site_domain|default:account.domain }} · {{ SITE_NAME }}{% endblock %}
 {% block container %}ws-apple{% endblock %}
 {% block content %}
 {% include "hosting/customer/_header.html" with tab="" %}

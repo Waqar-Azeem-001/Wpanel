@@ -20,7 +20,7 @@ def _band(score):
 def performance(account):
     """{"desktop": row or None, "mobile": row or None, "server": last server test or None}. Rows: {score, band, at, figures}."""
     out = {"desktop": None, "mobile": None, "server": None}
-    tests = account.speed_tests.all()
+    tests = account.speed_tests.filter(domain="")
     for strategy in ("desktop", "mobile"):
         for t in tests:
             if t.kind == "pagespeed" and (t.report or {}).get("strategy") == strategy:

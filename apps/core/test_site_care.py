@@ -264,7 +264,7 @@ def test_where_the_server_cannot_schedule_the_panel_takes_the_backups_and_keeps_
 
 def test_the_daily_job_runs_only_what_is_due(world, owner, account, monkeypatch):  # noqa: F811
     started = []
-    monkeypatch.setattr(care, "start_scan", lambda user, acct, trigger="manual": started.append((acct.pk, trigger)))
+    monkeypatch.setattr(care, "start_scan", lambda user, acct, trigger="manual", domain="": started.append((acct.pk, trigger)))
     row = care.care_for(account)
     row.scan_schedule = "weekly"
     row.save()

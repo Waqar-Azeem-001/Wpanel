@@ -70,6 +70,7 @@
             <li><a class="dropdown-item" href="{{ row.manage_url }}"><i class="bi bi-speedometer2" aria-hidden="true"></i> {% trans "Dashboard" %}</a></li>
             <li><a class="dropdown-item" href="{{ row.visit_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Visit website" %}</a></li>
             {% if row.app and row.app.kind == "wordpress" and row.app.state == "ready" and row.app.admin_url %}
+            <li><a class="dropdown-item" href="{% if row.extra %}{% url 'hosting_customer:site_care' row.account.pk row.domain %}{% else %}{% url 'hosting_customer:care' row.account.pk %}{% endif %}"><i class="bi bi-heart-pulse" aria-hidden="true"></i> {% trans "Website care" %}</a></li>
             <li><a class="dropdown-item" href="{% if row.extra %}{% url 'hosting_customer:site_wp_admin' row.account.pk row.domain %}{% else %}{% url 'hosting_customer:wp_admin' row.account.pk %}{% endif %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-wordpress" aria-hidden="true"></i> {% trans "WordPress admin" %}</a></li>
             {% endif %}
             {% if row.can_stage %}<li><a class="dropdown-item" href="{{ row.staging_url }}"><i class="bi bi-copy" aria-hidden="true"></i> {% trans "Staging website" %}</a></li>{% endif %}
