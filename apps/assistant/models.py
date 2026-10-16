@@ -72,7 +72,9 @@ class Message(TimeStampedModel):
 class KnowledgeEntry(TimeStampedModel):
     """One thing the Agent knows: the ways customers ask it (one per line, any language) and the answer, optionally with a live check on the customer's own account."""
 
-    ACTIONS = [("renew_ssl", "Propose: renew SSL"), ("force_https", "Propose: force HTTPS"), ("set_mailbox_quota", "Propose: change a mailbox size"),
+    ACTIONS = [("add_dns_record", "Propose with code: add a DNS record"), ("delete_dns_record", "Propose with code: delete a DNS record"),
+               ("restore_backup", "Propose with code: restore a backup"), ("delete_mailbox", "Propose with code: delete a mailbox"),
+               ("renew_ssl", "Propose: renew SSL"), ("force_https", "Propose: force HTTPS"), ("set_mailbox_quota", "Propose: change a mailbox size"),
                ("set_php_setting", "Propose: change a PHP limit"), ("scan_website", "Propose: malware scan"), ("create_backup", "Propose: backup now"),
                ("", "Just answer"), ("website_status", "Check the website"), ("ssl", "Check SSL"), ("disk", "Check disk and bandwidth"), ("error_log", "Show the error log"),
                ("dns", "Show DNS records"), ("email_quota", "Check mailboxes"), ("invoices", "Show invoices"), ("services", "List their services"),
@@ -108,7 +110,8 @@ class Unanswered(TimeStampedModel):
 class PendingAction(TimeStampedModel):
     """A change the Agent proposed. It runs only when the customer who was shown it presses Approve, once, within half an hour."""
 
-    STATES = [("pending", "Waiting for approval"), ("running", "Running"), ("done", "Done"), ("failed", "Failed"), ("cancelled", "Cancelled"), ("expired", "Expired")]
+    STATES = [("pending", "Waiting for approval"), ("running", "Running"), ("done", "Done"), ("failed", "Failed"), ("cancelled", "Cancelled"), ("expired", "Expired"), ("locked", "Locked")]
+    NEEDS = [("approve", "Approve"), ("code", "Security code")]
 
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="actions")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
@@ -116,6 +119,7 @@ class PendingAction(TimeStampedModel):
     params = models.JSONField(default=dict)
     summary = models.CharField(max_length=300)
     account_id = models.PositiveIntegerField(default=0)  # the hosting plan it is about; set by the panel, never by the model
+    needs = models.CharField(max_length=8, choices=NEEDS, default="approve")
     status = models.CharField(max_length=10, choices=STATES, default="pending", db_index=True)
     result = models.CharField(max_length=500, blank=True)
     executed_at = models.DateTimeField(null=True, blank=True)
@@ -125,3 +129,14 @@ class PendingAction(TimeStampedModel):
 
     def __str__(self):
         return f"{self.tool}: {self.summary} ({self.status})"
+
+
+class VerificationCode(TimeStampedModel):
+    """The security code for one change. Only a hash is kept; the code itself goes by email to the address on the customer's account and is never shown in the chat."""
+
+    action = models.OneToOneField(PendingAction, on_delete=models.CASCADE, related_name="verification")
+    code_hash = models.CharField(max_length=128)
+    sent_to = models.CharField(max_length=120)  # masked, for the page: a*****@gmail.com
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    last_sent_at = models.DateTimeField()

@@ -20,9 +20,10 @@
     var status = log.dataset.status;
     log.scrollTop = log.scrollHeight;
 
-    function card(text, id, state) {
+    function card(text, id, state, needs) {
       var el = document.createElement("div");
-      el.className = "asst-action is-" + state;
+      el.className = "asst-action is-" + state + (needs === "code" ? " needs-code" : "");
+      el.dataset.needs = needs || "approve";
       el.dataset.action = id;
       el.dataset.status = state;
       var line = document.createElement("div");
@@ -35,7 +36,17 @@
       if (state === "pending") {
         var row = document.createElement("div");
         row.className = "asst-action-buttons";
+        if (needs === "code") {
+          var link = document.createElement("a");
+          link.className = "btn btn-sm btn-primary";
+          link.href = box.dataset.verify + id + "/";
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "Verify securely";
+          row.appendChild(link);
+        }
         [["approve", "Approve", "btn btn-sm btn-primary"], ["cancel", "Cancel", "btn btn-sm btn-outline-secondary"]].forEach(function (b) {
+          if (b[0] === "approve" && needs === "code") { return; }
           var btn = document.createElement("button");
           btn.type = "button";
           btn.className = b[2];
@@ -53,10 +64,10 @@
       return el;
     }
 
-    function add(sender, text, tool, kind, who, action, state) {
+    function add(sender, text, tool, kind, who, action, state, needs) {
       var el;
       if (sender === "event" && kind === "action") {
-        el = card(text, action, state || "pending");
+        el = card(text, action, state || "pending", needs);
       } else if (sender === "event") {
         el = document.createElement("p");
         el.className = "asst-event";
@@ -109,7 +120,7 @@
             res.data.messages.forEach(function (m) {
               last = Math.max(last, m.id);
               if (m.sender === "client") { return; }
-              add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state);
+              add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state, m.needs);
             });
           })
           .catch(function () { wait.remove(); add("ai", "The connection dropped. Please try again."); })
@@ -132,7 +143,7 @@
             holder.querySelectorAll("button").forEach(function (b) { b.disabled = false; });
             return;
           }
-          var fresh = card(holder.querySelector(".asst-action-text").textContent.trim(), holder.dataset.action, res.data.status);
+          var fresh = card(holder.querySelector(".asst-action-text").textContent.trim(), holder.dataset.action, res.data.status, holder.dataset.needs);
           holder.replaceWith(fresh);
           res.data.messages.forEach(function (m) { last = Math.max(last, m.id); add(m.sender, m.body, m.tool, m.kind, m.who); });
         })
@@ -152,7 +163,7 @@
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
           if (!data) { return; }
-          data.messages.forEach(function (m) { if (m.id > last) { last = m.id; add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state); } });
+          data.messages.forEach(function (m) { if (m.id > last) { last = m.id; add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state, m.needs); } });
           if (data.status !== status) { reload(); }
         })
         .catch(function () { /* the next tick tries again */ });

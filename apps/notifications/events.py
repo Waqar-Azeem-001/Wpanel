@@ -58,6 +58,8 @@ EVENTS = _events(
           essential=True, sensitive=True),
     Event("account.verification", "Verify your email address", C.ACCOUNT, "verify_email", essential=True,
           sensitive=True),
+    Event("assistant.code", "Your security code for a change the AI Agent prepared", C.ACCOUNT, "assistant_code", essential=True, sensitive=True),
+    Event("assistant.locked", "A security check for a change was locked", C.ACCOUNT, "assistant_locked", essential=True),
     Event("account.password_reset", "Reset your password", C.ACCOUNT, "password_reset", essential=True,
           sensitive=True),
     Event("account.password_changed_by_admin", "Your password was changed by our team", C.ACCOUNT,
@@ -111,6 +113,7 @@ EVENTS = _events(
     # --- Team alerts (staff; in-app by default, email only if a person asks for it) ------------------------------
     Event("ticket.assigned", "A ticket was assigned to you", C.TEAM, default_email=False),
     Event("ticket.unassigned", "A new ticket needs an owner", C.TEAM, default_email=False),
+    Event("assistant.locked_team", "A customer's security check was locked after wrong codes", C.TEAM, default_email=False),
     Event("chat.waiting", "A customer is waiting for a person in the chat", C.TEAM, default_email=False),
     Event("ticket.customer_reply", "A customer replied to your ticket", C.TEAM, default_email=False),
     Event("ticket.note", "A note was added to your ticket", C.TEAM, default_email=False),

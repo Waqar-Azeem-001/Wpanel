@@ -50,9 +50,10 @@
       <h2 class="h6">This chat</h2>
       <form method="post" action="{% url 'livechat:action' c.pk %}">{% csrf_token %}<input type="hidden" name="action" value="hand_back"><button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-robot" aria-hidden="true"></i> Hand back to AI</button></form>
       <form method="post" action="{% url 'livechat:action' c.pk %}">{% csrf_token %}<input type="hidden" name="action" value="ticket"><button class="btn btn-outline-secondary w-100" type="submit"><i class="bi bi-ticket-detailed" aria-hidden="true"></i> Convert to ticket</button></form>
-      <form method="post" action="{% url 'livechat:action' c.pk %}" class="d-flex gap-2">{% csrf_token %}<input type="hidden" name="action" value="transfer">
-        <label class="visually-hidden" for="to">Pass to</label><select class="form-select" id="to" name="to">{% for u in colleagues %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.email }}</option>{% empty %}<option value="">Nobody else</option>{% endfor %}</select>
-        <button class="btn btn-outline-secondary" type="submit">Pass</button></form>
+      <form method="post" action="{% url 'livechat:action' c.pk %}">{% csrf_token %}<input type="hidden" name="action" value="transfer">
+        <label class="form-label small text-secondary mb-1" for="to">Pass this chat to</label>
+        <div class="input-group"><select class="form-select" id="to" name="to">{% for u in colleagues %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.email }}</option>{% empty %}<option value="">Nobody else</option>{% endfor %}</select>
+          <button class="btn btn-outline-secondary" type="submit"{% if not colleagues %} disabled{% endif %}>Pass</button></div></form>
       <form method="post" action="{% url 'livechat:action' c.pk %}">{% csrf_token %}<input type="hidden" name="action" value="close"><button class="btn btn-outline-danger w-100" type="submit">Close chat</button></form>
     </div></section>
     {% endif %}

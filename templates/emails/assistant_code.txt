@@ -1,0 +1,13 @@
+Hello {{ user.get_short_name }},
+
+You asked our AI Agent to prepare this change:
+
+  {{ summary }}
+
+To confirm that it is you, enter this security code on the verification page:
+
+  {{ code }}
+
+The code works once and expires in {{ minutes }} minutes. Our team never asks for this code by phone or chat. If you did not ask for this change, ignore this email and nothing will happen.
+
+{{ site_name }}

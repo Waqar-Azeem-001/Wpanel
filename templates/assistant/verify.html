@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Verify it is you" %} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
+{% block content %}
+<section class="card verify"><div class="card-body text-center">
+  {% if done %}
+    <div class="verify-icon" aria-hidden="true"><i class="bi bi-check-lg"></i></div>
+    <h1 class="h4">{% if done.status == "done" %}{% trans "Verified" %}{% else %}{% trans "Verified, but it did not work" %}{% endif %}</h1>
+    <p class="verify-action mb-3">{{ done.result }}</p>
+    <a class="btn btn-primary" href="{% url 'assistant:chat' %}">{% trans "Back to chat" %}</a>
+  {% elif action.status == "pending" and can_try %}
+    <div class="verify-icon" aria-hidden="true"><i class="bi bi-lock"></i></div>
+    <h1 class="h4">{% trans "Verify it is you" %}</h1>
+    <p class="text-secondary">{% blocktrans with to=vc.sent_to %}We sent a 6 digit code to {{ to }}.{% endblocktrans %}</p>
+    <p class="verify-action">{{ action.summary }}</p>
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" novalidate>{% csrf_token %}
+      <label class="visually-hidden" for="code">{% trans "Security code" %}</label>
+      <input class="form-control verify-code mb-3" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="------" autofocus required>
+      <button class="btn btn-primary w-100" type="submit" id="verify-go" disabled>{% trans "Verify and continue" %}</button>
+    </form>
+    <p class="small text-secondary mt-3 mb-1">{% trans "The code expires in" %} <strong id="verify-timer" data-expires="{{ expires_ms }}">5:00</strong></p>
+    <form method="post" action="{% url 'assistant:verify_resend' action.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-link p-0" type="submit" id="verify-resend" data-ready="{{ resend_ms }}" disabled>{% trans "Resend code" %}</button></form>
+  {% else %}
+    <div class="verify-icon" aria-hidden="true"><i class="bi bi-exclamation-lg"></i></div>
+    <h1 class="h4">{% if action.status == "locked" %}{% trans "Too many attempts" %}{% elif action.status == "expired" or vc and action.status == "pending" %}{% trans "Code expired" %}{% elif action.status == "done" %}{% trans "Already done" %}{% else %}{% trans "This request is no longer active" %}{% endif %}</h1>
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+    <p class="verify-action">{{ action.summary }}</p>
+    {% if action.status == "pending" %}
+    <form method="post" action="{% url 'assistant:verify_resend' action.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% trans "Request a new code" %}</button></form>
+    {% else %}<p class="text-secondary">{% trans "Ask the AI Agent again to prepare it." %}</p>{% endif %}
+    <a class="btn btn-outline-secondary mt-2" href="{% url 'assistant:chat' %}">{% trans "Back to chat" %}</a>
+  {% endif %}
+  <p class="small text-secondary mt-4 mb-0">{% trans "Did you not ask for this? Ignore the email and nothing happens. Our team never asks for this code by phone or chat." %}</p>
+</div></section>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/verify.js' %}" defer></script>{% endblock %}

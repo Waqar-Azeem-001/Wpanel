@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -25,7 +25,7 @@ def _client(user):
 
 def _rows(conversation):
     return [{"sender": m.sender, "body": m.body, "tool": (m.tool_call or {}).get("tool", ""), "kind": (m.tool_call or {}).get("kind", ""), "at": m.created_at,
-             "action": (m.tool_call or {}).get("action"), "state": (m.tool_call or {}).get("status", ""),
+             "action": (m.tool_call or {}).get("action"), "state": (m.tool_call or {}).get("status", ""), "needs": (m.tool_call or {}).get("needs", "approve"),
              "who": (m.staff.get_full_name() or m.staff.email.split("@")[0]) if m.staff_id else "", "id": m.id}
             for m in conversation.messages.select_related("staff").order_by("-id")[:SHOWN][::-1]]
 
@@ -39,7 +39,8 @@ def _context(request, client):
         "conversation": conversation, "rows": rows, "last_id": rows[-1]["id"] if rows else 0, "ready": agent.available(config), "left": max(0, config.daily_limit - agent.used_today(client)),
         "waiting": conversation.status == ConversationStatus.WAITING, "with_person": conversation.status == ConversationStatus.WITH_STAFF, "person": conversation.assigned_to,
         "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60,
-        "act_base": reverse("assistant:act", args=[0, "approve"]).replace("0/approve/", "")}
+        "act_base": reverse("assistant:act", args=[0, "approve"]).replace("0/approve/", ""),
+        "verify_base": reverse("assistant:verify", args=[0]).replace("0/", "")}
 
 
 @login_required
@@ -219,3 +220,39 @@ def staff_chat(request, pk):
         return redirect("livechat:detail", pk=conversation.pk)
     return render(request, "assistant/transcript.html", {"conversation": conversation, "rows": [{"sender": m.sender, "body": m.body, "tool": (m.tool_call or {}), "at": m.created_at}
                                                                                               for m in conversation.messages.all()]})
+
+
+# --- the security check page: the code goes here, never into the chat ---------------------------------------------------------------------------
+
+def _verify_state(request, pk, error="", done=None):
+    try:
+        action = actions._own(request.user, pk)
+    except ServiceError:
+        raise Http404 from None
+    vc = getattr(action, "verification", None)
+    return render(request, "assistant/verify.html", {
+        "action": action, "vc": vc, "error": error, "done": done, "expires_ms": int(vc.expires_at.timestamp() * 1000) if vc else 0,
+        "resend_ms": int((vc.last_sent_at + actions.RESEND_AFTER).timestamp() * 1000) if vc else 0,
+        "can_try": action.status == "pending" and action.needs == "code" and vc is not None and timezone.now() <= vc.expires_at and vc.attempts < actions.MAX_ATTEMPTS})
+
+
+@login_required
+def verify(request, pk):
+    if request.method == "POST":
+        try:
+            done = actions.verify(request.user, pk, request.POST.get("code", ""), request=request)
+        except ServiceError as exc:
+            return _verify_state(request, pk, error=exc.message)
+        return _verify_state(request, pk, done=done)
+    return _verify_state(request, pk)
+
+
+@require_POST
+@login_required
+def verify_resend(request, pk):
+    try:
+        actions.resend_code(request.user, pk)
+        messages.success(request, "A new code was sent to your email.")
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+    return redirect("assistant:verify", pk=pk)

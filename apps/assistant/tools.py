@@ -186,7 +186,8 @@ def _proposal(name):
         from . import actions
 
         action = actions.propose(ctx, name, params)
-        return {"status": "awaiting_approval", "summary": action.summary, "note": "The customer now sees an Approve button in the chat. Tell them to press it. Nothing has changed yet."}
+        return {"status": "awaiting_approval", "summary": action.summary, "needs": action.needs,
+                "note": "The customer now sees a card in the chat. " + ("A security code was emailed to them: tell them to press Verify securely and enter it on that page, never in the chat." if action.needs == "code" else "Tell them to press Approve.") + " Nothing has changed yet."}
 
     return run
 
@@ -214,6 +215,10 @@ REGISTRY = {
                         _clean({"domain?": "The domain.", "key": "memory_limit, upload_max_filesize or max_execution_time.", "value": "The new number."}), _proposal("set_php_setting")),
     "scan_website": ("PROPOSE starting a malware scan of a website. The customer must approve it.", _clean({"domain?": "The domain."}), _proposal("scan_website")),
     "create_backup": ("PROPOSE taking a backup of the hosting account now. The customer must approve it.", _clean({"domain?": "A domain of the plan."}), _proposal("create_backup")),
+    "add_dns_record": ("PROPOSE adding a DNS record (A, AAAA, CNAME, MX or TXT). The customer must verify with a security code sent to their email.", _clean({"domain?": "The domain.", "type": "Record type.", "name": "Host name, e.g. www or @.", "value": "The value.", "priority?": "MX priority."}), _proposal("add_dns_record")),
+    "delete_dns_record": ("PROPOSE deleting a DNS record. The customer must verify with a security code.", _clean({"domain?": "The domain.", "type": "Record type.", "name": "Host name."}), _proposal("delete_dns_record")),
+    "restore_backup": ("PROPOSE restoring a backup (it replaces current data). The customer must verify with a security code.", _clean({"backup_id": "The backup id from the customer's backups."}), _proposal("restore_backup")),
+    "delete_mailbox": ("PROPOSE deleting a mailbox and its messages. The customer must verify with a security code.", _clean({"address": "The full mailbox address."}), _proposal("delete_mailbox")),
     "search_help": ("Search the help articles (knowledge base) for a how-to or an explanation.", _clean({"query": "Words to look for."}), search_help),
     "request_server_change": ("Ask the support team to make a change on the server for the client (the team does it within the stated hours). Use when the change cannot be done by the client in the panel, or the client asks you to do it.",
                               _clean({"summary": "What should be changed, in a few words.", "details": "Exactly what to change, on which domain, and why.", "domain?": "The domain it is about."}), request_server_change),

@@ -127,7 +127,7 @@ TOOL = {"website_status": "check_website_status", "ssl": "check_ssl", "disk": "c
 NEEDS_DOMAIN = {"website_status", "ssl", "disk", "error_log", "dns", "email_quota"}
 
 
-CHANGES = {"renew_ssl", "force_https", "set_mailbox_quota", "set_php_setting", "scan_website", "create_backup"}
+CHANGES = {"renew_ssl", "force_https", "set_mailbox_quota", "set_php_setting", "scan_website", "create_backup", "add_dns_record", "delete_dns_record", "restore_backup", "delete_mailbox"}
 EMAIL = re.compile(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+")
 SIZE = re.compile(r"(\d+(?:\.\d+)?)\s*(gb|g|mb|m)\b")
 NUMBER = re.compile(r"\b(\d{1,4})\s*(gb|g|mb|m|s|sec|seconds)?\b")
@@ -145,6 +145,32 @@ def change_params(action, text, domain):
             return params, "Which mailbox and what size? For example: info@yourdomain.com 2 GB"
         number = float(size.group(1))
         params.update(address=mail.group(0), quota_mb=int(number * 1024) if size.group(2).startswith("g") else int(number))
+    elif action == "delete_mailbox":
+        mail = EMAIL.search(low)
+        if not mail:
+            return params, "Which mailbox should I delete? Write its full address, for example info@yourdomain.com"
+        params["address"] = mail.group(0)
+    elif action in ("add_dns_record", "delete_dns_record"):
+        tokens = text.split()
+        skip = {"record", "for", "on", "to", "at", "name", "value", "point", "pointing", "ko", "ka", "ki", "par", "mein", "dns", params.get("domain", "").lower()}
+        kind, rest = "", []
+        for position in range(len(tokens)):  # the type is the last word that is a record type and still leaves enough words for the rest
+            if tokens[position].upper().strip(",.") in ("A", "AAAA", "CNAME", "MX", "TXT"):
+                after = [w for w in tokens[position + 1:] if w.lower().strip(",.") not in skip]
+                if len(after) >= (2 if action == "add_dns_record" else 1):
+                    kind, rest = tokens[position].upper().strip(",."), after
+        if not kind:
+            example = "A www 203.0.113.10" if action == "add_dns_record" else "A www"
+            return params, f"Tell me the type, the name{' and the value' if action == 'add_dns_record' else ''}. For example: {example}"
+        params.update(type=kind, name=rest[0].lower().rstrip("."))
+        if action == "add_dns_record":
+            params["value"] = " ".join(rest[1:]).strip("\"'")
+    elif action == "restore_backup":
+        found = re.search(r"\b(?:backup[-_ ]?id\s*)?([a-z0-9][a-z0-9._-]{5,60})\b", text.split("restore", 1)[-1], flags=re.I)
+        ids = [w for w in re.findall(r"[A-Za-z0-9._-]{6,60}", text) if any(ch.isdigit() for ch in w)]
+        if not ids:
+            return params, "__list_backups__"
+        params["backup_id"] = ids[-1]
     elif action == "set_php_setting":
         key = "memory_limit" if "memory" in low else "upload_max_filesize" if "upload" in low else "max_execution_time" if any(w in low for w in ("execution", "timeout", "time out", "seconds")) else ""
         found = SIZE.search(low) or NUMBER.search(low)
@@ -263,7 +289,7 @@ def reply(user, conversation, text, request=None):
 def _propose(ctx, user, conversation, action, text, domain, answer, saved, finish):
     """A change the customer asked for: gather what it needs, then show it as a card they approve. Nothing runs here."""
     owned = _owned_domains(user)
-    needs_domain = action != "set_mailbox_quota"
+    needs_domain = action not in ("set_mailbox_quota", "delete_mailbox", "restore_backup")
     if needs_domain and not domain:
         if len(owned) == 1:
             domain = owned[0]
@@ -272,6 +298,8 @@ def _propose(ctx, user, conversation, action, text, domain, answer, saved, finis
         else:
             return finish((answer + "\n\n" if answer else "") + "Which domain do you mean? " + ", ".join(owned), pending={"action": action, "text": text})
     params, missing = change_params(action, text, domain)
+    if missing == "__list_backups__":
+        missing = _backup_choices(user)
     if missing:
         return finish((answer + "\n\n" if answer else "") + missing, pending={"action": action, "text": text, "domain": domain})
     try:
@@ -280,6 +308,27 @@ def _propose(ctx, user, conversation, action, text, domain, answer, saved, finis
         return finish((answer + "\n\n" if answer else "") + exc.message, pending={"action": action, "text": text, "domain": domain} if exc.code in ("quota_needed", "quota_range", "php_value", "php_range", "php_key") else None)
     conversation.pending = {}
     conversation.save(update_fields=["pending", "updated_at"])
-    saved.append(_say(conversation, (answer + "\n\n" if answer else "") + "I prepared this change. Nothing happens until you press Approve:"))
+    if proposal.needs == "code":
+        note = f"This one is sensitive, so I sent a 6 digit code to your email ({actions.mask(user.email)}). Press Verify securely below and enter the code on the page; do not type it here. Nothing happens before that:"
+    else:
+        note = "I prepared this change. Nothing happens until you press Approve:"
+    saved.append(_say(conversation, (answer + "\n\n" if answer else "") + note))
     saved.append(Message.objects.filter(action=proposal).first())
     return saved
+
+
+def _backup_choices(user):
+    """The customer's newest backups, so they can say which one to restore."""
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    lines = []
+    for account in tools.accounts(user):
+        try:
+            rows = control.perform(user, account, Capability.BACKUPS, "list_backups")
+        except ServiceError:
+            continue
+        lines += [f"{r.backup_id} ({r.kind}, {r.created_at or 'date unknown'})" for r in rows[:5]]
+    if not lines:
+        return "You have no backups to restore yet."
+    return "Which backup? Reply with its id:\n" + "\n".join(lines[:8])

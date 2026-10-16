@@ -483,3 +483,119 @@ def test_in_claude_mode_the_change_tools_only_propose(world, owner, account, swi
     card = PendingAction.objects.get(conversation=conversation)
     assert card.status == "pending" and "awaiting_approval" in ask.requests[1]["messages"][-1]["content"][0]["content"]
     assert "set_mailbox_quota" in ask.requests[0]["tools"] and "client_id" not in str(ask.requests[0]["tools"])
+
+
+# --- Phase 4: changes that need the emailed security code -----------------------------------------------------------------------------------
+
+def _last_code(owner):
+    """The six digits from the newest security-code email sent to this person."""
+    import re
+
+    from django.core import mail
+
+    for message in reversed(mail.outbox):
+        if owner.email in message.to and "security code" in message.subject.lower():
+            return re.search(r"\b(\d{6})\b", message.body).group(1)
+    raise AssertionError("no code email was sent")
+
+
+def test_a_sensitive_change_waits_for_the_code_that_only_the_customer_gets_by_email(world, owner, account, knowledge_on, mailoutbox):  # noqa: F811
+    from apps.assistant import actions
+    from apps.assistant.models import VerificationCode
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    control.perform(owner, account, Capability.EMAIL, "create_mailbox", "old@" + account.domain, "Str0ng-Passw0rd-xyz", quota_mb=100)
+    text, conversation = _ask(owner, f"delete mailbox old@{account.domain}")
+    card = _card(conversation)
+    assert card.needs == "code" and card.status == "pending" and "Verify securely" in text
+    code = _last_code(owner)
+    assert code not in text and code not in " ".join(Message.objects.filter(conversation=conversation).values_list("body", flat=True))  # never in the chat
+    assert VerificationCode.objects.get(action=card).code_hash != code  # only a hash is kept
+    with pytest.raises(ServiceError) as err:  # the Approve button is not enough
+        actions.approve(owner, card.pk)
+    assert err.value.code == "needs_code"
+    with pytest.raises(ServiceError) as err:
+        actions.verify(owner, card.pk, "000000" if code != "000000" else "111111")
+    assert err.value.code == "code_wrong" and "2 attempts left" in err.value.message
+    done = actions.verify(owner, card.pk, code)
+    assert done.status == "done"
+    assert "old@" + account.domain not in [b.address for b in control.perform(owner, account, Capability.EMAIL, "list_mailboxes")]
+    with pytest.raises(ServiceError):  # one code, one action
+        actions.verify(owner, card.pk, code)
+
+
+def test_three_wrong_codes_lock_the_change_and_tell_the_customer_and_the_team(world, owner, account, knowledge_on, mailoutbox):  # noqa: F811
+    from apps.assistant import actions
+    from apps.notifications.models import Notification
+
+    control_mailbox = "lock@" + account.domain
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    control.perform(owner, account, Capability.EMAIL, "create_mailbox", control_mailbox, "Str0ng-Passw0rd-xyz", quota_mb=100)
+    _, conversation = _ask(owner, f"delete mailbox {control_mailbox}")
+    card = _card(conversation)
+    real = _last_code(owner)
+    wrong = "123456" if real != "123456" else "654321"
+    for _ in range(2):
+        with pytest.raises(ServiceError):
+            actions.verify(owner, card.pk, wrong)
+    with pytest.raises(ServiceError) as err:
+        actions.verify(owner, card.pk, wrong)
+    assert err.value.code == "locked"
+    card.refresh_from_db()
+    assert card.status == "locked"
+    with pytest.raises(ServiceError):  # the right code no longer helps
+        actions.verify(owner, card.pk, real)
+    assert any("locked" in m.subject.lower() for m in mailoutbox if owner.email in m.to)
+    assert Notification.objects.filter(event="assistant.locked_team").exists()
+    assert control_mailbox in [b.address for b in control.perform(owner, account, Capability.EMAIL, "list_mailboxes")]  # nothing was deleted
+
+
+def test_a_code_expires_can_be_sent_again_after_the_wait_and_belongs_to_its_owner(world, owner, stranger, account, knowledge_on, mailoutbox):  # noqa: F811
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.assistant import actions
+    from apps.assistant.models import VerificationCode
+
+    _, conversation = _ask(owner, f"add a record TXT @ hello-world-verification on {account.domain}")
+    card = _card(conversation)
+    assert card.tool == "add_dns_record" and card.params["type"] == "TXT" and card.params["value"] == "hello-world-verification"
+    with pytest.raises(ServiceError) as err:
+        actions.verify(stranger, card.pk, "123456")
+    assert err.value.code == "not_found"
+    with pytest.raises(ServiceError) as err:
+        actions.resend_code(owner, card.pk)
+    assert err.value.code == "cooldown"
+    VerificationCode.objects.filter(action=card).update(last_sent_at=timezone.now() - timedelta(seconds=31))
+    actions.resend_code(owner, card.pk)
+    fresh = _last_code(owner)
+    VerificationCode.objects.filter(action=card).update(expires_at=timezone.now() - timedelta(seconds=1))
+    with pytest.raises(ServiceError) as err:
+        actions.verify(owner, card.pk, fresh)
+    assert err.value.code == "code_expired"
+
+
+def test_the_verification_page_checks_the_code_and_runs_the_change(world, owner, account, knowledge_on, mailoutbox):  # noqa: F811
+    from django.utils.html import escape
+
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    _, conversation = _ask(owner, f"add dns record A blog 203.0.113.7 on {account.domain}")
+    card = _card(conversation)
+    client = browser(owner)
+    page = client.get(reverse("assistant:verify", args=[card.pk]))
+    html = page.content.decode()
+    assert page.status_code == 200 and "Verify it is you" in html and "Security code" in html and escape(card.summary) in html and owner.email[:1] in html
+    wrong = client.post(reverse("assistant:verify", args=[card.pk]), {"code": "999999" if _last_code(owner) != "999999" else "888888"})
+    assert "Incorrect code" in wrong.content.decode()
+    ok = client.post(reverse("assistant:verify", args=[card.pk]), {"code": _last_code(owner)})
+    assert "Verified" in ok.content.decode() and "Back to chat" in ok.content.decode()
+    names = {r.name.rstrip(".") for r in control.perform(owner, account, Capability.DNS, "list_dns_records", account.domain)}
+    assert any("blog" in n for n in names)
+    other = browser(owner)
+    assert other.get(reverse("assistant:verify", args=[card.pk + 999])).status_code == 404

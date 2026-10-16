@@ -36,3 +36,17 @@
 .asst-action.is-done .asst-action-text i { color: var(--bs-success); }
 .asst-action.is-failed { border-color: var(--bs-danger); }
 .asst-action.is-cancelled, .asst-action.is-expired { border-color: var(--bs-border-color); background: none; opacity: .8; }
+
+/* the staff view: the customer on the left, the team and the Agent on the right */
+.asst-log[data-staff-view] .asst-msg.is-client { justify-content: flex-start; }
+.asst-log[data-staff-view] .asst-msg.is-client .asst-bubble { background: var(--bs-tertiary-bg); color: inherit; }
+.asst-log[data-staff-view] .asst-msg.is-staff, .asst-log[data-staff-view] .asst-msg.is-ai { justify-content: flex-end; }
+.asst-log[data-staff-view] .asst-msg.is-staff .asst-bubble { background: var(--bs-primary); color: #fff; }
+.asst-log[data-staff-view] .asst-msg.is-ai .asst-bubble { background: color-mix(in srgb, var(--bs-primary) 12%, var(--bs-body-bg)); color: inherit; }
+.asst-summary { white-space: pre-wrap; font-family: inherit; }
+/* the security check */
+.verify { max-width: 28rem; margin: 2rem auto; }
+.verify-code { font-size: 1.8rem; letter-spacing: .6rem; text-align: center; font-variant-numeric: tabular-nums; }
+.verify-icon { width: 3.2rem; height: 3.2rem; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 1rem; background: color-mix(in srgb, var(--bs-primary) 14%, var(--bs-body-bg)); color: var(--bs-primary); font-size: 1.4rem; }
+.verify-action { padding: .65rem .8rem; border-radius: .6rem; background: var(--bs-tertiary-bg); font-weight: 600; }
+.asst-action.needs-code { border-style: dashed; }

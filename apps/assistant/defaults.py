@@ -149,3 +149,20 @@ CHANGE_ENTRIES = [
      "take backup now\nbackup now\ncreate backup\nmake a backup\nbackup lo\nbackup banao\nbackup abhi lo\nbackup chahiye",
      "I can take a backup of your hosting account now.", "create_backup"),
 ]
+
+
+# Sensitive changes: the customer must also enter the security code emailed to them. (title, keywords, answer, action)
+DANGER_ENTRIES = [
+    ("Do it: add a DNS record",
+     "add dns record\nadd a record\nadd a record to dns\nnew dns record\ncreate dns record\ndns record add karo\ndns record lagao\nadd txt record\nadd cname record\nadd mx record\nadd a record",
+     "I can add the DNS record.", "add_dns_record"),
+    ("Do it: delete a DNS record",
+     "delete dns record\nremove dns record\ndelete a record\nremove a record\ndns record delete karo\ndns record hatao\ndelete cname record\ndelete txt record\ndelete mx record",
+     "I can delete that DNS record.", "delete_dns_record"),
+    ("Do it: restore a backup",
+     "restore backup\nrestore my backup\nrestore a backup\nbackup restore karo\nbackup wapas lagao\nbackup se restore",
+     "I can restore a backup. This replaces the current files and data it covers.", "restore_backup"),
+    ("Do it: delete a mailbox",
+     "delete mailbox\ndelete email account\nremove mailbox\nremove email account\nmailbox delete karo\nemail account delete karo\nemail hatao",
+     "I can delete that mailbox with every message in it.", "delete_mailbox"),
+]

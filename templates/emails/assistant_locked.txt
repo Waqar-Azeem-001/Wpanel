@@ -1,0 +1,9 @@
+Hello {{ user.get_short_name }},
+
+A security check on your {{ site_name }} account was locked after three wrong codes:
+
+  {{ summary }}
+
+Nothing was changed. If this was you, ask the AI Agent again. If it was not you, change your password and tell our team.
+
+{{ site_name }}

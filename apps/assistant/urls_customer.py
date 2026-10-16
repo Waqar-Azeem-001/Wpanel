@@ -10,6 +10,8 @@ urlpatterns = [
     path("person/", views.handoff, name="handoff"),
     path("poll/", views.poll, name="poll"),
     path("actions/<int:pk>/<str:verb>/", views.act, name="act"),
+    path("verify/<int:pk>/", views.verify, name="verify"),
+    path("verify/<int:pk>/resend/", views.verify_resend, name="verify_resend"),
     path("ticket/", views.ticket_instead, name="ticket"),
     path("new/", views.new_chat, name="new"),
 ]

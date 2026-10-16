@@ -40,6 +40,8 @@ NOT_CLICKABLE_EXACT = {
     "assistant_staff:knowledge_edit": "one knowledge entry; the crawl world has none of its own (tested in apps/core/test_assistant.py)",
     "assistant_staff:knowledge_delete": "deletes one entry (tested in apps/core/test_assistant.py)",
     "assistant_staff:gap_dismiss": "dismisses one unanswered question (tested in apps/core/test_assistant.py)",
+    "assistant:verify": "the security check page, reached from the card in the chat (tested in apps/core/test_assistant.py)",
+    "assistant:verify_resend": "asks for a new code (tested in apps/core/test_assistant.py)",
     "assistant:act": "approve or cancel one proposed change; reached by the buttons in the chat (tested in apps/core/test_assistant.py)",
     "assistant:panel": "the chat shown in the pop-up of the header button, fetched by script (tested in apps/core/test_assistant.py)",
     "assistant:poll": "the data feed of the customer chat page (tested in apps/core/test_assistant.py)",
