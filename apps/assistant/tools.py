@@ -181,6 +181,16 @@ def request_human_handoff(ctx, reason):
     return {"status": "waiting_for_staff" if out["status"] == "waiting" else out["status"], "note": "A person has been asked to join this chat. Tell the client to wait here a moment."}
 
 
+def _proposal(name):
+    def run(ctx, **params):
+        from . import actions
+
+        action = actions.propose(ctx, name, params)
+        return {"status": "awaiting_approval", "summary": action.summary, "note": "The customer now sees an Approve button in the chat. Tell them to press it. Nothing has changed yet."}
+
+    return run
+
+
 def _clean(props):
     """An input schema from {"name": "what it is"}; a name ending in ? is optional."""
     return {"type": "object", "properties": {k.rstrip("?"): {"type": "string", "description": v} for k, v in props.items()},
@@ -197,6 +207,13 @@ REGISTRY = {
     "get_dns_records": ("The DNS records of a domain.", _clean({"domain?": "The domain."}), get_dns_records),
     "check_email_quota": ("Each mailbox's size against its quota.", _clean({"domain?": "A domain of the plan."}), check_email_quota),
     "get_invoices": ("The client's recent invoices and what is unpaid.", _clean({}), get_invoices),
+    "renew_ssl": ("PROPOSE requesting or renewing the SSL certificate of a domain. The customer must approve it in the chat.", _clean({"domain?": "The domain."}), _proposal("renew_ssl")),
+    "force_https": ("PROPOSE switching the HTTP to HTTPS redirect on or off for a domain. The customer must approve it.", _clean({"domain?": "The domain.", "enabled?": "true or false."}), _proposal("force_https")),
+    "set_mailbox_quota": ("PROPOSE a new size for one of the customer's mailboxes. The customer must approve it.", _clean({"address": "The full mailbox address.", "quota_mb": "New size in MB (50 to 51200)."}), _proposal("set_mailbox_quota")),
+    "set_php_setting": ("PROPOSE changing a PHP limit of a domain: memory_limit (64-2048 MB), upload_max_filesize (2-2048 MB) or max_execution_time (30-600 s). The customer must approve it.",
+                        _clean({"domain?": "The domain.", "key": "memory_limit, upload_max_filesize or max_execution_time.", "value": "The new number."}), _proposal("set_php_setting")),
+    "scan_website": ("PROPOSE starting a malware scan of a website. The customer must approve it.", _clean({"domain?": "The domain."}), _proposal("scan_website")),
+    "create_backup": ("PROPOSE taking a backup of the hosting account now. The customer must approve it.", _clean({"domain?": "A domain of the plan."}), _proposal("create_backup")),
     "search_help": ("Search the help articles (knowledge base) for a how-to or an explanation.", _clean({"query": "Words to look for."}), search_help),
     "request_server_change": ("Ask the support team to make a change on the server for the client (the team does it within the stated hours). Use when the change cannot be done by the client in the panel, or the client asks you to do it.",
                               _clean({"summary": "What should be changed, in a few words.", "details": "Exactly what to change, on which domain, and why.", "domain?": "The domain it is about."}), request_server_change),

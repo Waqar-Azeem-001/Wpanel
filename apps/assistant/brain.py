@@ -9,7 +9,7 @@ from django.db.models import F
 from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
-from . import live, tools
+from . import actions, live, tools
 from .models import KnowledgeEntry, Message, SenderType, Unanswered
 
 DOMAIN = re.compile(r"\b((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24})\b")
@@ -127,6 +127,35 @@ TOOL = {"website_status": "check_website_status", "ssl": "check_ssl", "disk": "c
 NEEDS_DOMAIN = {"website_status", "ssl", "disk", "error_log", "dns", "email_quota"}
 
 
+CHANGES = {"renew_ssl", "force_https", "set_mailbox_quota", "set_php_setting", "scan_website", "create_backup"}
+EMAIL = re.compile(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+")
+SIZE = re.compile(r"(\d+(?:\.\d+)?)\s*(gb|g|mb|m)\b")
+NUMBER = re.compile(r"\b(\d{1,4})\s*(gb|g|mb|m|s|sec|seconds)?\b")
+
+
+def change_params(action, text, domain):
+    """What a proposed change needs, read from the customer's own words. Returns (params, what is missing or "")."""
+    low = text.lower()
+    params = {"domain": domain}
+    if action == "force_https":
+        params["enabled"] = not any(w in low for w in (" off", "disable", "band ", "hata", "remove", "stop"))
+    elif action == "set_mailbox_quota":
+        mail, size = EMAIL.search(low), SIZE.search(low)
+        if not mail or not size:
+            return params, "Which mailbox and what size? For example: info@yourdomain.com 2 GB"
+        number = float(size.group(1))
+        params.update(address=mail.group(0), quota_mb=int(number * 1024) if size.group(2).startswith("g") else int(number))
+    elif action == "set_php_setting":
+        key = "memory_limit" if "memory" in low else "upload_max_filesize" if "upload" in low else "max_execution_time" if any(w in low for w in ("execution", "timeout", "time out", "seconds")) else ""
+        found = SIZE.search(low) or NUMBER.search(low)
+        if not key or not found:
+            return params, "Which limit and what value? For example: memory limit 512 MB, upload size 128 MB, or execution time 300 seconds."
+        number = float(found.group(1))
+        unit = (found.group(2) or "").lower()
+        params.update(key=key, value=int(number * 1024) if unit.startswith("g") else int(number))
+    return params, ""
+
+
 def _say(conversation, text):
     return Message.objects.create(conversation=conversation, sender=SenderType.AI, body=text[:6000])
 
@@ -170,11 +199,15 @@ def reply(user, conversation, text, request=None):
         saved.append(_say(conversation, answer))
         return saved
 
-    # the customer is answering "which domain?"
+    # the customer is answering "which domain?" (or the missing detail of a change)
     pending = conversation.pending or {}
     if pending.get("action") in TOOL and (domain or tokens & {d.split(".")[0] for d in _owned_domains(user)}):
         picked = domain or next((d for d in _owned_domains(user) if d.split(".")[0] in tokens), "")
         return finish(_run(ctx, pending["action"], picked, saved))
+    if pending.get("action") in CHANGES:
+        text_all = (pending.get("text", "") + " " + clean).strip()
+        picked = domain or pending.get("domain", "") or next((d for d in _owned_domains(user) if d.split(".")[0] in tokens), "")
+        return _propose(ctx, user, conversation, pending["action"], text_all, picked, "", saved, finish)
 
     if any(p in normal for p in PERSON):
         out = live.ask_person(user, conversation, "The customer asked for a person: " + clean[:150], request=request)
@@ -211,6 +244,8 @@ def reply(user, conversation, text, request=None):
         except ServiceError as exc:
             return finish(f"I could not open a ticket: {exc.message}")
         return finish(f"{answer}\nTicket {ticket.reference}.")
+    if action in CHANGES:
+        return _propose(ctx, user, conversation, action, clean, domain, answer, saved, finish)
     if action in TOOL:
         owned = _owned_domains(user)
         if action in NEEDS_DOMAIN and not domain:
@@ -223,3 +258,28 @@ def reply(user, conversation, text, request=None):
         result = _run(ctx, action, domain, saved)
         return finish(answer + ("\n\n" + result if result else ""))
     return finish(answer)
+
+
+def _propose(ctx, user, conversation, action, text, domain, answer, saved, finish):
+    """A change the customer asked for: gather what it needs, then show it as a card they approve. Nothing runs here."""
+    owned = _owned_domains(user)
+    needs_domain = action != "set_mailbox_quota"
+    if needs_domain and not domain:
+        if len(owned) == 1:
+            domain = owned[0]
+        elif not owned:
+            return finish((answer + "\n\n" if answer else "") + "I cannot see an active hosting plan on your account yet.")
+        else:
+            return finish((answer + "\n\n" if answer else "") + "Which domain do you mean? " + ", ".join(owned), pending={"action": action, "text": text})
+    params, missing = change_params(action, text, domain)
+    if missing:
+        return finish((answer + "\n\n" if answer else "") + missing, pending={"action": action, "text": text, "domain": domain})
+    try:
+        proposal = actions.propose(ctx, action, params)
+    except ServiceError as exc:
+        return finish((answer + "\n\n" if answer else "") + exc.message, pending={"action": action, "text": text, "domain": domain} if exc.code in ("quota_needed", "quota_range", "php_value", "php_range", "php_key") else None)
+    conversation.pending = {}
+    conversation.save(update_fields=["pending", "updated_at"])
+    saved.append(_say(conversation, (answer + "\n\n" if answer else "") + "I prepared this change. Nothing happens until you press Approve:"))
+    saved.append(Message.objects.filter(action=proposal).first())
+    return saved

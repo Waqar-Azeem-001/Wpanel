@@ -12,7 +12,7 @@ from apps.audit import services as audit
 from apps.clients.models import Client
 from apps.core.exceptions import ServiceError
 
-from . import agent, live
+from . import actions, agent, live
 from .views_chats import serialise
 from .models import AssistantSettings, Conversation, ConversationStatus, KnowledgeEntry, Message, SenderType, Unanswered
 
@@ -25,6 +25,7 @@ def _client(user):
 
 def _rows(conversation):
     return [{"sender": m.sender, "body": m.body, "tool": (m.tool_call or {}).get("tool", ""), "kind": (m.tool_call or {}).get("kind", ""), "at": m.created_at,
+             "action": (m.tool_call or {}).get("action"), "state": (m.tool_call or {}).get("status", ""),
              "who": (m.staff.get_full_name() or m.staff.email.split("@")[0]) if m.staff_id else "", "id": m.id}
             for m in conversation.messages.select_related("staff").order_by("-id")[:SHOWN][::-1]]
 
@@ -37,7 +38,8 @@ def _context(request, client):
     return {
         "conversation": conversation, "rows": rows, "last_id": rows[-1]["id"] if rows else 0, "ready": agent.available(config), "left": max(0, config.daily_limit - agent.used_today(client)),
         "waiting": conversation.status == ConversationStatus.WAITING, "with_person": conversation.status == ConversationStatus.WITH_STAFF, "person": conversation.assigned_to,
-        "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60}
+        "offer_ticket": waited is not None and waited.total_seconds() >= live.WAIT_BEFORE_TICKET_OFFER_MINUTES * 60,
+        "act_base": reverse("assistant:act", args=[0, "approve"]).replace("0/approve/", "")}
 
 
 @login_required
@@ -74,6 +76,27 @@ def send(request):
         return redirect("assistant:chat")
     if wants_json:
         return JsonResponse({"messages": [serialise(m) for m in saved]})
+    return redirect("assistant:chat")
+
+
+def _action_answer(request, action, wants_json):
+    messages_after = [serialise(m) for m in action.conversation.messages.filter(sender=SenderType.AI).order_by("-id")[:1]]
+    return JsonResponse({"ok": True, "status": action.status, "messages": messages_after, "action": action.pk})
+
+
+@require_POST
+@login_required
+def act(request, pk, verb):
+    """Approve or cancel a change the Agent proposed. Only the person it was shown to can."""
+    try:
+        action = actions.approve(request.user, pk, request=request) if verb == "approve" else actions.cancel(request.user, pk, request=request)
+    except ServiceError as exc:
+        if request.headers.get("X-Requested-With") == "fetch":
+            return JsonResponse({"error": exc.message}, status=exc.status_code if 400 <= exc.status_code < 600 else 400)
+        messages.error(request, exc.message)
+        return redirect("assistant:chat")
+    if request.headers.get("X-Requested-With") == "fetch":
+        return _action_answer(request, action, True)
     return redirect("assistant:chat")
 
 
@@ -176,6 +199,7 @@ def staff_settings(request):
         else:
             config.enabled, config.model, config.daily_limit, config.change_hours = request.POST.get("enabled") == "on", model, limit, hours
             config.mode = "claude" if request.POST.get("mode") == "claude" else "knowledge"
+            config.changes_enabled = request.POST.get("changes_enabled") == "on"
             config.save()
             audit.record("assistant.settings_saved", actor=request.user, target=config, metadata={"enabled": config.enabled, "mode": config.mode, "model": model, "daily_limit": limit}, request=request)
             messages.success(request, "The assistant settings were saved.")

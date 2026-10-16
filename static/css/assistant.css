@@ -26,3 +26,13 @@
 .agent-tool:hover { background: var(--bs-secondary-bg); }
 .agent-tool:disabled { opacity: .4; cursor: default; }
 @media (max-width: 575.98px) { .agent-pop { right: .5rem; left: .5rem; bottom: .5rem; width: auto; height: calc(100vh - 5rem); } }
+
+/* a change the Agent proposes: shown as a card with Approve and Cancel */
+.asst-action { align-self: flex-start; max-width: min(34rem, 92%); padding: .7rem .85rem; border: 1px solid var(--bs-primary); border-radius: .85rem; background: color-mix(in srgb, var(--bs-primary) 8%, var(--bs-body-bg)); display: flex; flex-direction: column; gap: .55rem; }
+.asst-action-text i { color: var(--bs-primary); }
+.asst-action-buttons { display: flex; gap: .5rem; }
+.asst-action-state { font-size: .8rem; font-weight: 600; color: var(--bs-secondary-color); }
+.asst-action.is-done { border-color: var(--bs-success); background: color-mix(in srgb, var(--bs-success) 8%, var(--bs-body-bg)); }
+.asst-action.is-done .asst-action-text i { color: var(--bs-success); }
+.asst-action.is-failed { border-color: var(--bs-danger); }
+.asst-action.is-cancelled, .asst-action.is-expired { border-color: var(--bs-border-color); background: none; opacity: .8; }

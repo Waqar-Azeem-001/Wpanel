@@ -9,6 +9,7 @@ urlpatterns = [
     path("send/", views.send, name="send"),
     path("person/", views.handoff, name="handoff"),
     path("poll/", views.poll, name="poll"),
+    path("actions/<int:pk>/<str:verb>/", views.act, name="act"),
     path("ticket/", views.ticket_instead, name="ticket"),
     path("new/", views.new_chat, name="new"),
 ]

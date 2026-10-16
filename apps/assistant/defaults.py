@@ -126,3 +126,26 @@ ENTRIES = [
      "A suspension needs a person to look at it. I am asking someone from our team to join this chat.",
      "handoff"),
 ]
+
+
+# Changes the Agent proposes. The customer sees an Approve button and only their click runs it. (title, keywords, answer, action)
+CHANGE_ENTRIES = [
+    ("Do it: renew or install SSL",
+     "renew ssl\ninstall ssl\nissue ssl\nssl renew karo\nssl install karo\nssl lagao\nssl lagwana hai\nrequest ssl\nfix ssl",
+     "I can request a new SSL certificate for your domain.", "renew_ssl"),
+    ("Do it: force HTTPS",
+     "force https\nhttps redirect\nhttp to https\nredirect to https\nhttps on karo\nhttps redirect on karo\nhttps force karo",
+     "I can switch the redirect from HTTP to HTTPS on for your domain.", "force_https"),
+    ("Do it: change a mailbox size",
+     "increase mailbox size\nincrease mailbox quota\nincrease email quota\nchange mailbox size\nmailbox quota badhao\nemail quota badhao\nmailbox size badhao\nemail space badhao\nset mailbox quota",
+     "I can change the size of one of your mailboxes.", "set_mailbox_quota"),
+    ("Do it: change a PHP limit",
+     "increase php memory\nchange php memory limit\nset memory limit\nincrease memory limit\nmemory limit badhao\nincrease upload limit\nupload limit badhao\nchange upload size\nincrease upload size\nincrease execution time\nset max execution time\nphp limit change karo",
+     "I can change this PHP limit for your domain.", "set_php_setting"),
+    ("Do it: run a malware scan now",
+     "run malware scan\nscan my website\nscan my site\nstart scan\nscan karo\nvirus scan karo\nwebsite scan karo\nmalware scan karo",
+     "I can start a malware scan of your website.", "scan_website"),
+    ("Do it: take a backup now",
+     "take backup now\nbackup now\ncreate backup\nmake a backup\nbackup lo\nbackup banao\nbackup abhi lo\nbackup chahiye",
+     "I can take a backup of your hosting account now.", "create_backup"),
+]

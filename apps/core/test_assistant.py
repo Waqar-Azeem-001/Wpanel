@@ -372,3 +372,114 @@ def test_staff_teach_the_agent_a_new_answer_from_a_question_it_missed(world, own
     bad = staff.post(reverse("assistant_staff:knowledge_new"), {"title": "", "keywords": "", "answer": "", "action": ""})
     assert bad.status_code == 200 and not KnowledgeEntry.objects.filter(title="").exists()
     assert browser(owner).get(reverse("assistant_staff:knowledge")).status_code in (302, 403)
+
+
+# --- Phase 3: changes the customer approves ----------------------------------------------------------------------------------------------
+
+def _card(conversation):
+    from apps.assistant.models import PendingAction
+
+    return PendingAction.objects.filter(conversation=conversation).first()
+
+
+def test_a_change_is_proposed_and_runs_only_after_the_customer_presses_approve_and_only_once(world, owner, account, knowledge_on):  # noqa: F811
+    from apps.assistant import actions
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    text, conversation = _ask(owner, f"please force https on {account.domain}")
+    card = _card(conversation)
+    failed = actions.approve(owner, card.pk)  # no working certificate yet: the panel refuses and the Agent says why
+    assert failed.status == "failed" and "certificate" in failed.result
+    control.perform(owner, account, Capability.SSL, "request_ssl", account.domain)
+    text, conversation = _ask_in(owner, agent.current_conversation(owner, conversation.client), f"please force https on {account.domain}")
+    card = [a for a in __import__("apps.assistant.models", fromlist=["PendingAction"]).PendingAction.objects.filter(conversation=conversation, status="pending")][0]
+    assert card is not None and card.status == "pending" and card.tool == "force_https" and account.domain in card.summary
+    assert "Nothing happens until you press Approve" in text
+    before = control.perform(owner, account, Capability.SSL, "get_ssl_status", account.domain).https_redirect
+    done = actions.approve(owner, card.pk)
+    assert done.status == "done" and "HTTPS redirect is now on" in done.result
+    assert control.perform(owner, account, Capability.SSL, "get_ssl_status", account.domain).https_redirect is True or before is True
+    with pytest.raises(ServiceError) as err:  # a second click does nothing
+        actions.approve(owner, card.pk)
+    assert err.value.code == "handled"
+    assert Message.objects.filter(conversation=conversation, action=card).first().tool_call["status"] == "done"
+
+
+def test_a_mailbox_size_and_a_php_limit_are_read_from_the_customers_words_and_checked(world, owner, account, knowledge_on):  # noqa: F811
+    from apps.assistant import actions
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    control.perform(owner, account, Capability.EMAIL, "create_mailbox", "agent@" + account.domain, "Str0ng-Passw0rd-xyz", quota_mb=100)
+    text, conversation = _ask(owner, "increase mailbox size")
+    assert "Which mailbox" in text and _card(conversation) is None
+    reply = [m for m in agent.send(owner, conversation, f"agent@{account.domain} 2 GB") if m.sender == "ai"][-1].body
+    card = _card(conversation)
+    assert card is not None and card.params == {"address": f"agent@{account.domain}", "quota_mb": 2048}
+    assert actions.approve(owner, card.pk).status == "done"
+    box = next(b for b in control.perform(owner, account, Capability.EMAIL, "list_mailboxes") if b.address == f"agent@{account.domain}")
+    assert box.quota_mb == 2048
+    other = agent.current_conversation(owner, conversation.client)
+    text, other = _ask_in(owner, other, f"set memory limit to 512 MB on {account.domain}")
+    php = _card(other)
+    assert php is not None and php.params["key"] == "memory_limit" and php.params["value"] == "512M"
+    text, _ = _ask_in(owner, other, f"set memory limit to 99999 MB on {account.domain}")
+    assert "between" in text
+
+
+def test_only_the_person_it_was_shown_to_can_approve_cancel_expire_and_the_kill_switch_stops_it(world, owner, stranger, account, knowledge_on):  # noqa: F811
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.assistant import actions
+    from apps.assistant.models import PendingAction
+
+    _, conversation = _ask(owner, f"scan my website {account.domain}")
+    card = _card(conversation)
+    assert card.tool == "scan_website"
+    with pytest.raises(ServiceError) as err:
+        actions.approve(stranger, card.pk)
+    assert err.value.code == "not_found"
+    assert actions.cancel(owner, card.pk).status == "cancelled"
+    with pytest.raises(ServiceError):
+        actions.approve(owner, card.pk)
+    _, second = _ask_in(owner, agent.current_conversation(owner, conversation.client), f"take backup now {account.domain}")
+    old = _card(second)
+    PendingAction.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(minutes=45))
+    with pytest.raises(ServiceError) as err:
+        actions.approve(owner, old.pk)
+    assert err.value.code == "expired"
+    knowledge_on.changes_enabled = False
+    knowledge_on.save()
+    text, third = _ask_in(owner, agent.current_conversation(owner, conversation.client), f"renew ssl {account.domain}")
+    assert "switched off" in text and PendingAction.objects.filter(conversation=third).count() == 2  # nothing new was prepared
+
+
+def test_the_approve_button_works_through_the_page_and_a_domain_that_is_not_yours_is_refused(world, owner, account, knowledge_on):  # noqa: F811
+    _, conversation = _ask(owner, f"renew ssl {account.domain}")
+    card = _card(conversation)
+    client = browser(owner)
+    page = client.get(reverse("assistant:panel")).content.decode()
+    assert "data-act" in page and "Approve" in page and f'data-action="{card.pk}"' in page
+    ok = client.post(reverse("assistant:act", args=[card.pk, "approve"]), HTTP_X_REQUESTED_WITH="fetch").json()
+    assert ok["ok"] is True and ok["status"] == "done"
+    again = client.post(reverse("assistant:act", args=[card.pk, "approve"]), HTTP_X_REQUESTED_WITH="fetch")
+    assert again.status_code == 400
+    ctx = tools.Context(owner, conversation)
+    from apps.assistant import actions
+
+    with pytest.raises(ServiceError):
+        actions.propose(ctx, "renew_ssl", {"domain": "not-mine.example.org"})
+
+
+def test_in_claude_mode_the_change_tools_only_propose(world, owner, account, switched_on, ask):  # noqa: F811
+    from apps.assistant.models import PendingAction
+
+    ask.script = [_use("scan_website", domain=account.domain), _say("Press Approve to start the scan.")]
+    conversation = _conversation(owner)
+    agent.send(owner, conversation, "scan my site")
+    card = PendingAction.objects.get(conversation=conversation)
+    assert card.status == "pending" and "awaiting_approval" in ask.requests[1]["messages"][-1]["content"][0]["content"]
+    assert "set_mailbox_quota" in ask.requests[0]["tools"] and "client_id" not in str(ask.requests[0]["tools"])

@@ -7,6 +7,7 @@
 <form method="post" class="card mb-4" novalidate>{% csrf_token %}
   <div class="card-body vstack gap-3">
     <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="enabled"{% if config.enabled %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label"><strong>AI Agent on</strong>. Turn it off at any time and it answers nobody.</span></label>
+    <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="changes_enabled"{% if config.changes_enabled %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label"><strong>Changes with approval on</strong>. The Agent may propose renewing SSL, forcing HTTPS, a mailbox size, a PHP limit, a malware scan or a backup; the customer must press Approve. Off = it stops proposing and approving.</span></label>
     <div class="row g-3">
       <div class="col-12"><label class="form-label" for="mode">How the Agent answers</label>
         <select class="form-select" id="mode" name="mode"{% if not can_manage %} disabled{% endif %}>{% for value, label in config.MODES %}<option value="{{ value }}"{% if config.mode == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>

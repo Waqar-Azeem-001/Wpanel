@@ -20,9 +20,44 @@
     var status = log.dataset.status;
     log.scrollTop = log.scrollHeight;
 
-    function add(sender, text, tool, kind, who) {
+    function card(text, id, state) {
+      var el = document.createElement("div");
+      el.className = "asst-action is-" + state;
+      el.dataset.action = id;
+      el.dataset.status = state;
+      var line = document.createElement("div");
+      line.className = "asst-action-text";
+      var icon = document.createElement("i");
+      icon.className = "bi bi-shield-check";
+      line.appendChild(icon);
+      line.appendChild(document.createTextNode(" " + text));
+      el.appendChild(line);
+      if (state === "pending") {
+        var row = document.createElement("div");
+        row.className = "asst-action-buttons";
+        [["approve", "Approve", "btn btn-sm btn-primary"], ["cancel", "Cancel", "btn btn-sm btn-outline-secondary"]].forEach(function (b) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = b[2];
+          btn.dataset.act = b[0];
+          btn.textContent = b[1];
+          row.appendChild(btn);
+        });
+        el.appendChild(row);
+      } else {
+        var s = document.createElement("span");
+        s.className = "asst-action-state";
+        s.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+        el.appendChild(s);
+      }
+      return el;
+    }
+
+    function add(sender, text, tool, kind, who, action, state) {
       var el;
-      if (sender === "event") {
+      if (sender === "event" && kind === "action") {
+        el = card(text, action, state || "pending");
+      } else if (sender === "event") {
         el = document.createElement("p");
         el.className = "asst-event";
         el.textContent = kind ? text : "Checked: " + tool;
@@ -74,13 +109,35 @@
             res.data.messages.forEach(function (m) {
               last = Math.max(last, m.id);
               if (m.sender === "client") { return; }
-              add(m.sender, m.body, m.tool, m.kind, m.who);
+              add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state);
             });
           })
           .catch(function () { wait.remove(); add("ai", "The connection dropped. Please try again."); })
           .then(function () { button.disabled = false; input.focus(); });
       });
     }
+
+    box.addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-act]");
+      var holder = btn && btn.closest(".asst-action");
+      if (!btn || !holder) { return; }
+      var body = new FormData();
+      body.append("csrfmiddlewaretoken", csrf(root) || csrf(document));
+      holder.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+      fetch(box.dataset.act + holder.dataset.action + "/" + btn.dataset.act + "/", { method: "POST", body: body, headers: { "X-Requested-With": "fetch" }, credentials: "same-origin" })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+          if (!res.ok) {
+            add("ai", res.data.error || "That did not work.");
+            holder.querySelectorAll("button").forEach(function (b) { b.disabled = false; });
+            return;
+          }
+          var fresh = card(holder.querySelector(".asst-action-text").textContent.trim(), holder.dataset.action, res.data.status);
+          holder.replaceWith(fresh);
+          res.data.messages.forEach(function (m) { last = Math.max(last, m.id); add(m.sender, m.body, m.tool, m.kind, m.who); });
+        })
+        .catch(function () { holder.querySelectorAll("button").forEach(function (b) { b.disabled = false; }); });
+    });
 
     var ticket = box.querySelector("[data-agent-ticket]");
     if (ticket) {
@@ -95,7 +152,7 @@
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
           if (!data) { return; }
-          data.messages.forEach(function (m) { if (m.id > last) { last = m.id; add(m.sender, m.body, m.tool, m.kind, m.who); } });
+          data.messages.forEach(function (m) { if (m.id > last) { last = m.id; add(m.sender, m.body, m.tool, m.kind, m.who, m.action, m.state); } });
           if (data.status !== status) { reload(); }
         })
         .catch(function () { /* the next tick tries again */ });

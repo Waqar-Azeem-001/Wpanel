@@ -25,6 +25,7 @@ def _see(request):
 
 def serialise(m):
     return {"id": m.id, "sender": m.sender, "body": m.body, "tool": (m.tool_call or {}).get("tool", ""), "kind": (m.tool_call or {}).get("kind", ""),
+            "action": (m.tool_call or {}).get("action"), "state": (m.tool_call or {}).get("status", ""),
             "who": ((m.staff.get_full_name() or m.staff.email.split("@")[0]) if m.staff_id else ""), "at": m.created_at.isoformat()}
 
 
