@@ -8,6 +8,13 @@
 <div class="page-head"><h1>{% trans "Website care" %}</h1>
   <p class="page-sub">{% trans "Test how fast your website is, scan it for malware, keep WordPress up to date and back it up on a schedule." %}</p></div>
 
+<div class="care-summary">
+  <a class="care-tile {% if speed and speed.ok %}{% if speed.score >= 80 %}is-ok{% elif speed.score >= 50 %}is-warn{% else %}is-bad{% endif %}{% endif %}" href="#care-speed"><i class="bi bi-speedometer" aria-hidden="true"></i><span><small>{% trans "Speed" %}</small><strong>{% if speed and speed.ok %}{{ speed.score }} / 100{% else %}{% trans "Not tested" %}{% endif %}</strong></span></a>
+  <a class="care-tile {% if scan and scan.state != 'running' and scan.state != 'failed' %}{% if scan.findings %}is-bad{% else %}is-ok{% endif %}{% endif %}" href="#care-scan"><i class="bi bi-shield-check" aria-hidden="true"></i><span><small>{% trans "Security" %}</small><strong>{% if scan and scan.state == "running" %}{% trans "Scanning" %}{% elif scan and scan.state == "failed" %}{% trans "Scan failed" %}{% elif scan %}{% if scan.findings %}{{ scan.findings|length }} {% trans "to review" %}{% else %}{% trans "Clean" %}{% endif %}{% else %}{% trans "Not scanned" %}{% endif %}</strong></span></a>
+  {% if wordpress %}<a class="care-tile" href="#care-updates"><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span><small>{% trans "Updates" %}</small><strong>{% if care.wp_core == "off" or not care.wp_core %}{% trans "Manual" %}{% else %}{% trans "Automatic" %}{% endif %}</strong></span></a>{% endif %}
+  {% if backups %}<a class="care-tile {% if backups.current and backups.current != 'off' %}is-ok{% endif %}" href="#care-backups"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span><small>{% trans "Backups" %}</small><strong>{% if backups.current and backups.current != "off" %}{% trans "On" %}{% else %}{% trans "Off" %}{% endif %}</strong></span></a>{% endif %}
+</div>
+
 <div class="care-stack">
 
   {# Speed #}

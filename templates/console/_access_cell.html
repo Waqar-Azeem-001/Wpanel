@@ -1,0 +1,7 @@
+{% load i18n %}<div class="access-cell">
+  {% if r.hidden %}<span class="badge text-bg-warning">{% trans "Hidden" %}</span>{% elif r.effective and r.extra and not r.role_gives %}<span class="badge text-bg-primary">{% trans "Added" %}</span>{% elif r.effective %}<span class="badge text-bg-success">{% trans "Allowed" %}</span>{% else %}<span class="badge text-bg-light text-secondary">{% trans "Off" %}</span>{% endif %}
+  {% if can_set_extra_permissions %}<select class="form-select form-select-sm" name="access_{{ r.codename }}" aria-label="{{ r.label }}">
+    <option value="default"{% if not r.hidden and not r.extra %} selected{% endif %}>{% trans "Follow role" %}</option>
+    <option value="allow"{% if r.extra and not r.hidden %} selected{% endif %}>{% trans "Always allow" %}</option>
+    <option value="hide"{% if r.hidden %} selected{% endif %}>{% trans "Hide" %}</option></select>{% endif %}
+</div>

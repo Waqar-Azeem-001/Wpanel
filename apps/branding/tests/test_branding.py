@@ -567,3 +567,15 @@ def test_the_error_and_maintenance_pages_carry_the_logo_without_the_database(shi
     (shipped / "logo-dark.png").unlink()
     assert 'class="badge"' in Command.with_logo(plain) and "BRAND_LOGO" not in Command.with_logo(plain)
     assert "Something went wrong" in render_to_string("500.html")  # the tag never raises, even before static files are collected
+
+
+@pytest.mark.django_db
+def test_seed_addons_loads_ssl_and_whois_privacy_with_yearly_prices_and_is_repeatable():
+    from django.core.management import call_command
+    from apps.products.models import Addon, AddonKind
+
+    call_command("seed_webhostera", "--addons")
+    call_command("seed_webhostera", "--addons")
+    assert Addon.objects.filter(kind=AddonKind.SSL).count() == 7
+    whois = Addon.objects.get(kind=AddonKind.WHOIS_PRIVACY)
+    assert str(whois.prices.get().price) == "1499.00" and whois.status == "active"

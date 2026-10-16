@@ -369,7 +369,7 @@ def test_every_permission_is_listed_and_one_can_be_hidden_from_a_person_or_added
     admin = browser(world.people["admin"])
     agent = world.people["support agent"]
     page = admin.get(reverse("console:user_detail", args=[agent.pk])).content.decode()
-    assert page.count('name="access_') >= 26 and "Hide from this person" in page and "Always allow" in page  # all permissions, each with a choice
+    assert page.count('name="access_') >= 26 and ">Hide</option>" in page and "Always allow" in page  # all permissions, each with a choice
     assert User.objects.get(pk=agent.pk).has_perm("accounts.view_billing") and not User.objects.get(pk=agent.pk).has_perm("accounts.manage_affiliates")
     response = admin.post(reverse("console:user_extra_permissions", args=[agent.pk]), {"access_view_billing": "hide", "access_manage_affiliates": "allow", "access_view_clients": "default"})
     assert "Extra permissions saved" in " ".join(notes(admin, response))

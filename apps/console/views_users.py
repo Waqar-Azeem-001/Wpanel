@@ -117,6 +117,7 @@ def user_detail(request, pk, password_form=None):
         "status_choices": AccountStatus.choices, "can_see_clients": actor.has_perm(perm("view_clients")),
         "can_set_extra_permissions": can_set_role and not person.is_superuser,
         "access_rows": account_services.access_table(person) if person.role in STAFF_ROLES else None,
+        "access_groups": _access_groups(person) if person.role in STAFF_ROLES else None,
         "access_summary": _access_summary(person) if person.role in STAFF_ROLES else None,
         "pages": _pages_for(person)})
 
@@ -136,6 +137,16 @@ def user_edit(request, pk):
         else:
             messages.success(request, "Details saved.")
     return redirect("console:user_detail", pk=pk)
+
+
+def _access_groups(person):
+    """The permission table as one row per area (View and Manage side by side), then the two single permissions: about half the rows of the flat list."""
+    from apps.accounts.roles import AREAS
+
+    rows = {r["codename"]: r for r in account_services.access_table(person)}
+    groups = [{"label": label[:1].upper() + label[1:], "view": rows[f"view_{area}"], "manage": rows[f"manage_{area}"]} for area, label in AREAS]
+    singles = [rows[c] for c in ("assign_roles", "view_audit_log") if c in rows]
+    return {"areas": groups, "singles": singles}
 
 
 def _access_summary(person):

@@ -21,7 +21,7 @@ from apps.core.system import SYSTEM
 from apps.domains import services as domains
 from apps.domains.models import RegistrarProvider
 from apps.products import services as products
-from apps.products.models import BillingCycle, Product, ProductType, Server
+from apps.products.models import Addon, AddonKind, BillingCycle, Product, ProductType, Server
 
 SEED = Path(__file__).resolve().parents[2] / "seed"
 
@@ -81,21 +81,38 @@ TLDS = [
 ]
 
 
+ADDONS = [
+    ("Positive SSL", AddonKind.SSL, "3499", "Domain validated. 256-bit encryption, free reissue, site seal, secures with and without www."),
+    ("Rapid SSL", AddonKind.SSL, "4890", "Domain validated. 256-bit encryption, free reissue, static site seal."),
+    ("RapidSSL Wildcard", AddonKind.SSL, "21490", "Domain validated. Secures your domain and unlimited subdomains."),
+    ("QuickSSL Premium", AddonKind.SSL, "14490", "Single domain, dynamic site seal, unlimited server licences, free reissue."),
+    ("True Business ID", AddonKind.SSL, "20990", "Organisation validated. Shows your business is real, with a company-name site seal."),
+    ("True Business ID Wildcard", AddonKind.SSL, "66390", "Organisation validated. Secures your domain and unlimited subdomains."),
+    ("True BusinessID with EV", AddonKind.SSL, "35990", "Extended validation with the green address bar and strict business checks."),
+    ("WHOIS Privacy Protection", AddonKind.WHOIS_PRIVACY, "1499", "Hides your name, email, phone number and address from the public WHOIS lookup and forwards real enquiries to you."),
+]
+
+
 class Command(BaseCommand):
     help = "Load the Web Host Era brand, plans and domain prices (see the module docstring)."
 
     def add_arguments(self, parser):
         parser.add_argument("--brand", action="store_true", help="Only the brand: name, colours, logo, favicon, footer.")
+        parser.add_argument("--addons", action="store_true", help="Only the SSL certificate and WHOIS privacy add-ons with their yearly prices.")
         parser.add_argument("--fill-blank", action="store_true", help="Only fill brand settings nobody has set yet; never change or remove anything already chosen.")
 
     def handle(self, *args, **options):
         if options["fill_blank"]:
             self.fill_blank()
             return
+        if options["addons"]:
+            self.addons()
+            return
         self.brand()
         if not options["brand"]:
             self.plans()
             self.domain_prices()
+            self.addons()
         if branding.store_currency() != "PKR":
             self.stdout.write(self.style.WARNING(
                 f"The store currency is {branding.store_currency()}: these prices are in rupees. Choose PKR as the Store currency in Setup > Branding "
@@ -130,6 +147,17 @@ class Command(BaseCommand):
         if wanted or links is not None:
             branding.save_settings(SYSTEM, values=wanted, policy_links=links)
         self.stdout.write(f"Brand: filled {', '.join(sorted(wanted)) or 'nothing'}{' and the policy links' if links is not None else ''}.")
+
+    def addons(self):
+        """The paid extras sold on the owner's site, at its yearly prices (PKR): SSL certificates for a plan and WHOIS privacy for a domain. Safe to run again: it only sets the price."""
+        for name, kind, yearly, text in ADDONS:
+            addon = Addon.objects.filter(name=name).first()
+            if addon is None:
+                addon = products.create_addon(SYSTEM, {"name": name, "kind": kind, "description": text})
+            products.set_price(SYSTEM, addon, billing_cycle=BillingCycle.ANNUAL, price=Decimal(yearly))
+            if addon.status != "active":
+                products.set_addon_status(SYSTEM, addon, "active")
+        self.stdout.write(f"Add-ons: {len(ADDONS)} (yearly prices).")
 
     def plans(self):
         server = Server.objects.first() or products.create_server(SYSTEM, {
