@@ -15,23 +15,31 @@ The customer never needs to open cPanel. "Open cPanel" stays as a small advanced
 
 ## Built
 
+The full record, with what is tested and what is proven, is in [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md). In short:
+
 | Area | What exists |
 |---|---|
-| Business | catalogue, cart and checkout, orders, invoices and payments (manual, bank transfer, JazzCash), renewals, lifecycle, affiliates, support, notifications, reports, storefront API |
-| Hosting control (H0-H15) | provider-neutral control layer, websites dashboard, file manager, databases, email, domains and DNS, SSL, PHP, cron, backups, security, usage and logs, staff admin access, infrastructure dashboard, cPanel adapter, Open cPanel fallback |
-| Website workspace | Websites list, create website (WordPress or custom), website dashboard, Website care (speed test, malware scan, WordPress updates, automatic backups, maintenance mode, plugins and themes, traffic), staging, delete website, domain check with transfer guidance |
-| Operations | CI on PostgreSQL, automatic deploy after green tests, deploy and failure notices through WHPanel's own email, nightly encrypted backup of the panel database |
+| Business | catalogue, cart and checkout, orders, invoices and payments (manual, bank transfer, JazzCash), renewals, lifecycle, affiliates, support, notifications, reports, storefront API and WordPress plugin |
+| Hosting control (H0-H15) | provider-neutral control layer, websites dashboard, file manager, databases (browse and edit), email with webmail, domains, DNS and zone management, SSL, PHP, cron, backups, security, usage, logs, SSH, staff admin access, infrastructure dashboard, cPanel adapter, Open cPanel fallback |
+| Website workspace | Websites list, create website (WordPress or custom), several websites per plan, website dashboard, preview address, one-click WP Admin, Website care, staging and copy website for every website, delete website, domain check with transfer guidance |
+| Customer shell and public site | icon rail and top bar, website menu, public top bar with Pricing, Products and Resources menus, new front page, editable home words and own pages, expanded footer |
+| AI Agent | chat on every customer page (knowledge base mode, Claude optional), how-to first, changes with Approve, security code for sensitive changes, live chat with a person, callbacks, analytics, staff knowledge editor |
+| Help centre | 110 articles in 9 topics, search, cards, readable article page, structured data, sitemap, robots |
+| Access control | roles, plus per-person extra permissions and hidden permissions, with the person's menu shown |
+| Operations | CI on PostgreSQL, deploy after green tests (waits for the GitHub secret), deploy and failure notices through WHPanel's own email, nightly encrypted backup of the panel database, a database dump before every deploy |
 
 ## Next
 
-The detailed phase plan for the Hostinger-style experience (shell, dashboard, WordPress, domains, advanced tools, public site) is in [docs/hostinger-parity-plan.md](docs/hostinger-parity-plan.md).
+The detailed plan for the Hostinger-style experience is in [docs/hostinger-parity-plan.md](docs/hostinger-parity-plan.md); its phases 0 to 7 are done.
 
-1. **Prove it on the live server.** Run every hosting action once against a real test account on the live WHM server and record the result (WordPress install, staging, delete, backups, SSL, DNS).
-2. **Sign-in safety.** Make two-factor authentication mandatory for staff; login and activity alerts to customers (new device, password change, staff access to their hosting).
-3. **Release hygiene.** A staging copy of WHPanel itself, branch protection on `main`, error tracking reviewed, a restore drill for the panel database.
-4. **Customer features.** SMS/WhatsApp notices, payment proof upload with staff verification, public status page, customer API tokens, Urdu interface, data export and deletion.
-5. **Website tools not built yet.** Git deployment, CDN, cache switch, several websites inside one plan, a temporary preview domain (needs a wildcard domain), automatic repair of modified WordPress files.
-6. **Independence from WHMCS.** Import real prices before going live.
+1. **Prove it on the live server.** Run the newest flows once against the real test account and record the result: staging and copy website of an added domain, Care of an added domain, the AI Agent (a how-to, an Approve card, a security-code change, a live chat, a callback), the Emails page buttons, zone management.
+2. **Owner items** (see section 10 of the overview): the deploy key secret, preview HTTPS, Git deployment and SSH keys in WHM, phpMyAdmin, the AI Agent switches and working hours, Setup content, the sitemap in Google Search Console.
+3. **Sign-in safety.** Make two-factor authentication mandatory for staff; login and activity alerts to customers (new device, password change, staff access to their hosting).
+4. **Release hygiene.** A staging copy of WHPanel itself, branch protection on `main`, error tracking reviewed, a restore drill for the panel database.
+5. **Customer features.** SMS/WhatsApp notices (and a real WhatsApp bot), payment proof upload with staff verification, public status page, customer API tokens, Urdu interface, data export and deletion.
+6. **Website tools not built yet.** Git deployment, CDN, automatic repair of modified WordPress files, hosting password reset and the domain transfer-out code by the Agent (the provider layer has no operation for them yet).
+7. **Help centre depth.** Lengthen the most searched articles once real search data exists; keep the Agent's knowledge entries growing from the questions it could not answer.
+8. **Independence from WHMCS.** Import real prices before going live.
 
 ## Rules that stay
 

@@ -6,7 +6,7 @@ import re
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.utils.html import escape, format_html_join
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from rest_framework import status
 

@@ -551,7 +551,7 @@ def test_the_plans_own_website_is_never_confused_with_an_added_domains(world, ow
 
 def test_subdomains_parked_domains_and_redirects_each_have_their_page_and_menu_entry(world, owner, account):  # noqa: F811
     menu = _page(owner, "hosting_customer:detail", account.pk).split('<aside class="cmenu"')[1].split("</aside>")[0]
-    for label in ("All domains", "Subdomains", "Parked domains", "Redirects", "DNS Zone Editor"):
+    for label in ("All domains", "Subdomains", "Parked domains", "Redirects", "Zone management", "DNS Zone Editor"):
         assert label in menu
     assert "Create a subdomain" in _page(owner, "hosting_customer:domain_page", account.pk, "subdomains")
     assert "Park a domain" in _page(owner, "hosting_customer:domain_page", account.pk, "parked")
@@ -1120,3 +1120,38 @@ def test_care_belongs_to_each_website_and_an_added_domain_has_its_own(world, own
     client.post(reverse("hosting_customer:site_care_action", args=[account.pk, "care.example-test.com"]), {"action": "scan_schedule", "value": "weekly"})
     assert care.care_for(account, "care.example-test.com").scan_schedule != care.care_for(account).scan_schedule or SiteCare.objects.filter(account=account).count() == 2
     assert client.get(reverse("hosting_customer:care", args=[account.pk])).status_code == 200
+
+
+def test_every_mailbox_on_the_emails_page_has_its_own_buttons_and_the_page_says_how_to_sign_in(world, owner, account):  # noqa: F811
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    control.perform(owner, account, Capability.EMAIL, "create_mailbox", "login@" + account.domain, "Str0ng-Passw0rd-xyz", quota_mb=100)
+    html = _page(owner, "hosting_customer:emails")
+    assert "How to sign in to an email address" in html and "login@" + account.domain in html
+    assert "Open webmail" in html and reverse("hosting_customer:webmail", args=[account.pk]) + "?address=login%40" in html
+    assert reverse("hosting_customer:webmail_settings", args=[account.pk]) + "?address=login%40" in html and "Settings" in html
+    assert "/help/" in html
+    opened = browser(owner).get(reverse("hosting_customer:webmail", args=[account.pk]) + "?address=login%40" + account.domain)
+    assert opened.status_code in (200, 302)  # the link opens a mail screen (or the provider's own webmail)
+
+
+def test_zone_management_lists_every_zone_and_filters_by_name_and_kind(world, owner, account):  # noqa: F811
+    from apps.hosting import control
+    from apps.hosting.adapters.capabilities import Capability
+
+    for leftover in control.perform(owner, account, Capability.DOMAINS, "list_domains"):  # the demo server remembers earlier tests: start from the plan's own domain
+        if leftover.kind != "primary":
+            control.perform(owner, account, Capability.DOMAINS, "remove_domain", leftover.name)
+    control.perform(owner, account, Capability.DOMAINS, "add_domain", "alpha-zone.example-test.com", "addon", "public_html/alpha-zone.example-test.com")
+    control.perform(owner, account, Capability.DOMAINS, "add_domain", "beta-zone.example-test.com", "addon", "public_html/beta-zone.example-test.com")
+    html = _page(owner, "hosting_customer:zones", account.pk)
+    assert "Zone management" in html and account.domain in html and "alpha-zone.example-test.com" in html and "beta-zone.example-test.com" in html and "Edit records" in html
+    assert reverse("hosting_customer:dns", args=[account.pk]) + "?domain=alpha-zone.example-test.com" in html
+    client = browser(owner)
+    only = client.get(reverse("hosting_customer:zones", args=[account.pk]) + "?q=alpha-zone").content.decode()
+    assert "alpha-zone.example-test.com" in only and "beta-zone.example-test.com" not in only and "1 of" in only
+    kinds = client.get(reverse("hosting_customer:zones", args=[account.pk]) + "?kind=primary").content.decode()
+    assert account.domain in kinds and "alpha-zone.example-test.com" not in kinds
+    none = client.get(reverse("hosting_customer:zones", args=[account.pk]) + "?q=zzzz-nothing").content.decode()
+    assert "No zone matches" in none

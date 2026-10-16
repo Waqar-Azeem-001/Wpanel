@@ -135,3 +135,14 @@ class MFARecoveryCode(models.Model):
 
     def __str__(self):
         return f"Recovery code for {self.user_id} ({'used' if self.used_at else 'unused'})"
+
+
+class HiddenPermission(models.Model):
+    """A permission the person's role gives, switched off for this one person (the role itself and everyone else keep it). The other half of "extra permissions"."""
+
+    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="hidden_permissions")
+    codename = models.CharField(max_length=60)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "codename"], name="one_hidden_permission_per_user")]

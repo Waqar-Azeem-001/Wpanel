@@ -111,7 +111,7 @@ def test_extra_permissions_are_granted_beyond_the_role_and_shown_on_the_page(wor
     admin = browser(world.people["admin"])
     agent = world.people["support agent"]
     page = admin.get(reverse("console:user_detail", args=[agent.pk])).content.decode()
-    assert "Extra permissions" in page and "Can manage affiliates" in page
+    assert "What this person can do" in page and "Can manage affiliates" in page and "Pages this person can open" in page
     response = admin.post(reverse("console:user_extra_permissions", args=[agent.pk]),
                           {"permissions": ["manage_affiliates", "manage_support"]})
     assert "Extra permissions saved" in " ".join(notes(admin, response))
@@ -363,3 +363,39 @@ def test_the_setup_menu_offers_these_screens_only_to_who_may_open_them(world):
     assert {"All users", "Email provider", "Domain registrar"} <= labels("admin")
     assert "All users" in labels("manager") and "Email provider" not in labels("manager")
     assert not {"All users", "Email provider", "Domain registrar"} & labels("support agent")
+
+
+def test_every_permission_is_listed_and_one_can_be_hidden_from_a_person_or_added_on_top(world):
+    admin = browser(world.people["admin"])
+    agent = world.people["support agent"]
+    page = admin.get(reverse("console:user_detail", args=[agent.pk])).content.decode()
+    assert page.count('name="access_') >= 26 and "Hide from this person" in page and "Always allow" in page  # all permissions, each with a choice
+    assert User.objects.get(pk=agent.pk).has_perm("accounts.view_billing") and not User.objects.get(pk=agent.pk).has_perm("accounts.manage_affiliates")
+    response = admin.post(reverse("console:user_extra_permissions", args=[agent.pk]), {"access_view_billing": "hide", "access_manage_affiliates": "allow", "access_view_clients": "default"})
+    assert "Extra permissions saved" in " ".join(notes(admin, response))
+    fresh = User.objects.get(pk=agent.pk)
+    assert not fresh.has_perm("accounts.view_billing") and fresh.has_perm("accounts.manage_affiliates") and fresh.has_perm("accounts.view_clients")  # hidden, added, still the role's
+    assert AuditEvent.objects.filter(action="account.permissions_hidden_changed", target_id=str(agent.pk)).exists()
+    page = admin.get(reverse("console:user_detail", args=[agent.pk])).content.decode()
+    assert "Hidden" in page and "Added" in page and "1 hidden" in page.replace("hidden from this person", "hidden").replace(", 1 hidden", " 1 hidden") or "1 hidden" in page
+    assert User.objects.get(pk=world.people["manager"].pk).has_perm("accounts.view_billing")  # nobody else lost it
+    admin.post(reverse("console:user_extra_permissions", args=[agent.pk]), {"access_view_billing": "default"})
+    assert User.objects.get(pk=agent.pk).has_perm("accounts.view_billing") and not User.objects.get(pk=agent.pk).has_perm("accounts.manage_affiliates")
+
+
+def test_a_hidden_permission_also_hides_the_page_from_that_persons_menu_and_a_super_admin_cannot_be_restricted(world):
+    from apps.core import navigation
+    from apps.core.test_navigation import request_for
+
+    admin = browser(world.people["admin"])
+    agent = world.people["support agent"]
+
+    def entries(user):
+        return {e.label for e in navigation.build(request_for(User.objects.get(pk=user.pk)), "staff")["main"]}
+
+    assert "Billing" in entries(agent)
+    admin.post(reverse("console:user_extra_permissions", args=[agent.pk]), {"access_view_billing": "hide"})
+    assert "Billing" not in entries(agent)
+    boss = world.people["super admin"]
+    response = admin.post(reverse("console:user_extra_permissions", args=[boss.pk]), {"access_view_billing": "hide"})
+    assert User.objects.get(pk=boss.pk).has_perm("accounts.view_billing") and response.status_code in (302, 403, 404)

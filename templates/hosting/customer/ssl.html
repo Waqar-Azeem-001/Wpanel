@@ -45,12 +45,56 @@
 </section>
 
 <section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "SSL status" %}</h3>
+  {% if counts.expired %}<p class="mb-1"><span class="site-pill is-danger"><i class="bi bi-shield-x" aria-hidden="true"></i> {% trans "Not secure" %}</span> {% trans "At least one domain has an expired certificate. Visitors see a warning. Press Renew in the table." %}</p>
+  {% elif counts.none %}<p class="mb-1"><span class="site-pill is-warn"><i class="bi bi-shield-slash" aria-hidden="true"></i> {% trans "Partly secure" %}</span> {% trans "Some domains have no certificate yet. Press Install next to them." %}</p>
+  {% elif counts.expiring %}<p class="mb-1"><span class="site-pill is-warn"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {% trans "Ends soon" %}</span> {% trans "A certificate ends within 14 days. Turn on automatic renewal." %}</p>
+  {% else %}<p class="mb-1"><span class="site-pill is-ok"><i class="bi bi-shield-check" aria-hidden="true"></i> {% trans "Secure" %}</span> {% trans "Every domain has a valid certificate." %}</p>{% endif %}
+  <ul class="small text-secondary mb-0">
+    <li>{% trans "Active: the padlock shows and traffic is encrypted." %}</li>
+    <li>{% trans "Ends soon: 14 days or fewer are left." %}</li>
+    <li>{% trans "Expired: browsers warn visitors until you renew." %}</li>
+    <li>{% trans "No certificate: the website opens only over plain HTTP." %}</li>
+  </ul>
+</div></section>
+
+<section class="card mb-3"><div class="card-body">
+  <h3 class="h6">{% trans "How to install an SSL certificate" %}</h3>
+  <ol class="small mb-3">
+    <li>{% trans "Make sure the domain points to this server." %}{% if dns_url %} <a href="{{ dns_url }}">{% trans "Check the DNS records" %}</a>.{% endif %} {% trans "The A record must show this server's address. A change can take up to a few hours to spread." %}</li>
+    <li>{% trans "Find the domain in the table above and press Install. The free certificate is issued in a moment and lasts 90 days." %}</li>
+    <li>{% trans "Turn on Automatic renewal so it renews itself in the last 30 days." %}</li>
+    <li>{% trans "Turn on Always use HTTPS so every visitor is sent to the secure version." %}</li>
+    <li>{% trans "Open your website and check the padlock in the address bar. If a WordPress site still shows mixed content, set its address to the secure version in WordPress settings." %}</li>
+  </ol>
   <h3 class="h6">{% trans "How it works" %}</h3>
   <ul class="small text-secondary mb-0">
     <li>{% trans "Certificates are free and last 90 days. With automatic renewal on, they renew themselves in the last 30 days." %}</li>
-    <li>{% trans "A certificate can only be installed once the domain points to this server." %}{% if dns_url %} <a href="{{ dns_url }}">{% trans "Check the DNS records" %}</a>.{% endif %}</li>
+    <li>{% trans "A certificate can only be installed once the domain points to this server." %}</li>
     <li>{% trans "Always use HTTPS sends every visitor to the secure version of your website. It needs a working certificate." %}</li>
+    <li>{% trans "Remove a certificate only if you are moving the domain: visitors then see a warning." %}</li>
   </ul>
 </div></section>
+
+{% if upsell %}
+<section class="mb-3">
+  <h3 class="h6 mb-2">{% trans "Recommended for you" %}</h3>
+  <div class="row g-3">
+    {% for u in upsell %}
+    <div class="col-md-6"><div class="card h-100"><div class="card-body d-flex flex-column">
+      <p class="small text-secondary mb-1"><i class="bi {% if u.kind == 'whois_privacy' %}bi-eye-slash{% else %}bi-patch-check{% endif %}" aria-hidden="true"></i> {% trans u.title %}</p>
+      <h4 class="h6">{{ u.addon.name }}</h4>
+      {% if u.addon.description %}<p class="small text-secondary">{{ u.addon.description|truncatewords:30 }}</p>{% endif %}
+      {% if u.kind == "whois_privacy" %}<p class="small text-secondary">{% trans "Hides your name, address, email and phone from the public WHOIS lookup so spammers cannot copy them." %}{% if domain_page_url %} <a href="{{ domain_page_url }}">{% trans "See your domains" %}</a>.{% endif %}</p>
+      {% else %}<p class="small text-secondary">{% trans "A paid certificate adds a warranty and a trust seal, and can validate your business name." %}</p>{% endif %}
+      <div class="mt-auto d-flex justify-content-between align-items-center">
+        <span>{% if u.price %}<strong>{{ u.price.price|money }}</strong> <small class="text-secondary">/ {{ u.price.get_billing_cycle_display }}</small>{% endif %}</span>
+        <a class="btn btn-sm btn-primary" href="{{ u.url }}">{% trans "Order this" %}</a>
+      </div>
+    </div></div></div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endif %}
 {% endblock %}

@@ -44,7 +44,8 @@ def ticket_new(request):
     clients = list(Client.objects.filter(contacts__user=request.user).distinct())
     if not clients:
         return render(request, "support/customer/unavailable.html")
-    form = forms.NewTicketForm(request.POST or None, request.FILES or None, clients=clients)
+    initial = {k: request.GET[k][:200 if k == "subject" else 2000] for k in ("subject", "body", "hosting_account") if request.GET.get(k)} if request.method == "GET" else None
+    form = forms.NewTicketForm(request.POST or None, request.FILES or None, clients=clients, initial=initial)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         related = data["hosting_account"] or data["domain"]

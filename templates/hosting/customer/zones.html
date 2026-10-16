@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Zone management" %} · {{ account.domain }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}ws-apple{% endblock %}
+{% block content %}
+{% include "hosting/customer/_header.html" with tab="" %}
+<div class="db-top">
+  <h2 class="h5 mb-0"><i class="bi bi-collection" aria-hidden="true"></i> {% trans "Zone management" %}</h2>
+  <p class="db-counts"><span class="site-pill"><i class="bi bi-diagram-3" aria-hidden="true"></i> {{ rows|length }} {% trans "of" %} {{ total }} {% trans "zones" %}</span>
+    <a class="site-pill" href="{{ domains_url }}"><i class="bi bi-globe2" aria-hidden="true"></i> {% trans "All domains" %}</a></p>
+</div>
+
+<section class="card mb-3"><div class="card-body">
+  <form method="get" class="row g-2 align-items-end" role="search">
+    <div class="col-md-6"><label class="form-label small" for="zone-q">{% trans "Find a zone by name" %}</label>
+      <div class="input-group"><span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span><input class="form-control" id="zone-q" name="q" value="{{ term }}" placeholder="example.com" autocomplete="off"></div></div>
+    <div class="col-md-4"><label class="form-label small" for="zone-kind">{% trans "Show" %}</label>
+      <select class="form-select" id="zone-kind" name="kind">{% for value, label in kinds %}<option value="{{ value }}"{% if value == kind %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-md-2 d-flex gap-2"><button class="btn btn-primary flex-grow-1" type="submit">{% trans "Filter" %}</button>{% if term or kind %}<a class="btn btn-outline-secondary" href="{% url 'hosting_customer:zones' account.pk %}" aria-label="{% trans 'Clear the filter' %}"><i class="bi bi-x-lg" aria-hidden="true"></i></a>{% endif %}</div>
+  </form>
+</div></section>
+
+<section class="card mb-3">
+  {% if rows %}<div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th scope="col">{% trans "Zone" %}</th><th scope="col">{% trans "Kind" %}</th><th scope="col">{% trans "Records" %}</th><th scope="col">{% trans "What it holds" %}</th><th scope="col" class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>{% for z in rows %}<tr>
+      <td class="fw-semibold text-break"><i class="bi bi-globe2" aria-hidden="true"></i> {{ z.name }}{% if z.subs %}<div class="small text-secondary">{{ z.subs }} {% trans "subdomain" %}{{ z.subs|pluralize }}</div>{% endif %}</td>
+      <td><span class="site-pill">{% if z.kind == "primary" %}{% trans "Main domain" %}{% elif z.kind == "addon" %}{% trans "Added domain" %}{% elif z.kind == "alias" %}{% trans "Parked" %}{% else %}{{ z.kind }}{% endif %}</span></td>
+      <td>{% if z.records is None %}<span class="text-secondary">&mdash;</span>{% else %}{{ z.records }}{% endif %}</td>
+      <td>{% for t, n in z.counts %}<span class="dns-type dns-type-{{ t|lower }}">{{ t }} {{ n }}</span> {% endfor %}
+        {% if z.records is not None %}{% if z.has_mail and not z.has_spf %}<span class="badge text-bg-warning" title="{% trans 'This zone receives email but has no SPF record' %}">{% trans "no SPF" %}</span>{% endif %}{% endif %}</td>
+      <td class="text-end"><a class="btn btn-sm btn-primary" href="{{ z.edit_url }}"><i class="bi bi-diagram-3" aria-hidden="true"></i> {% trans "Edit records" %}</a></td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="card-body text-secondary">{% if term or kind %}{% trans "No zone matches. Clear the filter to see all of them." %}{% else %}{% trans "There is no zone to show." %}{% endif %}</div>{% endif %}
+</section>
+{% if nameservers %}<p class="small text-secondary">{% trans "Nameservers to use for these zones:" %} {% for ns in nameservers %}<code>{{ ns }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+{% endblock %}

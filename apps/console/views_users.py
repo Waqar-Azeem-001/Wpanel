@@ -115,10 +115,10 @@ def user_detail(request, pk, password_form=None):
         "role_choices": [(v, label) for v, label in forms.STAFF_ROLE_CHOICES if v in allowed_roles(actor)],
         "details_form": forms.UserDetailsForm(initial={f: getattr(person, f) for f in ("first_name", "last_name", "phone")}),
         "status_choices": AccountStatus.choices, "can_see_clients": actor.has_perm(perm("view_clients")),
-        "can_set_extra_permissions": can_set_role,
-        "extra_permissions_form": forms.ExtraPermissionsForm(
-            initial={"permissions": list(person.user_permissions.values_list("codename", flat=True))})
-        if person.role in STAFF_ROLES else None})
+        "can_set_extra_permissions": can_set_role and not person.is_superuser,
+        "access_rows": account_services.access_table(person) if person.role in STAFF_ROLES else None,
+        "access_summary": _access_summary(person) if person.role in STAFF_ROLES else None,
+        "pages": _pages_for(person)})
 
 
 @require_POST
@@ -138,10 +138,43 @@ def user_edit(request, pk):
     return redirect("console:user_detail", pk=pk)
 
 
+def _access_summary(person):
+    rows = account_services.access_table(person)
+    return {"allowed": sum(1 for r in rows if r["effective"]), "total": len(rows), "extra": sum(1 for r in rows if r["extra"] and not r["role_gives"]), "hidden": sum(1 for r in rows if r["hidden"])}
+
+
+def _pages_for(person):
+    """The pages this person's menu offers them, as [(menu, [page, ...])]: exactly what they can open, so an administrator sees the result of the access they set."""
+    from django.test import RequestFactory
+
+    from apps.core import navigation
+
+    request = RequestFactory().get("/")
+    request.user, request.resolver_match = person, None
+    try:
+        main = navigation.build(request, navigation.area_of(request))["main"]
+    except Exception:  # noqa: BLE001 - a list of pages must never break the page about a person
+        return []
+    return [(entry.label, [child.label for child in (entry.children or [])]) for entry in main]
+
+
 @require_POST
 @portal_permission_required(perm("manage_users"), perm("assign_roles"))
 def user_extra_permissions(request, pk):
+    """Save one person's access. The table posts ``access_<permission>`` = default | allow | hide; the older plain list (``permissions``) still means "allow these"."""
     person = get_object_or_404(User, pk=pk, role__in=STAFF_ROLES)
+    posted = [k for k in request.POST if k.startswith("access_")]
+    if posted:
+        allow = {k[len("access_"):] for k in posted if request.POST[k] == "allow"}
+        hide = {k[len("access_"):] for k in posted if request.POST[k] == "hide"}
+        mine = request.user
+        try:
+            account_services.set_permission_access(mine, person, allow, hide, request=request)
+        except ACTION_ERRORS as exc:
+            messages.error(request, error_text(exc))
+        else:
+            messages.success(request, "Extra permissions saved. The access of this person now follows the table below.")
+        return redirect("console:user_detail", pk=pk)
     form = forms.ExtraPermissionsForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Choose valid permissions.")

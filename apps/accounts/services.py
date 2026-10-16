@@ -28,7 +28,7 @@ from apps.notifications import services as notifications
 
 from . import mfa as mfa_lib
 from .models import AccountStatus, MFARecoveryCode, User
-from .roles import ALL_CODENAMES, PRIVILEGED_ROLES, STAFF_ROLES, Role, perm
+from .roles import ALL_CODENAMES, PORTAL_PERMISSIONS, PRIVILEGED_ROLES, ROLE_PERMISSIONS, STAFF_ROLES, Role, perm
 
 logger = logging.getLogger(__name__)
 
@@ -677,3 +677,43 @@ def get_pending_mfa_user(request):
 def clear_mfa_pending(request):
     for key in (MFA_PENDING_SESSION_KEY, MFA_PENDING_EXPIRES_KEY, MFA_PENDING_REMEMBER_KEY, MFA_PENDING_NEXT_KEY):
         request.session.pop(key, None)
+
+
+def set_permission_access(actor, user, allow, hide, *, request=None):
+    """
+    One person's access, permission by permission: ``allow`` = given on top of the role, ``hide`` = taken away from this person although the role gives it, anything else follows the role.
+    The role and everybody else holding it are never touched. Gated exactly like role assignment, and a Super Admin cannot be restricted.
+    """
+    from .models import HiddenPermission
+
+    allow, hide = set(allow or ()), set(hide or ())
+    if allow & hide:
+        raise ServiceError("A permission cannot be both allowed and hidden.", code="invalid_permission")
+    if user.is_superuser:
+        raise ServiceError("A Super Admin always has full access.", code="permission_denied", status_code=status.HTTP_403_FORBIDDEN)
+    unknown = (allow | hide) - set(ALL_CODENAMES)
+    if unknown:
+        raise ServiceError(f"Unknown permission(s): {', '.join(sorted(unknown))}.", code="invalid_permission")
+    before_hidden = set(user.hidden_permissions.values_list("codename", flat=True))
+    set_extra_permissions(actor, user, sorted(allow), request=None)  # the same checks as before; raises when this person may not be changed
+    user.hidden_permissions.exclude(codename__in=hide).delete()
+    for codename in hide - before_hidden:
+        HiddenPermission.objects.get_or_create(user=user, codename=codename)
+    if before_hidden != hide:
+        audit.record("account.permissions_hidden_changed", actor=actor, target=user,
+                     metadata={"hidden": sorted(hide - before_hidden), "shown_again": sorted(before_hidden - hide)}, request=request)
+    audit.record("account.permission_access_saved", actor=actor, target=user, metadata={"allowed": sorted(allow), "hidden": sorted(hide)}, request=request)
+    return user
+
+
+def access_table(user):
+    """Every portal permission for one person: [{codename, label, area, role_gives, extra, hidden, effective}] - what the role gives, what was added, what was hidden, and what that leaves."""
+    role_gives = set(ROLE_PERMISSIONS.get(user.role, [])) if user.role in {r.value for r in Role} else set()
+    extra = set(user.user_permissions.values_list("codename", flat=True))
+    hidden = set(user.hidden_permissions.values_list("codename", flat=True))
+    rows = []
+    for codename, label in PORTAL_PERMISSIONS:
+        given = codename in role_gives
+        rows.append({"codename": codename, "label": label, "role_gives": given, "extra": codename in extra, "hidden": codename in hidden,
+                     "effective": user.is_superuser or ((given or codename in extra) and codename not in hidden)})
+    return rows

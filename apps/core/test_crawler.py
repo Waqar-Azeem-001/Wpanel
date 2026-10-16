@@ -40,6 +40,7 @@ NOT_CLICKABLE_EXACT = {
     "assistant_staff:knowledge_edit": "one knowledge entry; the crawl world has none of its own (tested in apps/core/test_assistant.py)",
     "assistant_staff:knowledge_delete": "deletes one entry (tested in apps/core/test_assistant.py)",
     "assistant_staff:gap_dismiss": "dismisses one unanswered question (tested in apps/core/test_assistant.py)",
+    "hosting_customer:zones": "Zone management of a plan, reached from the plan's Domains menu; the crawl world's plan has no DNS tool (tested in apps/core/test_client_shell.py)",
     "help:vote": "the Was-this-helpful vote of an article page, sent by script (tested in apps/core/test_help_centre.py)",
     "robots": "robots.txt for search engines, not a page people open (tested in apps/core/test_help_centre.py)",
     "sitemap": "sitemap.xml for search engines, not a page people open (tested in apps/core/test_help_centre.py)",

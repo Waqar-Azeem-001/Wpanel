@@ -239,3 +239,40 @@ def my_hosting_dns_action(request, pk):
     except ServiceError as exc:
         messages.error(request, exc.message)
     return redirect(_dns_url(account, domain))
+
+
+ZONE_KINDS = [("", "All zones"), ("primary", "Main domain"), ("addon", "Added domains"), ("alias", "Parked domains")]
+
+
+@login_required
+def my_hosting_zones(request, pk):
+    """Zone management: every DNS zone of the plan in one list, with what each holds, filtered by name or by kind. Editing a zone is the zone editor, one click away."""
+    account = _own_account(request, pk)
+    sidebar = portal.service_sidebar(request, account)
+    if not (_supports(account, "dns") and _supports(account, "domains")):
+        return render(request, "hosting/customer/section.html", {"account": account, "sidebar": sidebar, "section": dashboard.section_page(request.user, account, "dns")})
+    term = (request.GET.get("q") or "").strip().lower()[:100]
+    kind = request.GET.get("kind", "")
+    try:
+        domains = [d for d in _read(request, account, "domains", "list_domains") if d.kind != "subdomain"]
+        limits = _read(request, account, "domains", "domain_limits")
+        rows, total = [], len(domains)
+        for d in domains:
+            if (term and term not in d.name.lower()) or (kind and d.kind != kind):
+                continue
+            try:
+                records = _read(request, account, "dns", "list_dns_records", d.name)
+            except ServiceError:
+                records = None
+            counts = {}
+            for r in records or []:
+                counts[r.type] = counts.get(r.type, 0) + 1
+            rows.append({"name": d.name, "kind": d.kind, "records": None if records is None else len(records), "counts": sorted(counts.items()),
+                         "has_mail": "MX" in counts, "has_spf": any(r.type == "TXT" and r.value.startswith("v=spf1") for r in records or []),
+                         "edit_url": _dns_url(account, d.name), "subs": sum(1 for s in _read(request, account, "domains", "list_domains") if s.kind == "subdomain" and s.name.endswith("." + d.name))})
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        return redirect(_domains_url(account))
+    return render(request, "hosting/customer/zones.html", {
+        "account": account, "sidebar": sidebar, "rows": rows, "total": total, "term": term, "kind": kind, "kinds": ZONE_KINDS, "nameservers": limits.nameservers if limits else [],
+        "domains_url": _domains_url(account)})

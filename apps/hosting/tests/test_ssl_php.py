@@ -251,3 +251,26 @@ def test_strangers_get_nothing_and_a_provider_without_them_shows_the_not_availab
     assert "not available for your hosting server yet" in client.get(purl(account)).content.decode()
     with pytest.raises(ServiceError):
         control.perform(owner, account, "ssl", "list_ssl_status")
+
+
+def test_the_ssl_page_explains_installation_and_status(client, owner, account):
+    client.force_login(owner)
+    page = client.get(surl(account)).content.decode()
+    assert "How to install an SSL certificate" in page and "SSL status" in page
+    assert "Recommended for you" not in page  # nothing to suggest until staff create the add-ons
+
+
+def test_the_ssl_page_suggests_ssl_and_whois_privacy_and_opens_a_filled_in_ticket(client, owner, account, manager):
+    from apps.products.models import AddonKind, BillingCycle
+    from apps.products import services as ps
+    for name, kind in (("Premium SSL", AddonKind.SSL), ("WHOIS Privacy", AddonKind.WHOIS_PRIVACY)):
+        addon = ps.create_addon(manager, {"name": name, "kind": kind})
+        ps.set_addon_status(manager, addon, "active")
+        ps.set_price(manager, addon, billing_cycle=BillingCycle.ANNUAL, price="12.00")
+    client.force_login(owner)
+    page = client.get(surl(account)).content.decode()
+    assert "Recommended for you" in page and "Premium SSL" in page and "WHOIS Privacy" in page
+    from django.urls import reverse
+    assert reverse("support_customer:new") + "?" in page
+    new = client.get(reverse("support_customer:new"), {"hosting_account": account.pk, "subject": "Order: Premium SSL", "body": "Hello"})
+    assert new.status_code == 200 and "Order: Premium SSL" in new.content.decode()

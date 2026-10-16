@@ -11,6 +11,15 @@
 </div>
 
 {% if plans %}
+<section class="card mb-3 em-login" aria-labelledby="em-login-title"><div class="card-body">
+  <h2 class="h6" id="em-login-title"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> {% trans "How to sign in to an email address" %}</h2>
+  <ol class="mb-2 em-login-steps">
+    <li><strong>{% trans "In your browser:" %}</strong> {% trans "press Open webmail next to the address. You are signed in for you, no password to type." %}</li>
+    <li><strong>{% trans "On your phone or in Outlook:" %}</strong> {% trans "use the full email address as the user name and the mailbox password. The server settings are in" %} <a href="{{ help_url }}">{% trans "this guide" %}</a>.</li>
+    <li><strong>{% trans "Forgot the password?" %}</strong> {% trans "press Settings next to the address, then Password, and set a new one." %}</li>
+  </ol>
+  <small class="text-secondary">{% trans "No address yet?" %} <a href="{{ help_create_url }}">{% trans "See how to create one" %}</a>.</small>
+</div></section>
 {% for plan in plans %}
 <section class="card mb-3" aria-labelledby="mail-{{ plan.account.pk }}">
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -29,6 +38,8 @@
   <ul class="mail-rows">
     {% for box in plan.boxes %}
     <li><span class="mail-address"><i class="bi bi-envelope" aria-hidden="true"></i> {{ box.address }}</span>
+      <span class="mail-actions">{% if plan.webmail %}<a class="btn btn-sm btn-primary" href="{{ box.webmail_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Open webmail" %}</a>{% endif %}
+        <a class="btn btn-sm btn-outline-secondary" href="{{ box.settings_url }}"><i class="bi bi-gear" aria-hidden="true"></i> {% trans "Settings" %}</a></span>
       <span class="mail-use">{% if box.percent is not None %}<progress class="usage-meter{% if box.percent >= 95 %} is-danger{% elif box.percent >= 80 %} is-warning{% endif %}" max="100" value="{{ box.percent }}" aria-label="{{ box.address }}">{{ box.percent }}%</progress> {{ box.percent }}%{% else %}<span class="text-secondary">{% trans "unlimited" %}</span>{% endif %}</span></li>
     {% endfor %}
     {% if plan.more %}<li class="text-secondary">{% blocktrans with n=plan.more %}and {{ n }} more{% endblocktrans %}</li>{% endif %}
