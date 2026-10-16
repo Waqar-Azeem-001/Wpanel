@@ -4,13 +4,13 @@
 {% block container %}wide{% endblock %}
 {% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
 {% block content %}
-<div class="page-head page-head-split"><div><h1>{{ c.client }}</h1>
+<div class="page-head"><h1>{{ c.client }}</h1>
   <p class="page-sub"><a href="{% url 'livechat:list' %}">All chats</a> · {{ c.user.email }} ·
     {% if c.status == "waiting" %}<span class="badge text-bg-warning">Waiting for staff{% if waited %} · {{ waited.total_seconds|floatformat:0 }} s{% endif %}</span>
     {% elif c.status == "ai" %}<span class="badge text-bg-primary">AI handling</span>
     {% elif c.status == "with_staff" %}{% if mine %}<span class="badge text-bg-success">With you</span>{% else %}<span class="badge text-bg-secondary">With {{ c.assigned_to.get_full_name|default:c.assigned_to.email }}</span>{% endif %}
     {% else %}<span class="badge text-bg-secondary">Closed</span>{% endif %}
-    {% if c.ticket %} · ticket <a href="{% url 'support_staff:ticket' c.ticket.pk %}">{{ c.ticket.reference }}</a>{% endif %}</p></div>
+    {% if c.ticket %} · ticket <a href="{% url 'support_staff:ticket' c.ticket.pk %}">{{ c.ticket.reference }}</a>{% endif %}</p>
   {% if can_act and c.status == "waiting" or can_act and c.status == "ai" %}
   <form method="post" action="{% url 'livechat:action' c.pk %}">{% csrf_token %}<input type="hidden" name="action" value="take"><button class="btn btn-primary" type="submit"><i class="bi bi-person-check" aria-hidden="true"></i> {% if c.status == "waiting" %}Take chat{% else %}Take over from AI{% endif %}</button></form>
   {% endif %}

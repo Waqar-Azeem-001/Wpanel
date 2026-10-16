@@ -16,7 +16,7 @@ pytestmark = pytest.mark.django_db
 def switched_on(settings):
     settings.ANTHROPIC_API_KEY = "test-key-not-real"
     row = AssistantSettings.load()
-    row.enabled, row.daily_limit = True, 3
+    row.enabled, row.daily_limit, row.mode = True, 3, "claude"
     row.save()
     return row
 
@@ -60,7 +60,7 @@ def test_the_assistant_is_off_until_the_owner_turns_it_on_and_the_key_is_on_the_
         agent.send(owner, conversation, "hello")
     assert err.value.code == "assistant_off" and not agent.available()
     row = AssistantSettings.load()
-    row.enabled = True
+    row.enabled, row.mode = True, "claude"
     row.save()
     with pytest.raises(ServiceError):  # on, but still no key
         agent.send(owner, conversation, "hello")
@@ -227,7 +227,7 @@ def test_staff_set_the_switches_and_read_the_record_but_customers_cannot(world, 
     staff.post(reverse("assistant_staff:settings"), {"model": "bad model name", "daily_limit": "12", "change_hours": "24", "enabled": "on"})
     assert AssistantSettings.load().model == "claude-sonnet-5-5"
     ask.script = [_say("hi")]
-    row.enabled = True
+    row.enabled, row.mode = True, "claude"
     row.save()
     agent.send(owner, _conversation(owner), "hello")
     chat = Conversation.objects.first()
@@ -269,3 +269,106 @@ def test_the_pop_up_chat_is_served_as_a_fragment_and_the_header_opens_it(world, 
     assert "data-agent-open" in page and 'id="agent-pop"' in page and "client-shell.css" in page
     assert "client-shell.css" in client.get(reverse("assistant:chat")).content.decode()  # the page keeps the layout's own styles
     assert client.post(reverse("assistant:new"), HTTP_X_REQUESTED_WITH="fetch").json() == {"ok": True}
+
+
+# --- the knowledge-base mode: no outside service -----------------------------------------------------------------------------------------
+
+@pytest.fixture
+def knowledge_on(settings):
+    settings.ANTHROPIC_API_KEY = ""
+    row = AssistantSettings.load()
+    row.enabled, row.mode, row.daily_limit = True, "knowledge", 50
+    row.save()
+    return row
+
+
+def _ask(owner, text):
+    conversation = _conversation(owner)
+    return [m for m in agent.send(owner, conversation, text) if m.sender == "ai"][-1].body, conversation
+
+
+def test_the_starter_knowledge_is_there_and_the_agent_works_without_any_key(world, owner, account, knowledge_on):  # noqa: F811
+    from apps.assistant.models import KnowledgeEntry
+
+    assert KnowledgeEntry.objects.filter(is_active=True).count() >= 25 and agent.available()
+    text, _ = _ask(owner, "hello")
+    assert "AI Agent" in text
+    text, _ = _ask(owner, "Is my ssl working?")
+    assert account.domain in text and "SSL" in text  # the live check on the customer's own domain
+
+
+def test_a_question_in_roman_urdu_is_matched_and_a_live_check_runs_on_the_domain_named(world, owner, account, knowledge_on, monkeypatch):  # noqa: F811
+    from apps.hosting import care, site_apps
+
+    monkeypatch.setattr(site_apps, "_public", lambda host: True)
+    monkeypatch.setattr(care, "_fetch", lambda url: {"final_url": url, "status": 200, "first_byte_ms": 120, "total_ms": 400, "size": 60000, "redirects": 0, "https": True, "compressed": True, "cached": True})
+    text, conversation = _ask(owner, f"{account.domain} ki website nahi khul rahi")
+    assert account.domain in text and ("opens" in text or "does not open" in text)
+    assert Message.objects.filter(conversation=conversation, sender="event", body="check_website_status").exists()
+    other, _ = _ask(owner, f"disk space kitni hai {account.domain}")
+    assert "Disk" in other and "MB" in other
+
+
+def test_the_agent_asks_which_domain_when_there_are_several_and_remembers_the_question(world, owner, account, knowledge_on):  # noqa: F811
+    from apps.hosting.models import HostingAccount
+
+    second = HostingAccount.objects.create(client=account.client, product=account.product, server=account.server, domain="second-plan.example-test.com", username="second1", status=account.status)
+    text, conversation = _ask(owner, "check my ssl")
+    assert "Which domain" in text and account.domain in text and second.domain in text
+    answer = [m for m in agent.send(owner, conversation, second.domain) if m.sender == "ai"][-1].body
+    assert second.domain in answer and "SSL" in answer
+    conversation.refresh_from_db()
+    assert conversation.pending == {}
+
+
+def test_a_request_for_a_person_or_a_refund_queues_the_chat_and_a_ticket_is_opened_on_request(world, owner, account, knowledge_on):  # noqa: F811
+    Department.objects.get_or_create(slug="technical", defaults={"name": "Technical"})
+    text, conversation = _ask(owner, "I want to talk to a real person")
+    conversation.refresh_from_db()
+    assert conversation.status == "waiting" and "team" in text
+    other = _conversation(owner).__class__.objects.create(user=owner, client=conversation.client)
+    text, other = _ask_in(owner, other, "please open a ticket")
+    other.refresh_from_db()
+    assert "Ticket" in text
+
+
+def _ask_in(owner, conversation, text):
+    return [m for m in agent.send(owner, conversation, text) if m.sender == "ai"][-1].body, conversation
+
+
+def test_what_the_agent_cannot_match_is_kept_for_staff_and_help_articles_are_offered(world, owner, account, knowledge_on):  # noqa: F811
+    from apps.assistant.models import Unanswered
+    from apps.support.models import KBArticle, KBCategory
+
+    category = KBCategory.objects.create(name="Gadget guides", slug="gadget-guides", is_active=True)
+    KBArticle.objects.create(category=category, title="Using the quasar widget", slug="quasar", body="How to use a quasar widget.", is_published=True)
+    text, _ = _ask(owner, "my quasar thing is broken")
+    assert "Using the quasar widget" in text and "/help/gadget-guides/quasar/" in text
+    nothing, _ = _ask(owner, "xyzzy plugh frobnicate")
+    assert "not sure" in nothing and Unanswered.objects.filter(text="xyzzy plugh frobnicate").exists()
+    _ask(owner, "xyzzy plugh frobnicate")
+    assert Unanswered.objects.get(text="xyzzy plugh frobnicate").count == 2
+
+
+def test_staff_teach_the_agent_a_new_answer_from_a_question_it_missed(world, owner, account, knowledge_on):  # noqa: F811
+    from django.test import Client as DjangoClient
+
+    from apps.assistant.models import KnowledgeEntry, Unanswered
+
+    _ask(owner, "kya aap wordpress themes dete hain")
+    staff = DjangoClient()
+    staff.force_login(world.people["super admin"])
+    page = staff.get(reverse("assistant_staff:knowledge"))
+    assert page.status_code == 200 and "kya aap wordpress themes dete hain" in page.content.decode()
+    form = staff.get(reverse("assistant_staff:knowledge_new") + "?q=kya aap wordpress themes dete hain")
+    assert form.status_code == 200
+    saved = staff.post(reverse("assistant_staff:knowledge_new") + "?q=kya aap wordpress themes dete hain", {
+        "title": "Themes", "keywords": "wordpress themes dete hain\nthemes kahan se milte hain", "answer": "Yes, every WordPress theme works on our hosting.", "action": "", "is_active": "on",
+        "sort_order": "50", "resolve": "kya aap wordpress themes dete hain"})
+    assert saved.status_code == 302 and KnowledgeEntry.objects.filter(title="Themes").exists()
+    assert not Unanswered.objects.filter(text="kya aap wordpress themes dete hain").exists()
+    text, _ = _ask(owner, "kya aap wordpress themes dete hain")
+    assert "every WordPress theme" in text
+    bad = staff.post(reverse("assistant_staff:knowledge_new"), {"title": "", "keywords": "", "answer": "", "action": ""})
+    assert bad.status_code == 200 and not KnowledgeEntry.objects.filter(title="").exists()
+    assert browser(owner).get(reverse("assistant_staff:knowledge")).status_code in (302, 403)

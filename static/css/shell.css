@@ -918,3 +918,30 @@ html[data-bs-theme="dark"] .auth-center .auth-panel::before, html[data-bs-theme=
 .foot-social a { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 1px solid var(--foot-line); color: var(--foot-text); text-decoration: none; transition: background .15s ease, color .15s ease; }
 .foot-social a:hover { background: rgba(255, 255, 255, .12); color: #fff; }
 .foot-note { margin-left: .5rem; opacity: .75; }
+
+/* Menus, the newer look: a rounded panel, each area a soft card with its icon tile, long lists in two columns */
+.mega { border-radius: 18px; padding: 1.1rem 1.15rem 1.2rem; border-color: var(--border); box-shadow: 0 22px 55px -18px rgba(15, 23, 42, .35), 0 2px 6px rgba(15, 23, 42, .06); max-width: min(860px, 94vw); }
+.mega-title { margin: 0 0 .8rem .25rem; }
+.mega-grid { gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); align-items: start; }
+.mega-grid[data-cols="1"] { grid-template-columns: minmax(13rem, 1fr); }
+.mega-grid[data-cols="2"] { grid-template-columns: repeat(2, minmax(12rem, 1fr)); }
+.mega-grid[data-cols="3"], .mega-grid[data-cols="4"] { grid-template-columns: repeat(3, minmax(12rem, 1fr)); }
+.mega-col { padding: .6rem .6rem .5rem; border: 1px solid transparent; border-radius: 14px; transition: background .15s var(--ease), border-color .15s var(--ease); }
+.mega-col:hover { background: var(--surface-2); border-color: var(--border); }
+.mega-head { gap: .65rem; padding: .15rem .1rem; font-weight: 650; }
+.mega-head .bi { width: 2.1rem; height: 2.1rem; border-radius: 11px; background: var(--accent-subtle); color: var(--accent-ink); font-size: 1rem; }
+.mega-col ul { margin: .4rem 0 0; padding: 0; }
+.mega-col:has(li:nth-child(8)) ul { columns: 2; column-gap: .5rem; }
+.mega-col:has(li:nth-child(8)) { grid-column: span 2; }
+.mega li a { margin: 0; padding: .36rem .65rem .36rem 2.9rem; border-radius: 9px; }
+.mega-col:has(li:nth-child(8)) li a { padding-left: .65rem; }
+.mega li a:hover { background: var(--accent-subtle); color: var(--accent-ink); }
+.mega li a.is-current { background: var(--accent-subtle); color: var(--accent-ink); }
+.mega.is-small { padding: .45rem; border-radius: 14px; }
+.mega.is-small li a { padding: .5rem .8rem; }
+@media (max-width: 991.98px) {
+  .mega-col, .mega-col:hover { padding: 0; border-color: transparent; background: none; }
+  .mega-col:has(li:nth-child(8)) { grid-column: auto; }
+  .mega-col:has(li:nth-child(8)) ul { columns: 1; }
+  .mega li a, .mega-col:has(li:nth-child(8)) li a { padding-left: .6rem; }
+}

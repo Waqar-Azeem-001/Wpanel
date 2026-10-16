@@ -14,7 +14,7 @@ from apps.core.exceptions import ServiceError
 
 from . import agent, live
 from .views_chats import serialise
-from .models import AssistantSettings, Conversation, ConversationStatus, Message, SenderType
+from .models import AssistantSettings, Conversation, ConversationStatus, KnowledgeEntry, Message, SenderType, Unanswered
 
 SHOWN = 60
 
@@ -175,14 +175,16 @@ def staff_settings(request):
             messages.error(request, getattr(exc, "message", "The daily limit is a number from 1 to 500."))
         else:
             config.enabled, config.model, config.daily_limit, config.change_hours = request.POST.get("enabled") == "on", model, limit, hours
+            config.mode = "claude" if request.POST.get("mode") == "claude" else "knowledge"
             config.save()
-            audit.record("assistant.settings_saved", actor=request.user, target=config, metadata={"enabled": config.enabled, "model": model, "daily_limit": limit}, request=request)
+            audit.record("assistant.settings_saved", actor=request.user, target=config, metadata={"enabled": config.enabled, "mode": config.mode, "model": model, "daily_limit": limit}, request=request)
             messages.success(request, "The assistant settings were saved.")
         return redirect("assistant_staff:settings")
     start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     return render(request, "assistant/settings.html", {
         "config": config, "can_manage": can_manage, "key_set": bool(agent.api_key()), "today": Message.objects.filter(sender=SenderType.CLIENT, created_at__gte=start).count(),
-        "chats": Conversation.objects.select_related("client", "user", "ticket").order_by("-updated_at")[:25]})
+        "chats": Conversation.objects.select_related("client", "user", "ticket").order_by("-updated_at")[:25],
+        "entries": KnowledgeEntry.objects.filter(is_active=True).count(), "gaps": Unanswered.objects.count()})
 
 
 @login_required

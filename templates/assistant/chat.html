@@ -3,8 +3,8 @@
 {% block title %}{% trans "AI Agent" %} · {{ SITE_NAME }}{% endblock %}
 {% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/assistant.css' %}">{% endblock %}
 {% block content %}
-<div class="page-head page-head-split"><div><h1>{% trans "AI Agent" %}</h1>
-  <p class="page-sub">{% trans "Ask about your website, email, SSL, domains or invoices, or how to do something in the panel. The Agent looks at your own account. For a change on the server it asks our team, who do it within the time it tells you." %}</p></div>
+<div class="page-head"><h1>{% trans "AI Agent" %}</h1>
+  <p class="page-sub">{% trans "Ask about your website, email, SSL, domains or invoices, or how to do something in the panel. The Agent looks at your own account. For a change on the server it asks our team, who do it within the time it tells you." %}</p>
   <div class="d-flex gap-2 flex-wrap">
     <form method="post" action="{% url 'assistant:new' %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% trans "New chat" %}</button></form>
     <form method="post" action="{% url 'assistant:handoff' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit"{% if waiting or with_person %} disabled{% endif %}><i class="bi bi-person-lines-fill" aria-hidden="true"></i> {% trans "Talk to a person" %}</button></form>

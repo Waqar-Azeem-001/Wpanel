@@ -75,7 +75,7 @@ def check_website_status(ctx, domain=""):
     account, name = _resolve(ctx.user, domain)
     test = care.speed_test(account, domain=_site(account, name))
     return {"domain": name, "reachable": test.ok, "http_status": test.status_code, "first_byte_ms": test.first_byte_ms, "total_ms": test.total_ms, "https": test.https, "score": test.score,
-            "advice": test.advice, "error": test.error}
+            "advice": test.advice, "problem": test.error}
 
 
 def check_ssl(ctx, domain=""):

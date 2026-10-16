@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{% if entry %}Edit entry{% else %}New entry{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% if entry %}Edit entry{% else %}New entry{% endif %}</h1>
+  <p class="page-sub"><a href="{% url 'assistant_staff:knowledge' %}">All entries</a></p></div>
+<form method="post" class="card" novalidate>{% csrf_token %}<input type="hidden" name="resolve" value="{{ resolve }}">
+  <div class="card-body vstack gap-3">
+    <div><label class="form-label" for="title">Title</label><input class="form-control" id="title" name="title" value="{{ v.title }}" maxlength="120"{% if not can_manage %} disabled{% endif %}></div>
+    <div><label class="form-label" for="keywords">How customers ask it</label>
+      <textarea class="form-control" id="keywords" name="keywords" rows="7"{% if not can_manage %} disabled{% endif %}>{{ v.keywords }}</textarea>
+      <div class="form-text">One wording per line, in English, Urdu or Roman Urdu: <em>website down</em>, <em>site nahi khul rahi</em>. A short, specific wording works best.</div></div>
+    <div><label class="form-label" for="answer">Answer</label><textarea class="form-control" id="answer" name="answer" rows="7"{% if not can_manage %} disabled{% endif %}>{{ v.answer }}</textarea>
+      <div class="form-text">Say where in the panel to go, for example <em>Hosting plan &gt; SSL</em>. When the entry runs a check, its result is added under the answer.</div></div>
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label" for="action">Also do</label><select class="form-select" id="action" name="action"{% if not can_manage %} disabled{% endif %}>{% for value, label in actions %}<option value="{{ value }}"{% if v.action == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label" for="order">Order</label><input class="form-control" id="order" name="sort_order" type="number" min="0" max="32000" value="{{ v.sort_order }}"{% if not can_manage %} disabled{% endif %}></div>
+      <div class="col-md-3 d-flex align-items-end"><label class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="is_active"{% if v.is_active %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label">On</span></label></div>
+    </div>
+    {% if can_manage %}<div class="d-flex gap-2"><button class="btn btn-primary" type="submit">Save</button></div>{% endif %}
+  </div>
+</form>
+{% if entry and can_manage %}<form method="post" action="{% url 'assistant_staff:knowledge_delete' entry.pk %}" class="mt-3">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Delete this entry</button></form>{% endif %}
+{% endblock %}

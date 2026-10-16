@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Agent knowledge · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Agent knowledge</h1>
+  <p class="page-sub">What the AI Agent knows. When a customer writes something, the Agent finds the entry whose wordings fit best and answers with it, and an entry can also run a live check on the customer's own account. <a href="{% url 'assistant_staff:settings' %}">Back to AI Agent</a>
+    {% if can_manage %}<a class="btn btn-primary ms-2" href="{% url 'assistant_staff:knowledge_new' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> New entry</a>{% endif %}</p></div>
+
+{% if gaps %}
+<section class="card mb-4"><div class="card-header"><h2 class="h6 mb-0">Questions the Agent could not answer</h2></div>
+  <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>What customers wrote</th><th>Times</th><th></th></tr></thead>
+    <tbody>{% for g in gaps %}<tr><td>{{ g.text }}</td><td>{{ g.count }}</td><td class="text-end text-nowrap">
+      {% if can_manage %}<a class="btn btn-sm btn-primary" href="{% url 'assistant_staff:knowledge_new' %}?q={{ g.text|urlencode }}">Write an answer</a>
+      <form method="post" action="{% url 'assistant_staff:gap_dismiss' g.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" type="submit">Dismiss</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div></section>
+{% endif %}
+
+<section class="card"><div class="card-header"><h2 class="h6 mb-0">Entries ({{ entries|length }})</h2></div>
+  <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Entry</th><th>Does</th><th>Used</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for e in entries %}<tr><td><a href="{% url 'assistant_staff:knowledge_edit' e.pk %}">{{ e.title }}</a><div class="small text-secondary">{{ e.keywords|truncatechars:90 }}</div></td>
+      <td>{{ e.get_action_display }}</td><td>{{ e.hits }}</td><td>{% if e.is_active %}<span class="badge text-bg-success">On</span>{% else %}<span class="badge text-bg-secondary">Off</span>{% endif %}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'assistant_staff:knowledge_edit' e.pk %}">Edit</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="text-secondary">No entries yet.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

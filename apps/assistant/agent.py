@@ -15,7 +15,7 @@ from rest_framework import status
 from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
-from . import knowledge, tools
+from . import brain, knowledge, tools
 from .models import AssistantSettings, Conversation, ConversationStatus, Message, SenderType
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def api_key():
 
 def available(config=None):
     config = config or AssistantSettings.load()
-    return bool(config.enabled and api_key())
+    return bool(config.enabled and (config.mode == "knowledge" or api_key()))
 
 
 def call_model(model, system, messages, tool_list):
@@ -89,7 +89,7 @@ def send(user, conversation, text, request=None):
         if not text:
             raise ServiceError("Write your message first.", code="empty")
         return [Message.objects.create(conversation=conversation, sender=SenderType.CLIENT, body=text)]
-    if not config.enabled or not api_key():
+    if not available(config):
         raise ServiceError("The AI Agent is not switched on yet. Please open a ticket and our team will help.", code="assistant_off", status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
     if not text:
         raise ServiceError("Write your message first.", code="empty")
@@ -98,6 +98,12 @@ def send(user, conversation, text, request=None):
     if used_today(conversation.client) >= config.daily_limit:
         raise ServiceError("You have reached today's message limit for the AI Agent. Please open a ticket, or try again tomorrow.", code="daily_limit",
                            status_code=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    if config.mode == "knowledge":  # the Agent's own knowledge base: no outside service
+        Message.objects.create(conversation=conversation, sender=SenderType.CLIENT, body=text)
+        saved = brain.reply(user, conversation, text, request=request)
+        conversation.save(update_fields=["updated_at", "status"])
+        return saved
 
     from apps.branding.models import BrandSettings
 
