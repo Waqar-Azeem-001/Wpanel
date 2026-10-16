@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{% if page %}{{ page.title }}{% else %}New page{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide shop-page{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% if page %}Edit page{% else %}New page{% endif %}</h1>
+  <p class="page-sub"><a href="{% url 'brand_staff:pages' %}">&larr; All pages</a>{% if page and page.is_published %} &middot; <a href="{% url 'public_page' page.slug %}" target="_blank" rel="noopener noreferrer">View it</a>{% endif %}</p></div>
+<form method="post" novalidate class="shop-main">{% csrf_token %}
+  <section class="shop-card"><div class="row g-3">
+    <div class="col-md-8"><label class="form-label" for="p_title">Title</label><input class="form-control" id="p_title" name="title" value="{{ v.title }}" maxlength="120" required{% if not can_manage %} disabled{% endif %}></div>
+    <div class="col-md-4"><label class="form-label" for="p_slug">Address</label><div class="input-group"><span class="input-group-text">/p/</span><input class="form-control" id="p_slug" name="slug" value="{{ v.slug }}" maxlength="60" placeholder="about-us" required{% if not can_manage %} disabled{% endif %}></div></div>
+    <div class="col-12"><label class="form-label" for="p_body">Text</label><textarea class="form-control" id="p_body" name="body" rows="14" required{% if not can_manage %} disabled{% endif %}>{{ v.body }}</textarea>
+      <div class="form-text">Plain text. A blank line starts a new paragraph, a line starting with # is a heading, and a web address becomes a link.</div></div>
+    <div class="col-md-3"><label class="form-label" for="p_order">Order in the footer</label><input class="form-control" id="p_order" name="sort_order" type="number" min="0" max="32000" value="{{ v.sort_order }}"{% if not can_manage %} disabled{% endif %}></div>
+    <div class="col-md-9 d-flex flex-wrap gap-4 align-items-end">
+      <label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_published"{% if v.is_published %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label">Published</span></label>
+      <label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="in_footer"{% if v.in_footer %} checked{% endif %}{% if not can_manage %} disabled{% endif %}> <span class="form-check-label">List in the footer</span></label>
+    </div>
+  </div></section>
+  {% if can_manage %}<div class="d-flex justify-content-between">
+    {% if page %}<button class="btn btn-outline-danger" type="submit" form="delete-page" data-confirm="Delete this page for good?">Delete</button>{% else %}<span></span>{% endif %}
+    <button class="btn btn-primary" type="submit">Save the page</button></div>{% endif %}
+</form>
+{% if page and can_manage %}<form id="delete-page" method="post" action="{% url 'brand_staff:page_delete' page.pk %}">{% csrf_token %}</form>{% endif %}
+{% endblock %}

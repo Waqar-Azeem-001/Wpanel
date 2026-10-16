@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Contact us" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}narrow{% endblock %}
+{% block content %}
+<header class="page-head"><h1>{% trans "Contact us" %}</h1><p class="page-sub">{% trans "The quickest way to a person is a ticket from your account: we answer there and you can follow the whole conversation." %}</p></header>
+<div class="row g-3">
+  <div class="col-md-6"><section class="card h-100"><div class="card-body">
+    <h2 class="h5">{% trans "Support" %}</h2>
+    {% if user.is_authenticated %}<p class="text-secondary">{% trans "Open a ticket and our team replies in your account." %}</p><a class="btn btn-primary" href="{% url 'support_customer:new' %}">{% trans "Open a ticket" %}</a>
+    {% else %}<p class="text-secondary">{% trans "Sign in to open a ticket. New here? Create an account first: it takes a minute." %}</p><a class="btn btn-primary" href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a> <a class="btn btn-outline-secondary" href="{% url 'accounts:register' %}">{% trans "Create an account" %}</a>{% endif %}
+    <p class="small text-secondary mt-3 mb-0">{% trans "Looking for an answer yourself?" %} <a href="{% url 'help:index' %}">{% trans "Help centre" %}</a></p>
+  </div></section></div>
+  {% if email or phone or address %}
+  <div class="col-md-6"><section class="card h-100"><div class="card-body">
+    <h2 class="h5">{% trans "Reach us" %}</h2>
+    <ul class="list-unstyled mb-0 contact-list">
+      {% if email %}<li><i class="bi bi-envelope" aria-hidden="true"></i> <a href="mailto:{{ email }}">{{ email }}</a></li>{% endif %}
+      {% if phone %}<li><i class="bi bi-telephone" aria-hidden="true"></i> <a href="tel:{{ phone|cut:' ' }}">{{ phone }}</a></li>{% endif %}
+      {% if address %}<li><i class="bi bi-geo-alt" aria-hidden="true"></i> <span>{{ address|linebreaksbr }}</span></li>{% endif %}
+    </ul>
+  </div></section></div>
+  {% endif %}
+</div>
+{% endblock %}

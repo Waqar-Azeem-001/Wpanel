@@ -8,7 +8,7 @@ from django.shortcuts import redirect, render
 from apps.accounts.roles import perm
 from apps.core.web import ACTION_ERRORS, apply_form_error
 
-from . import forms, services
+from . import forms, home, services
 from .models import BrandSettings
 
 ASSET_CACHE = "public, max-age=3600"
@@ -107,6 +107,45 @@ def posted_policy_links(request):
     """The policy rows as typed: [{"title", "url"}], the boxes repeating their names."""
     titles, urls = request.POST.getlist("policy_title"), request.POST.getlist("policy_url")
     return [{"title": title, "url": urls[i] if i < len(urls) else ""} for i, title in enumerate(titles)]
+
+
+def posted_rows(request, prefix, fields):
+    """Repeating rows as typed, the boxes repeating their names: [{field: value}]."""
+    columns = {field: request.POST.getlist(f"{prefix}_{field}") for field in fields}
+    count = max([len(v) for v in columns.values()] or [0])
+    return [{field: (columns[field][i] if i < len(columns[field]) else "") for field in fields} for i in range(count)]
+
+
+def home_page(request):
+    """Setup > Home page: the words of the front page. Prices, plans and extensions are read live and cannot be typed here."""
+    if not request.user.is_authenticated:
+        return redirect_to_login(request.get_full_path())
+    if not request.user.has_perm(perm("view_settings")):
+        raise PermissionDenied
+    can_manage = request.user.has_perm(perm("manage_settings"))
+    current = home.get()
+    faq_rows, why_rows = list(current["faq_items"]), list(current["why_items"])
+    if request.method == "POST":
+        if not can_manage:
+            raise PermissionDenied
+        try:
+            if request.POST.get("do") == "reset":
+                home.reset(request.user, request=request)
+                messages.success(request, "The front page is back to its standard words.")
+                return redirect("brand_staff:home")
+            faq_rows, why_rows = posted_rows(request, "faq", ("q", "a")), posted_rows(request, "why", ("icon", "title", "text"))
+            values = {k: request.POST.get(k, "") for section in home.SECTIONS for k, *_ in section["fields"]}
+            values.update({toggle: request.POST.get(toggle) == "on" for toggle in home.TOGGLES})
+            changed = home.save(request.user, values, faq_rows, why_rows, request=request)
+            messages.success(request, "The front page was saved." if changed else "Nothing was changed.")
+            return redirect("brand_staff:home")
+        except ACTION_ERRORS as exc:
+            messages.error(request, str(getattr(exc, "message", exc)))
+            current = {**current, **{k: request.POST.get(k, "") for section in home.SECTIONS for k, *_ in section["fields"]}}
+    sections = [{**section, "enabled": current.get(section["toggle"], True) if section["toggle"] else True,
+                 "fields": [{"key": k, "label": label, "kind": kind, "value": current.get(k, default)} for k, label, kind, default in section["fields"]]} for section in home.SECTIONS]
+    return render(request, "branding/home.html", {"sections": sections, "faq_rows": faq_rows, "why_rows": why_rows, "icons": home.ICONS, "can_manage": can_manage,
+                                                  "tokens": ("domain_from", "plan_from", "currency", "payment_methods", "support_email", "phone")})
 
 
 def posted_social_links(request):

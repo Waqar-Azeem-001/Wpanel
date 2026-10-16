@@ -24,6 +24,8 @@ NOT_CLICKABLE_EXACT = {
     "hosting_customer:site_setup": "the set-up of a website on a domain added to a plan; the crawl world has no added domain (tested in apps/core/test_client_shell.py)",
     "preview_resolve": "the web server's own question about a preview host; answers only with the shared key (tested in apps/core/test_client_shell.py)",
     "hosting_customer:wordpress": "WordPress > Overview: listed in the website menu only for a WordPress website (tested in apps/core/test_client_shell.py)",
+    "public_page": "an owner-written page: it exists only once staff write one (tested in apps/core/test_client_shell.py)",
+    "brand_staff:page": "edit one of the owner-written pages: needs a page to exist (tested in apps/core/test_client_shell.py)",
     "hosting_customer:statistics": "opens the server's own visitor statistics through a one-time sign-in; a button on the traffic page, redirects away (tested in apps/core/test_client_shell.py)",
     "hosting_customer:domain_page": "Subdomains, Parked domains and Redirects: listed in the website menu when the server offers domains (tested in apps/core/test_client_shell.py)",
     "hosting_customer:wordpress_do": "the WordPress overview switches and installs; POST only (tested in apps/core/test_client_shell.py)",

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} · {{ SITE_NAME }}{% endblock %}
+{% block container %}narrow{% endblock %}
+{% block content %}
+{% if draft %}<div class="alert alert-warning" role="status">This page is a draft: only staff can see it. Publish it in Setup &gt; Pages.</div>{% endif %}
+<article class="page-article">
+  <header class="page-head"><h1>{{ page.title }}</h1></header>
+  <div class="page-body">{{ body }}</div>
+</article>
+{% endblock %}

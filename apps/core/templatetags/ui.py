@@ -28,7 +28,7 @@ def public_menu():
 @register.simple_tag
 def footer_info():
     """What the store footer lists, all of it real: the store categories, the ways to pay and the company's contact details."""
-    info = {"categories": [], "addons": [], "help": [], "methods": [], "phone": "", "address": ""}
+    info = {"categories": [], "addons": [], "help": [], "pages": [], "methods": [], "phone": "", "address": ""}
     try:
         from apps.billing.models import BillingSettings, PaymentMethod
         from apps.products import categories
@@ -36,6 +36,9 @@ def footer_info():
 
         info["categories"] = [c for c in categories.active() if c.kind == CategoryKind.PLANS][:8]
         info["addons"] = [c for c in categories.active() if c.kind == CategoryKind.ADDONS][:4]
+        from apps.branding import pages as site_pages
+
+        info["pages"] = site_pages.footer_links()
         try:
             from apps.support import kb
 

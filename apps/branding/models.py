@@ -106,3 +106,40 @@ class BrandSettings(models.Model):
         """The row, without the (possibly large) image columns."""
         row = cls.objects.defer("logo", "favicon", "logo_dark", "mark_dark").filter(pk=1).first()
         return row or cls.objects.create(pk=1)
+
+
+class HomeContent(models.Model):
+    """The words of the front page (Setup > Home page): only what the owner changed is kept, the rest are the standard words (apps/branding/home.py)."""
+
+    content = models.JSONField(default=dict, blank=True)
+    version = models.PositiveIntegerField(default=1, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "home page content"
+        verbose_name_plural = "home page content"
+
+    @classmethod
+    def load(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    def __str__(self):
+        return "Home page content"
+
+
+class PublicPage(models.Model):
+    """A page the owner writes in Setup > Pages (About us, Terms, a guide ...): public at /p/<slug>/ once published, and listed in the footer when asked."""
+
+    slug = models.SlugField(max_length=60, unique=True, help_text="The end of the page's address, for example about-us.")
+    title = models.CharField(max_length=120)
+    body = models.TextField(help_text="Plain text. A blank line starts a new paragraph; a line starting with # is a heading.")
+    is_published = models.BooleanField(default=False, help_text="Unpublished pages are only a draft: visitors get a 404.")
+    in_footer = models.BooleanField(default=True, help_text="List the page in the footer's Company column.")
+    sort_order = models.PositiveSmallIntegerField(default=100, help_text="Lower numbers come first.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "title"]
+
+    def __str__(self):
+        return self.title

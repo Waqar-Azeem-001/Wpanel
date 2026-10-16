@@ -16,6 +16,7 @@ from apps.core.web import run_action
 
 from . import categories, forms, services
 from .models import Addon, CatalogStatus, Product, Server, StoreCategory
+from apps.branding import services as branding
 from apps.branding.services import store_currency
 
 
@@ -135,7 +136,22 @@ def public_home(request):
     chosen.sort(key=lambda p: min([x.price for x in p.prices.all() if x.is_active] or [float("inf")]))
     cheapest_domain = min(prices.values(), key=lambda t: t.register_price) if prices else None
     return render(request, "public/home.html", {"tiles": tiles, "cat": cat, "popular_tlds": popular, "plans": chosen, "cheapest_domain": cheapest_domain,
-                                                 "lowest_plan": cheapest[0] if cheapest else None})
+                                                 "lowest_plan": cheapest[0] if cheapest else None,
+                                                 "home": _home_words(cheapest_domain, cheapest[0] if cheapest else None)})
+
+
+def _home_words(cheapest_domain, lowest_plan):
+    """The front page's words (Setup > Home page) with their live figures filled in: the lowest domain and plan price, the currency, the ways to pay."""
+    from apps.branding import home
+    from apps.core.templatetags.ui import footer_info, money
+
+    currency = store_currency()
+    info = footer_info()
+    lowest = categories.lowest_price(lowest_plan) if lowest_plan is not None else None
+    values = {"currency": currency, "payment_methods": ", ".join(m["name"] for m in info["methods"]) or "bank transfer",
+              "domain_from": money(cheapest_domain.register_price, currency) if cheapest_domain else "",
+              "plan_from": money(lowest.price, currency) if lowest else "", "support_email": branding.get().support_email, "phone": info["phone"]}
+    return home.with_tokens(home.get(), values)
 
 
 def public_addon_list(request):

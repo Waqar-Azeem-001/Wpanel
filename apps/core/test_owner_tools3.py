@@ -368,7 +368,7 @@ def test_a_paid_invoice_is_marked_after_its_content_so_tables_cannot_hide_it(man
 
 def test_the_client_footer_has_columns_and_the_staff_footer_is_slim(owner_user, boss):
     page = browser(owner_user).get(reverse("dashboard")).content.decode()
-    assert page.count('class="foot-col"') == 5 and "Open a ticket" in page and "Affiliate programme" in page and "foot-cta" in page
+    assert page.count('class="foot-col"') == 6 and "Open a ticket" in page and "Affiliate programme" in page and "foot-cta" in page
     staff_page = browser(boss).get(reverse("console:dashboard")).content.decode()
     assert "app-footer-slim" in staff_page and "foot-col" not in staff_page
     assert "site-footer" in browser().get(reverse("catalog:product_list")).content.decode()  # the store, signed out, has it too

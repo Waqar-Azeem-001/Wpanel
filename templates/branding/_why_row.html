@@ -1,0 +1,6 @@
+<div class="limit-row" data-row>
+  <select class="form-select w-auto" name="why_icon" aria-label="Icon">{% for value, label in icons %}<option value="{{ value }}"{% if value == icon %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <input class="form-control" name="why_title" value="{{ title }}" maxlength="80" placeholder="Title, e.g. Free SSL certificate" aria-label="Promise title">
+  <input class="form-control" name="why_text" value="{{ text }}" maxlength="240" placeholder="One short line" aria-label="Promise text">
+  <button class="btn btn-sm btn-outline-danger" type="button" data-rows-remove aria-label="Remove this promise"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+</div>

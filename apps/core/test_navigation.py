@@ -180,7 +180,7 @@ def test_a_group_appears_only_when_something_in_it_can_be_opened(agent, technica
     assert group(technical, "staff.billing") is None and group(technical, "staff.catalog") is None
     assert [c.label for c in group(technical, "staff.providers").children] == ["Servers"]  # no registrar, email, payments
     assert [c.label for c in group(admin, "staff.settings").children] == [
-        "Brand", "Customer menu", "Billing", "Tax rules", "Lifecycle timings", "Domain registration", "Affiliate programme"]
+        "Brand", "Customer menu", "Home page", "Pages", "Billing", "Tax rules", "Lifecycle timings", "Domain registration", "Affiliate programme"]
     assert [c.label for c in group(agent, "staff.settings").children] == ["Billing", "Tax rules"]
 
 

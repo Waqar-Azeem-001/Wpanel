@@ -975,3 +975,133 @@ def test_the_footer_is_expanded_and_shows_social_links_when_the_owner_set_them(c
     foot = client.get("/").content.decode().split('<footer class="app-footer site-footer">')[1]
     assert "foot-social" in foot and "bi-facebook" in foot and "bi-whatsapp" in foot and 'aria-label="Facebook"' in foot
     assert "Prices are shown in" in foot
+
+
+# --- the front page's words are editable; its figures are live --------------------------------------------------------------------
+
+def test_front_page_figures_follow_the_backend_and_words_follow_setup(client, world):  # noqa: F811
+    from apps.branding import home
+    from apps.domains.models import TldPricing
+    from apps.products.models import Product
+
+    staff = world.people["super admin"]
+    before = client.get("/").content.decode()
+    assert "Your idea, online." in before
+    # a price changed in the backend shows on the front page with no other step
+    TldPricing.objects.all().delete()
+    TldPricing.objects.create(tld=".live", register_price=1234, renew_price=1500, transfer_price=1200)
+    html = client.get("/").content.decode()
+    assert ".live" in html and "1,234.00" in html
+    # the words come from Setup
+    home.save(staff, {"hero_title": "Launch faster.\nGrow calmer.", "hero_text": "From {domain_from} a year. Pay by {payment_methods} in {currency}.", "show_faq": False,
+                      "show_tools": True, "show_plans_card": True, "show_ask": True, "show_essentials": True, "show_choose": True, "show_power": True, "show_why": True, "show_cta": True},
+              [{"q": "Why us?", "a": "Because."}], [{"icon": "bi-lock", "title": "Locked down", "text": "Safe."}])
+    html = client.get("/").content.decode()
+    assert "Launch faster." in html and "Grow calmer." in html and "From PKR 1,234.00 a year" in html or "1,234.00 a year" in html
+    assert "Frequently asked questions" not in html  # the section was switched off
+    assert "Locked down" in html
+    TldPricing.objects.all().update(register_price=999)
+    assert "999.00 a year" in client.get("/").content.decode()  # the figure inside the sentence follows the price too
+
+
+def test_an_emptied_box_goes_back_to_the_standard_words_and_reset_restores_everything(client, world):  # noqa: F811
+    from apps.branding import home
+
+    staff = world.people["super admin"]
+    values = {k: "" for section in home.SECTIONS for k, *_ in section["fields"]}
+    values.update({toggle: True for toggle in home.TOGGLES})
+    home.save(staff, values, [], [])
+    page = client.get("/").content.decode()
+    assert "Your idea, online." in page and "Frequently asked questions" not in page  # no questions left: the section is not drawn
+    home.save(staff, {**values, "hero_title": "Custom headline"}, home.DEFAULT_FAQ, home.DEFAULT_WHY)
+    assert "Custom headline" in client.get("/").content.decode()
+    home.reset(staff)
+    page = client.get("/").content.decode()
+    assert "Your idea, online." in page and "Frequently asked questions" in page
+
+
+def test_home_content_is_validated(world):  # noqa: F811
+    from django.core.exceptions import ValidationError
+
+    from apps.branding import home
+
+    staff = world.people["super admin"]
+    with pytest.raises(ValidationError, match="longer than"):
+        home.save(staff, {"hero_title": "x" * 200}, [], [])
+    with pytest.raises(ValidationError, match="both the question"):
+        home.save(staff, {}, [{"q": "Only a question", "a": ""}], [])
+    with pytest.raises(ValidationError, match="needs a title"):
+        home.save(staff, {}, [], [{"icon": "bi-lock", "title": "", "text": "no title"}])
+    rows = home.clean_rows([{"icon": "bi-not-an-icon", "title": "Fine", "text": ""}], "why")
+    assert rows == [{"icon": "bi-shield-check", "title": "Fine", "text": ""}]  # an unknown icon becomes the standard one
+
+
+def test_the_home_page_settings_page_works_for_staff_only(client, world):  # noqa: F811
+    from django.test import Client as DjangoClient
+
+    staff = world.people["super admin"]
+    c = DjangoClient()
+    c.force_login(staff)
+    page = c.get("/staff/settings/brand/home/")
+    html = page.content.decode()
+    assert page.status_code == 200 and "Prices, plans, domain extensions and categories are not typed here" in html and "Frequently asked questions" in html
+    posted = {"hero_title": "From the form", "faq_q": ["One?", ""], "faq_a": ["Yes.", ""], "why_icon": ["bi-lock"], "why_title": ["Safe"], "why_text": ["Very."], "show_faq": "on", "do": "save"}
+    reply = c.post("/staff/settings/brand/home/", posted)
+    assert reply.status_code == 302
+    assert "From the form" in client.get("/").content.decode()
+    assert client.get("/staff/settings/brand/home/").status_code == 302  # a visitor is sent to sign in
+    owner = DjangoClient()
+    owner.force_login(world.people["customer owner"])
+    assert owner.get("/staff/settings/brand/home/").status_code in (302, 403, 404)
+
+
+# --- the owner's own pages and the Contact page -----------------------------------------------------------------------------------
+
+def test_a_page_written_in_setup_is_public_once_published_and_listed_in_the_footer(client, world):  # noqa: F811
+    from django.test import Client as DjangoClient
+
+    staff = DjangoClient()
+    staff.force_login(world.people["super admin"])
+    assert staff.get("/staff/settings/brand/pages/").status_code == 200
+    reply = staff.post("/staff/settings/brand/pages/new/", {"title": "About us", "slug": "about-us", "body": "# Who we are\n\nWe host websites.\nSee https" + "://example.org/team for the team.",
+                                                              "sort_order": "10", "in_footer": "on"})
+    assert reply.status_code == 302
+    assert client.get("/p/about-us/").status_code == 404  # a draft is not public
+    assert staff.get("/p/about-us/").status_code == 200  # but staff can preview it
+    page = __import__("apps.branding.models", fromlist=["PublicPage"]).PublicPage.objects.get(slug="about-us")
+    staff.post(f"/staff/settings/brand/pages/{page.pk}/", {"title": "About us", "slug": "about-us", "body": page.body, "sort_order": "10", "in_footer": "on", "is_published": "on"})
+    shown = client.get("/p/about-us/")
+    html = shown.content.decode()
+    assert shown.status_code == 200 and "<h2>Who we are</h2>" in html and "We host websites.<br>" in html and 'href="https' in html and "<script>alert" not in html
+    footer = client.get("/").content.decode().split('<footer class="app-footer site-footer">')[1]
+    assert 'href="/p/about-us/"' in footer and "About us" in footer and "Contact us" in footer
+
+
+def test_page_text_cannot_inject_markup_and_reserved_addresses_are_refused(world):  # noqa: F811
+    from django.core.exceptions import ValidationError
+
+    from apps.branding import pages
+
+    html = pages.render_body("<script>alert(1)</script> & <b>bold</b>")
+    assert "<script>" not in html and "&lt;script&gt;" in html and "&amp;" in html
+    staff = world.people["super admin"]
+    with pytest.raises(ValidationError, match="used by the site itself"):
+        pages.save(staff, None, {"slug": "pricing", "title": "Prices", "body": "x"})
+    with pytest.raises(ValidationError, match="Write something"):
+        pages.save(staff, None, {"slug": "empty", "title": "Empty", "body": "  "})
+    first = pages.save(staff, None, {"slug": "terms", "title": "Terms", "body": "x"})
+    with pytest.raises(ValidationError, match="already has that address"):
+        pages.save(staff, None, {"slug": "terms", "title": "Terms 2", "body": "y"})
+    pages.delete(staff, first)
+
+
+def test_the_contact_page_uses_the_details_from_setup(client, world):  # noqa: F811
+    from apps.branding import services as branding
+    from apps.billing.models import BillingSettings
+
+    branding.save_settings(world.people["super admin"], values={"support_email": "hello@example.org"})
+    row = BillingSettings.load()
+    row.phone, row.address = "+92 300 1234567", "Office 4, Lahore"
+    row.save()
+    html = client.get("/contact/").content.decode()
+    assert "mailto:hello@example.org" in html and "+92 300 1234567" in html and "Office 4, Lahore" in html and "Sign in" in html

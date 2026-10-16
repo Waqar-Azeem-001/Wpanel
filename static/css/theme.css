@@ -869,3 +869,7 @@ a.use-item:hover { border-color: var(--border-strong); }
 .tld-strip a:hover { border-color: var(--accent); }
 .tld-strip strong { font-size: 1.15rem; }
 .tld-strip span { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+
+/* Pages the owner writes, and the Contact page */
+.page-body { font-size: 1.05rem; line-height: 1.7; max-width: 46rem; } .page-body h2 { font-size: 1.35rem; margin: 1.6rem 0 .5rem; } .page-body p { margin: 0 0 1rem; }
+.contact-list li { display: flex; gap: .7rem; align-items: baseline; margin-bottom: .6rem; } .contact-list .bi { color: var(--brand-primary); }

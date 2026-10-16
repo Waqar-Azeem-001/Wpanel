@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Pages · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide{% endblock %}
+{% block content %}
+<div class="page-head page-head-split"><div><h1>Pages</h1><p class="page-sub">Your own pages: About us, Terms, a guide. A published page opens at <code>/p/its-address/</code> and can be listed in the footer. The <a href="{% url 'contact' %}" target="_blank" rel="noopener noreferrer">Contact page</a> is built in and shows the details you entered in Setup.</p></div>
+  {% if can_manage %}<a class="btn btn-primary" href="{% url 'brand_staff:page_new' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> New page</a>{% endif %}</div>
+<section class="card">
+  {% if pages %}<div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Page</th><th>Address</th><th>Status</th><th>Footer</th><th></th></tr></thead>
+    <tbody>{% for p in pages %}<tr><td><a href="{% url 'brand_staff:page' p.pk %}">{{ p.title }}</a></td><td><code>/p/{{ p.slug }}/</code></td>
+      <td>{% if p.is_published %}<span class="badge text-bg-success">Published</span>{% else %}<span class="badge text-bg-secondary">Draft</span>{% endif %}</td>
+      <td>{% if p.in_footer %}Yes{% else %}No{% endif %}</td><td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'brand_staff:page' p.pk %}">Edit</a></td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}<div class="card-body text-secondary">No pages yet. Add one, for example About us.</div>{% endif %}
+</section>
+{% endblock %}

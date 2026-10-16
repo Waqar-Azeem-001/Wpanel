@@ -70,6 +70,13 @@
             {% if user.is_authenticated %}<li><a href="{% url 'affiliates_customer:dashboard' %}">{% trans "Affiliate programme" %}</a></li>{% endif %}
           </ul>
         </nav>
+        <nav class="foot-col" aria-label="{% trans 'Company' %}">
+          <h2>{% trans "Company" %}</h2>
+          <ul>
+            {% for title, address in foot.pages %}<li><a href="{{ address }}">{{ title }}</a></li>{% endfor %}
+            <li><a href="{% url 'contact' %}">{% trans "Contact us" %}</a></li>
+          </ul>
+        </nav>
         <nav class="foot-col" aria-label="{% trans 'Support' %}">
           <h2>{% trans "Support" %}</h2>
           <ul>
