@@ -42,6 +42,22 @@ def _run(request, action, view_name, **redirect_kwargs):
 
 # --- Public: availability search -----------------------------------------------------------
 
+def _typed_name(raw):
+    """What a visitor typed as a domain name, made tidy: no address prefix, no path, lower case, and a name with no extension (``mybrand``) gets the first extension we sell (.com when we sell it)."""
+    name = (raw or "").strip().lower()
+    for prefix in ("https://", "http://"):
+        if name.startswith(prefix):
+            name = name[len(prefix):]
+    name = name.split("/")[0].split("?")[0]
+    if name.startswith("www."):
+        name = name[4:]
+    if name and "." not in name:
+        active = [t.tld for t in TldPricing.objects.filter(is_active=True).order_by("tld")]
+        if active:
+            name += ".com" if ".com" in active else active[0]
+    return name
+
+
 def _suggestions(result, popular, limit=5):
     """The same name under the other popular extensions, each checked: [{domain, available, pricing}]. A check that fails is left out, never an error."""
     base = result["domain"].split(".")[0]
@@ -64,13 +80,15 @@ def domain_search(request):
     form = forms.AvailabilitySearchForm(request.GET or None)
     result = None
     if request.GET and form.is_valid():
+        typed = _typed_name(form.cleaned_data["domain"])
         try:
-            available, pricing = services.check_availability(form.cleaned_data["domain"])
+            available, pricing = services.check_availability(typed)
         except ServiceError as exc:
             form.add_error("domain", exc.message)
+        except ValidationError as exc:
+            form.add_error("domain", " ".join(exc.messages))
         else:
-            result = {"available": available, "pricing": pricing, "domain": form.cleaned_data["domain"].lower(),
-                     "years": form.cleaned_data["years"]}
+            result = {"available": available, "pricing": pricing, "domain": typed, "years": form.cleaned_data["years"]}
     tlds = list(TldPricing.objects.filter(is_active=True).order_by("tld"))
     by_name = {t.tld: t for t in tlds}
     from apps.products.models import Addon, AddonKind, CatalogStatus

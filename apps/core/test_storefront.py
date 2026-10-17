@@ -185,3 +185,11 @@ def test_dark_mode_keeps_the_logo_readable():
 def test_no_page_hand_codes_the_old_navigation_colour():
     css = (STATIC / "css" / "theme.css").read_text(encoding="utf-8")
     assert ".app-navbar.navbar-client { background: var(--brand-primary); }" not in css
+
+
+def test_a_name_without_an_extension_is_searched_as_dot_com_and_a_bad_name_is_a_message_not_a_crash(client, store):
+    page = client.get(reverse("domains_public:search"), {"domain": "mybrandname", "years": 1}).content.decode()
+    assert "mybrandname.com" in page and "Exact match" in page or "Taken" in page
+    for bad in ("https://www.mybrandname.com/path?x=1", "my brand!!", "-bad-.com"):
+        response = client.get(reverse("domains_public:search"), {"domain": bad, "years": 1})
+        assert response.status_code == 200
