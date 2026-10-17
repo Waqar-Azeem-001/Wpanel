@@ -26,7 +26,7 @@ The full record, with what is tested and what is proven, is in [PROJECT_OVERVIEW
 | AI Agent | chat on every customer page (knowledge base mode, Claude optional), how-to first, changes with Approve, security code for sensitive changes, live chat with a person, callbacks, analytics, staff knowledge editor |
 | Help centre | 110 articles in 9 topics, search, cards, readable article page, structured data, sitemap, robots |
 | Access control | roles, plus per-person extra permissions and hidden permissions, with the person's menu shown |
-| Operations | CI on PostgreSQL, deploy after green tests (waits for the GitHub secret), deploy and failure notices through WHPanel's own email, nightly encrypted backup of the panel database, a database dump before every deploy |
+| Operations | CI on PostgreSQL, deploy after green tests (waits for the GitHub secret), deploy and failure notices through WHPanel's own email, a database dump before every deploy (taken by hand, kept on the same server). The nightly encrypted panel backup is built but does NOT work yet: pg_dump is missing in the image, the folder is not a volume and nothing is copied off the server |
 
 ## Next
 
