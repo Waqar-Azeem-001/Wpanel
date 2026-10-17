@@ -993,3 +993,14 @@ a.use-item:hover { border-color: var(--border-strong); }
 .page-search .btn { border-radius: 999px; }
 .page-hero + .container-xxl, .page-hero + .container-xxl.hero-overlap { margin-top: 0; }
 .page-hero-narrow { max-width: 48rem; margin-inline: auto; }
+
+/* The hero sits on a soft tint of the brand colour, in a rounded panel (as the help centre's did) */
+.page-hero { padding: 1.25rem 0 .75rem; isolation: isolate; }
+.page-hero > .container-xxl { position: relative; padding-block: 2.75rem 2.5rem; }
+.page-hero > .container-xxl::before { content: ""; position: absolute; inset: 0 calc(var(--bs-gutter-x, 1.5rem) * .5); z-index: -1; border-radius: 1.25rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, var(--bg)), color-mix(in srgb, var(--primary) 4%, var(--bg)));
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border)); }
+.page-hero.is-tight > .container-xxl { padding-block: 2rem 1.75rem; }
+.page-hero .lead { margin-bottom: 1.4rem; }
+.page-hero .page-search { background: var(--surface); }
+.page-hero .hero-points { margin-bottom: 0; }

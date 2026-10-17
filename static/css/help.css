@@ -120,3 +120,5 @@
   .help-vote-more { margin-left: 0; }
 }
 @media (max-width: 575.98px) { .help-prevnext { grid-template-columns: 1fr; } .help-prevnext .is-next { grid-column: auto; } }
+.help-search .dm-go i { color: #fff; }
+.help-search.page-search { max-width: 46rem; border-width: 2px; padding: .45rem .5rem .45rem 1.1rem; }
