@@ -80,7 +80,7 @@ def test_the_domain_page_has_a_hero_search_and_price_tiles(client, store):
     response = client.get(reverse("domains_public:search"))
     page = response.content.decode()
     assert response.status_code == 200 and "hero-search" in page and "tld-tile" in page
-    assert page.count('class="tld-tile"') == 35 and ".com" in page and "PKR 4,849.00" in page
+    assert page.count("<tr class=\"tld-tile") == 35 and ".com" in page and "PKR 4,849.00" in page
     assert 'aria-label="Breadcrumb"' not in page
 
 
