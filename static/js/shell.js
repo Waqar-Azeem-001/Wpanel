@@ -318,6 +318,24 @@
     }
   });
 
+  // --- A long table shown short: <table data-collapsed> hides its .is-extra rows until [data-show-all="#id"] is pressed or a filter is typed ---------
+  doc.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-show-all]");
+    if (!button) return;
+    var table = doc.querySelector(button.getAttribute("data-show-all"));
+    if (table) table.classList.add("show-all");
+    button.hidden = true;
+  });
+  doc.addEventListener("input", function (event) {
+    var box = event.target.closest("[data-filter-table]");
+    var table = box && doc.querySelector(box.getAttribute("data-filter-table"));
+    if (table && box.value) {
+      table.classList.add("show-all");
+      var more = doc.querySelector('[data-show-all="' + box.getAttribute("data-filter-table") + '"]');
+      if (more) more.hidden = true;
+    }
+  });
+
   // --- Filter the rows of a table by what is typed: <input data-filter-table="#table-id">, rows carry data-filter-text ---------
   doc.addEventListener("input", function (event) {
     var box = event.target.closest("[data-filter-table]");

@@ -55,20 +55,27 @@
 
 <section class="dm-section" aria-labelledby="dm-why-h">
   <h2 id="dm-why-h">{% blocktrans %}Why buy your domain at {{ SITE_NAME }}?{% endblocktrans %}</h2>
-  <div class="dm-bento">
-    <article class="dm-card is-wide"><span class="chip" aria-hidden="true"><i class="bi bi-eye-slash"></i></span>
-      <h3>{% trans "Privacy" %}</h3>
-      <p>{% trans "When you register a domain, your contact details can appear in the public WHOIS lookup. Add WHOIS privacy and your name, email, phone and address are hidden, while real enquiries are still forwarded to you." %}{% if whois_price %} <strong>{% trans "From" %} {{ whois_price.price|money:STORE_CURRENCY }} / {{ whois_price.get_billing_cycle_display|lower }}.</strong>{% endif %}</p></article>
-    <article class="dm-card"><span class="chip" aria-hidden="true"><i class="bi bi-sliders"></i></span>
-      <h3>{% trans "Manage it yourself" %}</h3>
-      <p>{% trans "Nameservers, DNS records, the registrar lock and auto-renew are all in your account. No ticket needed." %}</p></article>
-    <article class="dm-card"><span class="chip" aria-hidden="true"><i class="bi bi-headset"></i></span>
-      <h3>{% trans "Support when you need it" %}</h3>
-      <p>{% trans "Ask through your panel at any time, or open a ticket. Our help centre has step-by-step guides for every common task." %}</p></article>
-    <article class="dm-card is-wide"><span class="chip" aria-hidden="true"><i class="bi bi-lightning-charge"></i></span>
-      <h3>{% trans "Quick, simple set-up" %}</h3>
-      <p>{% trans "Search, add to your cart and pay. Then point the domain to your hosting in a few clicks, or add it to a hosting plan in the same order." %}</p>
-      <p class="mb-0"><a class="btn btn-primary btn-sm" href="#top-search">{% trans "Find your domain" %}</a></p></article>
+  <div class="dm-why">
+    <article class="dm-mock" aria-hidden="true">
+      <div class="dm-url"><i class="bi bi-lock-fill"></i><span>www.yourbusiness.com</span></div>
+      <ul class="dm-rows">
+        <li><span><i class="bi bi-eye-slash"></i> WHOIS privacy</span><b class="dm-switch is-on"></b></li>
+        <li><span><i class="bi bi-lock"></i> Registrar lock</span><b class="dm-tag">Locked</b></li>
+        <li><span><i class="bi bi-arrow-repeat"></i> Auto-renew</span><b class="dm-switch is-on"></b></li>
+        <li><span><i class="bi bi-shield-check"></i> SSL certificate</span><b class="dm-tag is-ok">Active</b></li>
+      </ul>
+      <p class="dm-mock-note">{% trans "All in your account, one click each" %}</p>
+    </article>
+    <div class="dm-why-grid">
+      <article class="dm-card"><span class="chip c1" aria-hidden="true"><i class="bi bi-eye-slash"></i></span><h3>{% trans "Privacy" %}</h3>
+        <p>{% trans "Hide your name, email, phone and address from the public WHOIS lookup. Real enquiries are still forwarded to you." %}{% if whois_price %} <strong>{% trans "From" %} {{ whois_price.price|money:STORE_CURRENCY }} / {{ whois_price.get_billing_cycle_display|lower }}.</strong>{% endif %}</p></article>
+      <article class="dm-card"><span class="chip c2" aria-hidden="true"><i class="bi bi-sliders"></i></span><h3>{% trans "Manage it yourself" %}</h3>
+        <p>{% trans "Nameservers, DNS records, the registrar lock and auto-renew are all in your account. No ticket needed." %}</p></article>
+      <article class="dm-card"><span class="chip c3" aria-hidden="true"><i class="bi bi-headset"></i></span><h3>{% trans "Support when you need it" %}</h3>
+        <p>{% trans "Ask through your panel at any time, or open a ticket. Our help centre has a guide for every common task." %}</p></article>
+      <article class="dm-card"><span class="chip c4" aria-hidden="true"><i class="bi bi-lightning-charge"></i></span><h3>{% trans "Quick, simple set-up" %}</h3>
+        <p>{% trans "Search, add to your cart and pay. Then connect the domain to your hosting, or order both together." %}</p></article>
+    </div>
   </div>
 </section>
 
@@ -120,11 +127,11 @@
   </div>
   {% if tlds %}
   <div class="table-responsive price-table-wrap">
-    <table class="table price-table align-middle mb-0" id="tld-table">
+    <table class="table price-table align-middle mb-0" id="tld-table" data-collapsed>
       <thead><tr><th>{% trans "Extension" %}</th><th class="text-end">{% trans "Register" %}</th><th class="text-end">{% trans "Renew" %}</th><th class="text-end">{% trans "Transfer" %}</th><th></th></tr></thead>
       <tbody>
         {% for t in tlds %}
-        <tr class="tld-tile" data-filter-text="{{ t.tld }}"><th scope="row"><strong>{{ t.tld }}</strong></th>
+        <tr class="tld-tile{% if forloop.counter > 10 %} is-extra{% endif %}" data-filter-text="{{ t.tld }}"><th scope="row"><strong>{{ t.tld }}</strong></th>
           <td class="text-end">{{ t.register_price|money:STORE_CURRENCY }}</td><td class="text-end">{{ t.renew_price|money:STORE_CURRENCY }}</td><td class="text-end">{{ t.transfer_price|money:STORE_CURRENCY }}</td>
           <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&amp;years=1">{% trans "Check" %}</a></td></tr>
         {% endfor %}
@@ -132,6 +139,7 @@
     </table>
   </div>
   <p class="small text-secondary mt-2 mb-0" data-filter-empty hidden>{% trans "No extension matches." %}</p>
+  {% if tlds|length > 10 %}<p class="text-center mt-3 mb-0"><button type="button" class="btn btn-outline-primary" data-show-all="#tld-table">{% trans "Show all" %} {{ tlds|length }} {% trans "extensions" %}</button></p>{% endif %}
   {% else %}
   <div class="card"><div class="card-body text-secondary">{% trans "The domain price list is coming soon." %}</div></div>
   {% endif %}

@@ -901,7 +901,7 @@ a.use-item:hover { border-color: var(--border-strong); }
 .dm-fact .chip { grid-row: span 2; }
 .dm-fact small { color: var(--muted); }
 .dm-section { margin: 0 0 3rem; }
-.dm-section > h2, .dm-two > h2, .dm-two > div > h2 { font-size: clamp(1.4rem, 1.2vw + 1rem, 2rem); font-weight: 750; letter-spacing: -.02em; margin-bottom: 1rem; }
+.dm-section h2, .dm-two > h2, .dm-two > div > h2 { font-size: clamp(1.4rem, 1.2vw + 1rem, 2rem); font-weight: 750; letter-spacing: -.02em; margin-bottom: 1rem; }
 .dm-sub { color: var(--muted); }
 .dm-bento { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
 .dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 1.4rem 1.5rem; box-shadow: var(--shadow-panel); }
@@ -929,3 +929,27 @@ a.use-item:hover { border-color: var(--border-strong); }
 .dm-dark h2, .dm-dark .dm-sub { color: #fff; }
 .dm-dark .dm-sub { color: rgba(255,255,255,.78); }
 .price-table tr.tld-tile { border: 0; box-shadow: none; border-radius: 0; background: transparent; padding: 0; }
+
+/* Domains page, second pass: a picture of the account on the left, four equal cards, even popular tiles, a short table */
+.dm-why { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+@media (min-width: 992px) { .dm-why { grid-template-columns: .9fr 1.4fr; align-items: stretch; } }
+.dm-why-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+.dm-mock { display: flex; flex-direction: column; justify-content: center; gap: 1rem; padding: 1.75rem; border-radius: 22px; color: #fff;
+  background: linear-gradient(135deg, var(--hero-from, #1b1a3d), var(--hero-to, #2d2870)); }
+.dm-url { display: flex; align-items: center; gap: .6rem; padding: .8rem 1rem; border-radius: 999px; background: rgba(255,255,255,.14); font-weight: 600; }
+.dm-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.dm-rows li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 1rem; border-radius: 14px; background: #fff; color: #14213d; font-weight: 600; }
+.dm-rows li span i { color: var(--primary); margin-right: .45rem; }
+.dm-switch { width: 2.6rem; height: 1.45rem; border-radius: 999px; background: #c9cfdb; position: relative; flex: none; }
+.dm-switch::after { content: ""; position: absolute; top: .18rem; left: .18rem; width: 1.09rem; height: 1.09rem; border-radius: 50%; background: #fff; transition: transform .15s; }
+.dm-switch.is-on { background: #1f9d55; } .dm-switch.is-on::after { transform: translateX(1.15rem); }
+.dm-tag { padding: .2rem .65rem; border-radius: 999px; background: #eef1f7; color: #33415c; font-size: .8rem; }
+.dm-tag.is-ok { background: #def5e7; color: #14653a; }
+.dm-mock-note { margin: 0; text-align: center; color: rgba(255,255,255,.8); font-size: .9rem; }
+.dm-card .chip.c1 { background: #ffe9d6; color: #b45309; } .dm-card .chip.c2 { background: #dff1ff; color: #0b6aa8; }
+.dm-card .chip.c3 { background: #e8e1ff; color: #5b34c9; } .dm-card .chip.c4 { background: #ddf6e6; color: #14753f; }
+.dm-card { transition: transform .15s, box-shadow .15s; } .dm-card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(20,33,61,.1); }
+.dm-popular { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.dm-pop strong { font-size: 1.6rem; }
+.dm-pop .dm-price { font-size: 1.05rem; }
+.price-table[data-collapsed]:not(.show-all) tr.is-extra { display: none; }
