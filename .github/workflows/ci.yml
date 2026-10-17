@@ -48,7 +48,7 @@ jobs:
           sudo apt-get install -y -qq postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"   # pg_dump and pg_restore must both be 17, not the runner's 16
           /usr/lib/postgresql/17/bin/pg_dump --version
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
