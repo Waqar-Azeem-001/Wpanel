@@ -36,7 +36,7 @@ jobs:
         with:
           fetch-depth: 0  # the secret scan below reads the whole history
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: PostgreSQL 17 client tools (pg_dump must match the server version)
