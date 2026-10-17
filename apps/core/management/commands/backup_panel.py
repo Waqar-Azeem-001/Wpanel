@@ -88,6 +88,48 @@ def prune_offsite(keep):
     return len(old)
 
 
+def run_backup(keep=None):
+    """The whole backup job: make the encrypted file, read it back, copy it off-site when storage is set, delete the oldest beyond ``keep``. Returns (file, short text)."""
+    keep = keep if keep is not None else getattr(settings, "PANEL_BACKUP_KEEP", 4)
+    target = make_backup(settings.PANEL_BACKUP_DIR, keep)
+    verify_backup(target)  # a backup that cannot be read back is not a backup
+    if offsite_configured():
+        text = f"off-site {upload_offsite(target)}, {prune_offsite(keep)} old ones deleted there"
+    else:
+        text = "no off-site storage set"
+    return target, text
+
+
+def restore_backup(path):
+    """
+    Put the panel's database back as it was in an encrypted backup. PostgreSQL only. Before anything is touched: the file is read back to prove it is whole, and a fresh backup of
+    the CURRENT database is taken (kept, never pruned) so the restore can be undone. The restore itself is ONE transaction (``--single-transaction``): it either completes or changes nothing.
+    After it, migrations are run (a backup older than the code is brought up to date) and the cache is cleared. Returns a short description.
+    """
+    from django.core.cache import cache
+    from django.core.management import call_command
+
+    if connection.vendor != "postgresql":
+        raise CommandError("Restoring works for the PostgreSQL database only.")
+    path = Path(path)
+    summary = verify_backup(path)
+    safety = make_backup(settings.PANEL_BACKUP_DIR, 0)  # keep=0: nothing is pruned
+    db = connection.settings_dict
+    with tempfile.TemporaryDirectory() as scratch:
+        raw = Path(scratch) / "dump"
+        raw.write_bytes(crypto.decrypt_bytes(path.read_bytes()))
+        env = {**os.environ, "PGPASSWORD": db.get("PASSWORD") or ""}
+        done = subprocess.run(["pg_restore", "--clean", "--if-exists", "--no-owner", "--no-privileges", "--single-transaction", "--no-password",
+                               "-h", db.get("HOST") or "localhost", "-p", str(db.get("PORT") or 5432), "-U", db["USER"], "-d", db["NAME"], str(raw)],
+                              shell=False, capture_output=True, text=True, env=env, check=False, timeout=3600)
+    if done.returncode != 0:
+        raise CommandError("The restore failed and changed nothing: " + (done.stderr.strip().splitlines() or ["?"])[-1][:200])
+    connection.close()  # the old connection saw the old tables
+    call_command("migrate", interactive=False, verbosity=0)
+    cache.clear()
+    return f"restored from {path.name} ({summary}); the database as it was just before is saved as {safety.name}"
+
+
 def verify_backup(path):
     """Decrypt a backup and check the database inside is sound. Returns a short description, or raises CommandError."""
     path = Path(path)

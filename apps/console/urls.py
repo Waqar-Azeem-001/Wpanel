@@ -1,7 +1,7 @@
 """The staff console: dashboard, its widgets, global search and the audit log. Mounted at staff/."""
 from django.urls import path
 
-from . import views, views_setup, views_users
+from . import views, views_setup, views_storage, views_users
 
 app_name = "console"
 
@@ -14,6 +14,13 @@ urlpatterns = [
     path("utilities/audit/", views.audit_log, name="audit_log"),
     path("utilities/audit/export/", views.audit_export, name="audit_export"),
     path("utilities/audit/purge/", views.audit_purge, name="audit_purge"),
+    path("setup/storage/", views_storage.storage_page, name="storage"),
+    path("setup/storage/backup-now/", views_storage.backup_now, name="storage_backup_now"),
+    path("setup/storage/backups/delete/", views_storage.backups_delete, name="storage_backups_delete"),
+    path("setup/storage/backups/<slug:kind>/<str:name>/download/", views_storage.backup_download, name="storage_backup_download"),
+    path("setup/storage/restore/", views_storage.restore, name="storage_restore"),
+    path("setup/storage/documents/delete/", views_storage.documents_delete, name="storage_documents_delete"),
+    path("setup/storage/unreferenced/delete/", views_storage.unreferenced_delete, name="storage_unreferenced_delete"),
     path("users/", views_users.users, name="users"),
     path("users/<int:pk>/", views_users.user_detail, name="user_detail"),
     path("users/<int:pk>/details/", views_users.user_edit, name="user_edit"),

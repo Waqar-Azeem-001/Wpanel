@@ -297,7 +297,7 @@ CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
-    "panel-database-backup": {"task": "apps.core.tasks.panel_backup_task", "schedule": crontab(day_of_week=env("PANEL_BACKUP_WEEKDAYS", default="sun"), hour=1, minute=30)},
+    "panel-database-backup": {"task": "apps.core.tasks.panel_backup_task", "schedule": crontab(day_of_week=env("PANEL_BACKUP_WEEKDAYS", default="*"), hour=1, minute=30)},
     "website-care": {"task": "apps.hosting.tasks.run_site_care_task", "schedule": crontab(hour=3, minute=15)},
     "resource-readings": {"task": "apps.hosting.tasks.record_resource_readings_task", "schedule": crontab(minute="*/10")},
     "sync-tld-prices": {"task": "apps.domains.tasks.sync_tld_prices_task", "schedule": crontab(hour=2, minute=10)},
@@ -416,5 +416,7 @@ PANEL_BACKUP_S3_ACCESS_KEY = env("PANEL_BACKUP_S3_ACCESS_KEY", default="")
 PANEL_BACKUP_S3_SECRET_KEY = env("PANEL_BACKUP_S3_SECRET_KEY", default="")
 PANEL_BACKUP_S3_PREFIX = env("PANEL_BACKUP_S3_PREFIX", default="panel-backups")
 # How often the panel's own backup is made (a cron day-of-week: "sun" = weekly, "*" = every night) and how many are kept, here and off-site; the older ones are deleted.
-PANEL_BACKUP_WEEKDAYS = env("PANEL_BACKUP_WEEKDAYS", default="sun")
-PANEL_BACKUP_KEEP = env.int("PANEL_BACKUP_KEEP", default=3)
+PANEL_BACKUP_WEEKDAYS = env("PANEL_BACKUP_WEEKDAYS", default="*")
+PANEL_BACKUP_KEEP = env.int("PANEL_BACKUP_KEEP", default=4)
+# The server folder where the database dumps taken before each deploy are kept (mounted into the web container so the staff Storage page can list and delete them). Empty = not shown.
+HOST_BACKUP_DIR = env("HOST_BACKUP_DIR", default="")

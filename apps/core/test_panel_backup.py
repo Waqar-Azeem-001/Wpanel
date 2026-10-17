@@ -72,7 +72,7 @@ def test_only_the_newest_few_backups_are_kept_here(tmp_path, settings, monkeypat
     for f in old:
         f.unlink()
     assert len(list(tmp_path.glob("panel-*.bak.enc"))) == 3
-    assert settings.PANEL_BACKUP_KEEP == 3 and settings.PANEL_BACKUP_WEEKDAYS == "sun"
+    assert settings.PANEL_BACKUP_KEEP == 4 and settings.PANEL_BACKUP_WEEKDAYS == "*"
 
 
 def test_the_off_site_copies_beyond_the_newest_few_are_deleted(settings, monkeypatch):
@@ -99,6 +99,6 @@ def test_the_off_site_copies_beyond_the_newest_few_are_deleted(settings, monkeyp
     assert sorted(deleted) == ["panel-backups/panel-3.bak.enc", "panel-backups/panel-4.bak.enc"]  # the two oldest backups; other files are left alone
 
 
-def test_the_nightly_job_became_a_weekly_one_by_default(settings):
+def test_the_backup_job_runs_every_night_by_default(settings):
     schedule = settings.CELERY_BEAT_SCHEDULE["panel-database-backup"]["schedule"]
-    assert str(schedule.day_of_week) == "{0}"
+    assert len(schedule.day_of_week) == 7 and str(schedule.hour) == "{1}" and str(schedule.minute) == "{30}"

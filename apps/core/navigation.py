@@ -209,6 +209,8 @@ ITEMS = [
     item("staff.notifications.templates", _("Email templates"), "notifications_staff:templates", areas=STAFF,
          parent="staff.notifications", requires="superuser"),
     item("staff.settings", _("Settings"), areas=STAFF, section=_("System"), icon="bi-sliders"),
+    item("staff.settings.storage", _("Storage and backups"), "console:storage", areas=STAFF, parent="staff.settings",
+         permission="view_settings"),
     item("staff.settings.brand", _("Brand"), "brand_staff:settings", areas=STAFF, parent="staff.settings",
          permission="view_settings"),
     item("staff.settings.menu", _("Customer menu"), "brand_staff:menu", areas=STAFF, parent="staff.settings",

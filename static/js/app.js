@@ -40,7 +40,7 @@
 document.addEventListener("change", function (event) {
   var box = event.target;
   if (!box.matches || !box.matches("[data-select-all]") || !box.form) { return; }
-  box.form.querySelectorAll("input[name=ids]").forEach(function (row) { row.checked = box.checked; });
+  Array.prototype.forEach.call(box.form.elements, function (row) { if (row.name === "ids" || row.hasAttribute("data-row")) { row.checked = box.checked; } });
 });
 
 /* Long actions give feedback at once: a form marked data-loading="Doing it..." disables its buttons and says so after it is submitted (after any confirmation). */

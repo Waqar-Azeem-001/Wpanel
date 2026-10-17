@@ -31,10 +31,10 @@ After rotating, sign everyone out: `C exec web python manage.py shell -c "from d
 
 ## 2. If the data is damaged or the server is lost
 
-Backups (see `docs/operations-runbook.md`): the weekly encrypted `panel-postgresql-*.bak.enc` (newest 3) in the `panel_backups` volume and, when set, in the off-site bucket; plus the plain dumps `/srv/backups/whpanel-before-*.sql.gz` taken before each deploy.
+Backups (see `docs/operations-runbook.md`): the nightly encrypted `panel-postgresql-*.bak.enc` (newest 4) in the `panel_backups` volume and, when set, in the off-site bucket; plus the plain dumps `/srv/backups/whpanel-before-*.sql.gz` taken before each deploy.
 
 1. New or cleaned server: Docker, the repo (`git clone`), `.env` from the password manager.
-2. `C up -d db redis` then restore:
+2. `C up -d db redis` then restore (or, with the panel running, Setup > Settings > Storage and backups > Restore, as a Super Admin):
    - from a pre-deploy dump: `gunzip -c whpanel-before-X.sql.gz | C exec -T db psql -U whpanel whpanel`
    - from an encrypted panel backup: `C exec web python manage.py shell -c "from apps.core import crypto; open('/tmp/p.dump','wb').write(crypto.decrypt_bytes(open('/app/panel_backups/FILE','rb').read()))"` then `pg_restore --clean --if-exists -h db -U whpanel -d whpanel /tmp/p.dump` (needs the encryption key).
 3. `C up -d --build`, `C exec web python manage.py migrate`, open `/api/v1/health/`, sign in as staff, open an invoice and a ticket.

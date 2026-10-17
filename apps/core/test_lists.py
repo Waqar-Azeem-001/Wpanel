@@ -449,4 +449,4 @@ def test_destructive_staff_actions_ask_first_in_the_modal(world):
 
 def test_the_modal_script_handles_forms_and_the_select_all_box():
     js = (Path(django_settings.BASE_DIR) / "static" / "js" / "app.js").read_text(encoding="utf-8")
-    assert "data-confirm" in js and "data-select-all" in js and 'input[name=ids]' in js
+    assert "data-confirm" in js and "data-select-all" in js and 'row.name === "ids"' in js

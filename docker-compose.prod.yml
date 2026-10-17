@@ -2,6 +2,12 @@
 # Use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 # The stack's own Nginx listens only on 127.0.0.1:8010; the host Nginx proxies the domain to it.
 services:
+  # The folder of database dumps taken before each deploy, so the staff Storage page can list, download and delete them (it is group-writable by the app user's group).
+  web:
+    environment:
+      HOST_BACKUP_DIR: /app/host_backups
+    volumes:
+      - /srv/backups:/app/host_backups
   nginx:
     ports: !override
       - "127.0.0.1:8010:80"

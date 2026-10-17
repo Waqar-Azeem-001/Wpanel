@@ -44,6 +44,7 @@ NOT_CLICKABLE_EXACT = {
     "accounts:signin_code": "the emailed-code step of signing in on a new device, reached only mid sign-in (tested in apps/accounts/tests/test_devices.py)",
     "billing_staff:transaction_proof": "downloads a customer's proof of payment, linked only when one was uploaded (tested in apps/billing/tests/test_payment_proof.py)",
     "billing_customer:payment_proof": "downloads a customer's own proof of payment, linked only when one was uploaded (tested in apps/billing/tests/test_payment_proof.py)",
+    "console:storage_backup_download": "downloads one backup file by name, linked from the Storage page only when a backup exists (tested in apps/console/test_storage.py)",
     "help:vote": "the Was-this-helpful vote of an article page, sent by script (tested in apps/core/test_help_centre.py)",
     "robots": "robots.txt for search engines, not a page people open (tested in apps/core/test_help_centre.py)",
     "sitemap": "sitemap.xml for search engines, not a page people open (tested in apps/core/test_help_centre.py)",
