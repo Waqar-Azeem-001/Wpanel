@@ -13,6 +13,11 @@
     </ul>
   </li>
   {% else %}
+  {% if e.key == "public.register" %}<li class="nav-item nav-cta"><a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ e.url }}">{{ e.label }}</a></li>
+  {% elif e.key == "public.login" %}<li class="nav-item nav-signin"><a class="nav-link" href="{{ e.url }}"><i class="bi bi-person-circle" aria-hidden="true"></i> {{ e.label }}</a></li>
+  {% elif e.key == "public.cart" %}<li class="nav-item nav-cart"><a class="nav-link" href="{{ e.url }}"><i class="bi bi-cart3" aria-hidden="true"></i><span class="visually-hidden">{{ e.label }}</span>{% if e.badge %}<span class="cart-count">{{ e.badge }}</span>{% endif %}</a></li>
+  {% else %}
   <li class="nav-item"><a class="nav-link{% if e.key == 'account.notifications' %} bell{% endif %}{% if e.active %} active{% endif %}" href="{{ e.url }}"{% if e.active %} aria-current="page"{% endif %}>{% if e.icon %}<i class="bi {{ e.icon }}" aria-hidden="true"></i> {% endif %}{{ e.label }}{% if e.badge %}{% if e.key == 'account.notifications' %} <span class="badge unread">{{ e.badge }}</span>{% else %} ({{ e.badge }}){% endif %}{% endif %}</a></li>
+  {% endif %}
   {% endif %}
 {% endfor %}

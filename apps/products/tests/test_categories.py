@@ -213,3 +213,21 @@ def test_the_addon_catalogue_adds_switched_off_categories_and_hidden_unpriced_ad
     assert not Addon.objects.filter(prices__isnull=False).exists()
     assert Addon.objects.get(name="Domain Protection").applies_to == "domain" and Addon.objects.get(name="Dedicated IP").applies_to == "hosting"
     assert Addon.objects.get(name="Domain Protection").kind == AddonKind.DOMAIN
+
+
+@pytest.mark.django_db
+def test_the_addons_page_groups_addons_by_category_and_the_hosting_page_shows_category_blocks(client):
+    from django.core.management import call_command
+
+    call_command("seed_webhostera", "--addons")
+    page = client.get("/products/addons/").content.decode()
+    assert "SSL certificates" in page and "Positive SSL" in page and page.count('class="cat-block"') >= 2  # SSL and WHOIS privacy are separate blocks
+    from apps.core.system import SYSTEM
+    from apps.products import services as ps
+    from apps.products.models import BillingCycle
+
+    plan = ps.create_product(SYSTEM, {"name": "Starter", "type": "wordpress_hosting"})
+    ps.set_price(SYSTEM, plan, billing_cycle=BillingCycle.MONTHLY, price="5.00")
+    ps.set_product_status(SYSTEM, plan, "active")
+    hosting = client.get("/hosting/").content.decode()
+    assert "cat-block-head" in hosting and "Starter" in hosting

@@ -2,7 +2,7 @@
 {# An add-on sold on the store as its own product (an SSL certificate, WHOIS privacy). Use: include this file with addon=... #}
 <article class="plan-card">
   <div class="plan-body">
-    <div class="plan-type">{{ addon.get_kind_display }}</div>
+    <div class="plan-type">{{ addon.category.name|default:addon.get_kind_display }}</div>
     <h2 class="plan-name">{{ addon.name }}</h2>
     {% with lowest=addon.prices.all|dictsort:"price"|first %}
       {% if lowest %}<div class="plan-price">{{ lowest.price|money:STORE_CURRENCY }} <small>{% if lowest.billing_cycle == "one_time" %}{% trans "one-time" %}{% else %}{% trans "billed" %} {{ lowest.get_billing_cycle_display|lower }}{% endif %}</small></div>{% endif %}

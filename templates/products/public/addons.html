@@ -1,25 +1,29 @@
 {% extends "base.html" %}
 {% load ui i18n %}
-{% block title %}{% trans "Available addons" %} · {{ SITE_NAME }}{% endblock %}
+{% block title %}{% trans "Add-ons" %} · {{ SITE_NAME }}{% endblock %}
+{% block container %}wide flush{% endblock %}
+{% block breadcrumbs %}{% endblock %}
 {% block content %}
-<div class="page-head">
-  <h1>{% trans "Available addons" %}</h1>
-  <a class="btn btn-primary" href="{% url 'catalog:product_list' %}">{% trans "Order new services" %}</a>
-</div>
-<p class="text-secondary">{% trans "Addons are chosen when you order a hosting plan." %}</p>
-<div class="row g-3">
-  {% for addon in addons %}
-  <div class="col-md-6 col-lg-4">
-    <section class="card h-100"><div class="card-body">
-      <h2 class="h5">{{ addon.name }}</h2>
-      {% if addon.description %}<p>{{ addon.description|linebreaksbr }}</p>{% endif %}
-      <ul class="list-unstyled mb-0">
-        {% for price in addon.prices.all %}{% if price.is_active %}<li>{{ price.price|money }} <span class="text-secondary">/ {{ price.get_billing_cycle_display }}</span></li>{% endif %}{% endfor %}
-      </ul>
-    </div></section>
+<section class="hero hero-compact">
+  <div class="container-xxl">
+    <h1>{% trans "Add-ons" %}</h1>
+    <p class="lead">{% trans "Extras for your hosting and your domains. Choose them when you order, or add them to what you already have from your account." %}</p>
+    <p class="mb-0"><a class="btn btn-light btn-sm" href="{% url 'catalog:product_list' %}">{% trans "Order new services" %}</a></p>
   </div>
-  {% empty %}
-  <div class="col-12">{% url 'catalog:product_list' as plans_url %}{% include "components/empty_state.html" with message=_("No addons are available right now.") action_url=plans_url action_label=_("See plans") icon="bi-plus-square" %}</div>
-  {% endfor %}
+</section>
+<div class="container-xxl pt-4 pb-4">
+{% for block in blocks %}
+<div class="cat-block">
+  <div class="cat-block-head">
+    <span class="chip" aria-hidden="true"><i class="bi {% if block.category %}{{ block.category.icon }}{% else %}bi-plus-square{% endif %}"></i></span>
+    <div class="grow"><h2 class="h3">{% if block.category %}{{ block.category.name }}{% else %}{% trans "More add-ons" %}{% endif %}</h2>{% if block.category and block.category.blurb %}<p class="text-secondary mb-0">{{ block.category.blurb }}</p>{% endif %}</div>
+  </div>
+  <div class="row g-4">
+    {% for addon in block.items %}<div class="col-md-6 col-xl-3">{% include "products/_addon_card.html" with addon=addon %}</div>{% endfor %}
+  </div>
+</div>
+{% empty %}
+{% url 'catalog:product_list' as plans_url %}{% include "components/empty_state.html" with message=_("No add-ons are available right now.") action_url=plans_url action_label=_("See plans") icon="bi-plus-square" %}
+{% endfor %}
 </div>
 {% endblock %}

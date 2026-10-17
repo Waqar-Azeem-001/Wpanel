@@ -24,15 +24,21 @@
   </div>
 </section>
 
-<div class="container-xxl hero-overlap">
-  <div class="row g-4">
-    {% for product in products %}
-    <div class="col-md-6 col-xl-3">{% include "products/_plan_card.html" with product=product featured=False %}</div>
-    {% empty %}
-    <div class="col-12"><div class="card"><div class="card-body text-secondary">{% trans "Our plans are coming soon." %}</div></div></div>
-    {% endfor %}
+<div class="container-xxl pt-4 pb-2">
+  {% for block in blocks %}
+  <div class="cat-block">
+    <div class="cat-block-head">
+      <span class="chip" aria-hidden="true"><i class="bi {% if block.category %}{{ block.category.icon }}{% else %}bi-box-seam{% endif %}"></i></span>
+      <div class="grow"><h2 class="h3">{% if block.category %}{{ block.category.name }}{% else %}{% trans "More plans" %}{% endif %}</h2>{% if block.category %}<p class="text-secondary mb-0">{{ block.category.blurb }}</p>{% endif %}</div>
+      {% if block.category %}<a class="cat-all" href="{% url 'catalog:product_list' %}?category={{ block.category.slug }}">{% if block.total > block.items|length %}{% trans "See all" %} {{ block.total }}{% else %}{% trans "See all" %}{% endif %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+    </div>
+    <div class="row g-4">
+      {% for item in block.items %}<div class="col-md-6 col-xl-3">{% include "products/_plan_card.html" with product=item featured=False %}</div>{% endfor %}
+    </div>
   </div>
-  {% if products %}<p class="text-center mt-4"><a class="btn btn-outline-primary" href="{% url 'catalog:product_list' %}">{% trans "See all plans" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a></p>{% endif %}
+  {% empty %}
+  <div class="card"><div class="card-body text-secondary">{% trans "Our plans are coming soon." %}</div></div>
+  {% endfor %}
 </div>
 
 <section class="container-xxl mt-5" aria-labelledby="explore-h">
