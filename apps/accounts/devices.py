@@ -52,7 +52,19 @@ def _hash(token):
 
 
 def _client_ip(request):
-    return (request.META.get("REMOTE_ADDR") or None) if request is not None else None
+    from apps.core.utils import client_ip  # the real address (the proxy's X-Forwarded-For), not the proxy's own
+
+    return client_ip(request)
+
+
+def describe_device(request):
+    """A readable device name from the browser's user-agent: "Chrome on Windows". Falls back to "an unknown device"."""
+    agent = (request.META.get("HTTP_USER_AGENT", "") if request is not None else "") or ""
+    browser = next((name for key, name in (("Edg/", "Edge"), ("OPR/", "Opera"), ("Firefox/", "Firefox"), ("Chrome/", "Chrome"), ("Safari/", "Safari")) if key in agent), "")
+    system = next((name for key, name in (("Windows", "Windows"), ("Android", "Android"), ("iPhone", "iPhone"), ("iPad", "iPad"), ("Mac OS X", "macOS"), ("Linux", "Linux")) if key in agent), "")
+    if browser and system:
+        return f"{browser} on {system}"
+    return browser or system or "an unknown device"
 
 
 def is_trusted_device(request, user):
@@ -108,8 +120,8 @@ def send_code(user, request=None, *, resend=False):
     code = f"{secrets.randbelow(1_000_000):06d}"
     EmailSignInCode.objects.create(user=user, code_hash=make_password(code), expires_at=now + timedelta(minutes=CODE_MINUTES))
     notifications.dispatch("account.signin_code", user=user, context={
-        "code": code, "minutes": CODE_MINUTES, "ip": _client_ip(request) or "unknown",
-        "device": (request.META.get("HTTP_USER_AGENT", "")[:120] if request is not None else "") or "unknown"})
+        "code": code, "minutes": CODE_MINUTES, "ip": _client_ip(request) or "unknown", "device": describe_device(request),
+        "when": timezone.localtime().strftime("%d %b %Y, %H:%M")})
     audit.record("auth.signin_code_sent", actor=user, target=user, request=request)
 
 
@@ -166,7 +178,7 @@ def register_login(request, response, user):
     response.set_cookie(DEVICE_COOKIE, token, max_age=COOKIE_SECONDS, httponly=True, samesite="Lax", secure=request.is_secure())
     audit.record("auth.device_changed", actor=user, target=user, request=request)
     notifications.dispatch("account.new_device", user=user, context={
-        "ip": _client_ip(request) or "unknown", "device": request.META.get("HTTP_USER_AGENT", "")[:120] or "unknown"})
+        "ip": _client_ip(request) or "unknown", "device": describe_device(request), "when": timezone.localtime().strftime("%d %b %Y, %H:%M")})
     return response
 
 

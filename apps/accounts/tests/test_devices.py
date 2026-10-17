@@ -111,3 +111,15 @@ def test_registering_makes_that_browser_the_device_without_a_code():
     response = browser.post("/account/register/", {"email": "new@example.com", "password": PASSWORD, "password_confirm": PASSWORD})
     assert response.status_code == 302 and devices.DEVICE_COOKIE in response.cookies
     assert browser.get("/account/profile/").status_code == 200
+
+
+def test_the_device_is_described_in_words_and_the_email_has_a_code_box(customer, sent):
+    from django.test import RequestFactory
+
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+    assert devices.describe_device(RequestFactory().get("/", HTTP_USER_AGENT=ua)) == "Chrome on Windows"
+    assert devices.describe_device(RequestFactory().get("/")) == "an unknown device"
+    browser = Client(HTTP_USER_AGENT=ua, HTTP_X_FORWARDED_FOR="203.0.113.9")
+    sign_in(browser, customer)
+    context = [c for e, c in sent if e == "account.signin_code"][-1]
+    assert context["device"] == "Chrome on Windows" and context["ip"] == "203.0.113.9"

@@ -198,3 +198,18 @@ def test_an_addon_is_created_with_its_price_and_shows_it(manager):
 def test_an_addon_can_be_placed_in_an_addons_category(manager):
     addon = product_services.create_addon(manager, {"name": "Trust Seal", "kind": "ssl", "category": StoreCategory.objects.get(slug="whois")})
     assert addon.category.slug == "whois"
+
+
+@pytest.mark.django_db
+def test_the_addon_catalogue_adds_switched_off_categories_and_hidden_unpriced_addons_and_is_repeatable():
+    from django.core.management import call_command
+
+    from apps.products.models import Addon, AddonKind, StoreCategory
+
+    call_command("seed_addon_catalogue")
+    call_command("seed_addon_catalogue")
+    assert StoreCategory.objects.filter(kind="addons", is_active=False).count() == 6
+    assert Addon.objects.count() == 21 and not Addon.objects.exclude(status="hidden").exists()
+    assert not Addon.objects.filter(prices__isnull=False).exists()
+    assert Addon.objects.get(name="Domain Protection").applies_to == "domain" and Addon.objects.get(name="Dedicated IP").applies_to == "hosting"
+    assert Addon.objects.get(name="Domain Protection").kind == AddonKind.DOMAIN

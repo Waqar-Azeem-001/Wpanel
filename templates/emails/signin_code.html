@@ -1,0 +1,13 @@
+{% extends "layouts/email.html" %}
+{% block content %}<p style="margin:0 0 6px 0;font-size:22px;font-weight:bold;color:#14213d">Your sign-in code</p>
+<p style="margin:0 0 18px 0">Hello {{ user.get_short_name }}, someone is signing in to your {{ site_name }} account from a new device. Enter this code on the sign-in page to continue.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 18px 0"><tr><td align="center" style="background:#f3f6fc;border:1px solid #dbe3f3;border-radius:12px;padding:22px 12px">
+  <div style="font-family:Consolas,'Courier New',monospace;font-size:38px;line-height:1;font-weight:bold;letter-spacing:10px;color:{{ brand.primary }}">{{ code }}</div>
+  <div style="margin-top:10px;font-size:13px;color:#5d6677">Works once &middot; expires in {{ minutes }} minutes</div>
+</td></tr></table>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="font-size:14px;color:#33415c;border-top:1px solid #e6eaf2">
+  <tr><td style="padding:9px 0;color:#5d6677;width:90px">Device</td><td style="padding:9px 0">{{ device }}</td></tr>
+  <tr><td style="padding:9px 0;color:#5d6677;border-top:1px solid #eef1f7">Address</td><td style="padding:9px 0;border-top:1px solid #eef1f7">{{ ip }}</td></tr>
+  <tr><td style="padding:9px 0;color:#5d6677;border-top:1px solid #eef1f7">Time</td><td style="padding:9px 0;border-top:1px solid #eef1f7">{{ when }}</td></tr>
+</table>
+<p style="margin:18px 0 0 0;padding:12px 14px;background:#fff7e6;border-radius:8px;font-size:13px;color:#7a5200"><strong>Not you?</strong> Do not share this code with anyone, ever. Change your password right away: someone may know it. Our team never asks for this code.</p>{% endblock %}

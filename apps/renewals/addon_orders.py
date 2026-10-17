@@ -41,7 +41,7 @@ def buy_addon(actor, addon, *, hosting_account=None, domain=None, request=None):
         raise ServiceError("You do not have permission to perform this action.", code="permission_denied", status_code=status.HTTP_403_FORBIDDEN)
     if not isinstance(addon, Addon) or addon.status != CatalogStatus.ACTIVE:
         raise ServiceError("This extra is not available right now.", code="addon_unavailable")
-    if addon.kind == AddonKind.GENERAL or (addon.kind == AddonKind.WHOIS_PRIVACY) != (domain is not None):
+    if (addon.applies_to == "domain") != (domain is not None):
         raise ServiceError("This extra cannot be added to that.", code="addon_mismatch")
     if hosting_account is not None and hosting_account.status not in (HostingStatus.ACTIVE, HostingStatus.SUSPENDED):
         raise ServiceError("Only an active hosting plan can get this extra.", code="invalid_status")

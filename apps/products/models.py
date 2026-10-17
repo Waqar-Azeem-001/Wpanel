@@ -313,6 +313,7 @@ class AddonKind(models.TextChoices):
     GENERAL = "general", "Add-on for a hosting plan"
     SSL = "ssl", "SSL certificate (for a hosting plan)"
     WHOIS_PRIVACY = "whois_privacy", "WHOIS privacy (for a domain)"
+    DOMAIN = "domain", "Add-on for a domain"
 
 
 class Addon(CatalogItem):
@@ -323,7 +324,7 @@ class Addon(CatalogItem):
     @property
     def applies_to(self):
         """The kind of cart line this add-on attaches to: a hosting plan, or a domain registration or transfer."""
-        return "domain" if self.kind == AddonKind.WHOIS_PRIVACY else "hosting"
+        return "domain" if self.kind in (AddonKind.WHOIS_PRIVACY, AddonKind.DOMAIN) else "hosting"
 
 
 class PriceEntry(TimeStampedModel):
