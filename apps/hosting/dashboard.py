@@ -245,7 +245,8 @@ def workspace_groups(request, account, *, app=None, live=True):
         if not url and not children:
             continue
         here = bool(url) and path == url
-        opened = any(c.active for c in children) or (not url and any(path == c.url.split("#")[0] for c in children))
+        # Several entries point at parts of one page (Speed test, Malware scan, Website care are all the care page): only an entry for the whole page opens its group, so one menu opens, not four.
+        opened = any(c.active for c in children) or (not url and any("#" not in c.url and path == c.url for c in children))
         groups.append(MenuGroup(label=label, icon=icon, url=url, children=children, active=here or opened, open=opened))
     return groups
 

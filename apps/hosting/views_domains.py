@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.core import portal
+from apps.products.upsell import whois_privacy_offer
 from apps.core.exceptions import ServiceError
 
 from . import control, dashboard
@@ -129,7 +130,7 @@ def my_hosting_domains(request, pk):
     subs = [d for d in domains if d.kind == "subdomain"]
     return render(request, "hosting/customer/domains.html", {
         "account": account, "sidebar": sidebar, "limits": limits, "rows": rows, "zone_domains": zone_domains,
-        "extra_count": len(extra), "sub_count": len(subs),
+        "whois_offer": whois_privacy_offer(hosting_account=account), "extra_count": len(extra), "sub_count": len(subs),
         "extra_full": bool(limits and limits.max_addon_domains is not None and len(extra) >= limits.max_addon_domains),
         "sub_full": bool(limits and limits.max_subdomains is not None and len(subs) >= limits.max_subdomains)})
 

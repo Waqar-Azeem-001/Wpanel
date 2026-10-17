@@ -15,6 +15,7 @@
   </p>
 </div>
 
+{% include "components/whois_offer.html" with offer=whois_offer %}
 <section class="card mb-3"><div class="card-body">
   <h3 class="h6">{% trans "Add a domain" %}</h3>
   <form method="post" action="{% url 'hosting_customer:domain_action' account.pk %}" class="dm-add" data-plain data-dm-add>{% csrf_token %}

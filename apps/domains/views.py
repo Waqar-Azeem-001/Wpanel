@@ -82,7 +82,9 @@ def _tab(request, pk, tab, **extra):
 
 @login_required
 def my_domain_detail(request, pk):
-    return _tab(request, pk, "overview")
+    from apps.products.upsell import whois_privacy_offer
+
+    return _tab(request, pk, "overview", whois_offer=whois_privacy_offer(domain=_own_domain(request, pk)))
 
 
 @login_required

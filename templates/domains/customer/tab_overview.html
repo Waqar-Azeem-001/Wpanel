@@ -13,5 +13,6 @@
     <dt class="col-sm-4">{% trans "Nameservers" %}</dt><dd class="col-sm-8">{% for ns in domain.nameservers %}{{ ns }}{% if not forloop.last %}<br>{% endif %}{% empty %}—{% endfor %}</dd>
   </dl>
 </div></section>
+{% include "components/whois_offer.html" with offer=whois_offer %}
 {% lifecycle_card domain %}
 {% endblock %}

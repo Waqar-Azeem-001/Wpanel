@@ -274,3 +274,19 @@ def test_the_ssl_page_suggests_ssl_and_whois_privacy_and_opens_a_filled_in_ticke
     assert reverse("support_customer:new") + "?" in page
     new = client.get(reverse("support_customer:new"), {"hosting_account": account.pk, "subject": "Order: Premium SSL", "body": "Hello"})
     assert new.status_code == 200 and "Order: Premium SSL" in new.content.decode()
+
+
+def test_whois_privacy_is_offered_in_the_domains_section_and_one_menu_opens_on_the_care_page(client, owner, account, manager):
+    from apps.products import services as ps
+    from apps.products.models import AddonKind, BillingCycle
+    addon = ps.create_addon(manager, {"name": "WHOIS Privacy Protection", "kind": AddonKind.WHOIS_PRIVACY})
+    ps.set_addon_status(manager, addon, "active")
+    ps.set_price(manager, addon, billing_cycle=BillingCycle.ANNUAL, price="1499")
+    client.force_login(owner)
+    page = client.get(f"/account/hosting/{account.pk}/manage/domains/").content.decode()
+    assert "WHOIS Privacy Protection" in page and "Add WHOIS privacy" in page and "domain=" not in page.split("Add WHOIS privacy")[0][-400:]
+    from django.urls import reverse
+    from apps.hosting import dashboard
+    request = client.get(reverse("hosting_customer:care", args=[account.pk])).wsgi_request
+    groups = dashboard.workspace_groups(request, account)
+    assert [g.label for g in groups if g.open] == ["Website"]  # Speed test, Malware scan and Website care are one page: one menu opens, not four
