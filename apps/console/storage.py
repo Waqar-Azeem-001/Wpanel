@@ -23,7 +23,7 @@ from rest_framework import status
 from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
 
-PANEL_NAME = re.compile(r"^panel-(postgresql|sqlite)-\d{8}T\d{6}Z\.bak\.enc$")
+PANEL_NAME = re.compile(r"^panel-(postgresql|sqlite)-\d{8}T\d{6}Z(-full)?\.bak\.enc$")
 HOST_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.sql\.gz$")
 
 
@@ -99,7 +99,7 @@ def _listing(folder, pattern):
     for file in Path(folder).iterdir():
         if file.is_file() and pattern.match(file.name):
             info = file.stat()
-            out.append({"name": file.name, "size": info.st_size, "modified": datetime.fromtimestamp(info.st_mtime, timezone.utc)})
+            out.append({"name": file.name, "size": info.st_size, "modified": datetime.fromtimestamp(info.st_mtime, timezone.utc), "full": file.name.endswith("-full.bak.enc")})
     return sorted(out, key=lambda row: row["modified"], reverse=True)
 
 
@@ -166,13 +166,69 @@ def start_restore(actor, name, confirm, *, request=None):
     if (confirm or "").strip() != "RESTORE":
         raise ServiceError("Type the word RESTORE to confirm.", code="confirm_required")
     path = resolve("panel", name)
-    if connection.vendor != "postgresql":
-        raise ServiceError("Restoring works for the PostgreSQL database only.", code="not_supported")
     from apps.core.tasks import restore_panel_task
 
     audit.record("storage.restore_requested", actor=actor, metadata={"backup": path.name}, request=request)  # this row will itself be replaced by the restore: a new one is written after it
     restore_panel_task.delay(path.name, actor.pk)
     return path.name
+
+
+def upload_backup(actor, upload, *, request=None):
+    """Super Admin: put a backup file that was downloaded earlier (or from another server) into the list, so it can be restored. The name must be the one the panel gave it, and it must decrypt and read back."""
+    require_super(actor)
+    from apps.core.management.commands import backup_panel
+
+    name = os.path.basename(getattr(upload, "name", "") or "")
+    if not PANEL_NAME.match(name):
+        raise ServiceError("Choose a backup file as the panel named it (panel-...bak.enc).", code="invalid_name")
+    folder = Path(settings.PANEL_BACKUP_DIR)
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / name
+    if target.exists():
+        raise ServiceError("A backup with that name is already in the list.", code="exists")
+    with open(target, "wb") as handle:
+        for chunk in upload.chunks():
+            handle.write(chunk)
+    try:
+        backup_panel.verify_backup(target)
+    except Exception as exc:  # noqa: BLE001 - not a readable backup of this panel's key: remove it again
+        target.unlink(missing_ok=True)
+        raise ServiceError(f"That file cannot be read as a backup of this panel ({exc}).", code="unreadable") from exc
+    audit.record("storage.backup_uploaded", actor=actor, metadata={"name": name, "bytes": _size(target)}, request=request)
+    return name
+
+
+# --- public media -------------------------------------------------------------------------------------------
+
+def media_files():
+    """Files in the public media folder: [{path, size, modified}], newest first."""
+    root = Path(settings.MEDIA_ROOT)
+    if not root.is_dir():
+        return []
+    out = []
+    for file in root.rglob("*"):
+        if file.is_file():
+            info = file.stat()
+            out.append({"path": file.relative_to(root).as_posix(), "size": info.st_size, "modified": datetime.fromtimestamp(info.st_mtime, timezone.utc)})
+    return sorted(out, key=lambda r: r["modified"], reverse=True)
+
+
+def delete_media(actor, paths, *, request=None):
+    """Delete public media files by their path under the media folder (one or many). Returns how many were deleted."""
+    require_manage(actor)
+    known = {row["path"] for row in media_files()}
+    root = Path(settings.MEDIA_ROOT).resolve()
+    count = 0
+    for rel in paths:
+        if rel not in known:
+            continue
+        target = (Path(settings.MEDIA_ROOT) / rel).resolve()
+        if root not in target.parents or not target.is_file():
+            continue
+        target.unlink()
+        audit.record("storage.media_deleted", actor=actor, metadata={"file": os.path.basename(rel)}, request=request)
+        count += 1
+    return count
 
 
 # --- documents ----------------------------------------------------------------------------------------------

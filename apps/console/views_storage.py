@@ -36,7 +36,7 @@ def storage_page(request):
 
     return render(request, "console/storage.html", {
         "disk": disk, "overview": storage.overview(), "panel_backups": storage.panel_backups(), "host_dumps": storage.host_dumps() if user.is_superuser else [],
-        "host_dir_set": storage.host_dir() is not None, "documents": storage.documents(), "unreferenced": storage.unreferenced(),
+        "host_dir_set": storage.host_dir() is not None, "documents": storage.documents(), "unreferenced": storage.unreferenced(), "media": storage.media_files(),
         "can_manage": user.has_perm(MANAGE), "is_super": user.is_superuser,
         "keep": settings.PANEL_BACKUP_KEEP, "weekdays": settings.PANEL_BACKUP_WEEKDAYS, "offsite": backup_panel.offsite_configured()})
 
@@ -87,6 +87,34 @@ def restore(request):
                 "The team is told when it is done.")
 
     return _done(request, run)
+
+
+@require_POST
+@portal_permission_required(MANAGE)
+def restore_upload(request):
+    """Restore from a backup file the person picks from their computer: it is added to the list (after it has been read back) and the restore starts."""
+    def run():
+        upload = request.FILES.get("backup")
+        if upload is None:
+            raise ServiceError("Choose a backup file first.", code="no_file")
+        storage.require_super(request.user)
+        if (request.POST.get("confirm") or "").strip() != "RESTORE":
+            raise ServiceError("Type the word RESTORE to confirm.", code="confirm_required")
+        name = storage.upload_backup(request.user, upload, request=request)
+        storage.start_restore(request.user, name, request.POST.get("confirm", ""), request=request)
+        return f"{name} was added and the restore has started. A copy of the current state is saved first."
+
+    return _done(request, run)
+
+
+@require_POST
+@portal_permission_required(MANAGE)
+def media_delete(request):
+    paths = request.POST.getlist("media")
+    if not paths:
+        messages.warning(request, "Tick at least one file first.")
+        return redirect("console:storage")
+    return _done(request, lambda: f"{storage.delete_media(request.user, paths, request=request)} media file(s) deleted.")
 
 
 @require_POST

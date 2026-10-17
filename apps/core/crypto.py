@@ -39,3 +39,39 @@ def decrypt_bytes(token: bytes) -> bytes:
         return _fernet().decrypt(token)
     except InvalidToken as exc:
         raise ValueError("This backup cannot be decrypted with the current key.") from exc
+
+
+# --- big files, in pieces -------------------------------------------------------------------------------------
+
+FILE_MAGIC = b"WHPB1\n"
+FILE_CHUNK = 32 * 1024 * 1024
+
+
+def encrypt_file(source, target):
+    """Encrypt a (possibly large) file piece by piece, so it never has to fit in memory: the magic, then for each piece 4 bytes of length and the encrypted piece."""
+    fernet = _fernet()
+    with open(source, "rb") as src, open(target, "wb") as dst:
+        dst.write(FILE_MAGIC)
+        while chunk := src.read(FILE_CHUNK):
+            token = fernet.encrypt(chunk)
+            dst.write(len(token).to_bytes(4, "big"))
+            dst.write(token)
+
+
+def decrypt_file(source, target):
+    """The reverse of ``encrypt_file``. A file written before that (one encrypted block) is read too. Raises ValueError for a wrong key or a damaged file."""
+    fernet = _fernet()
+    with open(source, "rb") as src, open(target, "wb") as dst:
+        head = src.read(len(FILE_MAGIC))
+        try:
+            if head != FILE_MAGIC:  # an older backup: the whole file is one encrypted block
+                dst.write(fernet.decrypt(head + src.read()))
+                return
+            while True:
+                size = src.read(4)
+                if not size:
+                    return
+                token = src.read(int.from_bytes(size, "big"))
+                dst.write(fernet.decrypt(token))
+        except InvalidToken as exc:
+            raise ValueError("This backup cannot be decrypted with the current key.") from exc

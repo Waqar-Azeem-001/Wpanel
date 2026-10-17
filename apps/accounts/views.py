@@ -61,10 +61,7 @@ def login_view(request):
                 services.start_mfa_challenge(request, user, remember=remember, next_url=_safe_next(request))
                 return redirect("accounts:mfa_verify")
             return _finish_login(request, user, remember=remember, next_url=_safe_next(request))
-    from apps.support import kb
-
-    return render(request, "accounts/login.html", {"form": form, "next": request.GET.get("next", ""),
-                                                   "help_articles": list(kb.public_articles()[:3])})
+    return render(request, "accounts/login.html", {"form": form, "next": request.GET.get("next", "")})
 
 
 @sensitive_post_parameters("code")

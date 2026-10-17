@@ -1,11 +1,6 @@
 {% extends "layouts/auth.html" %}
 {% load i18n %}
 {% block title %}{% trans "Sign in" %} · {{ SITE_NAME }}{% endblock %}
-{% block art_extra %}{% if help_articles %}
-<section class="auth-news" aria-label="{% trans 'From our help centre' %}">
-  <h2>{% trans "From our help centre" %}</h2>
-  <ul>{% for article in help_articles %}<li><a href="{% url 'help:article' article.category.slug article.slug %}">{{ article.title }}</a><small>{{ article.category.name }}</small></li>{% endfor %}</ul>
-</section>{% endif %}{% endblock %}
 {% block content %}
 <h1>{% trans "Welcome back" %}</h1>
 <p class="auth-sub">{% trans "Sign in to manage your services, domains and billing." %}</p>

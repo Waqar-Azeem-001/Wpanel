@@ -717,13 +717,6 @@ table.lines .line-row[hidden] { display: none; }
 .auth-alt { margin: 1.4rem -2rem -1.6rem; padding: 1rem 2rem; border-top: 1px solid var(--border); background: var(--surface-2); border-radius: 0 0 18px 18px; }
 .auth-legal { margin-top: 1.3rem; padding-top: 0; }
 .auth-card > .auth-legal { margin-bottom: 0; }
-.auth-news { margin-top: 2rem; max-width: 28rem; }
-.auth-news h2 { margin: 0 0 .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #a3b1d4; }
-.auth-news ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
-.auth-news li { padding: .7rem .9rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px; background: rgba(255, 255, 255, .06); }
-.auth-news a { display: block; color: #fff; font-weight: 600; font-size: .9rem; text-decoration: none; }
-.auth-news a:hover { text-decoration: underline; }
-.auth-news small { color: #a3b1d4; }
 @media (max-width: 900px) { .auth-card-logo { display: none; } .auth-card { padding: 1.5rem 1.25rem 1.25rem; } .auth-alt { margin: 1.2rem -1.25rem -1.25rem; padding: .9rem 1.25rem; } }
 
 /* --- Product form: limit rows, and the collapsed "More options" ---------------------------------------------------------------- */
@@ -776,11 +769,7 @@ table.lines .line-row[hidden] { display: none; }
 .auth-brand { display: block; font-weight: 800; font-size: 1.3rem; color: var(--text); text-decoration: none; }
 .auth-brand img { height: 46px; width: auto; max-width: 260px; }
 .auth-center .auth-card { margin: 0; }
-.auth-center .auth-news { width: 100%; max-width: 27rem; margin: 0; }
-.auth-center .auth-news h2, .auth-center .auth-news small, .auth-center .auth-art-foot { color: var(--muted); }
-.auth-center .auth-news li { background: var(--surface); border-color: var(--border); }
-.auth-center .auth-news a { color: var(--text); }
-.auth-center .auth-art-foot { margin: .25rem 0 0; text-align: center; }
+.auth-center .auth-center .auth-center .auth-center .auth-center .auth-art-foot { margin: .25rem 0 0; text-align: center; }
 .auth-center .auth-art-foot a { color: inherit; }
 @media (max-width: 900px) { .auth-center .auth-card { padding: 1.5rem 1.25rem 1.25rem; } }
 .shop-main > * { min-width: 0; }

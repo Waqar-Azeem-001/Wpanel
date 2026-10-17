@@ -126,7 +126,6 @@ def test_a_backup_is_made_from_the_page(client, staff, folders, monkeypatch):
 def test_restore_needs_a_super_admin_the_typed_word_and_a_real_backup(client, staff, folders, monkeypatch):
     started = []
     monkeypatch.setattr("apps.core.tasks.restore_panel_task.delay", lambda name, actor: started.append((name, actor)))
-    monkeypatch.setattr(storage.connection, "vendor", "postgresql", raising=False)
     (folders / "panel" / NAME.replace("sqlite", "postgresql")).write_bytes(b"x")
     pg = NAME.replace("sqlite", "postgresql")
     admin = browser(client, staff(Role.ADMIN))
@@ -189,12 +188,3 @@ def test_a_failed_restore_changes_nothing_and_says_so(folders, monkeypatch):
     monkeypatch.setattr(backup_panel, "make_backup", lambda target, keep: folders / "panel" / "safety.bak.enc")
     with pytest.raises(CommandError, match="changed nothing"):
         backup_panel.restore_backup(backup)
-
-
-def test_restore_is_refused_on_a_database_that_is_not_postgresql(folders):
-    from django.core.management.base import CommandError
-
-    from apps.core.management.commands import backup_panel
-
-    with pytest.raises(CommandError, match="PostgreSQL"):
-        backup_panel.restore_backup(folders / "panel" / NAME)
