@@ -21,3 +21,6 @@ if not env("REDIS_URL", default=""):
     CELERY_TASK_EAGER_PROPAGATES = False
     CELERY_BROKER_URL = "memory://"
     CELERY_RESULT_BACKEND = "cache+memory://"
+
+# Local development: no emailed sign-in code (it would need a working mail provider); production keeps it on. Set SIGNIN_EMAIL_CODE=true in .env to try it locally.
+SIGNIN_EMAIL_CODE = env.bool("SIGNIN_EMAIL_CODE", default=False)
