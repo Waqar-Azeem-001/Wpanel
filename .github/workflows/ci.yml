@@ -32,7 +32,7 @@ jobs:
       DJANGO_SECRET_KEY: ci-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # the secret scan below reads the whole history
       - name: Secret scan
@@ -104,7 +104,7 @@ jobs:
       DEPLOY_PATH: /srv/whpanel
       DEPLOY_URL: https://whpanel.myaiwhe.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check for deploy key
         id: key
         env:
