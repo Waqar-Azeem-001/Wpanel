@@ -10,3 +10,6 @@ db.sqlite3
 celerybeat-schedule*
 /demo_hosting_files/
 /panel_backups/
+
+# downloaded Python package files
+*.whl
