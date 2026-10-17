@@ -24,3 +24,6 @@ if not env("REDIS_URL", default=""):
 
 # Local development: no emailed sign-in code (it would need a working mail provider); production keeps it on. Set SIGNIN_EMAIL_CODE=true in .env to try it locally.
 SIGNIN_EMAIL_CODE = env.bool("SIGNIN_EMAIL_CODE", default=False)
+
+# Local development: the browser must not keep an old copy of the scripts and styles between edits.
+MIDDLEWARE = [*MIDDLEWARE, "config.dev_nocache.NoCacheStaticMiddleware"]  # noqa: F405

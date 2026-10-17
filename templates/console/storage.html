@@ -4,96 +4,128 @@
 {% block container %}wide{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{% trans "Storage and backups" %}</h1>
-  <p class="page-sub">{% trans "What is kept on this server for the panel, the backups of its database, and the files customers uploaded." %}</p></div>
+  <p class="page-sub">{% trans "What is kept on this server for the panel, its backups, and the files customers uploaded." %}</p></div>
 
-<section class="stat-tiles mb-4" aria-label="{% trans 'Sizes' %}">
-  <div class="stat-tile"><span class="stat-label">{% trans "Disk used" %}</span><strong class="stat-value">{{ disk.used|filesizeformat }}</strong><small class="text-secondary">{% trans "of" %} {{ disk.total|filesizeformat }} &middot; {{ disk.free|filesizeformat }} {% trans "free" %} ({{ disk.percent }}%)</small></div>
-  {% for label, size in overview %}<div class="stat-tile"><span class="stat-label">{{ label }}</span><strong class="stat-value">{{ size|filesizeformat }}</strong></div>{% endfor %}
+{# ---------------- Sizes ---------------- #}
+<section class="sg-tiles mb-4" aria-label="{% trans 'Sizes' %}">
+  <div class="sg-tile sg-disk">
+    <span class="sg-icon" aria-hidden="true"><i class="bi bi-hdd"></i></span>
+    <div class="sg-body"><span class="sg-label">{% trans "Disk" %}</span>
+      <strong class="sg-value">{{ disk.used|filesizeformat }} <small>{% trans "of" %} {{ disk.total|filesizeformat }}</small></strong>
+      <progress class="usage-meter{% if disk.percent >= 90 %} is-red{% elif disk.percent >= 80 %} is-amber{% endif %}" max="100" value="{{ disk.percent }}" aria-label="{% trans 'Disk used' %}"></progress>
+      <small class="sg-note">{{ disk.free|filesizeformat }} {% trans "free" %} ({{ disk.percent }}% {% trans "used" %})</small></div>
+  </div>
+  {% for label, size in overview %}
+  <div class="sg-tile"><span class="sg-icon" aria-hidden="true"><i class="bi {% if "atabase" in label %}bi-database{% elif "ackups" in label %}bi-cloud-arrow-up{% elif "ocuments" in label %}bi-file-earmark-text{% else %}bi-images{% endif %}"></i></span>
+    <div class="sg-body"><span class="sg-label">{{ label }}</span><strong class="sg-value">{{ size|filesizeformat }}</strong></div></div>
+  {% endfor %}
 </section>
 
 {# ---------------- Backups ---------------- #}
-<section class="card mb-4" id="backups"><div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-  <span>{% trans "Backups: database and uploaded files" %}</span>
-  {% if can_manage %}<form method="post" action="{% url 'console:storage_backup_now' %}" data-plain>{% csrf_token %}<button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Back up now" %}</button></form>{% endif %}
-</div>
-<div class="card-body border-bottom small text-secondary">
-  {% if weekdays == "*" %}{% trans "A backup is made every night at 01:30." %}{% else %}{% trans "A backup is made on:" %} {{ weekdays }} 01:30.{% endif %}
-  {% trans "The newest" %} <strong>{{ keep }}</strong> {% trans "are kept; older ones are deleted by themselves." %}
-  {% if offsite %}{% trans "Each one is also copied off the server." %}{% else %}<span class="text-danger">{% trans "No off-site copy is set up: these exist only on this server." %}</span>{% endif %}
-</div>
-{% if can_manage %}<form id="bk-del" method="post" action="{% url 'console:storage_backups_delete' %}" data-confirm="{% trans 'Delete every ticked backup? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
-<div class="table-responsive"><table class="table align-middle mb-0">
-  <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all form="bk-del" aria-label="{% trans 'Select all backups' %}"></th>{% endif %}<th>{% trans "Backup" %}</th><th>{% trans "Made" %}</th><th class="text-end">{% trans "Size" %}</th><th></th></tr></thead>
-  <tbody>
-  {% for b in panel_backups %}<tr>
-    {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="backups" value="panel:{{ b.name }}" form="bk-del" data-row aria-label="{% trans 'Select' %} {{ b.name }}"></td>{% endif %}
-    <td><code>{{ b.name }}</code>{% if forloop.first %} <span class="badge text-bg-success">{% trans "newest" %}</span>{% endif %}<br><small class="text-secondary">{% if b.full %}{% trans "Database and uploaded files" %}{% else %}{% trans "Database only (an older backup)" %}{% endif %}</small></td>
-    <td>{{ b.modified|date:"j M Y, H:i" }} UTC</td><td class="text-end">{{ b.size|filesizeformat }}</td>
-    <td class="text-end"><div class="d-flex flex-wrap gap-2 justify-content-end">
-      {% if can_manage %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'console:storage_backup_download' 'panel' b.name %}">{% trans "Download" %}</a>{% endif %}
-      {% if is_super %}<button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#restore-{{ forloop.counter }}" aria-expanded="false">{% trans "Restore…" %}</button>{% endif %}
-    </div></td></tr>
-    {% if is_super %}<tr class="collapse" id="restore-{{ forloop.counter }}"><td colspan="5"><form method="post" action="{% url 'console:storage_restore' %}" class="alert alert-danger mb-0" data-plain>{% csrf_token %}
-      <input type="hidden" name="name" value="{{ b.name }}">
-      <p class="mb-2"><strong>{% trans "Restore the whole panel database to how it was on" %} {{ b.modified|date:"j M Y, H:i" }} UTC?</strong> {% trans "Everything done since then (orders, payments, tickets, users) is replaced. A copy of the database as it is right now is saved first so you can undo this. You may be signed out when it finishes." %}</p>
-      <div class="d-flex flex-wrap gap-2 align-items-center"><label class="visually-hidden" for="rc-{{ forloop.counter }}">{% trans "Type RESTORE" %}</label><input id="rc-{{ forloop.counter }}" class="form-control w-auto" name="confirm" placeholder="{% trans 'Type RESTORE' %}" autocomplete="off" required>
-        <button class="btn btn-danger" type="submit">{% trans "Restore this backup" %}</button></div></form></td></tr>{% endif %}
-  {% empty %}<tr><td colspan="5" class="text-secondary">{% trans "No backup yet. Press Back up now, then a Restore button appears next to it." %}</td></tr>{% endfor %}
-  </tbody></table></div>
-{% if is_super %}
-<div class="card-body border-top"><h2 class="h6">{% trans "Restore from a backup file" %}</h2>
-  <p class="small text-secondary mb-2">{% trans "Use this for a backup you downloaded earlier, or one from another server (it must be a file this panel made, with the same encryption key). It is added to the list and restored." %}</p>
-  <form method="post" action="{% url 'console:storage_restore_upload' %}" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center" data-confirm="{% trans 'Restore the panel from this file? Everything done since that backup is replaced.' %}">{% csrf_token %}
-    <label class="visually-hidden" for="up-file">{% trans "Backup file" %}</label><input id="up-file" class="form-control w-auto" type="file" name="backup" accept=".enc" required>
-    <label class="visually-hidden" for="up-confirm">{% trans "Type RESTORE" %}</label><input id="up-confirm" class="form-control w-auto" name="confirm" placeholder="{% trans 'Type RESTORE' %}" autocomplete="off" required>
-    <button class="btn btn-danger" type="submit">{% trans "Upload and restore" %}</button></form></div>
-{% elif can_manage %}<div class="card-body border-top small text-secondary">{% trans "Restoring a backup needs a Super Admin." %}</div>{% endif %}
-{% if host_dir_set and is_super %}
-<div class="card-body border-top"><h2 class="h6">{% trans "Made before each update of the panel" %}</h2>
-  <p class="small text-secondary mb-2">{% trans "Plain database dumps (every table, not encrypted). Only a Super Admin sees them. The newest 4 are kept." %}</p>
-  <div class="table-responsive"><table class="table table-sm align-middle mb-0"><tbody>
-  {% for b in host_dumps %}<tr>
-    {% if can_manage %}<td class="w-1"><input class="form-check-input" type="checkbox" name="backups" value="host:{{ b.name }}" form="bk-del" data-row aria-label="{% trans 'Select' %} {{ b.name }}"></td>{% endif %}
-    <td><code>{{ b.name }}</code></td><td>{{ b.modified|date:"j M Y, H:i" }} UTC</td><td class="text-end">{{ b.size|filesizeformat }}</td>
-    <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'console:storage_backup_download' 'host' b.name %}">{% trans "Download" %}</a></td></tr>
-  {% empty %}<tr><td class="text-secondary">{% trans "None." %}</td></tr>{% endfor %}</tbody></table></div></div>
-{% endif %}
-{% if can_manage %}{% if panel_backups or host_dumps %}<div class="card-footer d-flex flex-wrap align-items-center gap-2"><span class="fw-semibold">{% trans "With selected:" %}</span><button class="btn btn-sm btn-outline-danger" type="submit" form="bk-del">{% trans "Delete selected" %}</button></div>{% endif %}{% endif %}
+<section class="sg-card" id="backups">
+  <header class="sg-head">
+    <div><h2>{% trans "Backups" %}</h2><p>{% trans "The database and every uploaded file, in one encrypted file." %}</p></div>
+    {% if can_manage %}<form method="post" action="{% url 'console:storage_backup_now' %}" data-plain>{% csrf_token %}<button class="btn btn-primary" type="submit"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> {% trans "Back up now" %}</button></form>{% endif %}
+  </header>
+  <ul class="sg-facts">
+    <li><i class="bi bi-clock" aria-hidden="true"></i> {% if weekdays == "*" %}{% trans "Made every night at 01:30" %}{% else %}{% trans "Made on" %} {{ weekdays }} 01:30{% endif %}</li>
+    <li><i class="bi bi-collection" aria-hidden="true"></i> {% trans "The newest" %} <strong>{{ keep }}</strong> {% trans "are kept, older ones are deleted automatically" %}</li>
+    <li class="{% if offsite %}is-ok{% else %}is-warn{% endif %}"><i class="bi {% if offsite %}bi-cloud-check{% else %}bi-exclamation-triangle{% endif %}" aria-hidden="true"></i> {% if offsite %}{% trans "Each one is also copied off this server" %}{% else %}{% trans "No off-site copy: these exist only on this server" %}{% endif %}</li>
+  </ul>
+  {% if can_manage %}<form id="bk-del" method="post" action="{% url 'console:storage_backups_delete' %}" data-confirm="{% trans 'Delete every ticked backup? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
+  {% if panel_backups %}
+  <div class="table-responsive"><table class="table sg-table align-middle mb-0">
+    <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all form="bk-del" aria-label="{% trans 'Select all backups' %}"></th>{% endif %}<th>{% trans "Backup" %}</th><th>{% trans "Made" %}</th><th class="text-end">{% trans "Size" %}</th><th class="text-end">{% trans "Actions" %}</th></tr></thead>
+    <tbody>
+    {% for b in panel_backups %}<tr>
+      {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="backups" value="panel:{{ b.name }}" form="bk-del" data-row aria-label="{% trans 'Select' %} {{ b.name }}"></td>{% endif %}
+      <td><div class="sg-name"><code>{{ b.name }}</code>{% if forloop.first %} <span class="badge text-bg-success">{% trans "newest" %}</span>{% endif %}</div>
+        <small class="text-secondary">{% if b.full %}{% trans "Database and uploaded files" %}{% else %}{% trans "Database only (an older backup)" %}{% endif %}</small></td>
+      <td>{{ b.modified|date:"j M Y, H:i" }} UTC</td><td class="text-end">{{ b.size|filesizeformat }}</td>
+      <td class="text-end"><div class="d-flex flex-wrap gap-2 justify-content-end">
+        {% if can_manage %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'console:storage_backup_download' 'panel' b.name %}"><i class="bi bi-download" aria-hidden="true"></i> {% trans "Download" %}</a>{% endif %}
+        {% if is_super %}<button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#restore-{{ forloop.counter }}" aria-expanded="false">{% trans "Restore…" %}</button>{% endif %}
+      </div></td></tr>
+      {% if is_super %}<tr class="collapse" id="restore-{{ forloop.counter }}"><td colspan="5"><form method="post" action="{% url 'console:storage_restore' %}" class="sg-danger" data-plain>{% csrf_token %}
+        <input type="hidden" name="name" value="{{ b.name }}">
+        <p><strong>{% trans "Restore the panel to how it was on" %} {{ b.modified|date:"j M Y, H:i" }} UTC?</strong> {% trans "Everything done since then (orders, payments, tickets, users, uploads) is replaced. The current state is saved first so you can undo this. You may be signed out when it finishes." %}</p>
+        <div class="sg-row"><label class="visually-hidden" for="rc-{{ forloop.counter }}">{% trans "Type RESTORE" %}</label><input id="rc-{{ forloop.counter }}" class="form-control" name="confirm" placeholder="{% trans 'Type RESTORE to confirm' %}" autocomplete="off" required>
+          <button class="btn btn-danger" type="submit">{% trans "Restore this backup" %}</button></div></form></td></tr>{% endif %}
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}
+  <div class="sg-empty"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+    <strong>{% trans "No backup yet" %}</strong>
+    <p>{% trans "Press Back up now. The first one appears here, with its Download and Restore buttons." %}</p></div>
+  {% endif %}
+
+  {% if host_dir_set and is_super %}
+  <div class="sg-sub"><h3>{% trans "Made before each update of the panel" %}</h3>
+    <p>{% trans "Plain database dumps (every table, not encrypted); only a Super Admin sees them. The newest 4 are kept." %}</p>
+    <div class="table-responsive"><table class="table sg-table table-sm align-middle mb-0"><tbody>
+    {% for b in host_dumps %}<tr>
+      {% if can_manage %}<td class="w-1"><input class="form-check-input" type="checkbox" name="backups" value="host:{{ b.name }}" form="bk-del" data-row aria-label="{% trans 'Select' %} {{ b.name }}"></td>{% endif %}
+      <td><code>{{ b.name }}</code></td><td>{{ b.modified|date:"j M Y, H:i" }} UTC</td><td class="text-end">{{ b.size|filesizeformat }}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'console:storage_backup_download' 'host' b.name %}"><i class="bi bi-download" aria-hidden="true"></i> {% trans "Download" %}</a></td></tr>
+    {% empty %}<tr><td class="text-secondary">{% trans "None." %}</td></tr>{% endfor %}</tbody></table></div></div>
+  {% endif %}
+  {% if can_manage %}{% if panel_backups or host_dumps %}<footer class="sg-foot"><span>{% trans "With selected:" %}</span><button class="btn btn-sm btn-outline-danger" type="submit" form="bk-del"><i class="bi bi-trash" aria-hidden="true"></i> {% trans "Delete selected" %}</button></footer>{% endif %}{% endif %}
 </section>
+
+{% if is_super %}
+<section class="sg-card sg-card-danger" id="restore-file">
+  <header class="sg-head"><div><h2>{% trans "Restore from a backup file" %}</h2>
+    <p>{% trans "For a backup you downloaded earlier, or one from another server. It must be a file this panel made, with the same encryption key. It is added to the list and restored." %}</p></div></header>
+  <form method="post" action="{% url 'console:storage_restore_upload' %}" enctype="multipart/form-data" class="sg-upload" data-confirm="{% trans 'Restore the panel from this file? Everything done since that backup is replaced.' %}">{% csrf_token %}
+    <div><label class="form-label" for="up-file">{% trans "Backup file" %}</label><input id="up-file" class="form-control" type="file" name="backup" accept=".enc" required></div>
+    <div><label class="form-label" for="up-confirm">{% trans "Type RESTORE to confirm" %}</label><input id="up-confirm" class="form-control" name="confirm" placeholder="RESTORE" autocomplete="off" required></div>
+    <div class="sg-upload-go"><button class="btn btn-danger" type="submit"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {% trans "Upload and restore" %}</button></div>
+  </form>
+</section>
+{% elif can_manage %}<p class="small text-secondary mb-4"><i class="bi bi-shield-lock" aria-hidden="true"></i> {% trans "Restoring a backup needs a Super Admin." %}</p>{% endif %}
 
 {# ---------------- Documents ---------------- #}
-<section class="card mb-4" id="documents"><div class="card-header">{% trans "Documents customers uploaded" %} <span class="badge text-bg-secondary">{{ documents|length }}</span></div>
-<div class="card-body border-bottom small text-secondary">{% trans "Ticket attachments and proofs of payment. Deleting removes the file only; the ticket or payment record stays and shows that a file was once there." %}</div>
-{% if can_manage %}<form id="doc-del" method="post" action="{% url 'console:storage_documents_delete' %}" data-confirm="{% trans 'Delete every ticked file? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
-<div class="table-responsive"><table class="table align-middle mb-0">
-  <thead><tr>{% if can_manage %}<th><input class="form-check-input" type="checkbox" data-select-all form="doc-del" aria-label="{% trans 'Select all' %}"></th>{% endif %}<th>{% trans "File" %}</th><th>{% trans "Type" %}</th><th>{% trans "Belongs to" %}</th><th>{% trans "Added" %}</th><th class="text-end">{% trans "Size" %}</th></tr></thead>
-  <tbody>{% for d in documents %}<tr>
-    {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="documents" value="{{ d.key }}" form="doc-del" data-row aria-label="{% trans 'Select' %} {{ d.name }}"></td>{% endif %}
-    <td>{{ d.name }}</td><td>{{ d.kind }}</td><td><a href="{{ d.url }}">{{ d.where }}</a></td><td>{{ d.created|date:"j M Y" }}</td><td class="text-end">{{ d.size|filesizeformat }}</td></tr>
-  {% empty %}<tr><td colspan="6" class="text-secondary">{% trans "No uploaded documents are stored." %}</td></tr>{% endfor %}</tbody></table></div>
-{% if can_manage and documents %}<div class="card-footer d-flex flex-wrap align-items-center gap-2"><span class="fw-semibold">{% trans "With selected:" %}</span><button class="btn btn-sm btn-outline-danger" type="submit" form="doc-del">{% trans "Delete selected files" %}</button></div>{% endif %}
+<section class="sg-card" id="documents">
+  <header class="sg-head"><div><h2>{% trans "Documents customers uploaded" %} <span class="badge text-bg-secondary">{{ documents|length }}</span></h2>
+    <p>{% trans "Ticket attachments and proofs of payment. Deleting removes the file only; the ticket or payment record stays and shows that a file was once there." %}</p></div></header>
+  {% if can_manage %}<form id="doc-del" method="post" action="{% url 'console:storage_documents_delete' %}" data-confirm="{% trans 'Delete every ticked file? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
+  {% if documents %}
+  <div class="table-responsive"><table class="table sg-table align-middle mb-0">
+    <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all form="doc-del" aria-label="{% trans 'Select all' %}"></th>{% endif %}<th>{% trans "File" %}</th><th>{% trans "Type" %}</th><th>{% trans "Belongs to" %}</th><th>{% trans "Added" %}</th><th class="text-end">{% trans "Size" %}</th></tr></thead>
+    <tbody>{% for d in documents %}<tr>
+      {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="documents" value="{{ d.key }}" form="doc-del" data-row aria-label="{% trans 'Select' %} {{ d.name }}"></td>{% endif %}
+      <td>{{ d.name }}</td><td>{{ d.kind }}</td><td><a href="{{ d.url }}">{{ d.where }}</a></td><td>{{ d.created|date:"j M Y" }}</td><td class="text-end">{{ d.size|filesizeformat }}</td></tr>{% endfor %}</tbody></table></div>
+  {% if can_manage %}<footer class="sg-foot"><span>{% trans "With selected:" %}</span><button class="btn btn-sm btn-outline-danger" type="submit" form="doc-del"><i class="bi bi-trash" aria-hidden="true"></i> {% trans "Delete selected files" %}</button></footer>{% endif %}
+  {% else %}<div class="sg-empty"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><strong>{% trans "No uploaded documents" %}</strong><p>{% trans "Ticket attachments and payment proofs will be listed here." %}</p></div>{% endif %}
 </section>
 
-<section class="card mb-4" id="media"><div class="card-header">{% trans "Public media files" %} <span class="badge text-bg-secondary">{{ media|length }}</span></div>
-<div class="card-body border-bottom small text-secondary">{% trans "Files in the public media folder (anyone with the address can open them). Tick one or many to delete." %}</div>
-{% if can_manage %}<form id="media-del" method="post" action="{% url 'console:storage_media_delete' %}" data-confirm="{% trans 'Delete every ticked file? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
-<div class="table-responsive"><table class="table align-middle mb-0">
-  <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all form="media-del" aria-label="{% trans 'Select all' %}"></th>{% endif %}<th>{% trans "File" %}</th><th>{% trans "Changed" %}</th><th class="text-end">{% trans "Size" %}</th></tr></thead>
-  <tbody>{% for f in media %}<tr>
-    {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="media" value="{{ f.path }}" form="media-del" data-row aria-label="{% trans 'Select' %} {{ f.path }}"></td>{% endif %}
-    <td><code>{{ f.path }}</code></td><td>{{ f.modified|date:"j M Y" }}</td><td class="text-end">{{ f.size|filesizeformat }}</td></tr>
-  {% empty %}<tr><td colspan="4" class="text-secondary">{% trans "No public media files are stored." %}</td></tr>{% endfor %}</tbody></table></div>
-{% if can_manage and media %}<div class="card-footer d-flex flex-wrap align-items-center gap-2"><span class="fw-semibold">{% trans "With selected:" %}</span><button class="btn btn-sm btn-outline-danger" type="submit" form="media-del">{% trans "Delete selected files" %}</button></div>{% endif %}
+{# ---------------- Public media ---------------- #}
+<section class="sg-card" id="media">
+  <header class="sg-head"><div><h2>{% trans "Public media files" %} <span class="badge text-bg-secondary">{{ media|length }}</span></h2>
+    <p>{% trans "Files in the public media folder (anyone with the address can open them). Tick one or many to delete." %}</p></div></header>
+  {% if can_manage %}<form id="media-del" method="post" action="{% url 'console:storage_media_delete' %}" data-confirm="{% trans 'Delete every ticked file? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
+  {% if media %}
+  <div class="table-responsive"><table class="table sg-table align-middle mb-0">
+    <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all form="media-del" aria-label="{% trans 'Select all' %}"></th>{% endif %}<th>{% trans "File" %}</th><th>{% trans "Changed" %}</th><th class="text-end">{% trans "Size" %}</th></tr></thead>
+    <tbody>{% for f in media %}<tr>
+      {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="media" value="{{ f.path }}" form="media-del" data-row aria-label="{% trans 'Select' %} {{ f.path }}"></td>{% endif %}
+      <td><code>{{ f.path }}</code></td><td>{{ f.modified|date:"j M Y" }}</td><td class="text-end">{{ f.size|filesizeformat }}</td></tr>{% endfor %}</tbody></table></div>
+  {% if can_manage %}<footer class="sg-foot"><span>{% trans "With selected:" %}</span><button class="btn btn-sm btn-outline-danger" type="submit" form="media-del"><i class="bi bi-trash" aria-hidden="true"></i> {% trans "Delete selected files" %}</button></footer>{% endif %}
+  {% else %}<div class="sg-empty"><i class="bi bi-images" aria-hidden="true"></i><strong>{% trans "No public media files" %}</strong></div>{% endif %}
 </section>
 
+{# ---------------- Files nothing points to ---------------- #}
 {% if unreferenced %}
-<section class="card mb-4" id="unreferenced"><div class="card-header">{% trans "Files nothing points to" %} <span class="badge text-bg-warning">{{ unreferenced|length }}</span></div>
-<div class="card-body border-bottom small text-secondary">{% trans "Files in the documents folder that no ticket or payment uses (left behind by a failed upload, for example). Safe to delete." %}</div>
-{% if can_manage %}<form id="orph-del" method="post" action="{% url 'console:storage_unreferenced_delete' %}" data-confirm="{% trans 'Delete every ticked file? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
-<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all form="orph-del" aria-label="{% trans 'Select all' %}"></th>{% endif %}<th>{% trans "File" %}</th><th>{% trans "Changed" %}</th><th class="text-end">{% trans "Size" %}</th></tr></thead><tbody>{% for f in unreferenced %}<tr>
-  {% if can_manage %}<td class="w-1"><input class="form-check-input" type="checkbox" name="files" value="{{ f.path }}" form="orph-del" data-row aria-label="{% trans 'Select' %} {{ f.path }}"></td>{% endif %}
-  <td><code>{{ f.path }}</code></td><td>{{ f.modified|date:"j M Y" }}</td><td class="text-end">{{ f.size|filesizeformat }}</td></tr>{% endfor %}</tbody></table></div>
-{% if can_manage %}<div class="card-footer"><button class="btn btn-sm btn-outline-danger" type="submit" form="orph-del">{% trans "Delete selected files" %}</button></div>{% endif %}
+<section class="sg-card" id="unreferenced">
+  <header class="sg-head"><div><h2>{% trans "Files nothing points to" %} <span class="badge text-bg-warning">{{ unreferenced|length }}</span></h2>
+    <p>{% trans "Files in the documents folder that no ticket or payment uses (left behind by a failed upload, for example). Safe to delete." %}</p></div></header>
+  {% if can_manage %}<form id="orph-del" method="post" action="{% url 'console:storage_unreferenced_delete' %}" data-confirm="{% trans 'Delete every ticked file? This cannot be undone.' %}">{% csrf_token %}</form>{% endif %}
+  <div class="table-responsive"><table class="table sg-table align-middle mb-0">
+    <thead><tr>{% if can_manage %}<th class="w-1"><input class="form-check-input" type="checkbox" data-select-all form="orph-del" aria-label="{% trans 'Select all' %}"></th>{% endif %}<th>{% trans "File" %}</th><th>{% trans "Changed" %}</th><th class="text-end">{% trans "Size" %}</th></tr></thead>
+    <tbody>{% for f in unreferenced %}<tr>
+      {% if can_manage %}<td><input class="form-check-input" type="checkbox" name="files" value="{{ f.path }}" form="orph-del" data-row aria-label="{% trans 'Select' %} {{ f.path }}"></td>{% endif %}
+      <td><code>{{ f.path }}</code></td><td>{{ f.modified|date:"j M Y" }}</td><td class="text-end">{{ f.size|filesizeformat }}</td></tr>{% endfor %}</tbody></table></div>
+  {% if can_manage %}<footer class="sg-foot"><span>{% trans "With selected:" %}</span><button class="btn btn-sm btn-outline-danger" type="submit" form="orph-del"><i class="bi bi-trash" aria-hidden="true"></i> {% trans "Delete selected files" %}</button></footer>{% endif %}
 </section>
 {% endif %}
 {% endblock %}

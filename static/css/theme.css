@@ -1023,3 +1023,43 @@ a.use-item:hover { border-color: var(--border-strong); }
 [data-bs-theme="dark"] .page-hero .lead, [data-bs-theme="dark"] .page-hero .hero-points { color: #b9c9ea; }
 [data-bs-theme="dark"] .page-hero .btn-outline-primary { background: transparent; color: #cfe0fb; border-color: #5f86d9; }
 .page-hero + .container-xxl { margin-top: 2rem; }
+
+/* Storage and backups page */
+.sg-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+.sg-tile { display: flex; gap: .9rem; align-items: flex-start; padding: 1.1rem 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.sg-tile.sg-disk { grid-column: span 2; }
+@media (max-width: 575.98px) { .sg-tile.sg-disk { grid-column: auto; } }
+.sg-icon { flex: none; width: 2.6rem; height: 2.6rem; border-radius: 12px; display: grid; place-items: center; font-size: 1.25rem; background: var(--accent-subtle, rgba(0,0,0,.06)); color: var(--accent-ink, var(--primary)); }
+.sg-body { display: flex; flex-direction: column; gap: .15rem; min-width: 0; flex: 1; }
+.sg-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 650; }
+.sg-value { font-size: 1.55rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.sg-value small { font-size: .85rem; color: var(--muted); font-weight: 500; }
+.sg-note { color: var(--muted); }
+.sg-tile progress.usage-meter { width: 100%; margin-top: .35rem; }
+.sg-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; margin-bottom: 1.5rem; overflow: hidden; }
+.sg-card-danger { border-color: color-mix(in srgb, var(--danger, #c0392b) 40%, var(--border)); }
+.sg-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.15rem 1.4rem; border-bottom: 1px solid var(--border); }
+.sg-head h2 { font-size: 1.1rem; font-weight: 700; margin: 0 0 .15rem; }
+.sg-head p { margin: 0; color: var(--muted); font-size: .9rem; max-width: 46rem; }
+.sg-facts { list-style: none; margin: 0; padding: .8rem 1.4rem; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; border-bottom: 1px solid var(--border); font-size: .9rem; color: var(--muted); background: var(--surface-2, transparent); }
+.sg-facts i { margin-right: .35rem; }
+.sg-facts .is-warn { color: var(--danger, #c0392b); font-weight: 600; } .sg-facts .is-ok { color: var(--success, #198754); font-weight: 600; }
+.sg-table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 650; white-space: nowrap; padding-block: .7rem; }
+.sg-table td, .sg-table th { padding-inline: 1.1rem; }
+.sg-table tbody tr:not(.collapse) td { padding-block: .8rem; }
+.sg-name code { font-size: .88rem; word-break: break-all; }
+.sg-danger { background: color-mix(in srgb, var(--danger, #c0392b) 9%, transparent); border: 1px solid color-mix(in srgb, var(--danger, #c0392b) 35%, transparent); border-radius: 12px; padding: 1rem 1.2rem; margin: .4rem 0; }
+.sg-danger p { margin: 0 0 .75rem; }
+.sg-row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.sg-row .form-control { max-width: 18rem; }
+.sg-upload { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: 1rem; align-items: end; padding: 1.2rem 1.4rem; }
+.sg-upload-go { display: flex; }
+@media (max-width: 767.98px) { .sg-upload { grid-template-columns: 1fr; } }
+.sg-empty { text-align: center; padding: 2.5rem 1.5rem; color: var(--muted); }
+.sg-empty > i { font-size: 2rem; display: block; margin-bottom: .5rem; color: var(--accent-ink, var(--primary)); }
+.sg-empty strong { display: block; color: var(--text); font-size: 1.05rem; }
+.sg-empty p { margin: .3rem auto 0; max-width: 28rem; }
+.sg-sub { padding: 1.1rem 1.4rem 1.2rem; border-top: 1px solid var(--border); }
+.sg-sub h3 { font-size: .95rem; font-weight: 700; margin: 0 0 .2rem; } .sg-sub p { color: var(--muted); font-size: .88rem; margin: 0 0 .7rem; }
+.sg-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .85rem 1.4rem; border-top: 1px solid var(--border); background: var(--surface-2, transparent); }
+.sg-foot > span { font-weight: 650; font-size: .9rem; }
