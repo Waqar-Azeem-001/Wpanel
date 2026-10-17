@@ -31,7 +31,7 @@ After rotating, sign everyone out: `C exec web python manage.py shell -c "from d
 
 ## 2. If the data is damaged or the server is lost
 
-Backups (see `docs/operations-runbook.md`): the nightly encrypted `panel-postgresql-*.bak.enc` in the `panel_backups` volume and, when set, in the off-site bucket; plus the plain dumps `/srv/backups/whpanel-before-*.sql.gz` taken before each deploy.
+Backups (see `docs/operations-runbook.md`): the weekly encrypted `panel-postgresql-*.bak.enc` (newest 3) in the `panel_backups` volume and, when set, in the off-site bucket; plus the plain dumps `/srv/backups/whpanel-before-*.sql.gz` taken before each deploy.
 
 1. New or cleaned server: Docker, the repo (`git clone`), `.env` from the password manager.
 2. `C up -d db redis` then restore:

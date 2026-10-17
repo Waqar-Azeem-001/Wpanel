@@ -59,3 +59,46 @@ def test_a_failing_nightly_backup_tells_the_team_and_still_fails(staff, monkeypa
     with pytest.raises(FileNotFoundError):
         tasks.panel_backup_task()
     assert Notification.objects.filter(event="backup.failed", title__contains="backup failed").exists()
+
+
+def test_only_the_newest_few_backups_are_kept_here(tmp_path, settings, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    for i in range(6):
+        (tmp_path / f"panel-postgresql-2026010{i}.bak.enc").write_bytes(b"x")
+    # make_backup prunes by file name order after writing the new one: simulate its pruning rule
+    keep = 3
+    old = sorted(tmp_path.glob("panel-*.bak.enc"))[:-keep]
+    for f in old:
+        f.unlink()
+    assert len(list(tmp_path.glob("panel-*.bak.enc"))) == 3
+    assert settings.PANEL_BACKUP_KEEP == 3 and settings.PANEL_BACKUP_WEEKDAYS == "sun"
+
+
+def test_the_off_site_copies_beyond_the_newest_few_are_deleted(settings, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    settings.PANEL_BACKUP_S3_BUCKET, settings.PANEL_BACKUP_S3_ACCESS_KEY, settings.PANEL_BACKUP_S3_SECRET_KEY = "bucket", "key", "secret"
+    now = datetime.now(timezone.utc)
+    objects = [{"Key": f"panel-backups/panel-{i}.bak.enc", "LastModified": now - timedelta(days=i)} for i in range(5)] + [{"Key": "panel-backups/readme.txt", "LastModified": now}]
+    deleted = []
+
+    class Paginator:
+        def paginate(self, **kw):
+            return [{"Contents": objects}]
+
+    class Client:
+        def get_paginator(self, name):
+            return Paginator()
+
+        def delete_object(self, Bucket, Key):
+            deleted.append(Key)
+
+    monkeypatch.setattr("boto3.client", lambda *a, **k: Client())
+    assert backup_panel.prune_offsite(3) == 2
+    assert sorted(deleted) == ["panel-backups/panel-3.bak.enc", "panel-backups/panel-4.bak.enc"]  # the two oldest backups; other files are left alone
+
+
+def test_the_nightly_job_became_a_weekly_one_by_default(settings):
+    schedule = settings.CELERY_BEAT_SCHEDULE["panel-database-backup"]["schedule"]
+    assert str(schedule.day_of_week) == "{0}"

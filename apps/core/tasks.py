@@ -15,9 +15,13 @@ def panel_backup_task():
     from apps.core.management.commands import backup_panel
 
     try:
-        target = backup_panel.make_backup(settings.PANEL_BACKUP_DIR)
+        keep = settings.PANEL_BACKUP_KEEP
+        target = backup_panel.make_backup(settings.PANEL_BACKUP_DIR, keep)
         backup_panel.verify_backup(target)  # a backup that cannot be read back is not a backup
-        copied = backup_panel.upload_offsite(target) if backup_panel.offsite_configured() else "no off-site storage set"
+        if backup_panel.offsite_configured():
+            copied = f"off-site {backup_panel.upload_offsite(target)}, {backup_panel.prune_offsite(keep)} old ones deleted there"
+        else:
+            copied = "no off-site storage set"
     except Exception as exc:  # noqa: BLE001 - tell the team, then let the failure show on the automation page
         from django.urls import reverse
 

@@ -71,6 +71,23 @@ def upload_offsite(path):
     return key
 
 
+def prune_offsite(keep):
+    """Delete the oldest off-site backups beyond the newest ``keep`` (by the time they were stored). Returns how many were deleted."""
+    import boto3
+
+    client = boto3.client("s3", endpoint_url=settings.PANEL_BACKUP_S3_ENDPOINT or None, aws_access_key_id=settings.PANEL_BACKUP_S3_ACCESS_KEY,
+                          aws_secret_access_key=settings.PANEL_BACKUP_S3_SECRET_KEY, region_name=settings.PANEL_BACKUP_S3_REGION or None)
+    prefix = (settings.PANEL_BACKUP_S3_PREFIX or "panel-backups").strip("/") + "/"
+    found = []
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=settings.PANEL_BACKUP_S3_BUCKET, Prefix=prefix):
+        found += [o for o in page.get("Contents", []) if o["Key"].endswith(".bak.enc")]
+    found.sort(key=lambda o: o["LastModified"], reverse=True)
+    old = found[keep:] if keep else []
+    for item in old:
+        client.delete_object(Bucket=settings.PANEL_BACKUP_S3_BUCKET, Key=item["Key"])
+    return len(old)
+
+
 def verify_backup(path):
     """Decrypt a backup and check the database inside is sound. Returns a short description, or raises CommandError."""
     path = Path(path)
@@ -102,16 +119,17 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--to", default=None, help="Folder for the backup files (default: PANEL_BACKUP_DIR).")
-        parser.add_argument("--keep", type=int, default=14, help="How many backup files to keep (0 keeps all).")
+        parser.add_argument("--keep", type=int, default=None, help="How many backup files to keep (0 keeps all). Default: PANEL_BACKUP_KEEP.")
         parser.add_argument("--verify", default=None, help="Check an existing backup file instead of making one.")
 
     def handle(self, *args, **options):
         if options["verify"]:
             self.stdout.write(self.style.SUCCESS(verify_backup(options["verify"])))
             return
-        target = make_backup(options["to"] or getattr(settings, "PANEL_BACKUP_DIR", settings.BASE_DIR / "panel_backups"), options["keep"])
+        keep = options["keep"] if options["keep"] is not None else getattr(settings, "PANEL_BACKUP_KEEP", 3)
+        target = make_backup(options["to"] or getattr(settings, "PANEL_BACKUP_DIR", settings.BASE_DIR / "panel_backups"), keep)
         self.stdout.write(self.style.SUCCESS(f"Backup written to {target} ({verify_backup(target)})"))
         if offsite_configured():
-            self.stdout.write(self.style.SUCCESS(f"Copied off-site: {upload_offsite(target)}"))
+            self.stdout.write(self.style.SUCCESS(f"Copied off-site: {upload_offsite(target)} ({prune_offsite(keep)} older ones deleted there)"))
         else:
             self.stdout.write(self.style.WARNING("No off-site storage is set (PANEL_BACKUP_S3_*): this backup exists only on this server."))

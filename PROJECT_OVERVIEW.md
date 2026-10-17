@@ -30,7 +30,7 @@ Customer / staff -> WHPanel -> cPanel/WHM provider layer -> cPanel hosting serve
 | Hosting server | one cPanel/WHM server (version 11.138, Apache, CloudLinux) holding the customers' websites |
 | Test hosting account | `testing.com` on that server, used for real checks |
 | Deploy | by hand: backup of the database, upload the code, rebuild the containers, collect static files, restart nginx, check the pages. Automatic deploy after green tests is built but waits for one GitHub secret (see section 11) |
-| Backups | a database dump is taken before every deploy (by hand, on the same server); the nightly encrypted panel backup (`backup_panel`, 01:30) writes to the `panel_backups` volume, is read back to prove it, and is copied to S3-compatible storage once `PANEL_BACKUP_S3_*` is set (until then it exists on this server only) |
+| Backups | a database dump is taken before every deploy (by hand, on the same server); the weekly encrypted panel backup (`backup_panel`, Sundays 01:30, newest 3 kept) writes to the `panel_backups` volume, is read back to prove it, and is copied to S3-compatible storage once `PANEL_BACKUP_S3_*` is set (until then it exists on this server only) |
 | CI | GitHub Actions on PostgreSQL 17 and Redis: runs the whole test suite on every push |
 | Secrets | only on the server (`.env`) or in GitHub secrets. Provider passwords live in the database, encrypted. Nothing secret is in the repository |
 

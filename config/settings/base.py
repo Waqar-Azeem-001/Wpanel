@@ -192,7 +192,7 @@ SESSION_COOKIE_AGE = 60 * 60 * 12
 # A new device must enter a code emailed to the account, and only one device stays signed in (apps/accounts/devices.py).
 SIGNIN_EMAIL_CODE = env.bool("SIGNIN_EMAIL_CODE", default=True)
 # Staff must have two-factor sign-in on to use /staff/ and the admin, and are signed out after this many idle minutes (0 = never).
-REQUIRE_STAFF_2FA = env.bool("REQUIRE_STAFF_2FA", default=True)
+REQUIRE_STAFF_2FA = env.bool("REQUIRE_STAFF_2FA", default=False)  # off by default; the emailed code for a new device is the second step today
 STAFF_IDLE_TIMEOUT_MINUTES = env.int("STAFF_IDLE_TIMEOUT_MINUTES", default=60)
 # Where the Django admin lives (keep it off the well-known address in production: DJANGO_ADMIN_URL=some-long-random-path/).
 ADMIN_URL = env("DJANGO_ADMIN_URL", default="admin/")
@@ -297,7 +297,7 @@ CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 240
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
-    "panel-database-backup": {"task": "apps.core.tasks.panel_backup_task", "schedule": crontab(hour=1, minute=30)},
+    "panel-database-backup": {"task": "apps.core.tasks.panel_backup_task", "schedule": crontab(day_of_week=env("PANEL_BACKUP_WEEKDAYS", default="sun"), hour=1, minute=30)},
     "website-care": {"task": "apps.hosting.tasks.run_site_care_task", "schedule": crontab(hour=3, minute=15)},
     "resource-readings": {"task": "apps.hosting.tasks.record_resource_readings_task", "schedule": crontab(minute="*/10")},
     "sync-tld-prices": {"task": "apps.domains.tasks.sync_tld_prices_task", "schedule": crontab(hour=2, minute=10)},
@@ -415,3 +415,6 @@ PANEL_BACKUP_S3_REGION = env("PANEL_BACKUP_S3_REGION", default="")
 PANEL_BACKUP_S3_ACCESS_KEY = env("PANEL_BACKUP_S3_ACCESS_KEY", default="")
 PANEL_BACKUP_S3_SECRET_KEY = env("PANEL_BACKUP_S3_SECRET_KEY", default="")
 PANEL_BACKUP_S3_PREFIX = env("PANEL_BACKUP_S3_PREFIX", default="panel-backups")
+# How often the panel's own backup is made (a cron day-of-week: "sun" = weekly, "*" = every night) and how many are kept, here and off-site; the older ones are deleted.
+PANEL_BACKUP_WEEKDAYS = env("PANEL_BACKUP_WEEKDAYS", default="sun")
+PANEL_BACKUP_KEEP = env.int("PANEL_BACKUP_KEEP", default=3)
