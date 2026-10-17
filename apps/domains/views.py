@@ -42,6 +42,24 @@ def _run(request, action, view_name, **redirect_kwargs):
 
 # --- Public: availability search -----------------------------------------------------------
 
+def _suggestions(result, popular, limit=5):
+    """The same name under the other popular extensions, each checked: [{domain, available, pricing}]. A check that fails is left out, never an error."""
+    base = result["domain"].split(".")[0]
+    found = []
+    for tld in popular:
+        name = base + tld.tld
+        if name == result["domain"]:
+            continue
+        try:
+            available, pricing = services.check_availability(name)
+        except ServiceError:
+            continue
+        found.append({"domain": name, "available": available, "pricing": pricing})
+        if len(found) == limit:
+            break
+    return found
+
+
 def domain_search(request):
     form = forms.AvailabilitySearchForm(request.GET or None)
     result = None
@@ -62,8 +80,9 @@ def domain_search(request):
     popular = [by_name[x] for x in PREFERRED_TLDS if x in by_name][:6] or sorted(tlds, key=lambda t: t.register_price)[:6]
     whois = [lowest_price(a) for a in Addon.objects.filter(kind=AddonKind.WHOIS_PRIVACY, status=CatalogStatus.ACTIVE).prefetch_related("prices")]
     whois = [p for p in whois if p is not None]
+    suggestions = _suggestions(result, popular) if result else []
     return render(request, "domains/public/search.html", {
-        "form": form, "result": result, "tlds": tlds, "popular": popular, "cheapest": min(tlds, key=lambda t: t.register_price) if tlds else None,
+        "form": form, "result": result, "suggestions": suggestions, "tlds": tlds, "popular": popular, "cheapest": min(tlds, key=lambda t: t.register_price) if tlds else None,
         "whois_price": min(whois, key=lambda p: p.price) if whois else None})
 
 
