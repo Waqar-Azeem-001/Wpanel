@@ -14,10 +14,16 @@ services:
 
   redis:
     image: redis:7-alpine
+    # With REDIS_PASSWORD set (in .env) Redis asks for it; REDIS_URL then reads redis://:PASSWORD@redis:6379/0. Without it, as before (only the stack's own network can reach it).
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: ["sh", "-c", "exec redis-server $${REDIS_PASSWORD:+--requirepass \"$$REDIS_PASSWORD\"}"]
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping; else redis-cli ping; fi | grep -q PONG"]
       interval: 5s
       retries: 10
 
@@ -34,9 +40,14 @@ services:
     env_file: .env
     environment:
       MAINTENANCE_FLAG_PATH: /app/maintenance/maintenance.flag
+      PANEL_BACKUP_DIR: /app/panel_backups
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
     depends_on:
       migrate: { condition: service_completed_successfully }
     volumes:
+      - panel_backups:/app/panel_backups
       - static:/app/staticfiles
       - media:/app/media
       - private_media:/app/private_media
@@ -45,7 +56,14 @@ services:
   worker:
     build: .
     env_file: .env
+    environment:
+      PANEL_BACKUP_DIR: /app/panel_backups
     command: celery -A config worker --loglevel=INFO
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    volumes:
+      - panel_backups:/app/panel_backups
     depends_on:
       migrate: { condition: service_completed_successfully }
 
@@ -53,6 +71,9 @@ services:
     build: .
     env_file: .env
     command: celery -A config beat --loglevel=INFO --schedule /tmp/celerybeat-schedule
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
     depends_on:
       migrate: { condition: service_completed_successfully }
 
@@ -75,4 +96,5 @@ volumes:
   static:
   media:
   private_media:
+  panel_backups:
   maintenance:

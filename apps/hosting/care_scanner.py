@@ -14,6 +14,8 @@ import secrets
 
 from . import scan_rules
 
+from . import php_helpers
+
 PHP = r"""<?php
 /* WHPanel one-time malware scan. It removes itself when it starts and only reads. */
 @ignore_user_abort(true);
@@ -148,6 +150,6 @@ def build():
         "rules": [list(rule) for rule in scan_rules.RULES],
         "names": {key: list(value) for key, value in scan_rules.NAME_RULES.items()},
     }
-    source = (PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__SELF__", file_name)
+    source = (php_helpers.fill(PHP).replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__SELF__", file_name)
               .replace("__CHECKSUMS__", CHECKSUMS).replace("__CONFIG__", base64.b64encode(json.dumps(config).encode()).decode()))
     return file_name, result_name, token, source

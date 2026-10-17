@@ -22,7 +22,7 @@ def apr1(password, salt=None):
     salt = (salt or "".join(secrets.choice(_ITOA64) for _ in range(8)))[:8]
     s = salt.encode("ascii")
     magic = b"$apr1$"
-    final = hashlib.md5(pw + s + pw).digest()
+    final = hashlib.md5(pw + s + pw).digest()  # nosec B324 - the Apache apr1 password format is built on MD5; the web server requires it
     ctx = pw + magic + s
     length = len(pw)
     while length > 0:
@@ -32,7 +32,7 @@ def apr1(password, salt=None):
     while i:
         ctx += b"\x00" if i & 1 else pw[:1]
         i >>= 1
-    final = hashlib.md5(ctx).digest()
+    final = hashlib.md5(ctx).digest()  # nosec B324 - Apache $apr1$
     for i in range(1000):
         block = pw if i & 1 else final
         if i % 3:
@@ -40,7 +40,7 @@ def apr1(password, salt=None):
         if i % 7:
             block += pw
         block += final if i & 1 else pw
-        final = hashlib.md5(block).digest()
+        final = hashlib.md5(block).digest()  # nosec B324 - Apache $apr1$
     out = ""
     for a, b, c in ((0, 6, 12), (1, 7, 13), (2, 8, 14), (3, 9, 15), (4, 10, 5)):
         out += _to64((final[a] << 16) | (final[b] << 8) | final[c], 4)

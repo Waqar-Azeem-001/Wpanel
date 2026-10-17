@@ -121,6 +121,7 @@ EVENTS = _events(
     Event("chat.waiting", "A customer is waiting for a person in the chat", C.TEAM, default_email=False),
     Event("ticket.customer_reply", "A customer replied to your ticket", C.TEAM, default_email=False),
     Event("ticket.note", "A note was added to your ticket", C.TEAM, default_email=False),
+    Event("backup.failed", "The panel's nightly backup failed", C.TEAM, default_email=False),
     Event("addon.ordered", "A customer paid for an extra that needs setting up", C.TEAM, default_email=False),
     Event("addon.ready", "An extra you bought is ready", C.SERVICES, "addon_ready"),
     Event("payment.reported", "A customer says they have paid", C.TEAM, default_email=False),

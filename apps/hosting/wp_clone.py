@@ -16,6 +16,8 @@ import hashlib
 import json
 import secrets
 
+from . import php_helpers
+
 PHP = r"""<?php
 /* WHPanel one-time WordPress copier. It removes itself when it starts. */
 @ignore_user_abort(true);
@@ -215,5 +217,5 @@ def build(*, action, src, dst, from_url, to_url, exclude=(), dst_db=None, index=
     file_name, result_name = f"whp-clone-{suffix}.php", f"whp-clone-{suffix}.json"
     config = {"action": action, "src": src, "dst": dst, "from_url": from_url, "to_url": to_url, "exclude": list(exclude), "dst_db": dst_db or {}, "index": bool(index)}
     blob = base64.b64encode(json.dumps(config).encode()).decode()
-    source = PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__CONFIG__", blob)
+    source = php_helpers.fill(PHP).replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__CONFIG__", blob)
     return file_name, result_name, token, source

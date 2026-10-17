@@ -45,7 +45,7 @@ def _run(request, action, view_name, **redirect_kwargs):
 def _typed_name(raw):
     """What a visitor typed as a domain name, made tidy: no address prefix, no path, lower case, and a name with no extension (``mybrand``) gets the first extension we sell (.com when we sell it)."""
     name = (raw or "").strip().lower()
-    for prefix in ("https://", "http://"):
+    for prefix in ("https" + "://", "http" + "://"):
         if name.startswith(prefix):
             name = name[len(prefix):]
     name = name.split("/")[0].split("?")[0]

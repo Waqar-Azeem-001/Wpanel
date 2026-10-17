@@ -101,6 +101,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "apps.accounts.devices.SingleDeviceMiddleware",
+    "apps.accounts.staff_security.StaffSecurityMiddleware",
     "apps.hosting.middleware.AdminAccessMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middleware.MaintenanceModeMiddleware",
@@ -190,6 +191,11 @@ SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 60 * 60 * 12
 # A new device must enter a code emailed to the account, and only one device stays signed in (apps/accounts/devices.py).
 SIGNIN_EMAIL_CODE = env.bool("SIGNIN_EMAIL_CODE", default=True)
+# Staff must have two-factor sign-in on to use /staff/ and the admin, and are signed out after this many idle minutes (0 = never).
+REQUIRE_STAFF_2FA = env.bool("REQUIRE_STAFF_2FA", default=True)
+STAFF_IDLE_TIMEOUT_MINUTES = env.int("STAFF_IDLE_TIMEOUT_MINUTES", default=60)
+# Where the Django admin lives (keep it off the well-known address in production: DJANGO_ADMIN_URL=some-long-random-path/).
+ADMIN_URL = env("DJANGO_ADMIN_URL", default="admin/")
 
 # --- Django REST Framework -------------------------------------------------
 REST_FRAMEWORK = {
@@ -315,6 +321,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.lifecycle.tasks.send_expiry_notices_task",
         "schedule": crontab(hour=8, minute=30),
     },
+    "sweep-helper-files": {
+        "task": "apps.hosting.tasks.sweep_helper_files_task",
+        "schedule": crontab(hour=3, minute=40),
+    },
     "purge-guest-carts": {
         "task": "apps.orders.tasks.purge_guest_carts_task",
         "schedule": crontab(hour=4, minute=45),
@@ -398,3 +408,10 @@ CREDENTIALS_ENCRYPTION_KEY = env("CREDENTIALS_ENCRYPTION_KEY", default="")
 TLD_PRICE_SOURCE_URL = env("TLD_PRICE_SOURCE_URL", default="https://webhostera.pk/domain-pricing/")
 # Where `manage.py backup_panel` writes the panel's own encrypted database backups (copy them away from this server)
 PANEL_BACKUP_DIR = env("PANEL_BACKUP_DIR", default=str(BASE_DIR / "panel_backups"))
+# Optional off-server copy of each backup, to S3-compatible storage (Backblaze B2, Wasabi, AWS S3). Without these the backup stays on this server only.
+PANEL_BACKUP_S3_BUCKET = env("PANEL_BACKUP_S3_BUCKET", default="")
+PANEL_BACKUP_S3_ENDPOINT = env("PANEL_BACKUP_S3_ENDPOINT", default="")
+PANEL_BACKUP_S3_REGION = env("PANEL_BACKUP_S3_REGION", default="")
+PANEL_BACKUP_S3_ACCESS_KEY = env("PANEL_BACKUP_S3_ACCESS_KEY", default="")
+PANEL_BACKUP_S3_SECRET_KEY = env("PANEL_BACKUP_S3_SECRET_KEY", default="")
+PANEL_BACKUP_S3_PREFIX = env("PANEL_BACKUP_S3_PREFIX", default="panel-backups")

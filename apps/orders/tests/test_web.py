@@ -37,7 +37,7 @@ def test_plan_page_offers_ordering_to_everyone(client, owner, shop):
 def test_domain_search_offers_add_to_cart(client, owner, shop):
     client.force_login(owner)
     page = client.get("/domains/?domain=example.com&years=2")
-    assert b'action="/cart/add/domain/"' in page.content and b"Add to cart (2 years)" in page.content
+    assert b'action="/cart/add/domain/"' in page.content and b"Make it yours" in page.content and b'name="years" value="2"' in page.content
     assert b"cart/add/domain" not in Client().get("/domains/?domain=example.com").content  # signed out
 
 

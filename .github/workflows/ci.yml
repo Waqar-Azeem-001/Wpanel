@@ -66,6 +66,16 @@ jobs:
           SITE_URL: https://portal.example.com  # the deploy check refuses a non-https address
         run: python manage.py check --deploy --settings=config.settings.prod --fail-level ERROR
 
+      - name: Known vulnerabilities in dependencies (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
+
+      - name: Static security scan (bandit, high severity only)
+        run: |
+          pip install bandit
+          bandit -q -r apps config -lll -x "*/tests/*,*/test_*.py,apps/*/migrations"
+
       - name: Test suite on PostgreSQL
         run: pytest
 

@@ -24,6 +24,9 @@ docker compose run --rm -v "$PWD":/backup web tar czf /backup/media-$(date +%F).
 **Owner decision needed:** where backups are stored (off the server, e.g. object storage) and who is alerted when one
 fails. A backup kept only on the same server is not a backup.
 
+### Panel backup (nightly, built into WHPanel)
+`panel_backup_task` runs at 01:30, writes an encrypted `panel-postgresql-*.bak.enc` into the `panel_backups` volume (14 kept), reads it back to prove it can be restored, and, when `PANEL_BACKUP_S3_BUCKET`, `PANEL_BACKUP_S3_ACCESS_KEY`, `PANEL_BACKUP_S3_SECRET_KEY` (and `PANEL_BACKUP_S3_ENDPOINT` for Backblaze B2 or Wasabi) are set in `.env`, copies it off the server. A failure alerts the team (bell) and shows on Utilities > Automation. Run it by hand: `docker compose ... exec web python manage.py backup_panel`. The key that decrypts it is `CREDENTIALS_ENCRYPTION_KEY`: keep it OUTSIDE the backup, in the password manager.
+
 ## 3. Restore (test this on staging, not first in a crisis)
 
 ```

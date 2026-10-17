@@ -51,6 +51,26 @@ def make_backup(target_dir, keep=14):
     return target
 
 
+def offsite_configured():
+    return bool(getattr(settings, "PANEL_BACKUP_S3_BUCKET", "") and getattr(settings, "PANEL_BACKUP_S3_ACCESS_KEY", "") and getattr(settings, "PANEL_BACKUP_S3_SECRET_KEY", ""))
+
+
+def upload_offsite(path):
+    """Copy an (already encrypted) backup to S3-compatible storage (Backblaze B2, Wasabi, S3...), away from this server. Raises CommandError on a failure; the local copy stays."""
+    import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
+
+    path = Path(path)
+    client = boto3.client("s3", endpoint_url=settings.PANEL_BACKUP_S3_ENDPOINT or None, aws_access_key_id=settings.PANEL_BACKUP_S3_ACCESS_KEY,
+                          aws_secret_access_key=settings.PANEL_BACKUP_S3_SECRET_KEY, region_name=settings.PANEL_BACKUP_S3_REGION or None)
+    key = f"{(settings.PANEL_BACKUP_S3_PREFIX or 'panel-backups').strip('/')}/{path.name}"
+    try:
+        client.upload_file(str(path), settings.PANEL_BACKUP_S3_BUCKET, key)
+    except (BotoCoreError, ClientError, OSError) as exc:
+        raise CommandError(f"The off-site copy failed ({type(exc).__name__}); the backup is kept on this server.") from exc
+    return key
+
+
 def verify_backup(path):
     """Decrypt a backup and check the database inside is sound. Returns a short description, or raises CommandError."""
     path = Path(path)
@@ -91,3 +111,7 @@ class Command(BaseCommand):
             return
         target = make_backup(options["to"] or getattr(settings, "PANEL_BACKUP_DIR", settings.BASE_DIR / "panel_backups"), options["keep"])
         self.stdout.write(self.style.SUCCESS(f"Backup written to {target} ({verify_backup(target)})"))
+        if offsite_configured():
+            self.stdout.write(self.style.SUCCESS(f"Copied off-site: {upload_offsite(target)}"))
+        else:
+            self.stdout.write(self.style.WARNING("No off-site storage is set (PANEL_BACKUP_S3_*): this backup exists only on this server."))

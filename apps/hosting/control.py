@@ -61,7 +61,7 @@ def _bump_cache_version(account, adapter=None):
 
 
 def _read_key(account, capability, operation, args, kwargs):
-    digest = hashlib.sha1(repr((args, sorted(kwargs.items()))).encode()).hexdigest()
+    digest = hashlib.sha1(repr((args, sorted(kwargs.items()))).encode(), usedforsecurity=False).hexdigest()  # a cache key, not a secret
     return f"hostread:{account.pk}:{_cache_version(account)}:{capability.value}:{operation}:{digest}"
 
 

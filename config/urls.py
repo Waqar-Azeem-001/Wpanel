@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import include, path
@@ -34,7 +35,7 @@ urlpatterns = [
     path("_preview/resolve/", preview_resolve, name="preview_resolve"),
     path("staff/", include("apps.console.urls")),
     *retired_urlpatterns(),
-    path("admin/", admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     path("api/v1/", include(("config.api_urls", "v1"), namespace="v1")),
     path("account/", include("apps.accounts.urls")),
     path("account/client/", include("apps.clients.urls_customer")),

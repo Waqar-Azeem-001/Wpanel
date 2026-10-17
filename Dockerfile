@@ -7,7 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN addgroup --system app && adduser --system --ingroup app app
+# pg_dump and pg_restore for the panel's own nightly backup (apps/core/management/commands/backup_panel.py)
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/*
+
+RUN addgroup --system app && adduser --system --ingroup app app     && mkdir -p /app/panel_backups && chown app:app /app/panel_backups
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt

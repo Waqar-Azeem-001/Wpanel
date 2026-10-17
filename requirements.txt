@@ -16,3 +16,6 @@ dnspython>=2.6,<3
 
 # Optional error tracking, active only when SENTRY_DSN is set
 sentry-sdk>=2.0
+
+# Off-server copy of the panel backup (S3-compatible storage), used only when PANEL_BACKUP_S3_* is set
+boto3>=1.35,<2

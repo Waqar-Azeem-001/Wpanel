@@ -33,4 +33,6 @@ REST_FRAMEWORK = {
 # Tests do not depend on the developer's local .env (which may set another store currency).
 STORE_CURRENCY = "USD"
 
+REQUIRE_STAFF_2FA = False  # the staff security tests switch it on explicitly
+STAFF_IDLE_TIMEOUT_MINUTES = 0
 SIGNIN_EMAIL_CODE = False  # the sign-in code tests switch it on explicitly

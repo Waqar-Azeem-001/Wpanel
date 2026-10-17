@@ -84,7 +84,7 @@ def _clean_folder(path):
 
 
 def _slug(path):
-    return hashlib.sha1(path.encode()).hexdigest()[:12]
+    return hashlib.sha1(path.encode(), usedforsecurity=False).hexdigest()[:12]  # a short folder name, not a secret
 
 
 # --- the registry -------------------------------------------------------------------------------------------------------

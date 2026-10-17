@@ -10,6 +10,8 @@ import hashlib
 import json
 import secrets
 
+from . import php_helpers
+
 ACTIONS = ("inventory", "activate_plugin", "deactivate_plugin", "update_plugin", "activate_theme", "update_theme", "update_core", "flush_cache", "set_password", "install_plugin", "install_theme")
 
 PHP = r"""<?php
@@ -169,5 +171,5 @@ def build(action, target="", secret=""):
     suffix = secrets.token_hex(8)
     file_name, result_name = f"whp-wp-{suffix}.php", f"whp-wp-{suffix}.json"
     config = base64.b64encode(json.dumps({"action": action, "target": str(target)[:200], "secret": str(secret)[:200]}).encode()).decode()
-    source = PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__CONFIG__", config)
+    source = php_helpers.fill(PHP).replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result_name).replace("__CONFIG__", config)
     return file_name, result_name, token, source

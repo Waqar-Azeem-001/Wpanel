@@ -14,6 +14,8 @@ import hashlib
 import json
 import secrets
 
+from . import php_helpers
+
 SCHEME = "https"
 # What a brand-new hosting folder may already hold without counting as "the customer's files": the server's own folders and dot-files, and the placeholder pages a host puts there.
 HARMLESS = ("cgi-bin", "error_log", "php.ini", "robots.txt", ".htaccess", ".well-known", ".ftpquota", ".user.ini", ".cpanel", ".php-ini", ".cagefs", ".trash", "stats", "tmp")
@@ -190,6 +192,6 @@ def build(*, domain, scheme, db, db_user, db_password, title, admin_user, admin_
               "admin_user": admin_user, "admin_email": admin_email, "admin_password": admin_password}
     result = f"whp-install-{ident}.json"
     progress = f"whp-install-{ident}.progress.json"
-    source = (PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result).replace("__PROGRESS__", progress).replace("__ZIP__", WP_ZIP)
+    source = (php_helpers.fill(PHP).replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__RESULT__", result).replace("__PROGRESS__", progress).replace("__ZIP__", WP_ZIP)
               .replace("__TAR__", WP_TAR).replace("__HARMLESS__", json.dumps(list(HARMLESS))).replace("__PLACEHOLDERS__", json.dumps(list(PLACEHOLDERS))).replace("__CONFIG__", base64.b64encode(json.dumps(config).encode()).decode()))
     return f"whp-install-{ident}.php", result, token, source

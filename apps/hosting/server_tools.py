@@ -16,6 +16,8 @@ from apps.core.exceptions import ServiceError
 from . import care, site_apps
 from .adapters.capabilities import Capability
 
+from . import php_helpers
+
 PHP = r"""<?php
 /* WHPanel one-time server tool. It removes itself when it starts. */
 @ignore_user_abort(true);
@@ -76,7 +78,7 @@ def _build(action):
     token = secrets.token_urlsafe(32)
     name = f"whp-tool-{secrets.token_hex(8)}.php"
     blob = base64.b64encode(json.dumps({"action": action}).encode()).decode()
-    source = PHP.replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__CONFIG__", blob)
+    source = php_helpers.fill(PHP).replace("__TOKEN_HASH__", hashlib.sha256(token.encode()).hexdigest()).replace("__CONFIG__", blob)
     return name, token, source
 
 
