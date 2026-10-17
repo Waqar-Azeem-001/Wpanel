@@ -181,7 +181,7 @@ def record_payment(actor, invoice, *, amount, method=None, reference="", note=""
 
 
 @transaction.atomic
-def report_payment(actor, invoice, *, method, amount=None, reference="", note="", request=None):
+def report_payment(actor, invoice, *, method, amount=None, reference="", note="", proof=None, request=None):
     """
     Customer: say "I have paid this by <offline method>". Creates a *pending*
     transaction that changes nothing until staff confirm it.
@@ -193,6 +193,16 @@ def report_payment(actor, invoice, *, method, amount=None, reference="", note=""
         raise ServiceError("Choose a valid payment method.", code="payment_method_invalid")
     amount = _amount(amount) if amount not in (None, "") else invoice.balance_due
     _require_amount_within_balance(invoice, amount)
+    checked = None
+    if proof:  # a screenshot or PDF: the same checks as a ticket attachment (type, content, size) before anything is written
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from apps.support import uploads
+
+        try:
+            checked = uploads.check_uploads([proof])[0]
+        except DjangoValidationError as exc:
+            raise ServiceError(" ".join(exc.messages), code="invalid_proof")
     if invoice.transactions.filter(status=TransactionStatus.PENDING, provider__isnull=True,
                                    type=TransactionType.PAYMENT).exists():
         raise ServiceError("You have already reported a payment for this invoice. It is awaiting confirmation.",
@@ -202,11 +212,15 @@ def report_payment(actor, invoice, *, method, amount=None, reference="", note=""
         status=TransactionStatus.PENDING, amount=amount, currency=invoice.currency, payment_method=method,
         method_name=method.name[:100], reference=reference.strip()[:200], note=note.strip()[:500],
         recorded_by=actor)
+    if checked is not None:
+        tx.proof.save(checked.name, checked.file, save=False)
+        tx.proof_name, tx.proof_content_type = checked.name, checked.content_type
+        tx.save(update_fields=["proof", "proof_name", "proof_content_type", "updated_at"])
     _audit_payment("payment.reported", actor, tx, invoice, request)
     notifications.notify_team(
         "payment.reported", "manage_billing", exclude=actor,
         title=f"{invoice.reference}: {invoice.client.display_name} reports a payment of {tx.currency} {tx.amount}",
-        body="\n".join((f"Method: {tx.method_name}", f"Reference: {tx.reference or '-'}", notifications.describe_invoice(invoice))),
+        body="\n".join((f"Method: {tx.method_name}", f"Reference: {tx.reference or '-'}", "Proof of payment attached." if tx.proof else "No proof attached.", notifications.describe_invoice(invoice))),
         link=reverse("billing_staff:invoice_detail", args=[invoice.pk]))
     return tx
 

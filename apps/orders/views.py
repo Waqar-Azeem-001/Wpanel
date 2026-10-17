@@ -15,6 +15,7 @@ from apps.clients import services as client_services
 from apps.clients.services import single_contact_client
 from apps.core import bulk
 from apps.core.decorators import portal_permission_required
+from apps.accounts import devices
 from apps.core.exceptions import ServiceError
 from apps.core.web import ACTION_ERRORS, apply_form_error, error_text, query_id, run_action
 from apps.products.models import Addon, CatalogStatus, Product
@@ -394,10 +395,10 @@ def _finish_guest_checkout(request, user, data):
     except ACTION_ERRORS as exc:
         messages.error(request, f"Your account was created, but the order was not placed: {error_text(exc)} "
                                 "Your cart is kept; fix it and check out again.")
-        return redirect("orders_customer:cart")
+        return devices.register_login(request, redirect("orders_customer:cart"), user)
     messages.success(request, f"Welcome! Your account is ready and order {order.reference} is placed. Check your inbox to verify "
                               "your email address, and follow the payment instructions below.")
-    response = redirect("orders_customer:detail", pk=order.pk)
+    response = devices.register_login(request, redirect("orders_customer:detail", pk=order.pk), user)
     response.delete_cookie("wp_ref")
     return response
 

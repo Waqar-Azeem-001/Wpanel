@@ -1,0 +1,13 @@
+{% load ui i18n %}{# The price and the Buy button (or the state of an order already made) for one extra: o = {addon, price, order, field, pk} #}
+<div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+  <span><strong>{{ o.price.price|money }}</strong> <small class="text-secondary">/ {{ o.price.get_billing_cycle_display }}</small></span>
+  {% if o.order %}
+    {% if o.order.status == "done" %}<span class="site-pill is-ok"><i class="bi bi-check-circle" aria-hidden="true"></i> {% trans "Active" %}</span>
+    {% elif o.order.status == "paid" %}<span class="site-pill is-warn"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {% trans "Paid - being set up" %}</span>
+    {% else %}<a class="btn btn-sm btn-outline-primary" href="{% url 'billing_customer:invoice_detail' o.order.invoice_id %}">{% trans "Pay the invoice" %}</a>{% endif %}
+  {% else %}
+    <form method="post" action="{% url 'renewals_customer:addon_buy' o.addon.pk %}" class="d-inline" data-plain>{% csrf_token %}
+      <input type="hidden" name="{{ o.field }}" value="{{ o.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button class="btn btn-sm btn-primary" type="submit">{% trans "Buy now" %}</button></form>
+  {% endif %}
+</div>

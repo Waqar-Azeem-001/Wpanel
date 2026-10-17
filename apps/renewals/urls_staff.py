@@ -11,6 +11,8 @@ urlpatterns = [
     path("hosting/<int:pk>/term/", views.staff_hosting_term, name="hosting_term"),
     path("hosting/<int:pk>/renew/", views.staff_hosting_renew, name="hosting_renew"),
     path("domains/<int:pk>/renew/", views.staff_domain_renew, name="domain_renew"),
+    path("addon-orders/", views.staff_addon_orders, name="addon_orders"),
+    path("addon-orders/<int:pk>/done/", views.staff_addon_done, name="addon_done"),
     path("changes/<int:pk>/retry/", views.staff_retry, name="retry"),
     path("changes/<int:pk>/dismiss/", views.staff_dismiss, name="dismiss"),
 ]

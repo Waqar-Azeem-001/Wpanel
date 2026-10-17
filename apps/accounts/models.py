@@ -146,3 +146,31 @@ class HiddenPermission(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["user", "codename"], name="one_hidden_permission_per_user")]
+
+
+class SignInDevice(models.Model):
+    """
+    The one device a person is signed in on. Signing in on another device needs an emailed code and replaces this row, which
+    signs the old device out (its session carries the old token, which no longer matches). Only a hash of the token is kept;
+    the browser holds the token itself in an HttpOnly cookie.
+    """
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="signin_device")
+    token_hash = models.CharField(max_length=64)
+    user_agent = models.CharField(max_length=200, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+
+class EmailSignInCode(models.Model):
+    """A sign-in code sent by email: six digits, kept hashed, valid for a few minutes, a few tries, then it is spent."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="signin_codes")
+    code_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    tries = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]

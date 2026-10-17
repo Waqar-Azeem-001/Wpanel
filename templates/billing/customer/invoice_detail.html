@@ -12,12 +12,20 @@
   &middot; <a href="{% url 'billing_customer:invoice_pdf' invoice.pk %}">{% trans "Download PDF" %}</a></p>
 
 {% if invoice.can_be_paid %}
+{% if upsell %}
+<section class="card mb-3 no-print"><div class="card-body">
+  <h2 class="h6">{% trans "While you renew" %}</h2>
+  {% for o in upsell %}<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <span><strong>{{ o.addon.name }}</strong><small class="d-block text-secondary">{{ o.addon.description|truncatewords:18 }}</small></span>
+    {% include "components/addon_buy.html" with o=o %}</div>{% endfor %}
+</div></section>
+{% endif %}
 <section class="card mb-3 no-print"><div class="card-body">
   <h2 class="h5">{% trans "Pay this invoice" %}</h2>
   <p>{% trans "Amount due:" %} <strong>{{ invoice.balance_due|money:invoice.currency }}</strong></p>
   {% if pending_report %}<p class="text-secondary">{% trans "You have reported a payment. We will confirm it as soon as it arrives." %}</p>{% endif %}
   {% if online_methods or offline_methods %}
-  <form method="post" action="{% url 'billing_customer:invoice_pay' invoice.pk %}" class="row g-3">{% csrf_token %}
+  <form method="post" action="{% url 'billing_customer:invoice_pay' invoice.pk %}" class="row g-3" enctype="multipart/form-data">{% csrf_token %}
     <div class="col-md-6">
       <label class="form-label" for="id_method">{% trans "Payment method" %}</label>
       <select class="form-select" name="method" id="id_method" required>
@@ -28,6 +36,7 @@
     <div class="col-md-6"><label class="form-label" for="id_amount">{% trans "Amount (offline payments)" %}</label>{{ form.amount|bs_field }}</div>
     <div class="col-md-6"><label class="form-label" for="id_reference">{% trans "Your payment reference" %}</label>{{ form.reference|bs_field }}<div class="form-text">{% trans "e.g. the bank transfer reference. Optional." %}</div></div>
     <div class="col-md-6"><label class="form-label" for="id_note">{% trans "Note" %}</label>{{ form.note|bs_field }}</div>
+    <div class="col-12"><label class="form-label" for="id_proof">{% trans "Proof of payment" %}</label><input class="form-control" type="file" name="proof" id="id_proof" accept=".png,.jpg,.jpeg,.webp,.pdf"><div class="form-text">{% trans "Offline payments only: a screenshot or PDF of your receipt (up to 5 MB). Optional, but we can confirm faster with it." %}</div></div>
     <div class="col-12"><button class="btn btn-primary" type="submit">{% trans "Continue" %}</button></div>
   </form>
   {% for method in offline_methods %}{% if method.how_to_pay %}<h3 class="h6 mt-3">{{ method.name }}</h3><p class="mb-0">{{ method.how_to_pay|linebreaksbr }}</p>{% endif %}{% endfor %}

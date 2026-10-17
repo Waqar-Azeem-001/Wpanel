@@ -21,7 +21,7 @@
       <td><a href="{% url 'billing_staff:invoice_detail' tx.invoice_id %}">{{ tx.invoice.reference }}</a></td>
       <td>{{ tx.client.display_name }}</td>
       <td>{{ tx.get_type_display }}</td>
-      <td>{{ tx.method_name|default:"&mdash;" }}{% if tx.reference %}<br><small class="text-secondary">{{ tx.reference }}</small>{% endif %}</td>
+      <td>{{ tx.method_name|default:"&mdash;" }}{% if tx.reference %}<br><small class="text-secondary">{{ tx.reference }}</small>{% endif %}{% if tx.proof %}<br><a href="{% url 'billing_staff:transaction_proof' tx.pk %}"><i class="bi bi-paperclip" aria-hidden="true"></i> Proof</a>{% endif %}</td>
       <td>{% status_badge tx.status tx.get_status_display %}</td>
       <td class="text-end">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
       {% if can_manage %}

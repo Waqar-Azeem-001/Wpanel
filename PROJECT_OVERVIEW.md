@@ -103,6 +103,10 @@ See section 6.
 
 110 detailed articles in 9 topics, topic and article cards, a clear article page, search, a sitemap, `robots.txt` and structured data. See section 7.
 
+### 2.9b Extras sold on what customers already have
+
+SSL certificates and WHOIS privacy (prices from the owner's site, yearly) are offered on the SSL page, the Domains pages, the website dashboard (when there is no SSL), the dashboard to-dos and the renewal invoice. **Buy now** makes an invoice on the spot (`apps/renewals/addon_orders.py`); once it is paid, staff get an alert, set it up and mark it done (Billing > Add-on orders) and the customer is told. A daily job (`send_expiry_notices_task`, 08:30) warns before a domain, plan or SSL certificate ends (30, 14, 7 and 1 days; 14 and 7 for SSL), once per step.
+
 ### 2.10 Access control for staff
 
 Every permission is shown in a table per person: what the role gives, what was added, what was hidden. An administrator can add a permission for one person or hide one from them without touching the role. The person's menu shows what they can now open. (Section 8.)
@@ -166,7 +170,9 @@ Not possible with the panel's current provider layer, so the Agent hands these t
 - Roles: customer, support agent, technical, manager, admin, super admin. Permissions are named `view_*` and `manage_*` per area, plus `assign_roles` and `view_audit_log`.
 - Per person: extra permissions can be added, and any permission can be hidden from one person. A Super Admin cannot be restricted. Changes need `assign_roles`; only a Super Admin changes an admin.
 - Customers reach only their own records (ownership checks in every module).
-- Every sensitive action is written to the audit log. Provider credentials are encrypted. Uploads are validated by extension and content. Account lock-out, security headers, optional two-factor sign-in.
+- Every sensitive action is written to the audit log. Provider credentials are encrypted. Uploads are validated by extension and content. Account lock-out, security headers, optional two-factor sign-in (authenticator app).
+- **New device sign-in:** a correct password on a browser the panel does not know is held for a six-digit code emailed to the account (hashed, 10 minutes, 5 tries then a lock, resend every 30 seconds, 5 an hour). Only one device stays signed in: the new one becomes the device and every other session is ended (and an old one is signed out on its next click). Switch off with `SIGNIN_EMAIL_CODE=false`. The API (JWT) login is not covered.
+- **Payment proof:** a customer can attach a screenshot or PDF to a reported offline payment; it is stored privately, checked by type and content, and only the customer and billing staff can download it.
 - The hosting layer allow-lists every operation; one-file PHP helpers are written into a website, run once with a token, and delete themselves.
 
 ---
@@ -200,7 +206,7 @@ Not possible with the panel's current provider layer, so the Agent hands these t
 ## 11. What is still open
 
 1. Prove the new per-website and AI Agent flows on a real test account.
-2. Make two-factor sign-in mandatory for staff; sign-in and activity alerts to customers.
+2. Sign-in and activity alerts to customers beyond the new-device email (password change, staff access to their hosting); the same device rule for the API.
 3. Release hygiene: a staging copy of WHPanel, branch protection, a restore drill.
 4. Customer features: SMS or WhatsApp notices, payment proof upload, public status page, customer API tokens, Urdu interface, data export and deletion.
 5. Website tools not built: Git deployment, CDN, several domain pointing helpers, automatic repair of modified WordPress files.

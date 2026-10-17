@@ -157,6 +157,7 @@ class ReportPaymentForm(forms.Form):
     amount = forms.DecimalField(required=False, min_value=Decimal("0.01"), max_digits=12, decimal_places=2)
     reference = forms.CharField(required=False, max_length=200)
     note = forms.CharField(required=False, max_length=500)
+    proof = forms.FileField(required=False, help_text="A screenshot or PDF of your payment receipt. Optional, but it helps us confirm faster.")
 
 
 class PayOnlineForm(forms.Form):

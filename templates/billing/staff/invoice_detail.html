@@ -72,7 +72,7 @@
         <td>{{ tx.occurred_at|date:"Y-m-d H:i" }}</td>
         <td>{{ tx.get_type_display }}</td>
         <td>{{ tx.method_name|default:"&mdash;" }}</td>
-        <td>{{ tx.reference|default:tx.external_id|default:"&mdash;" }}{% if tx.failure_reason %}<br><small class="text-secondary">{{ tx.failure_reason }}</small>{% endif %}</td>
+        <td>{{ tx.reference|default:tx.external_id|default:"&mdash;" }}{% if tx.failure_reason %}<br><small class="text-secondary">{{ tx.failure_reason }}</small>{% endif %}{% if tx.proof %}<br><a href="{% url 'billing_staff:transaction_proof' tx.pk %}"><i class="bi bi-paperclip" aria-hidden="true"></i> Proof</a>{% endif %}</td>
         <td>{% status_badge tx.status tx.get_status_display %}</td>
         <td class="text-end">{% if tx.type == "refund" %}&minus; {% endif %}{{ tx.currency }} {{ tx.amount }}</td>
         {% if can_manage %}

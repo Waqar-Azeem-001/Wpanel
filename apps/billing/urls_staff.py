@@ -19,6 +19,7 @@ urlpatterns = [
     path("invoices/<int:pk>/payment/", docs.invoice_record_payment, name="invoice_record_payment"),
     path("invoices/<int:pk>/pdf/", docs.invoice_pdf, name="invoice_pdf"),
     path("payments/", docs.transaction_list, name="transaction_list"),
+    path("payments/<int:pk>/proof/", docs.transaction_proof, name="transaction_proof"),
     path("payments/<int:pk>/confirm/", docs.transaction_confirm, name="transaction_confirm"),
     path("payments/<int:pk>/reject/", docs.transaction_reject, name="transaction_reject"),
     path("payments/<int:pk>/refund/", docs.transaction_refund, name="transaction_refund"),

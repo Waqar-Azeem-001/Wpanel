@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core.exceptions import ServiceError
 
-from . import forms, mfa, services
+from . import devices, forms, mfa, services
 
 
 def _apply_error(form, exc, password_field=None):
@@ -35,7 +35,7 @@ def _finish_login(request, user, *, remember, next_url):
     login(request, user)
     # Ticked: stay signed in for 30 days. Not ticked: until the browser is closed (and never longer than the session age).
     request.session.set_expiry(REMEMBER_ME_SECONDS if remember else 0)
-    return redirect(next_url)
+    return devices.register_login(request, redirect(next_url), user)
 
 
 @sensitive_post_parameters("password")
@@ -50,6 +50,13 @@ def login_view(request):
         except ServiceError as exc:
             _apply_error(form, exc)
         else:
+            if devices.needs_code(request, user):  # a new device: an emailed code first, then (if on) the authenticator code
+                devices.start_pending(request, user, remember=remember, next_url=_safe_next(request))
+                try:
+                    devices.send_code(user, request)
+                except ServiceError as exc:
+                    messages.error(request, exc.message)
+                return redirect("accounts:signin_code")
             if user.mfa_enabled:
                 services.start_mfa_challenge(request, user, remember=remember, next_url=_safe_next(request))
                 return redirect("accounts:mfa_verify")
@@ -58,6 +65,39 @@ def login_view(request):
 
     return render(request, "accounts/login.html", {"form": form, "next": request.GET.get("next", ""),
                                                    "help_articles": list(kb.public_articles()[:3])})
+
+
+@sensitive_post_parameters("code")
+def signin_code_view(request):
+    """The step for a new device: the six-digit code that was emailed. Reached only mid sign-in; nobody is signed in until it is right."""
+    user = devices.pending_user(request)
+    if user is None:
+        messages.info(request, "That sign-in has expired. Please sign in again.")
+        return redirect("accounts:login")
+    form = forms.SignInCodeForm(request.POST or None)
+    if request.method == "POST" and request.POST.get("resend"):
+        try:
+            devices.send_code(user, request, resend=True)
+            messages.success(request, "A new code is on its way.")
+        except ServiceError as exc:
+            messages.error(request, exc.message)
+        return redirect("accounts:signin_code")
+    if request.method == "POST" and form.is_valid():
+        try:
+            ok = devices.verify_code(user, form.cleaned_data["code"], request)
+        except ServiceError as exc:
+            form.add_error(None, exc.message)
+        else:
+            if ok:
+                remember = request.session.get(devices.PENDING_REMEMBER, False)
+                next_url = request.session.get(devices.PENDING_NEXT) or "accounts:profile"
+                devices.clear_pending(request)
+                if user.mfa_enabled:
+                    services.start_mfa_challenge(request, user, remember=remember, next_url=next_url)
+                    return redirect("accounts:mfa_verify")
+                return _finish_login(request, user, remember=remember, next_url=next_url)
+            form.add_error("code", "That code is not right, or it has expired.")
+    return render(request, "accounts/signin_code.html", {"form": form, "email": user.email, "minutes": devices.CODE_MINUTES})
 
 
 @sensitive_post_parameters("code")
@@ -172,8 +212,9 @@ def register_view(request):
             _apply_error(form, exc, "password")
         else:
             login(request, user)
+            devices.register_login(request, redirect("accounts:profile"), user)  # the first device
             messages.success(request, "Account created. Check your inbox to verify your email address.")
-            response = redirect("accounts:profile")
+            response = devices.register_login(request, redirect("accounts:profile"), user)
             response.delete_cookie("wp_ref")  # the referral, if any, is now recorded on the account
             return response
     return render(request, "accounts/register.html", {"form": form})

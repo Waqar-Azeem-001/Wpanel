@@ -14,6 +14,14 @@
 <p class="site-note is-danger mb-3"><i class="bi bi-pause-circle" aria-hidden="true"></i>{% trans "This website is suspended." %} {{ account.suspend_reason }}</p>
 {% endif %}
 
+{% if ssl_attention %}
+<section class="ws-callout" aria-labelledby="ssl-title">
+  <span class="ws-callout-icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></span>
+  <div class="ws-callout-text"><h2 id="ssl-title">{% if card.ssl.status == "expired" %}{% trans "Your SSL certificate has expired" %}{% else %}{% trans "Your website is not secure yet" %}{% endif %}</h2>
+    <p>{% trans "Visitors see a warning without a valid SSL certificate. Installing a free one takes a moment, and paid certificates with a trust seal are on the same page." %}</p></div>
+  <a class="btn btn-primary" href="{{ ssl_url }}">{% trans "Install SSL" %}</a>
+</section>
+{% endif %}
 {% if card.needs_setup %}
 <section class="ws-callout" aria-labelledby="setup-title">
   <span class="ws-callout-icon" aria-hidden="true"><i class="bi bi-rocket-takeoff"></i></span>

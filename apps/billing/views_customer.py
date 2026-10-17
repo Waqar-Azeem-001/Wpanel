@@ -50,6 +50,20 @@ def invoice_list(request):
         "sidebar": [view_panel]})
 
 
+def _renewal_upsell(invoice):
+    """While paying a renewal: an SSL certificate for the plan being renewed, or WHOIS privacy for the domain being renewed, when staff have set the extra up."""
+    from apps.products.models import AddonKind
+    from apps.products.upsell import offers
+
+    out = []
+    for change in invoice.service_changes.filter(kind="renewal").select_related("hosting_account", "domain"):
+        if change.hosting_account_id:
+            out += offers(AddonKind.SSL, hosting_account=change.hosting_account)
+        elif change.domain_id:
+            out += offers(AddonKind.WHOIS_PRIVACY, domain=change.domain)
+    return out
+
+
 @login_required
 def invoice_detail(request, pk):
     invoice = _invoice_or_404(request, pk)
@@ -57,7 +71,7 @@ def invoice_detail(request, pk):
     return render(request, "billing/customer/invoice_detail.html", {
         "invoice": invoice, "items": invoice.items.all(),
         "transactions": invoice.transactions.order_by("-occurred_at", "-id"),
-        "offline_methods": offline, "online_methods": online,
+        "offline_methods": offline, "online_methods": online, "upsell": _renewal_upsell(invoice) if invoice.can_be_paid else [],
         "pending_report": invoice.transactions.filter(status=TransactionStatus.PENDING, provider__isnull=True).exists(),
         "form": forms.ReportPaymentForm(initial={"amount": invoice.balance_due})})
 
@@ -73,7 +87,7 @@ def invoice_pdf(request, pk):
 def invoice_pay(request, pk):
     """Pay online (redirects to the gateway) or report an offline payment, depending on the method chosen."""
     invoice = _invoice_or_404(request, pk)
-    form = forms.ReportPaymentForm(request.POST)
+    form = forms.ReportPaymentForm(request.POST, request.FILES)
     try:
         if not form.is_valid():
             raise ServiceError("Choose a payment method and check the amount.")
@@ -85,12 +99,37 @@ def invoice_pay(request, pk):
             _, url = payments.start_gateway_payment(request.user, invoice, method, request=request)
             return redirect(url)
         payments.report_payment(request.user, invoice, method=method, amount=data["amount"],
-                                reference=data["reference"], note=data["note"], request=request)
+                                reference=data["reference"], note=data["note"], proof=data.get("proof"), request=request)
     except ACTION_ERRORS as exc:
         messages.error(request, error_text(exc))
     else:
         messages.success(request, "Thank you. We will confirm your payment as soon as we receive it.")
     return redirect("billing_customer:invoice_detail", pk=pk)
+
+
+def serve_proof(tx):
+    """The payment proof as a download, never shown inline."""
+    from django.http import FileResponse
+
+    if not tx.proof:
+        raise Http404
+    try:
+        handle = tx.proof.open("rb")
+    except (FileNotFoundError, ValueError):
+        raise Http404
+    response = FileResponse(handle, as_attachment=True, filename=tx.proof_name or "proof", content_type=tx.proof_content_type or "application/octet-stream")
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+@login_required
+def payment_proof(request, pk):
+    tx = get_object_or_404(Transaction.objects.select_related("client"), pk=pk)
+    if not invoicing.can_act_for_client(request.user, tx.client):
+        raise Http404
+    return serve_proof(tx)
 
 
 # --- Test gateway (simulated hosted checkout) ---------------------------------------------------

@@ -198,3 +198,59 @@ def staff_dismiss(request, pk):
         return "Marked as handled."
 
     return run_action(request, action, "billing_staff:invoice_detail", pk=change.invoice_id)
+
+
+# --- Extras (SSL, WHOIS privacy) bought for something already owned ----------------------------------
+
+@require_POST
+@login_required
+def addon_buy(request, addon_id):
+    """The customer's "Buy" button: invoices the extra for their own hosting plan or domain and opens the invoice."""
+    from apps.domains.models import Domain
+    from apps.products.models import Addon
+
+    from . import addon_orders
+
+    back = request.POST.get("next") or ""
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    if not url_has_allowed_host_and_scheme(back, {request.get_host()}, request.is_secure()):
+        back = "/"
+    try:
+        addon = get_object_or_404(Addon, pk=addon_id)
+        if request.POST.get("domain"):
+            order = addon_orders.buy_addon(request.user, addon, domain=get_object_or_404(domain_services.visible_domains_for_user(request.user), pk=request.POST["domain"]), request=request)
+        else:
+            order = addon_orders.buy_addon(request.user, addon, hosting_account=_own_account(request, request.POST.get("hosting") or 0), request=request)
+    except ACTION_ERRORS as exc:
+        messages.error(request, error_text(exc))
+        return redirect(back)
+    messages.success(request, f"Invoice {order.invoice.number} is ready to pay. We set it up as soon as it is paid.")
+    return redirect("billing_customer:invoice_detail", pk=order.invoice_id)
+
+
+@portal_permission_required(perm("view_billing"))
+def staff_addon_orders(request):
+    from .models import AddonOrder
+
+    orders = AddonOrder.objects.select_related("client", "addon", "invoice", "hosting_account", "domain")
+    shown = request.GET.get("status") or ""
+    if shown in ("pending", "paid", "done", "void"):
+        orders = orders.filter(status=shown)
+    page = Paginator(orders, 25).get_page(request.GET.get("page"))
+    return render(request, "renewals/staff/addon_orders.html", {"page": page, "status": shown, "tabs": [("", "All"), ("paid", "To set up"), ("pending", "Awaiting payment"), ("done", "Active"), ("void", "Cancelled")], "can_manage": request.user.has_perm(perm("manage_billing"))})
+
+
+@require_POST
+@portal_permission_required(perm("manage_billing"))
+def staff_addon_done(request, pk):
+    from . import addon_orders
+    from .models import AddonOrder
+
+    order = get_object_or_404(AddonOrder, pk=pk)
+
+    def action():
+        addon_orders.mark_done(request.user, order, request=request)
+        return f"{order.addon.name} for {order.service_label} is marked done. The customer was told."
+
+    return run_action(request, action, "renewals_staff:addon_orders")

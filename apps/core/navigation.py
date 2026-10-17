@@ -140,6 +140,8 @@ ITEMS = [
          parent="staff.billing", permission="view_billing"),
     item("staff.billing.renewals", _("Renewals & upgrades"), "renewals_staff:list", areas=STAFF,
          parent="staff.billing", permission="view_billing"),
+    item("staff.billing.addon_orders", _("Add-on orders"), "renewals_staff:addon_orders", areas=STAFF,
+         parent="staff.billing", permission="view_billing"),
     item("staff.billing.coupons", _("Coupons"), "billing_staff:coupons", areas=STAFF, parent="staff.billing",
          permission="view_billing"),
     item("staff.catalog", _("Products"), areas=STAFF, section=_("Commerce"), icon="bi-box-seam"),

@@ -87,10 +87,7 @@
       {% if u.addon.description %}<p class="small text-secondary">{{ u.addon.description|truncatewords:30 }}</p>{% endif %}
       {% if u.kind == "whois_privacy" %}<p class="small text-secondary">{% trans "Hides your name, address, email and phone from the public WHOIS lookup so spammers cannot copy them." %}{% if domain_page_url %} <a href="{{ domain_page_url }}">{% trans "See your domains" %}</a>.{% endif %}</p>
       {% else %}<p class="small text-secondary">{% trans "A paid certificate adds a trust seal and can show your business name. Cheapest options shown." %}</p>{% endif %}
-      <div class="mt-auto d-flex justify-content-between align-items-center">
-        <span>{% if u.price %}<strong>{{ u.price.price|money }}</strong> <small class="text-secondary">/ {{ u.price.get_billing_cycle_display }}</small>{% endif %}</span>
-        <a class="btn btn-sm btn-primary" href="{{ u.url }}">{% trans "Order this" %}</a>
-      </div>
+      <div class="mt-auto">{% include "components/addon_buy.html" with o=u %}</div>
     </div></div></div>
     {% endfor %}
   </div>

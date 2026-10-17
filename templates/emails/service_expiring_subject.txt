@@ -1,0 +1,1 @@
+Your {{ kind }} {{ name }} ends {{ when }}

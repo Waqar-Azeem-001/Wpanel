@@ -71,7 +71,31 @@ def _todos(user, hosting, domains, tickets, quotes):
     if sent:
         items.append({"icon": "bi-file-earmark-text", "tone": "", "text": f"{sent} quote(s) waiting for your answer", "action": "View",
                       "url": reverse("billing_customer:quote_list") + "?status=sent"})
-    return items[:6]
+    extras = _extras_todos(hosting, domains)
+    return items[:6 - len(extras)] + extras
+
+
+def _extras_todos(hosting, domains):
+    """Quiet suggestions, last in the list: WHOIS privacy for a domain without it, a paid SSL certificate for a plan without one - only when staff have set the extra up."""
+    from apps.products.models import Addon, AddonKind, CatalogStatus
+    from apps.renewals.models import AddonOrder, AddonOrderStatus
+
+    out = []
+    taken = AddonOrder.objects.exclude(status=AddonOrderStatus.VOID)
+    if Addon.objects.filter(kind=AddonKind.WHOIS_PRIVACY, status=CatalogStatus.ACTIVE, prices__is_active=True).exists():
+        covered = taken.filter(addon__kind=AddonKind.WHOIS_PRIVACY, domain__isnull=False).values_list("domain_id", flat=True)
+        open_domains = list(domains.filter(status=DomainStatus.ACTIVE).exclude(pk__in=covered)[:3])
+        if open_domains:
+            first = open_domains[0]
+            text = f"Hide your name and address from the public WHOIS lookup: add WHOIS privacy to {first.name}"
+            out.append({"icon": "bi-eye-slash", "tone": "", "text": text, "action": "See price", "url": reverse("domains_customer:detail", args=[first.pk])})
+    if Addon.objects.filter(kind=AddonKind.SSL, status=CatalogStatus.ACTIVE, prices__is_active=True).exists():
+        covered = taken.filter(addon__kind=AddonKind.SSL, hosting_account__isnull=False).values_list("hosting_account_id", flat=True)
+        first = hosting.filter(status=HostingStatus.ACTIVE).exclude(pk__in=covered).order_by("id").first()
+        if first is not None:
+            out.append({"icon": "bi-shield-lock", "tone": "", "text": f"Show visitors a trust seal: see SSL certificates for {first.domain}", "action": "See options",
+                        "url": reverse("hosting_customer:ssl", args=[first.pk])})
+    return out
 
 
 @login_required

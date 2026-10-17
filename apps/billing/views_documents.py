@@ -290,6 +290,13 @@ def _transaction_action(request, pk, function, message, *, form_class=None, redi
     return run_action(request, action, "billing_staff:transaction_list")
 
 
+@portal_permission_required(perm("view_billing"))
+def transaction_proof(request, pk):
+    from .views_customer import serve_proof
+
+    return serve_proof(get_object_or_404(Transaction, pk=pk))
+
+
 @require_POST
 @portal_permission_required(perm("manage_billing"))
 def transaction_confirm(request, pk):

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load ui i18n %}
+{% block title %}{% trans "Add-on orders" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% trans "Add-on orders" %}</h1>
+  <p class="page-sub">{% trans "SSL certificates and WHOIS privacy that customers bought for something they already have. When one is paid, set it up, then mark it done." %}</p></div>
+<ul class="nav nav-tabs mb-3">
+  {% for value, label in tabs %}<li class="nav-item"><a class="nav-link {% if status == value %}active{% endif %}" href="?status={{ value }}">{{ label }}</a></li>{% endfor %}
+</ul>
+<section class="card"><div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Client" %}</th><th>{% trans "Extra" %}</th><th>{% trans "For" %}</th><th>{% trans "Invoice" %}</th><th>{% trans "Status" %}</th><th></th></tr></thead>
+  <tbody>
+  {% for o in page %}<tr>
+    <td>{{ o.created_at|date:"j M Y" }}</td><td>{{ o.client.display_name }}</td><td>{{ o.addon.name }}<br><small class="text-secondary">{{ o.price|money }} / {{ o.period_label }}</small></td>
+    <td>{{ o.service_label }}</td><td><a href="{% url 'billing_staff:invoice_detail' o.invoice_id %}">{{ o.invoice.reference }}</a></td>
+    <td>{{ o.get_status_display }}</td>
+    <td class="text-end">{% if can_manage and o.status == "paid" %}<form method="post" action="{% url 'renewals_staff:addon_done' o.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm btn-primary" type="submit">{% trans "Mark done" %}</button></form>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="7" class="text-secondary">{% trans "No add-on orders yet." %}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% include "components/pager.html" with page=page %}
+{% endblock %}

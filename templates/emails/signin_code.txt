@@ -1,0 +1,14 @@
+Hello {{ user.get_short_name }},
+
+Someone is signing in to your {{ site_name }} account from a new device. Enter this code on the sign-in page to continue:
+
+  {{ code }}
+
+The code works once and expires in {{ minutes }} minutes.
+
+Device: {{ device }}
+Address: {{ ip }}
+
+If this was not you, do not share the code. Change your password at once: someone may know it.
+
+{{ site_name }}

@@ -14,9 +14,7 @@ from django.views.decorators.http import require_POST
 from apps.core import portal
 from apps.core.exceptions import ServiceError
 
-from apps.products.categories import lowest_price
-from apps.products.models import Addon, AddonKind, CatalogStatus
-from urllib.parse import urlencode
+from apps.products.models import AddonKind
 
 from . import dashboard
 from .views import _own_account
@@ -24,16 +22,14 @@ from .views_domains import _read, _run, _supports
 
 
 def _upsell(account):
-    """The paid extras to suggest under the certificates: SSL certificates, and WHOIS privacy for the domains. Only active add-ons staff set up; asking for one opens a ticket already filled in."""
-    ticket = reverse("support_customer:new")
-    out = []
-    for kind, title, limit in ((AddonKind.SSL, "Upgrade your SSL certificate", 3), (AddonKind.WHOIS_PRIVACY, "Add WHOIS privacy", 1)):
-        found = [(lowest_price(a), a) for a in Addon.objects.filter(kind=kind, status=CatalogStatus.ACTIVE).prefetch_related("prices").order_by("name")]
-        found.sort(key=lambda pair: (pair[0] is None, pair[0].price if pair[0] else 0))
-        for price, addon in found[:limit]:
-            query = urlencode({"hosting_account": account.pk, "subject": f"Order: {addon.name} for {account.domain}",
-                               "body": f"Hello, I would like to order {addon.name} for {account.domain}."})
-            out.append({"addon": addon, "kind": kind, "title": title, "price": price, "url": f"{ticket}?{query}"})
+    """The paid extras to suggest under the certificates: the cheapest SSL certificates, and WHOIS privacy when the main domain is registered with us. Only add-ons staff have set up and priced."""
+    from apps.domains.models import Domain, DomainStatus
+    from apps.products.upsell import offers
+
+    out = [{**o, "kind": AddonKind.SSL, "title": "Upgrade your SSL certificate"} for o in offers(AddonKind.SSL, hosting_account=account, limit=3)]
+    domain = Domain.objects.filter(client=account.client, name__iexact=account.domain, status=DomainStatus.ACTIVE).first()
+    if domain is not None:
+        out += [{**o, "kind": AddonKind.WHOIS_PRIVACY, "title": "Add WHOIS privacy"} for o in offers(AddonKind.WHOIS_PRIVACY, domain=domain)]
     return out
 
 

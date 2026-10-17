@@ -100,6 +100,7 @@ MIDDLEWARE = [
     "apps.core.middleware.StripNullBytesMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "apps.accounts.devices.SingleDeviceMiddleware",
     "apps.hosting.middleware.AdminAccessMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middleware.MaintenanceModeMiddleware",
@@ -187,6 +188,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 60 * 60 * 12
+# A new device must enter a code emailed to the account, and only one device stays signed in (apps/accounts/devices.py).
+SIGNIN_EMAIL_CODE = env.bool("SIGNIN_EMAIL_CODE", default=True)
 
 # --- Django REST Framework -------------------------------------------------
 REST_FRAMEWORK = {
@@ -307,6 +310,10 @@ CELERY_BEAT_SCHEDULE = {
     "run-service-lifecycle": {
         "task": "apps.lifecycle.tasks.run_lifecycle_task",
         "schedule": crontab(hour=5, minute=0),
+    },
+    "send-expiry-notices": {
+        "task": "apps.lifecycle.tasks.send_expiry_notices_task",
+        "schedule": crontab(hour=8, minute=30),
     },
     "purge-guest-carts": {
         "task": "apps.orders.tasks.purge_guest_carts_task",

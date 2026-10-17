@@ -8,5 +8,6 @@ app_name = "renewals_customer"
 urlpatterns = [
     path("hosting/<int:pk>/renew/", views.hosting_renew, name="hosting_renew"),
     path("hosting/<int:pk>/upgrade/", views.hosting_upgrade, name="hosting_upgrade"),
+    path("addons/<int:addon_id>/buy/", views.addon_buy, name="addon_buy"),
     path("domains/<int:pk>/renew/", views.domain_renew, name="domain_renew"),
 ]

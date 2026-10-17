@@ -135,7 +135,7 @@ def test_the_pages_of_the_group_are_a_strip_in_the_header_with_the_current_one_m
     page = page_of(world.people["manager"], "billing_staff:invoice_list").content.decode()
     strip = page.split('<nav class="groupnav"')[1].split("</nav>")[0]
     assert re.findall(r'>([^<]+)</a></li>', strip) == ["Overview", "Invoices", "Transactions", "Quotes", "Billable items",
-                                                       "Renewals &amp; upgrades", "Coupons"]
+                                                       "Renewals &amp; upgrades", "Add-on orders", "Coupons"]
     assert 'class="is-current" href="/staff/billing/invoices/" aria-current="page">Invoices' in strip
     assert page.index('<header class="chrome">') < page.index('<nav class="groupnav"') < page.index("</header>") < page.index('<main id="main"')
 

@@ -58,6 +58,11 @@ class MFACodeForm(forms.Form):
               "placeholder": "123456, or a recovery code"}))
 
 
+class SignInCodeForm(forms.Form):
+    code = forms.CharField(label="Code from your email", max_length=12, widget=forms.TextInput(
+        attrs={"autocomplete": "one-time-code", "inputmode": "numeric", "autofocus": True, "placeholder": "123456"}))
+
+
 class MFAPasswordConfirmForm(forms.Form):
     """Turning two-factor sign-in off, or replacing the recovery codes: the current password stands in for re-entering it."""
     password = forms.CharField(label="Current password", widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}))

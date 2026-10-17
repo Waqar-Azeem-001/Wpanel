@@ -260,31 +260,42 @@ def test_the_ssl_page_explains_installation_and_status(client, owner, account):
     assert "Recommended for you" not in page  # nothing to suggest until staff create the add-ons
 
 
-def test_the_ssl_page_suggests_ssl_and_whois_privacy_and_opens_a_filled_in_ticket(client, owner, account, manager):
-    from apps.products.models import AddonKind, BillingCycle
+def _extras(manager):
     from apps.products import services as ps
+    from apps.products.models import AddonKind, BillingCycle
     for name, kind in (("Premium SSL", AddonKind.SSL), ("WHOIS Privacy", AddonKind.WHOIS_PRIVACY)):
         addon = ps.create_addon(manager, {"name": name, "kind": kind})
         ps.set_addon_status(manager, addon, "active")
         ps.set_price(manager, addon, billing_cycle=BillingCycle.ANNUAL, price="12.00")
+
+
+def _own_domain(account):
+    from apps.domains.models import Domain
+    return Domain.objects.create(client=account.client, name=account.domain, status="active")
+
+
+def test_the_ssl_page_suggests_ssl_and_whois_privacy_with_a_buy_button(client, owner, account, manager):
+    _extras(manager)
+    _own_domain(account)
     client.force_login(owner)
     page = client.get(surl(account)).content.decode()
     assert "Recommended for you" in page and "Premium SSL" in page and "WHOIS Privacy" in page
-    from django.urls import reverse
-    assert reverse("support_customer:new") + "?" in page
-    new = client.get(reverse("support_customer:new"), {"hosting_account": account.pk, "subject": "Order: Premium SSL", "body": "Hello"})
-    assert new.status_code == 200 and "Order: Premium SSL" in new.content.decode()
+    assert page.count("Buy now") == 2 and "/account/renewals/addons/" in page
+
+
+def test_whois_privacy_is_not_offered_for_a_domain_registered_elsewhere(client, owner, account, manager):
+    _extras(manager)
+    client.force_login(owner)
+    page = client.get(surl(account)).content.decode()
+    assert "Premium SSL" in page and "WHOIS Privacy" not in page
 
 
 def test_whois_privacy_is_offered_in_the_domains_section_and_one_menu_opens_on_the_care_page(client, owner, account, manager):
-    from apps.products import services as ps
-    from apps.products.models import AddonKind, BillingCycle
-    addon = ps.create_addon(manager, {"name": "WHOIS Privacy Protection", "kind": AddonKind.WHOIS_PRIVACY})
-    ps.set_addon_status(manager, addon, "active")
-    ps.set_price(manager, addon, billing_cycle=BillingCycle.ANNUAL, price="1499")
+    _extras(manager)
+    _own_domain(account)
     client.force_login(owner)
     page = client.get(f"/account/hosting/{account.pk}/manage/domains/").content.decode()
-    assert "WHOIS Privacy Protection" in page and "Add WHOIS privacy" in page and "domain=" not in page.split("Add WHOIS privacy")[0][-400:]
+    assert "WHOIS Privacy" in page and "Buy now" in page
     from django.urls import reverse
     from apps.hosting import dashboard
     request = client.get(reverse("hosting_customer:care", args=[account.pk])).wsgi_request

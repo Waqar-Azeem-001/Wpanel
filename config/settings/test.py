@@ -32,3 +32,5 @@ REST_FRAMEWORK = {
 
 # Tests do not depend on the developer's local .env (which may set another store currency).
 STORE_CURRENCY = "USD"
+
+SIGNIN_EMAIL_CODE = False  # the sign-in code tests switch it on explicitly

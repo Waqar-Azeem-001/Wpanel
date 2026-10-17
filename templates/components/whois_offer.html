@@ -4,6 +4,5 @@
     <h3 class="h6 mb-1"><i class="bi bi-eye-slash" aria-hidden="true"></i> {{ offer.addon.name }}</h3>
     <p class="small text-secondary mb-0">{% trans "Hides your name, email, phone number and address from the public WHOIS lookup, so spammers and scammers cannot copy them. Real enquiries are forwarded to you." %}</p>
   </div>
-  <div class="text-end"><strong>{{ offer.price.price|money }}</strong> <small class="text-secondary">/ {{ offer.price.get_billing_cycle_display }}</small><br>
-    <a class="btn btn-sm btn-primary mt-1" href="{{ offer.url }}">{% trans "Add WHOIS privacy" %}</a></div>
+  <div class="text-end">{% include "components/addon_buy.html" with o=offer %}</div>
 </div></section>{% endif %}

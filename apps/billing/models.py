@@ -16,7 +16,17 @@ from django.utils import timezone
 from apps.core import crypto
 from apps.core.models import TimeStampedModel
 
+from apps.support.storage import PrivateStorage
+
 from .calculations import TWO_PLACES, discount_amount
+
+
+def proof_path(instance, filename):
+    """A random, unguessable path; the uploaded name is only display text."""
+    import uuid
+
+    extension = ("." + filename.rsplit(".", 1)[1].lower()) if "." in filename else ""
+    return f"payment-proofs/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{extension}"
 
 MONEY = dict(max_digits=10, decimal_places=2)
 DOC_MONEY = dict(max_digits=12, decimal_places=2)
@@ -546,6 +556,10 @@ class Transaction(TimeStampedModel):
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                     related_name="+")
     occurred_at = models.DateTimeField(default=timezone.now)
+    # The customer's proof of an offline payment (a screenshot or receipt): private, only ever served as a download to people who may see this payment.
+    proof = models.FileField(storage=PrivateStorage(), upload_to=proof_path, max_length=255, blank=True)
+    proof_name = models.CharField(max_length=100, blank=True)
+    proof_content_type = models.CharField(max_length=100, blank=True)
 
     class Meta:
         ordering = ["-occurred_at", "-id"]

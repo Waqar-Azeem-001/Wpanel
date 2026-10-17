@@ -13,6 +13,9 @@ def apply_paid_changes(sender, invoice, actor=None, **kwargs):
     from . import services
 
     services.apply_paid_invoice(invoice, actor=actor)
+    from . import addon_orders
+
+    addon_orders.apply_paid_invoice(invoice)
 
 
 @receiver(invoice_cancelled)
@@ -20,3 +23,6 @@ def void_cancelled_changes(sender, invoice, actor=None, **kwargs):
     from . import services
 
     services.void_changes(invoice)
+    from . import addon_orders
+
+    addon_orders.void_orders(invoice)

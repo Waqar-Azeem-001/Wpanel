@@ -1,0 +1,7 @@
+Hello {{ user.get_short_name }},
+
+{{ addon }} for {{ service }} is now set up and active.
+
+You can see it in your account. If anything looks wrong, open a support ticket and we will help.
+
+{{ site_name }}

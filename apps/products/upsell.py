@@ -1,24 +1,26 @@
-"""Paid extras suggested to a customer on a page that already concerns them, with the ticket that orders one filled in."""
-from urllib.parse import urlencode
-
-from django.urls import reverse
-
+"""Paid extras suggested to a customer on a page that already concerns them; the button buys it (an invoice is made on the spot)."""
 from .categories import lowest_price
 from .models import Addon, AddonKind, CatalogStatus
 
 
+def offers(kind, *, hosting_account=None, domain=None, limit=1):
+    """Up to ``limit`` active add-ons of this kind, cheapest first, each as {addon, price, order, target_field, target_pk}; ``order`` is the one already bought or being set up."""
+    from apps.renewals.addon_orders import open_order
+
+    found = [(lowest_price(a), a) for a in Addon.objects.filter(kind=kind, status=CatalogStatus.ACTIVE).prefetch_related("prices").order_by("name")]
+    found = sorted([(p, a) for p, a in found if p is not None], key=lambda pair: pair[0].price)[:limit]
+    order = open_order(kind, hosting_account=hosting_account, domain=domain)
+    return [{"addon": a, "price": p, "order": order, "field": "domain" if domain is not None else "hosting",
+             "pk": domain.pk if domain is not None else hosting_account.pk} for p, a in found]
+
+
 def whois_privacy_offer(*, hosting_account=None, domain=None):
-    """The active WHOIS privacy add-on with its lowest price and the link that opens a filled-in ticket, or None when staff have not set one up."""
-    addons = Addon.objects.filter(kind=AddonKind.WHOIS_PRIVACY, status=CatalogStatus.ACTIVE).prefetch_related("prices")
-    priced = [(lowest_price(a), a) for a in addons]
-    priced = [(p, a) for p, a in priced if p is not None]
-    if not priced:
+    """The WHOIS privacy extra for a registered domain. Given a hosting plan it is offered for the plan's main domain, and only when that domain is registered with us; None when staff have not set the extra up."""
+    if domain is None and hosting_account is not None:
+        from apps.domains.models import Domain, DomainStatus
+
+        domain = Domain.objects.filter(client=hosting_account.client, name__iexact=hosting_account.domain, status=DomainStatus.ACTIVE).first()
+    if domain is None:
         return None
-    price, addon = min(priced, key=lambda pair: pair[0].price)
-    name = domain.name if domain is not None else hosting_account.domain
-    query = {"subject": f"Order: {addon.name} for {name}", "body": f"Hello, I would like to order {addon.name} for {name}."}
-    if domain is not None:
-        query["domain"] = domain.pk
-    else:
-        query["hosting_account"] = hosting_account.pk
-    return {"addon": addon, "price": price, "url": f"{reverse('support_customer:new')}?{urlencode(query)}"}
+    found = offers(AddonKind.WHOIS_PRIVACY, domain=domain)
+    return found[0] if found else None

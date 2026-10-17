@@ -1,0 +1,12 @@
+{% autoescape off %}Hello,
+
+Your {{ kind }} {{ name }} ends {{ when }} ({{ ends }}).
+
+{{ advice }}
+
+Open it here: {{ site_url }}{{ link }}
+
+If you no longer need it, you can ignore this message.
+
+{{ site_name }}
+{% endautoescape %}

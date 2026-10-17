@@ -76,3 +76,39 @@ class ServiceChange(TimeStampedModel):
     @property
     def service_label(self):
         return self.hosting_account.domain if self.hosting_account_id else (self.domain.name if self.domain_id else "")
+
+
+class AddonOrderStatus(models.TextChoices):
+    PENDING = "pending", "Awaiting payment"
+    PAID = "paid", "Paid - being set up"
+    DONE = "done", "Active"
+    VOID = "void", "Cancelled"
+
+
+class AddonOrder(TimeStampedModel):
+    """
+    An extra bought for something the customer already has (an SSL certificate for a hosting plan, WHOIS privacy for a domain):
+    one invoice, then, once it is paid, a person sets it up and marks it done (add-ons have no provisioning of their own).
+    """
+
+    client = models.ForeignKey("clients.Client", on_delete=models.PROTECT, related_name="addon_orders")
+    invoice = models.ForeignKey("billing.Invoice", on_delete=models.PROTECT, related_name="addon_orders")
+    addon = models.ForeignKey("products.Addon", on_delete=models.PROTECT, related_name="orders")
+    hosting_account = models.ForeignKey("hosting.HostingAccount", null=True, blank=True, on_delete=models.PROTECT, related_name="addon_orders")
+    domain = models.ForeignKey("domains.Domain", null=True, blank=True, on_delete=models.PROTECT, related_name="addon_orders")
+    status = models.CharField(max_length=10, choices=AddonOrderStatus.choices, default=AddonOrderStatus.PENDING, db_index=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    period_label = models.CharField(max_length=40, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    done_at = models.DateTimeField(null=True, blank=True)
+    done_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    @property
+    def service_label(self):
+        return self.hosting_account.domain if self.hosting_account_id else (self.domain.name if self.domain_id else "")
+
+    def __str__(self):
+        return f"{self.addon.name} for {self.service_label} ({self.get_status_display()})"

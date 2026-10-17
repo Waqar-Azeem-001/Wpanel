@@ -1,0 +1,14 @@
+{% extends "layouts/auth.html" %}
+{% load i18n %}
+{% block title %}{% trans "Check your email" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<h1>{% trans "Check your email" %}</h1>
+<p class="auth-sub">{% blocktrans %}This looks like a new device. We sent a 6-digit code to {{ email }}. It works for {{ minutes }} minutes. Signing in here signs you out everywhere else.{% endblocktrans %}</p>
+<form method="post" class="auth-form" novalidate>{% csrf_token %}
+  {% include "partials/auth_errors.html" %}
+  {% include "partials/auth_field.html" with field=form.code %}
+  <button type="submit" class="btn btn-primary auth-submit">{% trans "Verify and continue" %}</button>
+</form>
+<form method="post" class="auth-alt">{% csrf_token %}<input type="hidden" name="resend" value="1"><button type="submit" class="btn btn-link p-0">{% trans "Send a new code" %}</button></form>
+<p class="auth-alt"><a href="{% url 'accounts:login' %}">{% trans "Back to sign in" %}</a></p>
+{% endblock %}

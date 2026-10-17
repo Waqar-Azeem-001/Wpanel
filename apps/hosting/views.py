@@ -74,6 +74,8 @@ def my_hosting_detail(request, pk):
     card = dashboard.website_card(request.user, account)
     return render(request, "hosting/customer/detail.html", {
         "account": account, "card": card, "tiles": tiles,
+        "ssl_attention": bool(card["app"] is not None and card["app"].state == "ready" and card["ssl"] is not None and card["ssl"].status in ("none", "expired")),
+        "ssl_url": reverse("hosting_customer:ssl", args=[account.pk]),
         "care_rows": care.summary(request.user, account) if account.status == "active" else [],
         "domain_state": domain_check.check(account) if account.status == "active" and card["app"] is not None else None,
         "transfer_url": reverse("domains_public:search") + "?" + urlencode({"domain": account.domain}),

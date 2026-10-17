@@ -179,3 +179,13 @@ class LifecycleNotice(TimeStampedModel):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["hosting_account", "kind", "term_expires_at"],
                                                name="one_lifecycle_notice_per_term")]
+
+
+class ExpiryNotice(TimeStampedModel):
+    """A warning already sent that a domain, plan or certificate is about to end (one per thing, expiry date and step), so the daily job never repeats it."""
+
+    subject = models.CharField(max_length=200)
+    step = models.PositiveSmallIntegerField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["subject", "step"], name="one_expiry_notice_per_step")]

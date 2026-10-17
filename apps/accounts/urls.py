@@ -14,6 +14,7 @@ urlpatterns = [
     path("password-reset/<uidb64>/<token>/", views.password_reset_confirm_view, name="password_reset_confirm"),
     path("profile/", views.profile_view, name="profile"),
     path("password-change/", views.password_change_view, name="password_change"),
+    path("login/code/", views.signin_code_view, name="signin_code"),
     path("mfa/verify/", views.mfa_verify_view, name="mfa_verify"),
     path("mfa/setup/", views.mfa_setup_view, name="mfa_setup"),
     path("mfa/recovery-codes/", views.mfa_recovery_codes_view, name="mfa_recovery_codes"),

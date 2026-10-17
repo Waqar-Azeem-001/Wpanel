@@ -1,0 +1,10 @@
+Hello {{ user.get_short_name }},
+
+Your {{ site_name }} account was just signed in on a new device. For your safety only one device stays signed in, so every other session was signed out.
+
+Device: {{ device }}
+Address: {{ ip }}
+
+If this was you, nothing more is needed. If it was not, change your password now.
+
+{{ site_name }}

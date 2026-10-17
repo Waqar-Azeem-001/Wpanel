@@ -10,6 +10,7 @@ urlpatterns = [
     path("invoices/<int:pk>/", views.invoice_detail, name="invoice_detail"),
     path("invoices/<int:pk>/pdf/", views.invoice_pdf, name="invoice_pdf"),
     path("invoices/<int:pk>/pay/", views.invoice_pay, name="invoice_pay"),
+    path("payments/<int:pk>/proof/", views.payment_proof, name="payment_proof"),
     path("quotes/", views.quote_list, name="quote_list"),
     path("quotes/<int:pk>/", views.quote_detail, name="quote_detail"),
     path("quotes/<int:pk>/pdf/", views.quote_pdf, name="quote_pdf"),
