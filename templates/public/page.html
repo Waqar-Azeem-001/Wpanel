@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ page.title }} · {{ SITE_NAME }}{% endblock %}
-{% block container %}narrow{% endblock %}
+{% block container %}wide flush{% endblock %}
+{% block breadcrumbs %}{% endblock %}
 {% block content %}
-{% if draft %}<div class="alert alert-warning" role="status">This page is a draft: only staff can see it. Publish it in Setup &gt; Pages.</div>{% endif %}
-<article class="page-article">
-  <header class="page-head"><h1>{{ page.title }}</h1></header>
+{% if draft %}<div class="container-xxl pt-3"><div class="alert alert-warning" role="status">This page is a draft: only staff can see it. Publish it in Setup &gt; Pages.</div></div>{% endif %}
+<section class="page-hero is-tight"><div class="container-xxl"><h1>{{ page.title }}</h1></div></section>
+<article class="page-article container-xxl page-hero-narrow pb-5">
   <div class="page-body">{{ body }}</div>
 </article>
 {% endblock %}

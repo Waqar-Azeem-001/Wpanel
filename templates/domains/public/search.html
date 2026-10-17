@@ -4,10 +4,10 @@
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content %}
-<section class="dm-find">
+<section class="page-hero">
   <div class="container-xxl">
     <h1>{% trans "Find your domain name" %}</h1>
-    <form method="get" novalidate class="hero-search dm-search" role="search" id="top-search">
+    <form method="get" novalidate class="hero-search page-search" role="search" id="top-search">
       <label class="visually-hidden" for="{{ form.domain.id_for_label }}">{{ form.domain.label }}</label>
       <i class="bi bi-search" aria-hidden="true"></i>
       <input type="text" name="domain" id="{{ form.domain.id_for_label }}" value="{{ form.domain.value|default:'' }}" placeholder="{% trans 'Type the domain you want, for example yourbusiness.com' %}" required{% if form.domain.errors %} aria-invalid="true"{% endif %} autofocus>

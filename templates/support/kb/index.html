@@ -6,17 +6,22 @@
 <link rel="canonical" href="{{ canonical }}">{% if noindex %}
 <meta name="robots" content="noindex, follow">{% endif %}
 <meta property="og:type" content="website"><meta property="og:site_name" content="{{ SITE_NAME }}"><meta property="og:title" content="{% trans 'Help centre' %} | {{ SITE_NAME }}"><meta property="og:url" content="{{ canonical }}">{% endblock %}
+{% block container %}wide flush{% endblock %}
+{% block breadcrumbs %}{% endblock %}
 {% block content %}
-<section class="help-hero">
-  <h1>{% trans "How can we help?" %}</h1>
-  <p>{% trans "Guides for your website, domain, email and account. Find the answer, or ask our AI Agent." %}</p>
-  <form class="help-search" method="get" role="search">
-    <i class="bi bi-search" aria-hidden="true"></i>
-    <label class="visually-hidden" for="id_q">{{ form.q.label }}</label>
-    <input type="search" name="q" id="id_q" value="{{ term }}" placeholder="{% trans 'Search, for example: change nameservers' %}" autocomplete="off">
-    <button class="btn btn-primary" type="submit">{% trans "Search" %}</button>
-  </form>
+<section class="page-hero">
+  <div class="container-xxl">
+    <h1>{% trans "How can we help?" %}</h1>
+    <p class="lead">{% trans "Guides for your website, domain, email and account. Find the answer, or ask our AI Agent." %}</p>
+    <form class="help-search page-search" method="get" role="search">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <label class="visually-hidden" for="id_q">{{ form.q.label }}</label>
+      <input type="search" name="q" id="id_q" value="{{ term }}" placeholder="{% trans 'Search, for example: change nameservers' %}" autocomplete="off">
+      <button type="submit" class="dm-go" aria-label="{% trans 'Search' %}"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+    </form>
+  </div>
 </section>
+<div class="container-xxl">
 
 {% if results is not None %}
 <section class="help-section">
@@ -66,4 +71,5 @@
     {% else %}<a class="btn btn-primary" href="{% url 'contact' %}">{% trans "Contact us" %}</a>{% endif %}
   </div>
 </section>
+</div>
 {% endblock %}

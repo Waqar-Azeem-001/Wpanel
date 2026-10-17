@@ -4,11 +4,11 @@
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content %}
-<section class="hero hero-compact">
+<section class="page-hero">
   <div class="container-xxl">
     <h1>{% trans "Add-ons" %}</h1>
     <p class="lead">{% trans "Extras for your hosting and your domains. Choose them when you order, or add them to what you already have from your account." %}</p>
-    <p class="mb-0"><a class="btn btn-light btn-sm" href="{% url 'catalog:product_list' %}">{% trans "Order new services" %}</a></p>
+    <p class="hero-actions"><a class="btn btn-primary btn-sm rounded-pill px-3" href="{% url 'catalog:product_list' %}">{% trans "Order new services" %}</a></p>
   </div>
 </section>
 <div class="container-xxl pt-4 pb-4">

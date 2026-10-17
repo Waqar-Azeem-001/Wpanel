@@ -4,21 +4,22 @@
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content %}
-<section class="hero hero-compact">
+<section class="page-hero">
   <div class="container-xxl">
     <h1>{% if chosen %}{{ chosen.name }}{% else %}{% trans "Everything you need to get online" %}{% endif %}</h1>
     <p class="lead">{% if chosen %}{{ chosen.blurb }}{% else %}{% trans "Hosting for every kind of site, servers when you outgrow it, and the security and domains that go with it." %}{% endif %}</p>
     {% if not chosen %}
-    <form method="get" action="{% url 'domains_public:search' %}" class="hero-search mt-3" role="search">
+    <form method="get" action="{% url 'domains_public:search' %}" class="hero-search page-search" role="search">
       <input type="hidden" name="years" value="1">
       <label class="visually-hidden" for="store_domain">{% trans "Domain name" %}</label>
+      <i class="bi bi-search" aria-hidden="true"></i>
       <input id="store_domain" type="text" name="domain" placeholder="{% trans 'Find your domain: yourbusiness.com' %}" required>
-      <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i> {% trans "Search" %}</button>
+      <button type="submit" class="dm-go" aria-label="{% trans 'Search' %}"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
     </form>
     {% endif %}
   </div>
 </section>
-<div class="container-xxl hero-overlap">
+<div class="container-xxl pt-3">
   <nav class="cat-nav" aria-label="{% trans 'Categories' %}">
     <a href="{% url 'catalog:product_list' %}"{% if not chosen %} aria-current="page" class="is-current"{% endif %}>{% trans "All" %}</a>
     {% for c in nav %}<a href="{% if c.url_name %}{% url c.url_name %}{% else %}{% url 'catalog:product_list' %}?category={{ c.slug }}{% endif %}"{% if chosen and chosen.slug == c.slug %} aria-current="page" class="is-current"{% endif %}><i class="bi {{ c.icon }}" aria-hidden="true"></i> {{ c.label }}</a>{% endfor %}
