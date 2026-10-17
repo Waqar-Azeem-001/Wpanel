@@ -893,3 +893,39 @@ a.use-item:hover { border-color: var(--border-strong); }
 .navbar-public .nav-cart .nav-link { position: relative; display: inline-flex; align-items: center; font-size: 1.15rem; padding-inline: .6rem; }
 .navbar-public .cart-count { position: absolute; top: .1rem; right: -.1rem; min-width: 1.15rem; height: 1.15rem; padding: 0 .3rem; border-radius: 999px; background: var(--primary); color: #fff; font-size: .68rem; font-weight: 700; line-height: 1.15rem; text-align: center; }
 @media (max-width: 991.98px) { .navbar-public .nav-cta { margin: .5rem 0 0; } .navbar-public .nav-cta .btn { width: 100%; } }
+
+/* Domains page: facts, why-us cards, popular extensions, tips, what-to-know, compare table, FAQ */
+.dm-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin: 0 0 2.5rem; }
+.dm-fact { display: grid; grid-template-columns: auto 1fr; column-gap: .9rem; align-items: center; padding: 1rem 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; color: var(--text); text-decoration: none; }
+.dm-fact:hover { border-color: var(--accent); }
+.dm-fact .chip { grid-row: span 2; }
+.dm-fact small { color: var(--muted); }
+.dm-section { margin: 0 0 3rem; }
+.dm-section > h2, .dm-two > h2, .dm-two > div > h2 { font-size: clamp(1.4rem, 1.2vw + 1rem, 2rem); font-weight: 750; letter-spacing: -.02em; margin-bottom: 1rem; }
+.dm-sub { color: var(--muted); }
+.dm-bento { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.dm-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 1.4rem 1.5rem; box-shadow: var(--shadow-panel); }
+.dm-card h3 { font-size: 1.1rem; font-weight: 700; margin: .75rem 0 .4rem; }
+.dm-card p { color: var(--muted); }
+.dm-card .chip, .dm-fact .chip { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 12px; background: var(--accent-subtle, rgba(0,0,0,.05)); color: var(--accent-ink, var(--primary)); font-size: 1.2rem; }
+@media (min-width: 992px) { .dm-bento { grid-template-columns: 1.5fr 1fr; } .dm-bento .dm-card.is-wide { grid-column: auto; } }
+.dm-dark { background: var(--hero-bg, #14132b); background: linear-gradient(135deg, var(--hero-from, #1b1a3d), var(--hero-to, #2d2870)); color: #fff; border-radius: 22px; padding: 2rem 1.75rem; }
+.dm-dark .dm-sub { color: rgba(255,255,255,.75); }
+.dm-popular { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: .85rem; }
+.dm-pop { display: flex; flex-direction: column; gap: .35rem; padding: 1rem; border-radius: 16px; background: #fff; color: #14213d; }
+.dm-pop strong { font-size: 1.35rem; font-weight: 800; }
+.dm-pop .dm-price { font-weight: 700; font-variant-numeric: tabular-nums; }
+.dm-pop small { color: #5d6677; }
+.dm-pop .btn { margin-top: auto; }
+.dm-two { display: grid; grid-template-columns: 1fr; gap: 1.25rem; align-items: start; }
+@media (min-width: 992px) { .dm-two { grid-template-columns: 1fr 1.6fr; gap: 3rem; } }
+.dm-acc details { border-bottom: 1px solid var(--border); padding: .9rem 0; }
+.dm-acc summary { cursor: pointer; font-weight: 650; list-style: none; display: flex; justify-content: space-between; gap: 1rem; }
+.dm-acc summary::-webkit-details-marker { display: none; }
+.dm-acc summary::after { content: "+"; font-size: 1.25rem; line-height: 1; color: var(--muted); }
+.dm-acc details[open] > summary::after { content: "\2212"; }
+.dm-acc p { margin: .6rem 0 0; color: var(--muted); max-width: 46rem; }
+.dm-know { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+.dm-dark h2, .dm-dark .dm-sub { color: #fff; }
+.dm-dark .dm-sub { color: rgba(255,255,255,.78); }
+.price-table tr.tld-tile { border: 0; box-shadow: none; border-radius: 0; background: transparent; padding: 0; }

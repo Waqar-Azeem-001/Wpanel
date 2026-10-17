@@ -53,8 +53,18 @@ def domain_search(request):
         else:
             result = {"available": available, "pricing": pricing, "domain": form.cleaned_data["domain"].lower(),
                      "years": form.cleaned_data["years"]}
-    tlds = TldPricing.objects.filter(is_active=True).order_by("tld")
-    return render(request, "domains/public/search.html", {"form": form, "result": result, "tlds": tlds})
+    tlds = list(TldPricing.objects.filter(is_active=True).order_by("tld"))
+    by_name = {t.tld: t for t in tlds}
+    from apps.products.models import Addon, AddonKind, CatalogStatus
+    from apps.products.categories import lowest_price
+    from apps.products.views import PREFERRED_TLDS
+
+    popular = [by_name[x] for x in PREFERRED_TLDS if x in by_name][:6] or sorted(tlds, key=lambda t: t.register_price)[:6]
+    whois = [lowest_price(a) for a in Addon.objects.filter(kind=AddonKind.WHOIS_PRIVACY, status=CatalogStatus.ACTIVE).prefetch_related("prices")]
+    whois = [p for p in whois if p is not None]
+    return render(request, "domains/public/search.html", {
+        "form": form, "result": result, "tlds": tlds, "popular": popular, "cheapest": min(tlds, key=lambda t: t.register_price) if tlds else None,
+        "whois_price": min(whois, key=lambda p: p.price) if whois else None})
 
 
 # --- Customer self-service -----------------------------------------------------------------

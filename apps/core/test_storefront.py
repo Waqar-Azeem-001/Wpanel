@@ -80,16 +80,16 @@ def test_the_domain_page_has_a_hero_search_and_price_tiles(client, store):
     response = client.get(reverse("domains_public:search"))
     page = response.content.decode()
     assert response.status_code == 200 and "hero-search" in page and "tld-tile" in page
-    assert page.count("tld-tile") == 35 and ".com" in page and "PKR 4,849.00" in page
+    assert page.count('class="tld-tile"') == 35 and ".com" in page and "PKR 4,849.00" in page
     assert 'aria-label="Breadcrumb"' not in page
 
 
-def test_a_price_tile_mentions_renewal_only_when_it_differs(client, store):
+def test_the_price_table_shows_the_renewal_price(client, store):
     from apps.domains.models import TldPricing
 
     TldPricing.objects.filter(tld=".xyz").update(renew_price=4000)
     page = client.get(reverse("domains_public:search")).content.decode()
-    assert page.count("renews at") == 1 and "renews at PKR 4,000.00" in page
+    assert "PKR 4,000.00" in page
 
 
 def test_a_search_still_reports_availability_inside_the_new_page(client, store):

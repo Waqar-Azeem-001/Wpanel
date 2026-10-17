@@ -8,7 +8,7 @@
   <div class="container-xxl">
     <h1>{% trans "Find your domain" %}</h1>
     <p class="lead">{% trans "Your address on the internet. Check whether the name you want is available." %}</p>
-    <form method="get" novalidate class="hero-search mt-4" role="search">
+    <form method="get" novalidate class="hero-search mt-4" role="search" id="top-search">
       <label class="visually-hidden" for="{{ form.domain.id_for_label }}">{{ form.domain.label }}</label>
       <input type="text" name="domain" id="{{ form.domain.id_for_label }}" value="{{ form.domain.value|default:'' }}" placeholder="example.com" required{% if form.domain.errors %} aria-invalid="true"{% endif %}>
       <input type="hidden" name="years" value="{{ form.years.value|default:1 }}">
@@ -19,7 +19,7 @@
   </div>
 </section>
 
-<div class="container-xxl {% if result %}hero-overlap{% else %}pt-5{% endif %}">
+<div class="container-xxl {% if result %}hero-overlap{% else %}pt-4{% endif %}">
 {% if result %}
 <section class="card mb-4"><div class="card-body p-4">
   {% if result.available %}
@@ -44,13 +44,112 @@
 </div></section>
 {% endif %}
 
+{# Three facts, read from the price list #}
 {% if tlds %}
-<section class="mb-5">
-  <h2 class="h5 mb-3">{% trans "Domain prices" %} <small class="text-secondary fw-normal">{% trans "per year" %}</small></h2>
-  <div class="tld-grid">
-    {% for tld in tlds %}<div class="tld-tile"><strong>{{ tld.tld }}</strong><span>{{ tld.register_price|money:STORE_CURRENCY }}</span>{% if tld.renew_price != tld.register_price %}<em>{% trans "renews at" %} {{ tld.renew_price|money:STORE_CURRENCY }}</em>{% endif %}</div>{% endfor %}
-  </div>
+<section class="dm-facts" aria-label="{% trans 'At a glance' %}">
+  {% if cheapest %}<a class="dm-fact" href="{% url 'domains_public:search' %}?domain=yourname{{ cheapest.tld }}&amp;years=1"><span class="chip" aria-hidden="true"><i class="bi bi-tag"></i></span><strong>{% trans "From" %} {{ cheapest.register_price|money:STORE_CURRENCY }}</strong><small>{{ cheapest.tld }} {% trans "is our lowest price per year" %}</small></a>{% endif %}
+  <a class="dm-fact" href="#dm-compare"><span class="chip" aria-hidden="true"><i class="bi bi-globe2"></i></span><strong>{{ tlds|length }} {% trans "extensions" %}</strong><small>{% trans "Compare every price below" %}</small></a>
+  <a class="dm-fact" href="#dm-transfer"><span class="chip" aria-hidden="true"><i class="bi bi-arrow-left-right"></i></span><strong>{% trans "Transfer your domain" %}</strong><small>{% trans "Already own one? Bring it here" %}</small></a>
 </section>
 {% endif %}
+
+<section class="dm-section" aria-labelledby="dm-why-h">
+  <h2 id="dm-why-h">{% blocktrans %}Why buy your domain at {{ SITE_NAME }}?{% endblocktrans %}</h2>
+  <div class="dm-bento">
+    <article class="dm-card is-wide"><span class="chip" aria-hidden="true"><i class="bi bi-eye-slash"></i></span>
+      <h3>{% trans "Privacy" %}</h3>
+      <p>{% trans "When you register a domain, your contact details can appear in the public WHOIS lookup. Add WHOIS privacy and your name, email, phone and address are hidden, while real enquiries are still forwarded to you." %}{% if whois_price %} <strong>{% trans "From" %} {{ whois_price.price|money:STORE_CURRENCY }} / {{ whois_price.get_billing_cycle_display|lower }}.</strong>{% endif %}</p></article>
+    <article class="dm-card"><span class="chip" aria-hidden="true"><i class="bi bi-sliders"></i></span>
+      <h3>{% trans "Manage it yourself" %}</h3>
+      <p>{% trans "Nameservers, DNS records, the registrar lock and auto-renew are all in your account. No ticket needed." %}</p></article>
+    <article class="dm-card"><span class="chip" aria-hidden="true"><i class="bi bi-headset"></i></span>
+      <h3>{% trans "Support when you need it" %}</h3>
+      <p>{% trans "Ask through your panel at any time, or open a ticket. Our help centre has step-by-step guides for every common task." %}</p></article>
+    <article class="dm-card is-wide"><span class="chip" aria-hidden="true"><i class="bi bi-lightning-charge"></i></span>
+      <h3>{% trans "Quick, simple set-up" %}</h3>
+      <p>{% trans "Search, add to your cart and pay. Then point the domain to your hosting in a few clicks, or add it to a hosting plan in the same order." %}</p>
+      <p class="mb-0"><a class="btn btn-primary btn-sm" href="#top-search">{% trans "Find your domain" %}</a></p></article>
+  </div>
+</section>
+
+{% if popular %}
+<section class="dm-section dm-dark" aria-labelledby="dm-pop-h">
+  <h2 id="dm-pop-h">{% trans "Choose from the most popular domains" %}</h2>
+  <p class="dm-sub">{% trans "Type a name above, or pick an extension and start from there." %}</p>
+  <ul class="dm-popular">
+    {% for t in popular %}<li class="dm-pop"><strong>{{ t.tld }}</strong><span class="dm-price">{{ t.register_price|money:STORE_CURRENCY }}<small>/{% trans "yr" %}</small></span><small>{% trans "Renews at" %} {{ t.renew_price|money:STORE_CURRENCY }}</small>
+      <a class="btn btn-light btn-sm" href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&amp;years=1">{% trans "Check availability" %}</a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="dm-section" aria-labelledby="dm-tips-h">
+  <div class="dm-two">
+    <h2 id="dm-tips-h">{% trans "How to get the best domain name" %}</h2>
+    <div class="dm-acc">
+      <details open><summary>{% trans "1. Include your brand name" %}</summary><p>{% trans "Use your business or brand name, or a keyword people will search for. It is the easiest name to remember and to find." %}</p></details>
+      <details><summary>{% trans "2. Keep it short" %}</summary><p>{% trans "Short names are easier to type, say aloud and fit on a card. Aim for under about 15 characters." %}</p></details>
+      <details><summary>{% trans "3. Less is more" %}</summary><p>{% trans "Avoid hyphens, numbers and unusual spellings. People will type what they hear, and every extra symbol is a mistake waiting to happen." %}</p></details>
+      <details><summary>{% trans "4. Think local" %}</summary><p>{% trans "Serving customers in Pakistan? A .pk or .com.pk name shows it, and you can also keep the .com so nobody else has it." %}</p></details>
+      <details><summary>{% trans "5. Check it is available" %}</summary><p>{% trans "Search the name above. If it is taken, try another extension or a small change such as adding your city or service." %}</p></details>
+      <details><summary>{% trans "6. Act fast" %}</summary><p>{% trans "Good names go quickly. When you find one, register it, and consider adding WHOIS privacy and auto-renew." %}</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="dm-section" aria-labelledby="dm-know-h">
+  <h2 id="dm-know-h">{% trans "Lost? Here is what you need to know about domains" %}</h2>
+  <div class="dm-know">
+    <article class="dm-card"><span class="chip" aria-hidden="true"><i class="bi bi-question-circle"></i></span><h3>{% trans "What is a domain?" %}</h3>
+      <p>{% trans "A domain name is how people find your website online, like a street address for a house. It is easier to remember than the number computers use, and it is yours for as long as you renew it." %}</p></article>
+    <article class="dm-card" id="dm-transfer"><span class="chip" aria-hidden="true"><i class="bi bi-arrow-left-right"></i></span><h3>{% trans "How do I transfer my domain?" %}</h3>
+      <p>{% trans "If you already have a domain elsewhere, you can bring it here. Unlock it with your current registrar, get its transfer code, and add the transfer to your cart. The transfer adds a year to the domain." %}</p>
+      <p class="mb-0"><a href="{% url 'orders_customer:cart' %}">{% trans "Open your cart to transfer" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a></p></article>
+    <article class="dm-card"><span class="chip" aria-hidden="true"><i class="bi bi-hdd-network"></i></span><h3>{% trans "Hosting and a domain" %}</h3>
+      <p>{% trans "A domain is the address, hosting is the house. You need both to run a website. Pick a plan and connect your domain to it from your account." %}</p>
+      <p class="mb-0"><a href="{% url 'catalog:product_list' %}">{% trans "See hosting plans" %} <i class="bi bi-arrow-right" aria-hidden="true"></i></a></p></article>
+  </div>
+</section>
+
+<section class="dm-section" id="dm-compare" aria-labelledby="dm-compare-h">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+    <div><h2 id="dm-compare-h" class="mb-1">{% trans "Compare domain extension prices" %}</h2>
+      <p class="dm-sub mb-0">{% trans "Registration, renewal and transfer, per year." %}</p></div>
+    <div class="price-filter"><label class="visually-hidden" for="tld-filter">{% trans "Filter extensions" %}</label>
+      <input id="tld-filter" class="form-control" type="search" placeholder="{% trans 'Filter, for example .com' %}" data-filter-table="#tld-table" autocomplete="off"></div>
+  </div>
+  {% if tlds %}
+  <div class="table-responsive price-table-wrap">
+    <table class="table price-table align-middle mb-0" id="tld-table">
+      <thead><tr><th>{% trans "Extension" %}</th><th class="text-end">{% trans "Register" %}</th><th class="text-end">{% trans "Renew" %}</th><th class="text-end">{% trans "Transfer" %}</th><th></th></tr></thead>
+      <tbody>
+        {% for t in tlds %}
+        <tr class="tld-tile" data-filter-text="{{ t.tld }}"><th scope="row"><strong>{{ t.tld }}</strong></th>
+          <td class="text-end">{{ t.register_price|money:STORE_CURRENCY }}</td><td class="text-end">{{ t.renew_price|money:STORE_CURRENCY }}</td><td class="text-end">{{ t.transfer_price|money:STORE_CURRENCY }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'domains_public:search' %}?domain=yourname{{ t.tld }}&amp;years=1">{% trans "Check" %}</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="small text-secondary mt-2 mb-0" data-filter-empty hidden>{% trans "No extension matches." %}</p>
+  {% else %}
+  <div class="card"><div class="card-body text-secondary">{% trans "The domain price list is coming soon." %}</div></div>
+  {% endif %}
+</section>
+
+<section class="dm-section" aria-labelledby="dm-faq-h">
+  <div class="dm-two">
+    <div><h2 id="dm-faq-h">{% trans "Domain name search FAQs" %}</h2><p class="dm-sub">{% trans "Find answers to frequently asked questions about our domain checker." %}</p></div>
+    <div class="dm-acc">
+      <details><summary>{% trans "What is a domain name?" %}</summary><p>{% trans "A domain name, or simply a domain, is the address people type to reach your website, such as yourbusiness.com. It is made of a name and an extension." %}</p></details>
+      <details><summary>{% trans "How long does it take to register a domain?" %}</summary><p>{% trans "Usually a few minutes once your payment is confirmed. Some extensions, and domains paid for by bank transfer, take longer because we confirm the payment first." %}</p></details>
+      <details><summary>{% trans "Can I transfer a domain I already own?" %}</summary><p>{% trans "Yes. Unlock the domain at your current registrar, request its transfer code and add the transfer to your cart. Transfers add a year to your registration." %}</p></details>
+      <details><summary>{% trans "What is WHOIS privacy?" %}</summary><p>{% trans "It hides your name, email, phone and address from the public WHOIS lookup, so spammers cannot copy them. You can add it to a domain from your account." %}</p></details>
+      <details><summary>{% trans "What happens when my domain expires?" %}</summary><p>{% trans "We email you well before it ends. Turn on auto-renew and we send the renewal invoice for you. If it does expire, renew it as soon as possible: the website and email on it stop working until you do." %}</p></details>
+      <details><summary>{% trans "Can I point my domain to hosting somewhere else?" %}</summary><p>{% trans "Yes. You can change the nameservers or the DNS records of your domain at any time from your account." %}</p></details>
+      <details><summary>{% trans "What if the domain I want is taken?" %}</summary><p>{% trans "Try another extension, or add a word to the name such as your city or service. If you own the name, you can transfer it in." %}</p></details>
+    </div>
+  </div>
+</section>
 </div>
 {% endblock %}
