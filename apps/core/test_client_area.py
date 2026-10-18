@@ -331,7 +331,7 @@ def test_a_domain_has_a_workspace_menu_like_a_website_and_every_entry_opens(worl
     response = client.get(reverse("domains_customer:detail", args=[domain.pk]))
     sidebar = response.context["sidebar"]
     assert sidebar.workspace and [p.title for p in sidebar] == ["Domain", "Registration"]
-    assert [l.label for l in sidebar[0].links] == ["Overview", "DNS records", "Nameservers", "Auto renew", "Registrar lock"]
+    assert [l.label for l in sidebar[0].links] == ["Overview", "DNS records", "Nameservers", "Auto renew", "Registrar lock", "Transfer"]
     assert [l.label for l in sidebar[1].links] == ["Renew", "Request cancellation", "Open a ticket"]
     assert 'class="cdrawer"' in response.content.decode()  # a phone opens the same menu from the header button
     for panel in sidebar:

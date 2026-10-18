@@ -84,7 +84,7 @@ def test_the_owner_sees_the_code_once_after_typing_the_password_and_it_is_not_st
     assert page.status_code == 200 and "EPP-123" in page.content.decode() and "no-store" in page["Cache-Control"]
     assert AuditEvent.objects.filter(action="domain.transfer_code_shown").count() == 1
     assert "EPP-123" not in str(AuditEvent.objects.filter(action="domain.transfer_code_shown").first().metadata)
-    assert "EPP-123" not in client.get(reverse("domains_customer:lock_tab", args=[domain.pk])).content.decode()
+    assert "EPP-123" not in client.get(reverse("domains_customer:transfer_tab", args=[domain.pk])).content.decode()
 
 
 def test_a_locked_domain_and_too_many_requests_are_refused(setup):

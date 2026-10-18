@@ -182,7 +182,8 @@ def domain_sidebar(request, domain):
              link(request, "DNS records", "domains_customer:dns_add", pk, icon="bi-diagram-3"),
              link(request, "Nameservers", "domains_customer:nameservers", pk, icon="bi-hdd-network"),
              link(request, "Auto renew", "domains_customer:auto_renew", pk, icon="bi-arrow-repeat"),
-             link(request, "Registrar lock", "domains_customer:lock_tab", pk, icon="bi-lock")]
+             link(request, "Registrar lock", "domains_customer:lock_tab", pk, icon="bi-lock"),
+             link(request, "Transfer", "domains_customer:transfer_tab", pk, icon="bi-arrow-left-right")]
     registration = []
     if domain.status == "active":
         registration.append(link(request, "Renew", "domains_customer:renew_tab", pk, icon="bi-calendar-plus"))

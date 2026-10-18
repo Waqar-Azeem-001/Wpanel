@@ -124,7 +124,7 @@ def _tab(request, pk, tab, **extra):
     domain = _own_domain(request, pk)
     context = {"domain": domain, "tab": tab, "sidebar": portal.domain_sidebar(request, domain),
                "can_edit": domain.status not in (DomainStatus.CANCELLED, DomainStatus.FAILED),
-               "can_transfer_code": tab == "lock" and services.can_get_transfer_code(domain), **extra}
+               "can_transfer_code": tab == "transfer" and services.can_get_transfer_code(domain), **extra}
     return render(request, f"domains/customer/tab_{tab}.html", context)
 
 
@@ -185,6 +185,13 @@ def my_domain_lock(request, pk, locked):
     return _run(request, action, "domains_customer:lock_tab", pk=pk)
 
 
+@login_required
+def my_domain_transfer_tab(request, pk):
+    from apps.orders.forms import AddTransferForm
+
+    return _tab(request, pk, "transfer", transfer_form=AddTransferForm())
+
+
 @require_POST
 @login_required
 def my_domain_transfer_code(request, pk):
@@ -194,8 +201,10 @@ def my_domain_transfer_code(request, pk):
         code = services.get_transfer_code(request.user, domain, request.POST.get("password", ""), request=request)
     except ServiceError as exc:
         messages.error(request, exc.message)
-        return redirect("domains_customer:lock_tab", pk=pk)
-    response = _tab(request, pk, "lock", transfer_code=code)
+        return redirect("domains_customer:transfer_tab", pk=pk)
+    from apps.orders.forms import AddTransferForm
+
+    response = _tab(request, pk, "transfer", transfer_code=code, transfer_form=AddTransferForm())
     response["Cache-Control"] = "private, no-store"
     return response
 

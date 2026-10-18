@@ -15,22 +15,5 @@
     {% endif %}
   {% endif %}
 </div></section>
-{% if can_edit and can_transfer_code %}
-<section class="card mt-3"><div class="card-body">
-  <h2 class="h5">{% trans "Moving this domain to another company" %}</h2>
-  {% if transfer_code %}
-  <p class="text-secondary">{% trans "Give this transfer (EPP) code to your new registrar. It is shown only now; ask again if you lose it." %}</p>
-  <p class="h4"><code id="transfer-code">{{ transfer_code }}</code></p>
-  {% else %}
-  <p class="text-secondary">{% trans "Unlock the domain above, then type your password to see the transfer (EPP) code. Do not share it with anyone but the company you are moving to." %}</p>
-  <form method="post" action="{% url 'domains_customer:transfer_code' domain.pk %}" class="row g-2 align-items-end">{% csrf_token %}
-    <div class="col-md-6"><label class="form-label" for="tc-password">{% trans "Your password" %}</label><input id="tc-password" class="form-control" type="password" name="password" autocomplete="current-password" required></div>
-    <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Show the transfer code" %}</button></div>
-  </form>
-  {% endif %}
-</div></section>
-{% elif can_edit %}
-<section class="card mt-3"><div class="card-body"><h2 class="h5">{% trans "Moving this domain to another company" %}</h2>
-  <p class="mb-0 text-secondary">{% trans "Unlock the domain above, then open a support ticket and we will send you the transfer code." %}</p></div></section>
-{% endif %}
+{% if can_edit %}<p class="mt-3 text-secondary">{% trans "Moving this domain to another company, or bringing one to us?" %} <a href="{% url 'domains_customer:transfer_tab' domain.pk %}">{% trans "Open the Transfer page" %}</a>.</p>{% endif %}
 {% endblock %}

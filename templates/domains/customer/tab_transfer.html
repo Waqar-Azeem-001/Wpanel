@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ domain.name }} · {% trans "Transfer" %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{% include "domains/customer/_header.html" %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {% trans "Move this domain to another company" %}</h2>
+      <p class="text-secondary">{% trans "The new company asks for a transfer code (also called an EPP or authorization code). Here is how to get it and what happens next." %}</p>
+      <ol class="ps-3">
+        <li class="mb-2"><strong>{% trans "Unlock the domain." %}</strong> {% trans "Status now:" %} <strong>{{ domain.is_locked|yesno:_("Locked,Unlocked") }}</strong>. <a href="{% url 'domains_customer:lock_tab' domain.pk %}">{% trans "Registrar lock" %}</a></li>
+        <li class="mb-2"><strong>{% trans "Get the transfer code" %}</strong> {% trans "below. Keep it private." %}</li>
+        <li class="mb-2">{% trans "At the new company, start a transfer for this domain and type the code when it asks." %}</li>
+        <li class="mb-2">{% trans "Approve the email the registry sends you, if there is one. It takes from a few hours to about 5 days." %}</li>
+      </ol>
+      <p class="small text-secondary">{% trans "A domain registered or transferred in the last 60 days cannot be moved yet. Do not change the nameservers until the move is done, so the website stays online." %}</p>
+      {% if can_edit and can_transfer_code %}
+        {% if transfer_code %}
+        <div class="alert alert-success" role="status"><div class="small">{% trans "Your transfer code (shown now only):" %}</div><div class="h4 mb-0"><code id="transfer-code">{{ transfer_code }}</code></div></div>
+        {% else %}
+        <form method="post" action="{% url 'domains_customer:transfer_code' domain.pk %}" class="row g-2 align-items-end">{% csrf_token %}
+          <div class="col-md"><label class="form-label" for="tc-password">{% trans "Your password" %}</label><input id="tc-password" class="form-control" type="password" name="password" autocomplete="current-password" required></div>
+          <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Show the transfer code" %}</button></div>
+        </form>
+        {% endif %}
+      {% elif can_edit %}
+        <p class="mb-0"><a class="btn btn-outline-primary" href="{% url 'support_customer:new' %}">{% trans "Open a support ticket for the code" %}</a></p>
+      {% endif %}
+    </div></section>
+  </div>
+  <div class="col-lg-6">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5"><i class="bi bi-box-arrow-in-down-left" aria-hidden="true"></i> {% trans "Bring a domain to us" %}</h2>
+      <p class="text-secondary">{% trans "Already own a domain somewhere else? Move it here and manage it with your hosting." %}</p>
+      <ol class="ps-3">
+        <li class="mb-2">{% trans "At your current company, unlock the domain and ask for its transfer (EPP) code." %}</li>
+        <li class="mb-2">{% trans "Make sure the contact email on the domain works: the approval email goes there." %}</li>
+        <li class="mb-2"><strong>{% trans "Type the domain and the code here" %}</strong> {% trans "and pay for the transfer. The price includes one year added to the domain." %}</li>
+        <li class="mb-2">{% trans "Approve the email from the registry if you get one. Leave the nameservers as they are until it finishes." %}</li>
+      </ol>
+      <form method="post" action="{% url 'orders_customer:cart_add_transfer' %}" class="row g-2 align-items-end">{% csrf_token %}
+        <div class="col-md-6"><label class="form-label" for="id_domain">{% trans "Domain to move to us" %}</label>{{ transfer_form.domain }}</div>
+        <div class="col-md-6"><label class="form-label" for="id_auth_code">{% trans "Transfer (EPP) code" %}</label>{{ transfer_form.auth_code }}</div>
+        <div class="col-12"><button class="btn btn-outline-primary" type="submit">{% trans "Add the transfer to my cart" %}</button></div>
+      </form>
+    </div></section>
+  </div>
+</div>
+{% endblock %}
