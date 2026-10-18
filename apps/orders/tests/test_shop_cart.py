@@ -190,7 +190,8 @@ def test_a_whois_addon_on_a_domain_becomes_an_order_line(shop, whois):
     browser.post("/cart/addons/toggle/", {"parent_item": domain.pk, "addon": whois.pk, "option": "annual"})
     response = browser.post("/checkout/", {
         "first_name": "Zed", "email": "zed@visitor.test", "country": "PK", "password": PASSWORD,
-        "password_confirm": PASSWORD, "payment_method": shop["bank"].code})
+        "password_confirm": PASSWORD, "payment_method": shop["bank"].code, "address_line1": "1 Mall Road", "city": "Lahore",
+        "state": "Punjab", "postcode": "54000", "phone": "+923001234567"})
     assert response.status_code == 302
     order = Order.objects.get()
     assert sorted(order.items.values_list("kind", flat=True)) == ["addon", "domain_register"]

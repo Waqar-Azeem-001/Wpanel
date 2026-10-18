@@ -336,9 +336,12 @@ def checkout_view(request):
         messages.info(request, "Your cart is empty.")
         return redirect("orders_customer:cart")
 
-    form = forms.CheckoutForm(request.POST if request.method == "POST" else None)  # bound even if the body is empty
+    needs_owner = _cart_has_domain(cart)
+    form = forms.CheckoutForm(request.POST if request.method == "POST" else None, needs_owner=needs_owner, client=client)  # bound even if the body is empty
     if request.method == "POST" and form.is_valid():
         try:
+            if needs_owner:
+                client_services.update_client(request.user, client, _owner_values(form.cleaned_data), request=request)
             order = services.checkout(request.user, cart, payment_method_code=form.cleaned_data["payment_method"],
                                       notes=form.cleaned_data["notes"],
                                       policies_agreed=form.cleaned_data.get("agree_to_policies", False), request=request)
@@ -348,7 +351,16 @@ def checkout_view(request):
             messages.success(request, f"Order {order.reference} placed. Follow the payment instructions below.")
             return redirect("orders_customer:detail", pk=order.pk)
     return render(request, "orders/customer/checkout.html", {
-        "cart": cart, "priced": priced, "form": form, "client": client, "guest": False, "methods": _payment_methods()})
+        "cart": cart, "priced": priced, "form": form, "client": client, "guest": False, "methods": _payment_methods(), "needs_owner": needs_owner})
+
+
+def _cart_has_domain(cart):
+    return cart.items.filter(kind__in=(ItemKind.DOMAIN_REGISTER, ItemKind.DOMAIN_TRANSFER)).exists()
+
+
+def _owner_values(data):
+    """The owner's postal details typed at checkout, as client fields (only the ones this checkout asked for)."""
+    return {name: data[name] for name in (*forms.OWNER_NAMES, "phone", "country") if data.get(name)}
 
 
 def _guest_checkout(request):
@@ -357,13 +369,14 @@ def _guest_checkout(request):
         messages.info(request, "Your cart is empty.")
         return redirect("orders_customer:cart")
     posted = request.method == "POST"
+    needs_owner = _cart_has_domain(cart)
     refresh = posted and request.POST.get("action") == "refresh"  # only the country changed: show the tax, keep what was typed
     country = (request.POST.get("country") if posted else request.GET.get("country", "")) or ""
     priced = pricing.price_cart(cart, country=country.strip().upper()[:2])
     if refresh:
-        form = forms.GuestCheckoutForm(initial={k: v for k, v in request.POST.items() if "password" not in k})
+        form = forms.GuestCheckoutForm(initial={k: v for k, v in request.POST.items() if "password" not in k}, needs_owner=needs_owner)
     else:
-        form = forms.GuestCheckoutForm(request.POST if posted else None, initial={"country": country})
+        form = forms.GuestCheckoutForm(request.POST if posted else None, initial={"country": country}, needs_owner=needs_owner)
     if posted and not refresh and form.is_valid():
         data = form.cleaned_data
         try:
@@ -382,7 +395,7 @@ def _guest_checkout(request):
         else:
             return _finish_guest_checkout(request, user, data)
     return render(request, "orders/customer/checkout.html", {
-        "cart": cart, "priced": priced, "form": form, "guest": True, "methods": _payment_methods(),
+        "cart": cart, "priced": priced, "form": form, "guest": True, "methods": _payment_methods(), "needs_owner": needs_owner,
         "login_url": f"{reverse('accounts:login')}?next={reverse('orders_customer:checkout')}"})
 
 
@@ -391,7 +404,7 @@ def _finish_guest_checkout(request, user, data):
     login(request, user)  # the sign-in signal moves the guest cart into the new account's cart
     client = single_contact_client(user)
     try:
-        client_services.update_client(user, client, {"country": data["country"], "phone": data["phone"]}, request=request)
+        client_services.update_client(user, client, {"country": data["country"], "phone": data["phone"], **_owner_values(data)}, request=request)
         cart = services.get_open_cart(user, client)
         order = services.checkout(user, cart, payment_method_code=data["payment_method"], notes=data["notes"],
                                   policies_agreed=data.get("agree_to_policies", False), request=request)

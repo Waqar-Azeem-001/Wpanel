@@ -63,16 +63,29 @@ class CouponCodeForm(forms.Form):
     code = forms.CharField(max_length=50, label="Coupon code")
 
 
+OWNER_FIELDS = (("address_line1", "Street address"), ("city", "City"), ("state", "State or province"), ("postcode", "Postcode"))
+OWNER_NAMES = [name for name, _ in OWNER_FIELDS]
+
+
 class CheckoutForm(forms.Form):
     payment_method = forms.ChoiceField(widget=forms.RadioSelect)
     notes = forms.CharField(required=False, max_length=2000, widget=forms.Textarea(attrs={"rows": 2}),
                             label="Notes for our team (optional)")
     agree_to_policies = forms.BooleanField(required=False, label="I agree to the policies above")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, needs_owner=False, client=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["payment_method"].choices = [(m.code, m.name) for m in PaymentMethod.objects.filter(
             is_active=True)]
+        if needs_owner:  # a domain is in the cart: the registry needs the owner's full postal details and phone
+            for name, label in OWNER_FIELDS:
+                self.fields[name] = forms.CharField(label=label, max_length=200, initial=getattr(client, name, "") if client else "")
+            if client is not None:  # signed in: the phone and country may be missing too
+                self.fields["phone"] = forms.CharField(label="Phone (with country code)", max_length=32, initial=client.phone)
+                if not client.country:
+                    self.fields["country"] = forms.ChoiceField(label="Country", choices=[("", "Choose your country"), *COUNTRIES])
+            else:
+                self.fields["phone"].required = True
         from apps.branding import services as branding
 
         if branding.get().policy_links:

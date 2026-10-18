@@ -420,3 +420,43 @@ def test_a_signed_in_customer_can_pick_a_domain_they_have_without_a_plan_and_not
     client.post("/cart/add/hosting/", {"product": shop["product"].pk, "cycle": "annual", "existing_domain": "notmine.com"})
     client.post("/cart/add/hosting/", {"product": shop["product"].pk, "cycle": "annual", "existing_domain": "busy.com"})
     assert not CartItem.objects.filter(domain_name__in=["notmine.com", "busy.com"]).exists()
+
+
+def test_a_cart_with_a_domain_asks_for_the_owner_s_full_details_and_keeps_them_on_the_account(client, owner, shop):
+    from apps.clients import services as client_services
+
+    client.post("/cart/add/domain/", {"domain": "example.com", "years": 1})
+    page = client.get("/checkout/").content.decode()
+    assert "Domain owner details" in page and 'name="address_line1"' in page and 'name="postcode"' in page
+    base = {"first_name": "Zed", "email": "zed@visitor.test", "country": "PK", "password": "Str0ng-Passw0rd!x", "password_confirm": "Str0ng-Passw0rd!x",
+            "payment_method": shop["bank"].code}
+    assert client.post("/checkout/", base).status_code == 200  # nothing placed: the address and phone are missing
+    assert not Order.objects.exists()
+    host = Client()
+    host.post("/cart/add/hosting/", {"product": shop["product"].pk, "cycle": "annual", "domain": "example.org"})
+    assert "Domain owner details" not in host.get("/checkout/").content.decode()  # a plan alone does not need them
+    client.force_login(owner)
+    mine = client_services.contact_clients(owner)[0]
+    client.post("/cart/add/domain/", {"domain": "owned.com", "years": 1})
+    assert "Domain owner details" in client.get("/checkout/").content.decode()
+    client.post("/checkout/", {"payment_method": shop["bank"].code, "address_line1": "9 Canal Rd", "city": "Lahore", "state": "Punjab",
+                               "postcode": "54000", "phone": "+923001234567", "country": "PK"})
+    mine.refresh_from_db()
+    assert mine.address_line1 == "9 Canal Rd" and mine.postcode == "54000" and mine.phone == "+923001234567"
+
+
+def test_with_a_real_registrar_an_order_for_a_domain_is_refused_until_the_account_has_the_owner_details(client, owner, shop):
+    from apps.clients import services as client_services
+    from apps.domains.models import RegistrarProvider
+
+    from apps.orders.models import CartItem, ItemKind
+
+    client.force_login(owner)
+    mine = client_services.contact_clients(owner)[0]
+    client.post("/cart/add/domain/", {"domain": "guarded.com", "years": 1})
+    cart = services.get_open_cart(owner, mine)
+    assert cart.items.filter(kind=ItemKind.DOMAIN_REGISTER).exists()
+    RegistrarProvider.objects.update(is_active=False)
+    RegistrarProvider.objects.create(name="OnlineNIC", kind="onlinenic", is_active=True, sandbox=False)
+    with pytest.raises(services.ServiceError, match="owner's full details"):
+        services.checkout(owner, cart, payment_method_code=shop["bank"].code)

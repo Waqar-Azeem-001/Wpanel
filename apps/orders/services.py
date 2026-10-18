@@ -366,6 +366,22 @@ def purge_guest_carts(*, days=30):
 
 # --- Checkout -------------------------------------------------------------------------------
 
+def _require_domain_owner_details(cart):
+    """A real registry registers a domain in the owner's name: refuse the order (before it is paid) when the account lacks the address or phone it needs."""
+    from apps.domains import services as domain_services
+
+    registrar = domain_services.get_active_registrar()
+    if registrar is None or registrar.kind == "manual" or cart.client_id is None:
+        return
+    if not cart.items.filter(kind__in=(ItemKind.DOMAIN_REGISTER, ItemKind.DOMAIN_TRANSFER)).exists():
+        return
+    owner = domain_services.owner_details(cart.client)
+    missing = [label for key, label in (("name", "name"), ("street", "street address"), ("city", "city"), ("state", "state"), ("postcode", "postcode"),
+                                        ("country", "country"), ("phone", "phone"), ("email", "email")) if not owner[key]]
+    if missing:
+        raise ServiceError(f"A domain needs the owner's full details. Add to the account first: {', '.join(missing)}.", code="owner_details_missing")
+
+
 def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, policies_agreed=False, request=None):
     """
     Turn a cart into an order awaiting payment.
@@ -393,6 +409,7 @@ def checkout(actor, cart, *, payment_method_code, notes="", notify_client=True, 
     # cart is already checked out, not fail later with a confusing "domain is reserved".
     if not Cart.objects.filter(pk=cart.pk, status=CartStatus.OPEN).exists():
         raise ServiceError("This cart has already been checked out.", code="cart_closed")
+    _require_domain_owner_details(cart)
     method = PaymentMethod.objects.filter(code=payment_method_code, is_active=True).first()
     if method is None:
         raise ServiceError("Choose a valid payment method.", code="payment_method_invalid")

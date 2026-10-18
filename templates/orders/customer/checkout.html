@@ -40,6 +40,20 @@
   </section>
   {% endif %}
 
+  {% if needs_owner %}
+  <section class="shop-card">
+    <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-geo-alt"></i></span>
+      <div class="grow"><h2 class="shop-title">{% trans "Domain owner details" %}</h2><p class="text-secondary mb-0">{% trans "A domain is registered in the owner's name, so the registry needs a full address and a phone number. They are also your account details." %}</p></div></header>
+    <div class="row g-3">
+      {% include "orders/_field.html" with field=form.address_line1 wide=True %}
+      {% include "orders/_field.html" with field=form.city %}
+      {% include "orders/_field.html" with field=form.state %}
+      {% include "orders/_field.html" with field=form.postcode %}
+      {% if not guest %}{% include "orders/_field.html" with field=form.phone %}{% if "country" in form.fields %}{% include "orders/_field.html" with field=form.country %}{% endif %}{% endif %}
+    </div>
+  </section>
+  {% endif %}
+
   <section class="shop-card">
     <header class="shop-card-head"><span class="chip" aria-hidden="true"><i class="bi bi-bank"></i></span>
       <div class="grow"><h2 class="shop-title">{% trans "Payment method" %}</h2><p class="text-secondary mb-0">{% trans "You pay after placing the order. Nothing is charged now." %}</p></div></header>
