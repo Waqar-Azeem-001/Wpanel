@@ -43,6 +43,7 @@ class RegistrarProvider(TimeStampedModel):
 
     class Kind(models.TextChoices):
         MANUAL = "manual", "Manual (no real registration - development/testing only)"
+        ONLINENIC = "onlinenic", "OnlineNIC (transfer codes, lock, nameservers)"
 
     name = models.CharField(max_length=100)
     kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.MANUAL)

@@ -1,7 +1,9 @@
 from .manual import ManualAdapter
+from .onlinenic import OnlineNicAdapter
 
 ADAPTERS = {
     "manual": ManualAdapter,
+    "onlinenic": OnlineNicAdapter,
 }
 
 

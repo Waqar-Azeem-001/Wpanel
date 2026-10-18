@@ -503,3 +503,55 @@ def delete_registrar_provider(actor, provider, *, request=None):
         raise ServiceError("Domains are registered through this registrar, so it cannot be deleted.", code="provider_in_use")
     audit.record("registrar_provider.deleted", actor=actor, target=provider, metadata={"name": provider.name}, request=request)
     provider.delete()
+
+
+# --- The transfer (EPP) code, to move a domain away --------------------------------------------------------------------------
+
+TRANSFER_CODE_PER_HOUR = 3
+
+
+def transfer_code_provider():
+    """The OnlineNIC connection that can hand out transfer codes: the one in use if it is that kind, otherwise any saved one."""
+    queryset = RegistrarProvider.objects.filter(kind=RegistrarProvider.Kind.ONLINENIC)
+    return queryset.filter(is_active=True).first() or queryset.first()
+
+
+def can_get_transfer_code(domain):
+    return domain.status == DomainStatus.ACTIVE and transfer_code_provider() is not None
+
+
+def get_transfer_code(actor, domain, password, *, request=None):
+    """
+    The authorization code the next registrar asks for. Only for someone who may manage the domain, only after they type their
+    password again, at most a few times an hour per domain, and the domain must be unlocked first. The code is returned to be shown
+    once; it is never stored, and every request is in the audit log.
+    """
+    from django.core.cache import cache
+
+    _require_self_service(actor, domain)
+    if domain.status != DomainStatus.ACTIVE:
+        raise ServiceError("Only an active domain can be moved.", code="domain_not_active")
+    provider = transfer_code_provider()
+    if provider is None:
+        raise ServiceError("Transfer codes are not available automatically for this domain yet. Open a support ticket and we will send it.",
+                           code="no_transfer_code_provider")
+    if not actor.check_password(password or ""):
+        audit.record("domain.transfer_code_refused", actor=actor, target=domain, metadata={"reason": "wrong_password"}, request=request)
+        raise ServiceError("That password is not right.", code="wrong_password")
+    if domain.is_locked:
+        raise ServiceError("Unlock the domain first (Registrar lock), then ask for the code.", code="domain_locked")
+    key = f"transfer-code:{domain.pk}"
+    used = cache.get(key, 0)
+    if used >= TRANSFER_CODE_PER_HOUR:
+        raise ServiceError("The code was asked for too many times in the last hour. Try again later.", code="rate_limited",
+                           status_code=status.HTTP_429_TOO_MANY_REQUESTS)
+    cache.set(key, used + 1, 3600)
+    adapter = build_adapter(provider)
+    try:
+        adapter.unlock_domain(domain.name, domain.provider_ref)  # make sure the registrar side is open too
+        code = adapter.get_auth_code(domain.name)
+    except RegistrarError as exc:
+        audit.record("domain.transfer_code_failed", actor=actor, target=domain, metadata={"error": str(exc)[:200]}, request=request)
+        raise ServiceError(f"Could not get the transfer code: {exc}", code="registrar_error") from exc
+    audit.record("domain.transfer_code_shown", actor=actor, target=domain, request=request)
+    return code

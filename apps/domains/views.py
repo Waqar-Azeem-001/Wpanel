@@ -123,7 +123,8 @@ def _tab(request, pk, tab, **extra):
     still have nameservers/DNS adjusted before staff completes registration/transfer."""
     domain = _own_domain(request, pk)
     context = {"domain": domain, "tab": tab, "sidebar": portal.domain_sidebar(request, domain),
-               "can_edit": domain.status not in (DomainStatus.CANCELLED, DomainStatus.FAILED), **extra}
+               "can_edit": domain.status not in (DomainStatus.CANCELLED, DomainStatus.FAILED),
+               "can_transfer_code": tab == "lock" and services.can_get_transfer_code(domain), **extra}
     return render(request, f"domains/customer/tab_{tab}.html", context)
 
 
@@ -182,6 +183,21 @@ def my_domain_lock(request, pk, locked):
         return f"Domain {'locked' if locked else 'unlocked'}."
 
     return _run(request, action, "domains_customer:lock_tab", pk=pk)
+
+
+@require_POST
+@login_required
+def my_domain_transfer_code(request, pk):
+    """Ask for the code to move the domain away: shown on the page once, never kept."""
+    domain = _own_domain(request, pk)
+    try:
+        code = services.get_transfer_code(request.user, domain, request.POST.get("password", ""), request=request)
+    except ServiceError as exc:
+        messages.error(request, exc.message)
+        return redirect("domains_customer:lock_tab", pk=pk)
+    response = _tab(request, pk, "lock", transfer_code=code)
+    response["Cache-Control"] = "private, no-store"
+    return response
 
 
 @login_required

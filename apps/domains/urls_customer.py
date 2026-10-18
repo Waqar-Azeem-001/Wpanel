@@ -10,6 +10,7 @@ urlpatterns = [
     path("<int:pk>/auto-renew/", views.my_domain_auto_renew, name="auto_renew"),
     path("<int:pk>/nameservers/", views.my_domain_nameservers, name="nameservers"),
     path("<int:pk>/registrar-lock/", views.my_domain_lock_tab, name="lock_tab"),
+    path("<int:pk>/transfer-code/", views.my_domain_transfer_code, name="transfer_code"),
     path("<int:pk>/renew/", views.my_domain_renew_tab, name="renew_tab"),
     path("<int:pk>/lock/", views.my_domain_lock, {"locked": True}, name="lock"),
     path("<int:pk>/unlock/", views.my_domain_lock, {"locked": False}, name="unlock"),
