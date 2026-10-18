@@ -25,7 +25,7 @@ class ManualAdapter(RegistrarAdapter):
 
         return not Domain.objects.filter(name=domain_name, status__in=LIVE_STATUSES).exists()
 
-    def register_domain(self, domain_name: str, years: int, nameservers: list[str]) -> dict:
+    def register_domain(self, domain_name: str, years: int, nameservers: list[str], contact: dict | None = None) -> dict:
         return {
             "provider_ref": f"manual-{uuid.uuid4().hex[:12]}",
             "expires_at": timezone.now() + timedelta(days=365 * years),
@@ -39,7 +39,7 @@ class ManualAdapter(RegistrarAdapter):
             else timezone.now()
         return {"expires_at": base + timedelta(days=365 * years)}
 
-    def transfer_domain(self, domain_name: str, auth_code: str, years: int) -> dict:
+    def transfer_domain(self, domain_name: str, auth_code: str, years: int, contact: dict | None = None) -> dict:
         if not auth_code:
             raise RegistrarError("An authorization code is required to transfer this domain.")
         return {

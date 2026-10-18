@@ -25,16 +25,17 @@ class RegistrarAdapter(ABC):
         """True if ``domain_name`` can be registered."""
 
     @abstractmethod
-    def register_domain(self, domain_name: str, years: int, nameservers: list[str]) -> dict:
-        """Register a domain. Returns {"provider_ref": str, "expires_at": datetime}."""
+    def register_domain(self, domain_name: str, years: int, nameservers: list[str], contact: dict | None = None) -> dict:
+        """Register a domain. ``contact`` is the owner (name, organisation, address, phone, email). Returns {"provider_ref": str, "expires_at": datetime}."""
 
     @abstractmethod
     def renew_domain(self, domain_name: str, provider_ref: str, years: int) -> dict:
         """Extend a registration. Returns {"expires_at": datetime}."""
 
     @abstractmethod
-    def transfer_domain(self, domain_name: str, auth_code: str, years: int) -> dict:
-        """Initiate/complete an inbound transfer. Returns {"provider_ref": str, "expires_at": datetime}."""
+    def transfer_domain(self, domain_name: str, auth_code: str, years: int, contact: dict | None = None) -> dict:
+        """Initiate/complete an inbound transfer. Returns {"provider_ref": str, "expires_at": datetime}, or {"provider_ref": str, "pending": True}
+        when the registry takes days to finish (the panel then asks ``get_domain`` until the domain shows up)."""
 
     @abstractmethod
     def get_domain(self, domain_name: str, provider_ref: str) -> dict:

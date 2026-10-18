@@ -321,6 +321,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.lifecycle.tasks.send_expiry_notices_task",
         "schedule": crontab(hour=8, minute=30),
     },
+    "poll-domain-transfers": {
+        "task": "apps.domains.tasks.poll_transfers_task",
+        "schedule": crontab(minute=20),
+    },
     "sweep-helper-files": {
         "task": "apps.hosting.tasks.sweep_helper_files_task",
         "schedule": crontab(hour=3, minute=40),

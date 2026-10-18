@@ -130,6 +130,13 @@ def save_settings(actor, *, request=None, **values):
 
 # --- Registration ---------------------------------------------------------------------------
 
+def owner_details(client):
+    """The domain owner as the registry wants them, taken from the client's own details."""
+    return {"name": client.contact_name or client.company_name, "organization": client.company_name,
+            "street": " ".join(part for part in (client.address_line1, client.address_line2) if part).strip(), "city": client.city,
+            "state": client.state, "postcode": client.postcode, "country": client.country, "phone": client.phone, "email": client.email}
+
+
 @transaction.atomic
 def request_registration(actor, client, domain_name, years, nameservers=None, *, request=None):
     domain_name = domain_name.strip().lower()
@@ -169,7 +176,7 @@ def complete_registration(actor, domain, *, request=None):
 
     provider, adapter = get_adapter()
     try:
-        result = adapter.register_domain(domain.name, domain.years, domain.nameservers)
+        result = adapter.register_domain(domain.name, domain.years, domain.nameservers, owner_details(domain.client))
     except RegistrarError as exc:
         domain.status, domain.last_error = DomainStatus.FAILED, str(exc)
         domain.save(update_fields=["status", "last_error", "updated_at"])
@@ -222,8 +229,10 @@ def complete_transfer(actor, domain, *, request=None):
 
     provider, adapter = get_adapter()
     auth_code = domain.get_auth_code()
+    if domain.status == DomainStatus.PENDING_TRANSFER_IN and domain.provider_ref:
+        return poll_transfer(actor, domain, request=request)  # already sent to the registrar: never send (and pay for) it twice
     try:
-        result = adapter.transfer_domain(domain.name, auth_code, domain.years)
+        result = adapter.transfer_domain(domain.name, auth_code, domain.years, owner_details(domain.client))
     except RegistrarError as exc:
         domain.status, domain.last_error = DomainStatus.FAILED, str(exc)
         domain.save(update_fields=["status", "last_error", "updated_at"])
@@ -231,6 +240,12 @@ def complete_transfer(actor, domain, *, request=None):
                      request=request)
         raise ServiceError(f"Transfer failed: {exc}", code="registrar_error") from exc
 
+    if result.get("pending"):  # the registry takes days: wait, and ask again (``poll_transfer``)
+        domain.status, domain.registrar, domain.provider_ref = DomainStatus.PENDING_TRANSFER_IN, provider, result["provider_ref"]
+        domain.last_error = ""
+        domain.save(update_fields=["status", "registrar", "provider_ref", "last_error", "updated_at"])
+        audit.record("domain.transfer_started", actor=actor, target=domain, request=request)
+        return domain
     domain.status = DomainStatus.ACTIVE
     domain.registrar = provider
     domain.provider_ref = result["provider_ref"]
@@ -244,6 +259,40 @@ def complete_transfer(actor, domain, *, request=None):
                  metadata={"provider_ref": domain.provider_ref}, request=request)
     _announce_registered(domain)
     return domain
+
+
+def poll_transfer(actor, domain, *, request=None):
+    """Ask the registrar whether an inbound transfer has finished. Done: the domain becomes active. Not yet: it stays pending, with the registrar's own words for staff."""
+    provider, adapter = get_adapter()
+    try:
+        info = adapter.get_domain(domain.name, domain.provider_ref)
+    except RegistrarError as exc:
+        try:
+            where = adapter.transfer_status(domain.name, domain.get_auth_code()) if hasattr(adapter, "transfer_status") else ""
+        except RegistrarError:
+            where = ""
+        domain.last_error = f"Transfer not finished yet. {where or str(exc)}"[:500]
+        domain.save(update_fields=["last_error", "updated_at"])
+        return domain
+    domain.status, domain.registrar = DomainStatus.ACTIVE, provider
+    domain.registered_at = timezone.now()
+    domain.expires_at = info.get("expires_at")
+    domain.nameservers = info.get("nameservers") or domain.nameservers
+    domain.last_error = ""
+    domain.set_auth_code("")
+    domain.save(update_fields=["status", "registrar", "registered_at", "expires_at", "nameservers", "last_error", "auth_code_encrypted", "updated_at"])
+    audit.record("domain.transfer_completed", actor=actor, target=domain, metadata={"provider_ref": domain.provider_ref}, request=request)
+    _announce_registered(domain)
+    return domain
+
+
+def poll_pending_transfers():
+    """Hourly (beat): look at every inbound transfer that was sent to the registrar. Returns how many finished."""
+    done = 0
+    for domain in Domain.objects.filter(status=DomainStatus.PENDING_TRANSFER_IN).exclude(provider_ref=""):
+        if poll_transfer(None, domain).status == DomainStatus.ACTIVE:
+            done += 1
+    return done
 
 
 @transaction.atomic

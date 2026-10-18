@@ -104,3 +104,93 @@ def test_someone_else_cannot_ask_for_the_code(setup, make_user):
     client, domain, owner = setup
     client.force_login(make_user("other@example.com", password="Other-pass-1"))
     assert client.post(reverse("domains_customer:transfer_code", args=[domain.pk]), {"password": "Other-pass-1"}).status_code in (403, 404)
+
+
+# --- registering, transferring in, renewing ------------------------------------------------------------------------------
+
+OWNER = {"name": "Ada Khan", "organization": "Acme", "street": "1 Mall Road", "city": "Lahore", "state": "Punjab", "postcode": "54000",
+         "country": "PK", "phone": "0300 1234567", "email": "ada@acme.test"}
+GOOD = {"code": 1000, "message": "ok"}
+
+
+def test_phone_numbers_are_written_the_way_the_registry_wants():
+    from apps.domains.adapters.onlinenic import phone_for_registry
+
+    assert phone_for_registry("+92 300 1234567", "PK") == "+92.3001234567"
+    assert phone_for_registry("0300 1234567", "PK") == "+92.3001234567"
+    assert phone_for_registry("+971501234567", "AE") == "+971.501234567"
+    with pytest.raises(RegistrarError):
+        phone_for_registry("5551234", "ZZ")
+
+
+def test_registering_makes_the_owner_a_contact_first_and_sends_the_nameservers(monkeypatch):
+    seen = []
+    fake_post(monkeypatch, {"createContact": {**GOOD, "data": {"contactid": "C77"}},
+                            "registerDomain": {**GOOD, "data": {"expdate": "2027-10-19"}}}, seen)
+    adapter = OnlineNicAdapter({**CREDS, "nameservers": ["ns1.x.pk", "ns2.x.pk"]}, sandbox=False)
+    result = adapter.register_domain("new.com", 2, [], OWNER)
+    commands = [u.rsplit("=", 1)[1] for u, _ in seen]
+    assert commands == ["createContact", "registerDomain"]
+    contact, register = seen[0][1], seen[1][1]
+    assert contact["voice"] == "+92.3001234567" and contact["ext"] == "com" and contact["country"] == "PK"
+    assert register["registrant"] == register["admin"] == register["tech"] == register["billing"] == "C77"
+    assert register["period"] == "2" and register["dns1"] == "ns1.x.pk" and register["dns2"] == "ns2.x.pk"
+    assert result["provider_ref"] == "new.com" and result["expires_at"].year == 2027
+
+
+def test_registering_says_what_is_missing_and_makes_no_call(monkeypatch):
+    seen = []
+    fake_post(monkeypatch, {}, seen)
+    adapter = OnlineNicAdapter({**CREDS, "nameservers": ["a", "b"]}, sandbox=False)
+    with pytest.raises(RegistrarError, match="address, city"):
+        adapter.register_domain("new.com", 1, [], {**OWNER, "street": "", "city": ""})
+    with pytest.raises(RegistrarError, match="owner's details"):
+        adapter.register_domain("new.com", 1, [], None)
+    assert seen == []
+    fake_post(monkeypatch, {"createContact": {**GOOD, "data": {"contactid": "C1"}}})
+    with pytest.raises(RegistrarError, match="No nameservers"):
+        OnlineNicAdapter(CREDS, sandbox=False).register_domain("new.com", 1, [], OWNER)
+
+
+def test_a_premium_name_is_reported_unavailable_because_it_costs_extra(monkeypatch):
+    fake_post(monkeypatch, {"checkDomain": {**GOOD, "data": {"avail": "1", "Premium": "true"}}})
+    assert OnlineNicAdapter(CREDS, sandbox=False).check_availability("rich.com") is False
+    fake_post(monkeypatch, {"checkDomain": {**GOOD, "data": {"avail": "1", "Premium": "false"}}})
+    assert OnlineNicAdapter(CREDS, sandbox=False).check_availability("plain.com") is True
+
+
+def test_an_inbound_transfer_is_sent_once_then_waits_until_the_registrar_lists_the_domain(monkeypatch, setup):
+    from apps.domains import services
+
+    client, domain, owner = setup
+    seen = []
+    fake_post(monkeypatch, {"createContact": {**GOOD, "data": {"contactid": "C9"}}, "transferDomain": GOOD,
+                            "infoDomain": {"code": 1005, "message": "domain not found"},
+                            "queryTransferStatus": {**GOOD, "data": {"status": "pending at the old registrar"}}}, seen)
+    account = domain.client
+    for field, value in (("address_line1", "1 Mall Road"), ("city", "Lahore"), ("state", "Punjab"), ("postcode", "54000"), ("country", "PK"), ("phone", "+923001234567")):
+        setattr(account, field, value)
+    account.save()
+    provider = services.transfer_code_provider()
+    provider.is_active = True
+    provider.save()
+    incoming = Domain.objects.create(client=account, name="moving.com", status=DomainStatus.PENDING_TRANSFER_IN, years=1)
+    incoming.set_auth_code("EPP-OLD")
+    incoming.save()
+    from apps.accounts.roles import Role
+    from apps.accounts.models import User
+
+    boss = User.objects.create_user(email="boss@example.com", password="x", role=Role.SUPER_ADMIN)
+    services.complete_transfer(boss, incoming)
+    incoming.refresh_from_db()
+    assert incoming.status == DomainStatus.PENDING_TRANSFER_IN and incoming.provider_ref == "moving.com"
+    sent = [u.rsplit("=", 1)[1] for u, _ in seen]
+    assert sent.count("transferDomain") == 1
+    services.complete_transfer(boss, incoming)  # a retry must not send (and pay for) it again
+    assert [u.rsplit("=", 1)[1] for u, _ in seen].count("transferDomain") == 1
+    incoming.refresh_from_db()
+    assert "pending at the old registrar" in incoming.last_error
+    fake_post(monkeypatch, {"infoDomain": {**GOOD, "data": {"status": "ok", "expdate": "2027-11-01"}}})
+    assert services.poll_pending_transfers() == 1
+    incoming.refresh_from_db()
+    assert incoming.status == DomainStatus.ACTIVE and incoming.expires_at.year == 2027 and not incoming.get_auth_code()
