@@ -197,7 +197,7 @@ def test_a_detail_page_keeps_exactly_one_menu_lit(world):
 def test_the_profile_menu_shows_who_you_are_and_signs_out_with_a_post(world):
     html = page_of(world.people["technical staff"], "console:dashboard").content.decode()
     assert "Technical Staff" in html and "technical@harness.test" in html
-    assert re.search(r'<form method="post" action="/account/logout/">', html)
+    assert re.search(r'<form method="post" action="/account/logout/" data-confirm=', html)
     admin = page_of(world.people["admin"], "console:dashboard").content.decode()
     root = page_of(world.people["super admin"], "console:dashboard").content.decode()
     assert "Database admin" not in admin and "Database admin" in root

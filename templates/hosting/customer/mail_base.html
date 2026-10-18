@@ -20,7 +20,7 @@ sign out). The webmail and the mail settings pages both extend this; nothing of 
         <li><a class="dropdown-item" href="{{ settings_url }}"><i class="bi bi-gear" aria-hidden="true"></i> {% trans "Mail settings" %}</a></li>
         <li><a class="dropdown-item" href="{{ back_url }}" data-close-window><i class="bi bi-x-square" aria-hidden="true"></i> {% trans "Close mail" %}</a></li>
         <li><hr class="dropdown-divider"></li>
-        <li><form method="post" action="{{ logout_url }}">{% csrf_token %}<button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> {% trans "Sign out of WHPanel" %}</button></form></li>
+        <li><form method="post" action="{{ logout_url }}" data-confirm="{% trans 'Sign out of WHPanel?' %}">{% csrf_token %}<button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> {% trans "Sign out of WHPanel" %}</button></form></li>
       </ul>
     </div>
   </header>

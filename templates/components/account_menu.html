@@ -18,7 +18,7 @@
     <li><a class="dropdown-item{% if c.active %} active{% endif %}" href="{{ c.url }}"{% if c.active %} aria-current="page"{% endif %}>{{ c.label }}</a></li>
     {% endfor %}
     <li><hr class="dropdown-divider"></li>
-    <li><form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> {% trans "Sign out" %}</button></form></li>
+    <li><form method="post" action="{% url 'accounts:logout' %}" data-confirm="{% trans 'Sign out of your account?' %}">{% csrf_token %}<button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> {% trans "Sign out" %}</button></form></li>
   </ul>
 </div>
 {% endfor %}
