@@ -181,8 +181,16 @@ def public_product_detail(request, slug):
     recommended = product.recommended_addons.filter(status=CatalogStatus.ACTIVE)
     # A link from an outside storefront can name the billing cycle ("annual", or "custom_4" / "custom:4").
     selected_cycle = (request.GET.get("cycle") or request.GET.get("billing_cycle") or "").replace("custom_", "custom:")
+    own_domains = []
+    if request.user.is_authenticated:
+        from apps.orders import services as order_services
+        from apps.orders.views import _cart_client
+
+        client = _cart_client(request)
+        own_domains = order_services.domains_free_for_hosting(client) if client is not None else []
     return render(request, "products/public/detail.html", {"product": product, "prices": prices, "upsell": upsell,
-                                                           "recommended_addons": recommended,
+                                                           "recommended_addons": recommended, "own_domains": own_domains,
+                                                           "signed_in": request.user.is_authenticated,
                                                            "selected_cycle": selected_cycle})
 
 

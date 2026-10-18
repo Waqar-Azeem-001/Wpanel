@@ -398,3 +398,25 @@ def test_cart_service_and_page_share_one_cart(client, owner, client_obj, shop):
     client.force_login(owner)
     _add_host(client, shop)
     assert services.get_open_cart(owner, client_obj).items.count() == 1
+
+
+def test_a_signed_in_customer_can_pick_a_domain_they_have_without_a_plan_and_not_one_a_plan_uses(client, owner, shop, manager):
+    from apps.domains.models import Domain, DomainStatus
+    from apps.hosting.models import HostingAccount
+
+    account = owner.contact_links.first().client if hasattr(owner, "contact_links") else client_services.contact_clients(owner)[0]
+    Domain.objects.create(client=account, name="free.com", status=DomainStatus.ACTIVE)
+    Domain.objects.create(client=account, name="busy.com", status=DomainStatus.ACTIVE)
+    HostingAccount.objects.create(client=account, product=shop["product"], username="busy1", domain="busy.com", status="active")
+    other = client_services.create_client(manager, {"first_name": "Bo", "email": "bo@acme.test"})
+    Domain.objects.create(client=other, name="notmine.com", status=DomainStatus.ACTIVE)
+    url = f"/products/{shop['product'].slug}/"
+    assert "free.com" not in client.get(url).content.decode()  # a visitor sees only the plain field
+    client.force_login(owner)
+    page = client.get(url).content.decode()
+    assert "free.com" in page and "busy.com" not in page and "notmine.com" not in page and 'name="domain_source"' in page
+    ok = client.post("/cart/add/hosting/", {"product": shop["product"].pk, "cycle": "annual", "existing_domain": "free.com"})
+    assert ok.status_code == 302 and CartItem.objects.filter(domain_name="free.com").exists()
+    client.post("/cart/add/hosting/", {"product": shop["product"].pk, "cycle": "annual", "existing_domain": "notmine.com"})
+    client.post("/cart/add/hosting/", {"product": shop["product"].pk, "cycle": "annual", "existing_domain": "busy.com"})
+    assert not CartItem.objects.filter(domain_name__in=["notmine.com", "busy.com"]).exists()

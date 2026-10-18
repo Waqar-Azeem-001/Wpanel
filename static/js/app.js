@@ -56,3 +56,14 @@ document.addEventListener("submit", function (event) {
     });
   }, 0);
 });
+
+/* Ordering a plan while signed in: "a domain I already have" or "a new domain" shows only the matching field, and only that field is sent. */
+document.addEventListener("change", function (event) {
+  var radio = event.target;
+  if (!radio.matches || !radio.matches("input[name=domain_source]") || !radio.form) { return; }
+  radio.form.querySelectorAll("[data-domain-pick]").forEach(function (pane) {
+    var on = pane.getAttribute("data-domain-pick") === radio.value;
+    pane.hidden = !on;
+    pane.querySelectorAll("input, select").forEach(function (field) { field.disabled = !on; field.required = on && field.tagName === "INPUT"; });
+  });
+});

@@ -509,3 +509,14 @@ def cancel_order(actor, order, *, reason="", request=None):
     for invoice in open_invoices:
         cancel_invoice_internal(invoice, actor=actor, reason=order.cancel_reason, request=request)
     return order
+
+
+def domains_free_for_hosting(client):
+    """The client's own domains that no hosting plan is using yet (and none is already in their cart), to offer when they order a plan."""
+    from apps.domains.models import Domain, LIVE_STATUSES as DOMAIN_LIVE
+    from apps.hosting.models import HostingAccount, LIVE_STATUSES as HOSTING_LIVE
+
+    taken = set(HostingAccount.objects.filter(client=client, status__in=HOSTING_LIVE).values_list("domain", flat=True))
+    taken |= set(CartItem.objects.filter(cart__client=client, kind=ItemKind.HOSTING).values_list("domain_name", flat=True))
+    names = Domain.objects.filter(client=client, status__in=DOMAIN_LIVE).order_by("name").values_list("name", flat=True)
+    return [name for name in names if name.lower() not in taken]

@@ -182,6 +182,9 @@ def cart_add_hosting(request):
         if product is None:
             raise ServiceError("This plan is no longer available.", code="product_unavailable")
         cycle, months = form.cleaned_data["cycle"]
+        if form.cleaned_data.get("existing_domain"):
+            if client is None or form.cleaned_data["existing_domain"] not in services.domains_free_for_hosting(client):
+                raise ServiceError("That domain is not available for a new plan: it is not yours, or a plan already uses it.", code="domain_unavailable")
         services.add_hosting(actor, client, product, form.cleaned_data["domain"], cycle, months, cart=cart)
 
     return _add(request, form, add, "Added to your cart.")

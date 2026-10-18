@@ -28,7 +28,15 @@ class OptionField(forms.CharField):
 class AddHostingForm(forms.Form):
     product = forms.IntegerField(widget=forms.HiddenInput)
     cycle = OptionField()
-    domain = forms.CharField(label="Domain name", widget=forms.TextInput(attrs={"placeholder": "example.com"}))
+    domain = forms.CharField(label="Domain name", required=False, widget=forms.TextInput(attrs={"placeholder": "example.com"}))
+    existing_domain = forms.CharField(required=False)  # a signed-in customer picking one of their own domains
+
+    def clean(self):
+        data = super().clean()
+        data["domain"] = (data.get("existing_domain") or data.get("domain") or "").strip()
+        if not data["domain"]:
+            self.add_error("domain", "Enter the domain name this plan is for.")
+        return data
 
 
 class AddDomainForm(forms.Form):

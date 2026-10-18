@@ -40,10 +40,27 @@
         {% for entry in prices %}<option value="{{ entry.option_value }}"{% if entry.option_value == selected_cycle %} selected{% endif %}>{% if entry.billing_cycle == "custom" %}{{ entry.custom_months }} months{% else %}{{ entry.get_billing_cycle_display }}{% endif %} &ndash; {{ entry.price }}{% if entry.setup_fee != 0 %} (+{{ entry.setup_fee }} setup){% endif %}</option>{% endfor %}
       </select>
     </div>
+    {% if own_domains %}
+    <div class="col-12">
+      <div class="form-check"><input class="form-check-input" type="radio" name="domain_source" id="src-existing" value="existing" checked><label class="form-check-label" for="src-existing">{% trans "Use a domain I already have with you" %}</label></div>
+      <div class="form-check"><input class="form-check-input" type="radio" name="domain_source" id="src-new" value="new"><label class="form-check-label" for="src-new">{% trans "A new domain" %}</label></div>
+    </div>
+    <div class="col-md" data-domain-pick="existing">
+      <label class="form-label" for="order-existing">{% trans "Your domain" %}</label>
+      <select class="form-select" name="existing_domain" id="order-existing">{% for name in own_domains %}<option value="{{ name }}">{{ name }}</option>{% endfor %}</select>
+      <div class="form-text">{% trans "Only domains with no hosting plan yet are listed." %}</div>
+    </div>
+    <div class="col-md" data-domain-pick="new" hidden>
+      <label class="form-label" for="order-domain">{% trans "New domain name" %}</label>
+      <input class="form-control" type="text" name="domain" id="order-domain" placeholder="example.com" disabled>
+      <div class="form-text">{% trans "Not registered yet? We offer to register it in your cart." %}</div>
+    </div>
+    {% else %}
     <div class="col-md">
       <label class="form-label" for="order-domain">{% trans "Domain name" %}</label>
       <input class="form-control" type="text" name="domain" id="order-domain" placeholder="example.com" required>
     </div>
+    {% endif %}
     <div class="col-auto"><button class="btn btn-primary" type="submit">{% trans "Add to cart" %}</button></div>
   </form>
   <p class="text-secondary mt-3 mb-0">{% trans "Don't have a domain yet?" %} <a href="{% url 'domains_public:search' %}">{% trans "Search for one" %}</a> {% trans "and add it to the same cart." %} {% trans "You do not need an account to fill your cart; you create one at checkout." %}</p>
