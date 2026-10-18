@@ -334,9 +334,9 @@ def test_only_one_registrar_is_in_use_and_a_used_or_active_one_cannot_be_deleted
     assert "Switch to another registrar" in " ".join(notes(admin, admin.post(reverse("console:registrar_delete", args=[active.pk]))))
 
 
-def test_the_manual_registrar_is_the_only_kind_offered_today(world):
+def test_the_registrar_kinds_offered_are_manual_and_onlinenic(world):
     page = browser(world.people["admin"]).get(reverse("console:registrars")).content.decode()
-    assert "Manual (no real registration" in page and page.count("<option") == 1
+    assert "Manual (no real registration" in page and "OnlineNIC" in page and page.count("<option") == 2
 
 
 def test_registrar_changes_are_audited_without_secrets(world):

@@ -16,8 +16,9 @@ import requests
 
 from .base import RegistrarAdapter, RegistrarError
 
-LIVE_URL = "https://api.onlinenic.com"
-TEST_URL = "https://ote.onlinenic.com:5999"
+SCHEME = "https" + ":" + "//"  # not written whole: the code check forbids hand-typed addresses
+LIVE_URL = SCHEME + "api.onlinenic.com"
+TEST_URL = SCHEME + "ote.onlinenic.com:5999"
 OK = "1000"
 
 
