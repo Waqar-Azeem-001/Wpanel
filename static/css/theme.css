@@ -1063,3 +1063,16 @@ a.use-item:hover { border-color: var(--border-strong); }
 .sg-sub h3 { font-size: .95rem; font-weight: 700; margin: 0 0 .2rem; } .sg-sub p { color: var(--muted); font-size: .88rem; margin: 0 0 .7rem; }
 .sg-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .85rem 1.4rem; border-top: 1px solid var(--border); background: var(--surface-2, transparent); }
 .sg-foot > span { font-weight: 650; font-size: .9rem; }
+
+/* Public status page */
+.status-overall { border-width: 2px; }
+.status-overall.is-ok { border-color: var(--success, #198754); }
+.status-overall.is-degraded, .status-overall.is-unknown { border-color: var(--warning, #b7791f); }
+.status-overall.is-down { border-color: var(--danger, #c0392b); }
+.status-icon { font-size: 2rem; }
+.status-overall.is-ok .status-icon { color: var(--success, #198754); }
+.status-overall.is-degraded .status-icon, .status-overall.is-unknown .status-icon { color: var(--warning, #b7791f); }
+.status-overall.is-down .status-icon { color: var(--danger, #c0392b); }
+.status-pill { font-weight: 650; font-size: .85rem; padding: .2rem .7rem; border-radius: 999px; background: var(--surface-2, rgba(0,0,0,.05)); }
+.status-pill.is-ok { color: var(--success, #198754); } .status-pill.is-down { color: var(--danger, #c0392b); }
+.status-pill.is-degraded, .status-pill.is-unknown { color: var(--warning, #b7791f); }

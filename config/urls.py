@@ -5,6 +5,7 @@ from django.urls import include, path
 
 from apps.clients.views_dashboard import dashboard
 from apps.core.redirects import retired_urlpatterns
+from apps.core.views_status import status_page
 from apps.branding.views_pages import contact, public_page
 from apps.hosting.views_preview import resolve as preview_resolve
 from apps.notifications import views as notification_views
@@ -29,6 +30,7 @@ urlpatterns = [
     path("sitemap.xml", kb_views.sitemap, name="sitemap"),
     path("pricing/", public_pricing, name="pricing"),
     path("contact/", contact, name="contact"),
+    path("status/", status_page, name="status"),
     path("p/<slug:slug>/", public_page, name="public_page"),
     path("hosting/", public_hosting, name="hosting"),
     path("account/", dashboard, name="dashboard"),

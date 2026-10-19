@@ -75,6 +75,7 @@
           <ul>
             {% for title, address in foot.pages %}<li><a href="{{ address }}">{{ title }}</a></li>{% endfor %}
             <li><a href="{% url 'contact' %}">{% trans "Contact us" %}</a></li>
+            <li><a href="{% url 'status' %}">{% trans "System status" %}</a></li>
           </ul>
         </nav>
         <nav class="foot-col" aria-label="{% trans 'Support' %}">
