@@ -165,14 +165,14 @@ def _minutes_since(moment):
 
 
 def _scheduled_jobs():
-    """Green only when the scheduler is really firing: a job that runs every minute finished within the last few minutes."""
+    """Green only when the scheduler is really firing: the job that runs every 5 minutes finished within the last 12."""
     from apps.core import job_marks
 
     if _eager():
         return True, "run inline in development"
-    ago = _minutes_since(job_marks.last_finished("apps.notifications.tasks.retry_stuck_emails_task"))
-    if ago is None or ago > 5:
-        return False, "no scheduled job has finished in the last 5 minutes: the scheduler (beat) or the worker is not running"
+    ago = _minutes_since(job_marks.last_finished("apps.orders.tasks.sweep_stuck_orders_task"))
+    if ago is None or ago > 12:
+        return False, "no scheduled job has finished in the last 12 minutes: the scheduler (beat) or the worker is not running"
     return True, f"{len(settings.CELERY_BEAT_SCHEDULE)} scheduled, the last ran {ago} min ago"
 
 

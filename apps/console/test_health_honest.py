@@ -21,9 +21,9 @@ def real_run(settings):
 
 def test_scheduled_jobs_are_red_until_a_job_has_really_finished_lately(real_run):
     assert widgets._scheduled_jobs()[0] is False
-    cache.set(job_marks.PREFIX + "apps.notifications.tasks.retry_stuck_emails_task", (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat(), None)
+    cache.set(job_marks.PREFIX + "apps.orders.tasks.sweep_stuck_orders_task", (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat(), None)
     assert widgets._scheduled_jobs()[0] is True
-    cache.set(job_marks.PREFIX + "apps.notifications.tasks.retry_stuck_emails_task", (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat(), None)
+    cache.set(job_marks.PREFIX + "apps.orders.tasks.sweep_stuck_orders_task", (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat(), None)
     assert widgets._scheduled_jobs()[0] is False  # the scheduler stopped
 
 
