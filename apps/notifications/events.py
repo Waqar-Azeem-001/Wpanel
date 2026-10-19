@@ -65,6 +65,7 @@ EVENTS = _events(
     Event("account.password_changed_by_admin", "Your password was changed by our team", C.ACCOUNT,
           "password_changed_by_admin", essential=True),
     Event("account.signin_code", "Your sign-in code", C.ACCOUNT, "signin_code", essential=True, sensitive=True),
+    Event("domain.transfer_code_shown", "The transfer code of a domain was shown", C.ACCOUNT, "transfer_code_shown", essential=True),
     Event("account.new_device", "Your account was signed in on a new device", C.ACCOUNT, "new_device", essential=True),
     Event("account.mfa_enabled", "Two-factor sign-in was turned on", C.ACCOUNT, "mfa_enabled", essential=True),
     Event("account.mfa_disabled", "Two-factor sign-in was turned off", C.ACCOUNT, "mfa_disabled", essential=True),

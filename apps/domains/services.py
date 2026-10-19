@@ -565,6 +565,20 @@ def transfer_code_provider():
     return queryset.filter(is_active=True).first() or queryset.first()
 
 
+def _announce_transfer_code(actor, domain):
+    """Tell everyone on the account that the code to move the domain away was just shown (the code itself is never in the email)."""
+    from django.urls import reverse
+
+    from apps.notifications import services as notifications
+
+    link = reverse("domains_customer:transfer_tab", args=[domain.pk])
+    try:
+        notifications.dispatch_client("domain.transfer_code_shown", domain.client, title=f"The transfer code of {domain.name} was shown", link=link,
+                                      context={"domain": domain, "who": actor.email, "when": timezone.localtime().strftime("%d %b %Y, %H:%M"), "link": link})
+    except Exception:  # noqa: BLE001 - the alert must never stop the owner getting their code
+        pass
+
+
 def can_get_transfer_code(domain):
     return domain.status == DomainStatus.ACTIVE and transfer_code_provider() is not None
 
@@ -603,4 +617,5 @@ def get_transfer_code(actor, domain, password, *, request=None):
         audit.record("domain.transfer_code_failed", actor=actor, target=domain, metadata={"error": str(exc)[:200]}, request=request)
         raise ServiceError(f"Could not get the transfer code: {exc}", code="registrar_error") from exc
     audit.record("domain.transfer_code_shown", actor=actor, target=domain, request=request)
+    _announce_transfer_code(actor, domain)
     return code

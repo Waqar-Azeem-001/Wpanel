@@ -83,6 +83,10 @@ def test_the_owner_sees_the_code_once_after_typing_the_password_and_it_is_not_st
     page = client.post(url, {"password": "Secret-pass-1"})
     assert page.status_code == 200 and "EPP-123" in page.content.decode() and "no-store" in page["Cache-Control"]
     assert AuditEvent.objects.filter(action="domain.transfer_code_shown").count() == 1
+    from apps.notifications.models import EmailMessage
+
+    alert = EmailMessage.objects.get(event="domain.transfer_code_shown")
+    assert "mine.com" in alert.subject and "EPP-123" not in alert.body_text and "EPP-123" not in alert.subject  # told, but the code is never in the email
     assert "EPP-123" not in str(AuditEvent.objects.filter(action="domain.transfer_code_shown").first().metadata)
     assert "EPP-123" not in client.get(reverse("domains_customer:transfer_tab", args=[domain.pk])).content.decode()
 

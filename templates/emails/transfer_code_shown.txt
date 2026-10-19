@@ -1,0 +1,11 @@
+{% autoescape off %}Hello,
+
+The transfer (EPP) code of {{ domain.name }} was just shown in your {{ site_name }} account. This is the code another company needs to move the domain away from you.
+
+Asked by: {{ who }}
+Time: {{ when }}
+
+If you are moving the domain, nothing more is needed. If you did not ask for it, change your password now and open a support ticket straight away so we can protect the domain.
+
+{{ site_name }}
+{% endautoescape %}

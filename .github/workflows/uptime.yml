@@ -1,0 +1,23 @@
+name: Uptime
+
+# Looks at the live site from outside the server every 5 minutes. A failed run emails the person who last edited this file.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Health and home page
+        run: |
+          site="https://whpanel.myaiwhe.com"
+          ok=1
+          for attempt in 1 2 3; do
+            body=$(curl -fsS --max-time 20 "$site/api/v1/health/") && echo "$body" | grep -q '"status":"ok"' && home=$(curl -fsS --max-time 20 -o /dev/null -w "%{http_code}" "$site/") && [ "$home" = "200" ] && ok=0 && break
+            sleep 20
+          done
+          if [ "$ok" != "0" ]; then echo "The site did not answer correctly three times in a row."; exit 1; fi
+          echo "Site is up."
