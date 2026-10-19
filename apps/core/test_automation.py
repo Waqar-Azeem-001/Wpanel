@@ -120,4 +120,4 @@ def test_the_health_widget_lists_the_launch_readiness_checks(staff):
     checks = {c["name"]: c for c in widgets.health_widget(staff(Role.ADMIN))["checks"]}
     assert {"Public address", "Error tracking", "Scheduled jobs", "Hosting usage sync"} <= set(checks)
     assert checks["Scheduled jobs"]["ok"] is True
-    assert checks["Hosting usage sync"]["ok"] is False  # honest: it is a known open item until built
+    assert checks["Hosting usage sync"]["ok"] is True  # the resource readings are scheduled every 10 minutes

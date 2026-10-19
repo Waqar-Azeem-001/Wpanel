@@ -155,14 +155,97 @@ def _error_tracking():
     return active, "reporting errors" if active else "off: set SENTRY_DSN so crashes are reported"
 
 
+def _eager():
+    """Development runs every job inline with no worker or scheduler, so "is it running" has no meaning there."""
+    return bool(getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False))
+
+
+def _minutes_since(moment):
+    return None if moment is None else int((timezone.now() - moment).total_seconds() // 60)
+
+
 def _scheduled_jobs():
-    count = len(settings.CELERY_BEAT_SCHEDULE)
-    return count > 0, f"{count} scheduled"
+    """Green only when the scheduler is really firing: a job that runs every minute finished within the last few minutes."""
+    from apps.core import job_marks
+
+    if _eager():
+        return True, "run inline in development"
+    ago = _minutes_since(job_marks.last_finished("apps.notifications.tasks.retry_stuck_emails_task"))
+    if ago is None or ago > 5:
+        return False, "no scheduled job has finished in the last 5 minutes: the scheduler (beat) or the worker is not running"
+    return True, f"{len(settings.CELERY_BEAT_SCHEDULE)} scheduled, the last ran {ago} min ago"
+
+
+def _backups():
+    """Green only when a real backup file exists and is less than 36 hours old."""
+    if _eager():
+        return True, "not run in development"
+    from . import storage
+
+    files = storage.panel_backups()
+    if not files:
+        return False, "no backup exists yet"
+    ago = _minutes_since(max(f["modified"] for f in files))
+    if ago > 36 * 60:
+        return False, f"the newest backup is {ago // 60} hours old: the nightly backup is not running"
+    return True, f"newest {ago // 60} h ago, {len(files)} kept" + ("" if _offsite() else "; none copied off this server")
+
+
+def _offsite():
+    from apps.core.management.commands import backup_panel
+
+    return backup_panel.offsite_configured()
+
+
+def _registrar():
+    """A manual registrar only records domains here; it never registers anything, so it must not look healthy. A real one is asked, not assumed."""
+    provider = RegistrarProvider.objects.filter(is_active=True).first()
+    if provider is None:
+        return False, "none is active"
+    if provider.kind == "manual":
+        return False, f"{provider.name} is manual: domains are recorded here but NOT registered at a registrar"
+    cached = cache.get("console.registrar.probe")
+    if cached is None:
+        from apps.domains.adapters.base import RegistrarError
+        from apps.domains.adapters.registry import build_adapter
+
+        try:
+            build_adapter(provider).check_availability("whpanel-health-probe-zz91.com")
+            cached = (True, f"{provider.name} answered")
+        except RegistrarError as exc:
+            cached = (False, f"{provider.name} did not answer: {exc}"[:200])
+        cache.set("console.registrar.probe", cached, 600)
+    return cached
+
+
+def _email():
+    """An active provider is only green while mail is really leaving: not when everything sent in the last day failed."""
+    provider = EmailProvider.objects.filter(is_active=True).first()
+    if provider is None:
+        return False, "none is active: emails will not be delivered"
+    from apps.notifications.models import EmailMessage
+
+    since = timezone.now() - timedelta(days=1)
+    recent = EmailMessage.objects.filter(created_at__gte=since)
+    sent, failed = recent.filter(status="sent").count(), recent.filter(status="failed").count()
+    if failed and not sent:
+        return False, f"{provider.name}: {failed} email(s) failed in the last day and none went out"
+    return True, provider.name + (f" ({failed} failed in the last day)" if failed else "")
 
 
 def _usage_sync():
-    scheduled = any("usage" in str(entry.get("task", "")) for entry in settings.CELERY_BEAT_SCHEDULE.values())
-    return scheduled, "scheduled" if scheduled else "not scheduled: usage is refreshed by hand (launch item)"
+    from apps.core import job_marks
+
+    scheduled = any("usage" in str(entry.get("task", "")) or "resource_readings" in str(entry.get("task", ""))
+                    for entry in settings.CELERY_BEAT_SCHEDULE.values())
+    if not scheduled:
+        return False, "not scheduled: usage is refreshed by hand (launch item)"
+    if _eager():
+        return True, "scheduled"
+    ago = _minutes_since(job_marks.last_finished("apps.hosting.tasks.record_resource_readings_task"))
+    if ago is None or ago > 30:
+        return False, "scheduled but has not finished in the last 30 minutes"
+    return True, f"last ran {ago} min ago"
 
 
 def health_widget(user):
@@ -170,15 +253,14 @@ def health_widget(user):
         _check("Database", _database),
         _check("Cache", _cache),
         _check("Background jobs", _celery),
-        _check("Email provider", lambda: ((p := EmailProvider.objects.filter(is_active=True).first()) is not None,
-                                          p.name if p else "none is active: emails will not be delivered")),
-        _check("Domain registrar", lambda: ((p := RegistrarProvider.objects.filter(is_active=True).first()) is not None,
-                                            p.name if p else "none is active")),
+        _check("Email provider", _email),
+        _check("Domain registrar", _registrar),
         _check("Servers", lambda: (Server.objects.filter(status="active").exists(),
                                    f"{Server.objects.filter(status='active').count()} active")),
         _check("Public address", _public_address),
         _check("Error tracking", _error_tracking),
         _check("Scheduled jobs", _scheduled_jobs),
+        _check("Backups", _backups),
         _check("Hosting usage sync", _usage_sync),
     ]}
 
@@ -328,8 +410,8 @@ def attention_widget(user):
         for check in health_widget(user)["checks"]:
             if not check["ok"]:
                 target = {"Email provider": "console:email_providers", "Domain registrar": "console:registrars",
-                          "Servers": "catalog_staff:server_list"}.get(check["name"])
-                add("critical" if check["name"] in ("Database", "Email provider", "Domain registrar") else "warning",
+                          "Servers": "catalog_staff:server_list", "Backups": "console:storage"}.get(check["name"])
+                add("critical" if check["name"] in ("Database", "Email provider", "Domain registrar", "Background jobs", "Scheduled jobs", "Backups") else "warning",
                     "bi-heart-pulse", f"{check['name']} needs attention", check["detail"].capitalize() + ".",
                     reverse(target) if target else reverse("console:dashboard"), "Fix")
     order = {"critical": 0, "warning": 1}

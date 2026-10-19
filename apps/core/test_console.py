@@ -258,7 +258,8 @@ def test_audit_codes_are_shown_as_phrases_on_the_dashboard(world):
 
 def test_health_reports_a_missing_email_provider_as_a_problem_not_an_error(world):
     checks = {c["name"]: c for c in widget_context(world, "health")["checks"]}
-    assert checks["Database"]["ok"] and checks["Cache"]["ok"] and checks["Domain registrar"]["ok"]
+    assert checks["Database"]["ok"] and checks["Cache"]["ok"]
+    assert not checks["Domain registrar"]["ok"] and "NOT registered" in checks["Domain registrar"]["detail"]  # a manual registrar is not green
     assert not checks["Email provider"]["ok"] and "none is active" in checks["Email provider"]["detail"]
 
 

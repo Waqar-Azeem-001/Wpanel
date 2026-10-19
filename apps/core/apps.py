@@ -9,5 +9,6 @@ class CoreConfig(AppConfig):
     def ready(self):
         from . import checks  # noqa: F401  (registers the menu registry check)
         from . import celery_signals
+        from . import job_marks  # noqa: F401  (remembers when each background job last finished)
 
         celery_signals.register()
