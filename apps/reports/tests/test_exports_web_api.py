@@ -212,7 +212,7 @@ def test_a_customers_name_cannot_run_as_a_formula_in_the_download(client, manage
 def test_api_lists_only_the_reports_the_person_may_run(api, manager, agent, customer, support_reporter):
     api.force_authenticate(manager)
     listing = api.get("/api/v1/reports/").json()
-    assert len(listing) == 14 and {r["group"] for r in listing} == {"Sales", "Financial", "Services", "Support"}
+    assert len(listing) == 15 and {r["group"] for r in listing} == {"Sales", "Financial", "Services", "Support"}
     income = next(r for r in listing if r["slug"] == "income")
     assert income["parameters"] == ["from", "to", "group"]
     assert next(r for r in listing if r["slug"] == "expiring-services")["parameters"] == ["days", "scope"]

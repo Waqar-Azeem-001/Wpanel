@@ -414,8 +414,8 @@ def test_a_long_report_is_cut_and_says_so(manager, monkeypatch):
 
 
 def test_who_may_run_what(manager, admin, agent, customer, support_reporter):
-    assert len(services.available(manager)) == len(builders.all_reports()) == 14
-    assert len(services.available(admin)) == 14
+    assert len(services.available(manager)) == len(builders.all_reports()) == 15
+    assert len(services.available(admin)) == 15
     assert services.available(agent) == [] and services.available(customer) == []
     assert {d.slug for d in services.available(support_reporter)} == {"open-tickets", "resolved-tickets", "department-stats"}
     for user, slug in ((agent, "orders"), (customer, "income"), (support_reporter, "income"),
@@ -439,3 +439,15 @@ def test_the_headline_figures_follow_permissions(manager, agent, support_reporte
     assert figures["New customers today"] >= 1 and "Services expiring in 30 days" in figures
     assert {label for label, *_ in services.headline(support_reporter)} == {"Open tickets"}
     assert services.headline(agent) == []
+
+
+
+def test_the_monthly_summary_has_income_new_customers_and_net_growth_per_month(manager):
+    new_client(manager, "Ada", "ada@example.com", days_ago=45)
+    client = new_client(manager, "Bob", "bob@example.com")
+    pay_on(manager, invoice_for(manager, client, "40.00"), 1)
+    pay_on(manager, invoice_for(manager, client, "25.00"), 45)
+    result = run(manager, "monthly-summary", **{"from": TODAY - timedelta(days=60), "to": TODAY})
+    assert figure(result, "Income") == D("65.00") and figure(result, "New customers") == 2 and figure(result, "Cancellations") == 0
+    assert figure(result, "Net customers") == 2 and 2 <= len(result.rows) <= 3
+    assert sum(row["income"] for row in result.rows) == D("65.00")

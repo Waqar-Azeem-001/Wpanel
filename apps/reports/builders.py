@@ -426,6 +426,42 @@ def cancelled_services(definition, params, user):
                    notes=["Only cancellations requested through the portal; an account ended by hand does not appear."])
 
 
+@report("monthly-summary", "Monthly summary", "financial",
+        "Each month in one line: income, new customers, cancellations and what is left (growth minus churn).",
+        ("view_billing", "view_clients"), uses=("range",))
+def monthly_summary(definition, params, user):
+    cancelled = {r["p"]: r["n"] for r in CancellationRequest.objects.filter(
+        status=CancellationStatus.COMPLETED, completed_at__gte=params.start_at, completed_at__lt=params.end_at).annotate(
+        p=_trunc("month", "completed_at")).values("p").annotate(n=Count("id"))}
+    joined = {r["p"]: r["n"] for r in Client.objects.filter(created_at__gte=params.start_at, created_at__lt=params.end_at).annotate(
+        p=_trunc("month", "created_at")).values("p").annotate(n=Count("id"))}
+    rows, totals = [], defaultdict(lambda: Decimal(0))
+    for month in _periods("month", params.start, params.end):
+        following = (month.replace(day=28) + timedelta(days=4)).replace(day=1)
+        start_at = timezone.make_aware(timezone.datetime(month.year, month.month, 1))
+        end_at = timezone.make_aware(timezone.datetime(following.year, following.month, 1))
+        income_value = _net_income_between(start_at, end_at)
+        new, gone = joined.get(month, 0), cancelled.get(month, 0)
+        rows.append({"month": _label("month", month), "income": income_value, "new": new, "cancelled": gone, "net": new - gone})
+        totals["income"] += income_value
+        totals["new"] += new
+        totals["cancelled"] += gone
+    columns = [Column("month", "Month"), Column("income", "Income", "money"), Column("new", "New customers", "int"),
+               Column("cancelled", "Cancellations", "int"), Column("net", "Net customers", "int")]
+    return _result(definition, params, columns, rows, summary=[("Income", "money", calc.money(totals["income"])),
+                                                              ("New customers", "int", int(totals["new"])),
+                                                              ("Cancellations", "int", int(totals["cancelled"])),
+                                                              ("Net customers", "int", int(totals["new"] - totals["cancelled"]))],
+                   notes=["Cancellations are the ones carried out through the portal; an account ended by hand does not appear."])
+
+
+def _net_income_between(start_at, end_at):
+    ok = Transaction.objects.filter(status=TransactionStatus.SUCCEEDED, occurred_at__gte=start_at, occurred_at__lt=end_at,
+                                    currency=store_currency())
+    totals = {r["type"]: r["t"] for r in ok.values("type").annotate(t=Sum("amount"))}
+    return calc.money((totals.get(TransactionType.PAYMENT) or 0) - (totals.get(TransactionType.REFUND) or 0))
+
+
 # --- Support -------------------------------------------------------------------------------------------------------
 
 def _hours(delta):

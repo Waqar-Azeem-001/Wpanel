@@ -99,7 +99,7 @@ ICONS = {"income": "bi-cash-coin", "unpaid-invoices": "bi-receipt", "orders": "b
          "expiring-services": "bi-hourglass-split", "open-tickets": "bi-life-preserver", "refunds-disputes": "bi-arrow-counterclockwise",
          "active-services": "bi-hdd-rack", "suspended-services": "bi-pause-circle", "resolved-tickets": "bi-check2-circle",
          "sales-performance": "bi-graph-up-arrow", "transactions": "bi-credit-card-2-front", "cancelled-services": "bi-x-circle",
-         "department-stats": "bi-diagram-3"}
+         "department-stats": "bi-diagram-3", "monthly-summary": "bi-calendar3"}
 
 
 def kpi_sections(user):
