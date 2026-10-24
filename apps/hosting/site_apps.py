@@ -20,6 +20,7 @@ from django.utils import timezone
 
 from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
+from apps.core.locks import single_flight
 
 from . import control, wp_installer
 from .adapters.capabilities import Capability
@@ -107,6 +108,12 @@ def _require_open(account, domain=""):
 # --- custom ------------------------------------------------------------------------------------------------------------------------------------
 
 def start_custom(user, account, *, domain="", request=None):
+    """Set up the website (see ``_start_custom``). Two clicks at once set it up once: the second waits, then finds it already under way."""
+    with single_flight(f"site-setup:{account.pk}:{(domain or '').lower()}"):
+        return _start_custom(user, account, domain=domain, request=request)
+
+
+def _start_custom(user, account, *, domain="", request=None):
     domain = "" if site_domain(account, domain) == account.domain.lower() else site_domain(account, domain)
     existing = _require_open(account, domain)
     app = existing or WebsiteApp(account=account, domain=domain)
@@ -135,6 +142,12 @@ def _starter_page(user, account, domain=""):
 # --- WordPress ---------------------------------------------------------------------------------------------------------------------------------
 
 def start_wordpress(user, account, *, title, admin_user, admin_email, admin_password, domain="", request=None):
+    """Set up the website (see ``_start_wordpress``). Two clicks at once set it up once: the second waits, then finds it already under way."""
+    with single_flight(f"site-setup:{account.pk}:{(domain or '').lower()}"):
+        return _start_wordpress(user, account, title=title, admin_user=admin_user, admin_email=admin_email, admin_password=admin_password, domain=domain, request=request)
+
+
+def _start_wordpress(user, account, *, title, admin_user, admin_email, admin_password, domain="", request=None):
     domain = "" if site_domain(account, domain) == account.domain.lower() else site_domain(account, domain)
     existing = _require_open(account, domain)
     if not can_install_wordpress(account):
