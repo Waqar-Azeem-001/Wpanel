@@ -86,10 +86,12 @@ def resolve_client(actor, client_id=None):
 def _add_item(actor, cart, item, *, duplicate_check=None):
     _require_own_cart(actor, cart)
     _require_open(cart)
-    if duplicate_check is not None and cart.items.filter(duplicate_check).exists():
-        raise ServiceError("This is already in your cart.", code="duplicate_item")
-    pricing.price_item(item, verify_availability=True)  # raises if it can't be ordered right now
-    item.save()
+    pricing.price_item(item, verify_availability=True)  # raises if it can't be ordered right now (before the cart is locked)
+    with transaction.atomic():
+        Cart.objects.select_for_update().get(pk=cart.pk)  # a double click: the second request waits here, then sees the first one's item
+        if duplicate_check is not None and cart.items.filter(duplicate_check).exists():
+            raise ServiceError("This is already in your cart.", code="duplicate_item")
+        item.save()
     return item
 
 

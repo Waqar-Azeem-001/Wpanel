@@ -12,7 +12,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
 from django.core.cache import cache
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
@@ -37,9 +37,19 @@ EMAIL_VERIFICATION_SALT = "accounts.email-verification"
 
 # --- Registration & verification ---------------------------------------------
 
+def register_user(**kwargs):
+    """Create an account. Two sign-ups with the same address at the same instant make one account; the other is told the address is taken."""
+    try:
+        return _register_user(**kwargs)
+    except IntegrityError as exc:
+        if "email" in str(exc).lower():
+            raise ServiceError("An account with this email already exists.", code="email_taken") from exc
+        raise
+
+
 @transaction.atomic
-def register_user(*, email, password, first_name="", last_name="", phone="", company_name="", referral_code="",
-                  request=None):
+def _register_user(*, email, password, first_name="", last_name="", phone="", company_name="", referral_code="",
+                   request=None):
     email = User.objects.normalize_email(email).lower()
     if User.objects.filter(email__iexact=email).exists():
         raise ServiceError("An account with this email already exists.", code="email_taken")

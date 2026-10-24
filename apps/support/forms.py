@@ -1,4 +1,6 @@
 """Plain forms: validation only. The service layer applies (and re-checks) everything."""
+import uuid
+
 from django import forms
 
 from apps.domains.models import Domain
@@ -41,9 +43,11 @@ class NewTicketForm(forms.Form):
                                     empty_label="Not about a domain", label="Related domain")
     body = forms.CharField(widget=forms.Textarea(attrs={"rows": 8}), max_length=20000, label="How can we help?")
     files = MultipleFileField(help_text=ATTACH_HELP, label="Attachments")
+    submit_token = forms.CharField(widget=forms.HiddenInput, required=False, max_length=64)  # one per page view: a double click carries the same one
 
     def __init__(self, *args, clients=(), staff=False, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["submit_token"].initial = uuid.uuid4().hex
         self.fields["department"].queryset = Department.objects.filter(is_active=True)
         self.fields["hosting_account"].queryset = HostingAccount.objects.filter(client__in=clients)
         self.fields["domain"].queryset = Domain.objects.filter(client__in=clients)

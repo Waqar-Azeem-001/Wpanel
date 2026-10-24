@@ -604,11 +604,10 @@ def get_transfer_code(actor, domain, password, *, request=None):
     if domain.is_locked:
         raise ServiceError("Unlock the domain first (Registrar lock), then ask for the code.", code="domain_locked")
     key = f"transfer-code:{domain.pk}"
-    used = cache.get(key, 0)
-    if used >= TRANSFER_CODE_PER_HOUR:
+    cache.add(key, 0, 3600)
+    if cache.incr(key) > TRANSFER_CODE_PER_HOUR:  # one atomic step, so a burst of requests cannot slip past the limit
         raise ServiceError("The code was asked for too many times in the last hour. Try again later.", code="rate_limited",
                            status_code=status.HTTP_429_TOO_MANY_REQUESTS)
-    cache.set(key, used + 1, 3600)
     adapter = build_adapter(provider)
     try:
         adapter.unlock_domain(domain.name, domain.provider_ref)  # make sure the registrar side is open too

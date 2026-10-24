@@ -10,6 +10,7 @@ Every rule is enforced here (views, API and admin only call these functions):
 * Uploads are validated before anything is written (see ``uploads``); files are stored privately.
 """
 import logging
+import time
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
@@ -192,9 +193,25 @@ def _requester_email(ticket):
 
 # --- Opening a ticket -----------------------------------------------------------------------------------
 
+def _already_sent(actor, client, subject, token):
+    """The ticket this very form submission just made, if any (a double click carries the same one-time token). While the first request is still making it, wait for it rather than make a twin."""
+    from django.core.cache import cache
+
+    if not token:
+        return None
+    if cache.add("ticket-open:%s:%s" % (actor.pk, token), 1, 120):
+        return None
+    for _ in range(20):  # the first request is probably still writing the ticket: give it a moment to appear
+        found = Ticket.objects.filter(opened_by=actor, client=client, subject=subject, created_at__gte=timezone.now() - timedelta(seconds=60)).first()
+        if found is not None:
+            return found
+        time.sleep(0.25)
+    raise ServiceError("Your ticket is already being sent.", code="duplicate_submit")
+
+
 @transaction.atomic
 def open_ticket(actor, client, *, department, subject, body, priority=TicketPriority.NORMAL, hosting_account=None,
-                domain=None, files=(), request=None):
+                domain=None, files=(), idempotency_key="", request=None):
     """Open a ticket for ``client``: a customer contact, or staff on the client's behalf."""
     staff = can_manage(actor)
     if not (staff or is_client_contact(actor, client)):
@@ -211,6 +228,9 @@ def open_ticket(actor, client, *, department, subject, body, priority=TicketPrio
         raise ServiceError("You have opened several tickets in the last hour. Please wait a little, or add to an "
                            "existing ticket.", code="rate_limited", status_code=http.HTTP_429_TOO_MANY_REQUESTS)
     checked = uploads.check_uploads(files)  # validated before anything is written
+    sent_before = _already_sent(actor, client, subject, idempotency_key)
+    if sent_before is not None:  # a double click on "Open ticket": the second one is the same ticket, not another
+        return sent_before
 
     ticket = Ticket(client=client, opened_by=actor, department=department, subject=subject, priority=priority,
                     status=TicketStatus.OPEN, hosting_account=hosting_account, domain=domain,

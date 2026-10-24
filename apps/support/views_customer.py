@@ -57,7 +57,7 @@ def ticket_new(request):
             ticket = services.open_ticket(
                 request.user, client, department=data["department"], subject=data["subject"], body=data["body"],
                 priority=data["priority"], hosting_account=data["hosting_account"], domain=data["domain"],
-                files=data["files"], request=request)
+                files=data["files"], idempotency_key=data["submit_token"], request=request)
         except ACTION_ERRORS as exc:
             apply_form_error(form, exc)
         else:
