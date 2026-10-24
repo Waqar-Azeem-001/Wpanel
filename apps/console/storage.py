@@ -22,6 +22,7 @@ from rest_framework import status
 
 from apps.audit import services as audit
 from apps.core.exceptions import ServiceError
+from apps.core.locks import single_flight
 
 PANEL_NAME = re.compile(r"^panel-(postgresql|sqlite)-\d{8}T\d{6}Z(-full)?\.bak\.enc$")
 HOST_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.sql\.gz$")
@@ -153,7 +154,10 @@ def backup_now(actor, *, request=None):
     from apps.core.management.commands import backup_panel
 
     try:
-        target, text = backup_panel.run_backup()
+        with single_flight("panel-backup", wait=2):  # a double click, or the nightly one running: never two backups writing at once
+            target, text = backup_panel.run_backup()
+    except ServiceError:
+        raise
     except Exception as exc:  # noqa: BLE001 - shown as a message
         raise ServiceError(f"The backup failed: {str(exc)[:200]}", code="backup_failed") from exc
     audit.record("storage.backup_made", actor=actor, metadata={"name": target.name, "copy": text}, request=request)
@@ -166,8 +170,12 @@ def start_restore(actor, name, confirm, *, request=None):
     if (confirm or "").strip() != "RESTORE":
         raise ServiceError("Type the word RESTORE to confirm.", code="confirm_required")
     path = resolve("panel", name)
+    from django.core.cache import cache
+
     from apps.core.tasks import restore_panel_task
 
+    if not cache.add("panel-restore-queued", 1, 300):  # a double click must not queue two restores
+        raise ServiceError("A restore has already been started. Wait for it to finish; the team is told when it is done.", code="restore_in_progress")
     audit.record("storage.restore_requested", actor=actor, metadata={"backup": path.name}, request=request)  # this row will itself be replaced by the restore: a new one is written after it
     restore_panel_task.delay(path.name, actor.pk)
     return path.name
