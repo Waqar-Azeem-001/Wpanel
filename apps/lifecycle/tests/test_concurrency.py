@@ -72,3 +72,12 @@ def test_two_workers_ending_the_same_service_end_it_once(account, owner, manager
     assert errors == [] and len(calls) == 1
     assert HostingAccount.objects.get(pk=account.pk).status == HostingStatus.TERMINATED
     assert CancellationRequest.objects.get(pk=cr.pk).status == CancellationStatus.COMPLETED
+
+
+def test_a_double_clicked_cancellation_request_makes_one_request(account, owner):
+    results, errors = run_in_threads(
+        *[lambda: services.request_cancellation(owner, account, reason_code="not_needed", timing="end_of_term")] * 2)
+
+    assert sum(1 for r in results if r is not None) == 1
+    assert all(isinstance(e, ServiceError) and e.code in ("already_requested", "duplicate_request") for e in errors), errors
+    assert CancellationRequest.objects.count() == 1

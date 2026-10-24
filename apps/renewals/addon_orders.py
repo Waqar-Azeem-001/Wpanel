@@ -11,6 +11,7 @@ from apps.audit import services as audit
 from apps.billing import calculations as calc
 from apps.billing import invoicing
 from apps.core.exceptions import ServiceError
+from apps.core.locks import single_flight
 from apps.domains import services as domain_services
 from apps.domains.models import DomainStatus
 from apps.hosting import services as hosting_services
@@ -30,9 +31,16 @@ def open_order(addon_kind, *, hosting_account=None, domain=None):
     return (queryset.filter(hosting_account=hosting_account) if hosting_account is not None else queryset.filter(domain=domain)).first()
 
 
-@transaction.atomic
 def buy_addon(actor, addon, *, hosting_account=None, domain=None, request=None):
-    """Invoice one extra for one of the customer's own services and return the order (asking twice returns the same one)."""
+    """Invoice one extra for one of the customer's own services and return the order (asking twice returns the same one, even at the same instant)."""
+    target = hosting_account or domain
+    kind = getattr(addon, "kind", "")
+    with single_flight(f"addon-order:{'h' if hosting_account is not None else 'd'}{getattr(target, 'pk', 0)}:{kind}"):  # outside the transaction, so a twin sees the first one's committed order
+        return _buy_addon(actor, addon, hosting_account=hosting_account, domain=domain, request=request)
+
+
+@transaction.atomic
+def _buy_addon(actor, addon, *, hosting_account=None, domain=None, request=None):
     if (hosting_account is None) == (domain is None):
         raise ServiceError("Choose a hosting plan or a domain.", code="invalid_target")
     target = hosting_account or domain

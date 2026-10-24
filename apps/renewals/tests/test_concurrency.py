@@ -100,3 +100,19 @@ def test_the_paid_signal_delivered_twice_at_once_extends_once(manager, owner, ac
     assert HostingAccount.objects.get(pk=account.pk).expires_at == services.add_months(expiry, 12)  # once, not twice
     assert ServiceChange.objects.get(pk=change.pk).status == ChangeStatus.APPLIED
     assert integrity.verify_all() == []
+
+
+def test_a_double_clicked_extra_makes_one_invoice(owner, account, manager):
+    from apps.billing.models import Invoice as InvoiceModel
+    from apps.renewals import addon_orders
+    from apps.products.models import AddonKind
+    from apps.renewals.tests.test_addon_orders import extra
+
+    addon = extra(manager, "Positive SSL", AddonKind.SSL)
+    before = InvoiceModel.objects.count()
+
+    results, errors = run_in_threads(*[lambda: addon_orders.buy_addon(owner, addon, hosting_account=account)] * 2)
+
+    assert errors == []
+    assert results[0].pk == results[1].pk
+    assert InvoiceModel.objects.count() - before == 1, "the customer was invoiced twice for one click"

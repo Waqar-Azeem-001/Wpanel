@@ -247,3 +247,26 @@ def test_a_single_use_coupon_used_by_several_people_at_once_is_honoured_once(man
     from apps.orders.models import CouponRedemption
 
     assert CouponRedemption.objects.count() == 1
+
+
+def test_inviting_the_same_person_twice_at_once_adds_them_once(owner, client_obj):
+    from apps.clients import services as client_services
+    from apps.clients.models import ClientContact
+
+    results = burst(2, lambda i: client_services.invite_contact(owner, client_obj, email="newhire@race.test"))
+
+    assert ClientContact.objects.filter(client=client_obj, user__email="newhire@race.test").count() == 1
+    assert all(not isinstance(r, Exception) or isinstance(r, ServiceError) for r in results), results  # a clear refusal, never a database error
+
+
+def test_adding_the_same_dns_record_twice_at_once_keeps_one(owner, client_obj, registrar, com, manager):
+    from apps.domains import services as domain_services
+    from apps.domains.models import DnsRecord
+
+    domain = domain_services.complete_registration(manager, domain_services.request_registration(manager, client_obj, "dnsrace.com", 1))
+    record = {"record_type": "A", "name": "www", "content": "203.0.113.5", "ttl": 3600}
+
+    results = burst(2, lambda i: domain_services.add_dns_record(owner, domain, record))
+
+    assert DnsRecord.objects.filter(domain=domain, record_type="A", name="www").count() == 1
+    assert all(not isinstance(r, Exception) or isinstance(r, ServiceError) for r in results), results
