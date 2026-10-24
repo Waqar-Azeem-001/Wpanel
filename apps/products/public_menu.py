@@ -39,7 +39,7 @@ def resources():
     try:
         from apps.support import kb
 
-        found = [{"label": c.name, "about": c.description, "url": reverse("help:category", args=[c.slug])} for c in kb.public_categories()[:6]]
+        found = [{"label": c.name, "about": c.description, "url": reverse("help:category", args=[c.slug])} for c in kb.public_category_list()[:6]]
     except Exception:  # noqa: BLE001 - a menu must never break a page
         found = []
     return [{"label": _("Help centre"), "about": _("Guides and answers."), "url": reverse("help:index")}] + found

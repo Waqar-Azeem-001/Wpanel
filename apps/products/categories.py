@@ -24,29 +24,64 @@ def default_for_kind(addon_kind):
     return StoreCategory.objects.filter(slug=DEFAULT_BY_KIND.get(addon_kind, ""), is_active=True).first()
 
 
-def active():
-    """The categories shown on the store, in order."""
-    return list(StoreCategory.objects.filter(is_active=True).order_by("sort_order", "name"))
+SNAPSHOT_KEY = "catalog.snapshot.v1"
+SNAPSHOT_SECONDS = 60
 
 
-def get(slug):
-    return StoreCategory.objects.filter(slug=slug, is_active=True).first()
+def _snapshot():
+    """
+    Everything the public store pages list, read once and remembered for a minute (and dropped the moment staff change a product, price,
+    add-on or category): the active categories, the active plans and add-ons with their prices, grouped, so a page makes a handful of
+    queries however many categories there are. Plain model instances with their prices already loaded.
+    """
+    from django.core.cache import cache
 
-
-def items(category):
-    """The active products (or add-ons) of a category, cheapest first."""
-    if category.kind == CategoryKind.PLANS:
-        found = list(Product.objects.filter(status=CatalogStatus.ACTIVE, category=category).prefetch_related("prices"))
-    elif category.kind == CategoryKind.ADDONS:
-        found = list(Addon.objects.filter(status=CatalogStatus.ACTIVE, category=category).prefetch_related("prices"))
-    else:
-        return []
+    found = cache.get(SNAPSHOT_KEY)
+    if found is not None:
+        return found
+    categories = list(StoreCategory.objects.filter(is_active=True).order_by("sort_order", "name"))
+    hidden = set(StoreCategory.objects.filter(is_active=False).values_list("pk", flat=True))
+    plans = list(Product.objects.filter(status=CatalogStatus.ACTIVE).select_related("category").prefetch_related("prices"))
+    addons = list(Addon.objects.filter(status=CatalogStatus.ACTIVE).select_related("category").prefetch_related("prices"))
 
     def lowest(entry):
         prices = [p.price for p in entry.prices.all() if p.is_active]
         return (min(prices) if prices else float("inf"), entry.name)
 
-    return sorted(found, key=lowest)
+    by_category = {}
+    for entry in sorted(plans, key=lowest):
+        by_category.setdefault(("plans", entry.category_id), []).append(entry)
+    for entry in sorted(addons, key=lowest):
+        by_category.setdefault(("addons", entry.category_id), []).append(entry)
+    loose = [p for p in sorted(plans, key=lowest) if p.category_id is None or p.category_id in hidden]
+    found = {"categories": categories, "items": by_category, "uncategorised": loose}
+    cache.set(SNAPSHOT_KEY, found, SNAPSHOT_SECONDS)
+    return found
+
+
+def forget_snapshot(*args, **kwargs):
+    """Called when a product, price, add-on or category is saved or deleted: the next page reads the new catalogue."""
+    from django.core.cache import cache
+
+    cache.delete(SNAPSHOT_KEY)
+
+
+def active():
+    """The categories shown on the store, in order."""
+    return list(_snapshot()["categories"])
+
+
+def get(slug):
+    return next((c for c in _snapshot()["categories"] if c.slug == slug), None)
+
+
+def items(category):
+    """The active products (or add-ons) of a category, cheapest first."""
+    if category.kind == CategoryKind.PLANS:
+        return list(_snapshot()["items"].get(("plans", category.pk), []))
+    if category.kind == CategoryKind.ADDONS:
+        return list(_snapshot()["items"].get(("addons", category.pk), []))
+    return []
 
 
 def lowest_price(entry):
@@ -56,10 +91,7 @@ def lowest_price(entry):
 
 def uncategorised():
     """Active products nobody filed under a category (or filed under a hidden one): shown as "More plans"."""
-    hidden = StoreCategory.objects.filter(is_active=False).values_list("pk", flat=True)
-    found = Product.objects.filter(status=CatalogStatus.ACTIVE).prefetch_related("prices")
-    found = [p for p in found if p.category_id is None or p.category_id in set(hidden)]
-    return sorted(found, key=lambda p: (min([x.price for x in p.prices.all() if x.is_active] or [float("inf")]), p.name))
+    return list(_snapshot()["uncategorised"])
 
 
 def sections():

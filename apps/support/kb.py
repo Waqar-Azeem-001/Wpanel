@@ -38,6 +38,26 @@ def public_categories():
             .filter(article_count__gt=0))
 
 
+CATEGORY_LIST_KEY = "kb.public.categories.v1"
+
+
+def public_category_list():
+    """``public_categories()`` read once and remembered for a minute (the footer and the top menu both show it on every public page); dropped when a category or an article is saved."""
+    from django.core.cache import cache
+
+    found = cache.get(CATEGORY_LIST_KEY)
+    if found is None:
+        found = list(public_categories())
+        cache.set(CATEGORY_LIST_KEY, found, 60)
+    return found
+
+
+def forget_category_list(*args, **kwargs):
+    from django.core.cache import cache
+
+    cache.delete(CATEGORY_LIST_KEY)
+
+
 def public_articles(category=None):
     queryset = KBArticle.objects.filter(is_published=True, category__is_active=True).select_related("category")
     return queryset.filter(category=category) if category is not None else queryset

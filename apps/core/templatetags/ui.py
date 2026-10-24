@@ -42,7 +42,7 @@ def footer_info():
         try:
             from apps.support import kb
 
-            info["help"] = list(kb.public_categories()[:4])
+            info["help"] = kb.public_category_list()[:4]
         except Exception:  # noqa: BLE001
             pass
         icons = {"bank": "bi-bank", "jazzcash": "bi-phone", "easypaisa": "bi-phone"}

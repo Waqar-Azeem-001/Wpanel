@@ -903,6 +903,9 @@ def test_the_mega_menu_lists_the_active_store_categories_under_their_headings(cl
     first = StoreCategory.objects.filter(is_active=True).order_by("sort_order", "name").first()
     if first is not None:
         StoreCategory.objects.filter(pk=first.pk).update(is_active=False)
+        from django.core.cache import cache
+
+        cache.clear()  # update() skips the save signal that forgets the store's one-minute snapshot
         assert first.name not in {i["label"] for c in public_menu.products() for i in c["items"]}  # a hidden category leaves the menu
     assert columns[-1]["title"] and any("Domain prices" == i["label"] for i in columns[-1]["items"])
 
