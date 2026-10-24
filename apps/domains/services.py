@@ -16,6 +16,7 @@ from apps.accounts.roles import perm
 from apps.audit import services as audit
 from apps.clients.services import contact_role
 from apps.core.exceptions import ServiceError
+from apps.core.locks import single_flight
 
 from .adapters.base import RegistrarError
 from .adapters.registry import build_adapter
@@ -161,8 +162,16 @@ def request_registration(actor, client, domain_name, years, nameservers=None, *,
 
 
 def complete_registration(actor, domain, *, request=None):
+    """Staff (or the system, for a paid order): complete a pending registration. Two at once run one after the other, so the registrar is asked once."""
+    _require(actor, "manage_domains")
+    with single_flight(f"domain-registration:{domain.pk}"):
+        domain.refresh_from_db()
+        return _complete_registration(actor, domain, request=request)
+
+
+def _complete_registration(actor, domain, *, request=None):
     """
-    Staff: complete a pending registration against the active registrar. Idempotent.
+    Complete a pending registration against the active registrar. Idempotent.
 
     Deliberately not wrapped in ``@transaction.atomic``: on failure we must
     persist the FAILED status and error message so staff can see and retry it,
@@ -220,7 +229,15 @@ def request_transfer_in(actor, client, domain_name, auth_code, years=1, *, reque
 
 
 def complete_transfer(actor, domain, *, request=None):
-    """Staff: complete a pending inbound transfer. Idempotent. Not atomic - see ``complete_registration``."""
+    """Staff (or the system): start or finish a pending inbound transfer. Two at once run one after the other, so the registrar is asked once."""
+    _require(actor, "manage_domains")
+    with single_flight(f"domain-transfer:{domain.pk}"):
+        domain.refresh_from_db()
+        return _complete_transfer(actor, domain, request=request)
+
+
+def _complete_transfer(actor, domain, *, request=None):
+    """Complete a pending inbound transfer. Idempotent. Not atomic - see ``complete_registration``."""
     _require(actor, "manage_domains")
     if domain.status == DomainStatus.ACTIVE:
         return domain

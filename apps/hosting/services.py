@@ -28,6 +28,7 @@ from apps.accounts.roles import perm
 from apps.audit import services as audit
 from apps.clients.services import contact_role
 from apps.core.exceptions import ServiceError
+from apps.core.locks import single_flight
 from apps.notifications import services as notifications
 from apps.products.models import ServerStatus
 
@@ -152,8 +153,14 @@ def assign_server(actor, account, server, *, request=None):
 
 
 def complete_provisioning(actor, account, *, request=None):
-    """Staff: provision the account against its assigned server. Idempotent."""
+    """Staff (or the system, for a paid order): provision the account against its assigned server. Idempotent; two at once run one after the other, so the server is asked once."""
     _require(actor, "manage_hosting")
+    with single_flight(f"hosting-provisioning:{account.pk}"):
+        account.refresh_from_db()
+        return _complete_provisioning(actor, account, request=request)
+
+
+def _complete_provisioning(actor, account, *, request=None):
     if account.status == HostingStatus.ACTIVE:
         return account
     if account.status not in (HostingStatus.PENDING, HostingStatus.FAILED):
