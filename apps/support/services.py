@@ -273,6 +273,10 @@ def reply(actor, ticket, body, *, files=(), internal=False, set_status=None, req
         raise _denied()
     body = _clean_text(body, "a message", MAX_BODY)
     checked = uploads.check_uploads(files)
+    if not checked:  # a double click on "Send": the same words from the same person in the last few seconds are the same message (the ticket row is locked, so a twin sees it)
+        last = ticket.messages.order_by("-created_at", "-id").first()
+        if last is not None and last.author_id == getattr(actor, "pk", None) and last.body == body and last.is_internal == bool(internal)                 and (timezone.now() - last.created_at).total_seconds() < 15:
+            return last
     if internal and not staff:
         raise _denied("Only staff can add internal notes.")
     if set_status is not None and not staff:

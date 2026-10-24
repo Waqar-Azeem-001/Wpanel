@@ -270,3 +270,16 @@ def test_adding_the_same_dns_record_twice_at_once_keeps_one(owner, client_obj, r
 
     assert DnsRecord.objects.filter(domain=domain, record_type="A", name="www").count() == 1
     assert all(not isinstance(r, Exception) or isinstance(r, ServiceError) for r in results), results
+
+
+def test_a_double_clicked_ticket_reply_is_one_message(owner, client_obj):
+    from apps.support import services as support_services
+    from apps.support.models import Department, Ticket, TicketMessage
+
+    department = Department.objects.create(name="Support", is_active=True)
+    ticket = support_services.open_ticket(owner, client_obj, department=department, subject="Hello", body="First message")
+
+    results = burst(PEOPLE, lambda i: support_services.reply(owner, ticket, "Any news on this please?"))
+
+    assert not [r for r in results if isinstance(r, Exception)], results
+    assert TicketMessage.objects.filter(ticket=ticket, body="Any news on this please?").count() == 1
