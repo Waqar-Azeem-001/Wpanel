@@ -21,8 +21,8 @@ CF6="2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 
 } > /etc/nginx/conf.d/cloudflare.conf
 
 cat > /etc/nginx/conf.d/whpanel-limits.conf <<'EOF'
-# Per visitor address. 429 when a limit is passed. Sign-in, registration, reset, codes; the domain search; the API's sign-in.
-limit_req_zone $binary_remote_addr zone=whp_auth:10m rate=12r/m;
+# Per visitor address. 429 when a limit is passed. Sign-in, registration, reset, codes (30 a minute, a burst of 20: many people can share one address); the domain search; the API's sign-in.
+limit_req_zone $binary_remote_addr zone=whp_auth:10m rate=30r/m;
 limit_req_zone $binary_remote_addr zone=whp_search:10m rate=40r/m;
 limit_req_zone $binary_remote_addr zone=whp_api_auth:10m rate=12r/m;
 limit_req_status 429;
@@ -48,7 +48,7 @@ server {
 
     # Sign-in, registration, password reset and the emailed sign-in code.
     location ~ ^/account/(login|register|password-reset|mfa)/ {
-        limit_req zone=whp_auth burst=8 nodelay;
+        limit_req zone=whp_auth burst=20 nodelay;
         include snippets/whpanel-proxy.conf;
     }
     location ^~ /api/v1/auth/ {
