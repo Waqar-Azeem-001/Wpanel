@@ -129,3 +129,45 @@ def test_numbers_stay_gap_free_under_concurrent_issue(manager, client_obj):
     assert errors == []
     assert sorted(r.number for r in results) == ["INV-000001", "INV-000002", "INV-000003", "INV-000004"]
     assert integrity.verify_all() == []
+
+
+def test_two_refunds_of_the_same_payment_at_once_never_refund_more_than_was_paid(manager, client_obj):
+    invoice = invoicing.issue_invoice(manager, invoicing.create_invoice(
+        manager, client_obj, lines=lines(("Hosting", 1, "100.00"))))
+    paid = payments.record_payment(manager, invoice, amount="100.00")
+
+    results, errors = run_in_threads(*[lambda: payments.refund_payment(manager, paid, amount="100.00")] * 2)
+
+    assert len([r for r in results if r is not None]) == 1
+    assert len(errors) == 1 and getattr(errors[0], "code", "") == "refund_exceeds_payment"
+    assert payments.refundable_amount(Transaction.objects.get(pk=paid.pk)) == D("0.00")
+    assert Transaction.objects.filter(type="refund").count() == 1
+    assert integrity.verify_all() == []
+
+
+def test_a_bank_transfer_proof_approved_twice_at_once_pays_once(manager, owner, client_obj, bank):
+    invoice = invoicing.issue_invoice(manager, invoicing.create_invoice(
+        manager, client_obj, lines=lines(("Hosting", 1, "100.00"))))
+    reported = payments.report_payment(owner, invoice, method=bank)
+
+    results, errors = run_in_threads(*[lambda: payments.confirm_payment(manager, reported)] * 2)
+
+    assert len([r for r in results if r is not None]) == 1
+    assert len(errors) == 1 and getattr(errors[0], "code", "") == "invalid_status"
+    assert Invoice.objects.get(pk=invoice.pk).amount_paid == D("100.00")
+    assert integrity.verify_all() == []
+
+
+def test_approving_and_rejecting_the_same_proof_at_once_ends_one_way_only(manager, owner, client_obj, bank):
+    invoice = invoicing.issue_invoice(manager, invoicing.create_invoice(
+        manager, client_obj, lines=lines(("Hosting", 1, "100.00"))))
+    reported = payments.report_payment(owner, invoice, method=bank)
+
+    results, errors = run_in_threads(lambda: payments.confirm_payment(manager, reported),
+                                     lambda: payments.reject_payment(manager, reported, reason="no money"))
+
+    assert len([r for r in results if r is not None]) == 1 and len(errors) == 1
+    final = Transaction.objects.get(pk=reported.pk)
+    paid = Invoice.objects.get(pk=invoice.pk).amount_paid
+    assert (final.status, paid) in (("succeeded", D("100.00")), ("failed", D("0.00")))  # never "failed" with money booked, or "succeeded" with none
+    assert integrity.verify_all() == []

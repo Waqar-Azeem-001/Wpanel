@@ -135,3 +135,115 @@ def test_the_transfer_code_hourly_limit_holds_when_asked_for_all_at_once(owner, 
 
     results = burst(PEOPLE, ask)
     assert len(asked) <= domain_services.TRANSFER_CODE_PER_HOUR, f"{len(asked)} codes were handed out"
+
+
+# --- Jobs that must reach the registrar or the server once ---------------------------------------------------
+
+def _slow_counter(calls, result, pause=0.6):
+    """A stand-in for the outside call: counts how often it is made and takes long enough for a twin to overlap."""
+    import time
+
+    def call(*args, **kwargs):
+        calls.append(1)
+        time.sleep(pause)
+        return result() if callable(result) else result
+
+    return call
+
+
+def test_a_domain_registration_triggered_twice_at_once_calls_the_registrar_once(manager, client_obj, registrar, com, monkeypatch):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.domains import services as domain_services
+    from apps.domains.adapters.manual import ManualAdapter
+
+    calls = []
+    monkeypatch.setattr(ManualAdapter, "register_domain", _slow_counter(
+        calls, lambda: {"provider_ref": "ref-1", "expires_at": timezone.now() + timedelta(days=365)}))
+    domain = domain_services.request_registration(manager, client_obj, "twice.com", 1)
+
+    results = burst(2, lambda i: domain_services.complete_registration(manager, domain))
+
+    assert len(calls) == 1, f"the registrar was called {len(calls)} times"
+    assert all(not isinstance(r, Exception) or getattr(r, "code", "") == "in_progress" for r in results), results
+
+
+def test_an_inbound_transfer_triggered_twice_at_once_is_sent_once(manager, client_obj, registrar, com, monkeypatch):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.domains import services as domain_services
+    from apps.domains.adapters.manual import ManualAdapter
+
+    calls = []
+    monkeypatch.setattr(ManualAdapter, "transfer_domain", _slow_counter(
+        calls, lambda: {"provider_ref": "ref-2", "expires_at": timezone.now() + timedelta(days=365)}))
+    domain = domain_services.request_transfer_in(manager, client_obj, "moving.com", "EPP-1")
+
+    results = burst(2, lambda i: domain_services.complete_transfer(manager, domain))
+
+    assert len(calls) == 1, f"the registrar was called {len(calls)} times"
+    assert all(not isinstance(r, Exception) or getattr(r, "code", "") == "in_progress" for r in results), results
+
+
+def test_hosting_provisioned_twice_at_once_creates_one_account_on_the_server(manager, client_obj, shop, monkeypatch):
+    from apps.hosting import services as hosting_services
+
+    created = []
+    adapter_class = type(hosting_services.get_adapter(_one_server(shop["product"], manager)))
+    original = adapter_class.create_account
+
+    def slow_create(self, **kwargs):
+        import time
+
+        created.append(kwargs["username"])
+        time.sleep(0.6)
+        return original(self, **kwargs)
+
+    monkeypatch.setattr(adapter_class, "create_account", slow_create)
+    account = hosting_services.request_hosting(manager, client_obj, shop["product"], "host-twice.com")
+
+    results = burst(2, lambda i: hosting_services.complete_provisioning(manager, account))
+
+    assert len(created) == 1, f"the server was asked {len(created)} times"
+    assert all(not isinstance(r, Exception) or getattr(r, "code", "") == "in_progress" for r in results), results
+
+
+def _one_server(product, manager):
+    from apps.products import services as product_services
+    from apps.products.models import Server
+
+    server = Server.objects.filter(status="active").first()
+    if server is None:
+        server = product_services.create_server(manager, {"name": "Demo", "hostname": "demo.example.test", "kind": "manual", "status": "active"})
+        product_services.map_product_server(manager, product, server) if hasattr(product_services, "map_product_server") else product.servers.add(server)
+    return server
+
+
+def test_a_single_use_coupon_used_by_several_people_at_once_is_honoured_once(manager, shop):
+    from apps.billing import services as billing
+    from apps.clients import services as client_services
+    from apps.orders import services as order_services
+
+    billing.save_coupon(manager, "ONCE", {"discount_type": "percent", "value": 10, "max_redemptions": 1})
+    people = []
+    for n in range(PEOPLE):
+        account = client_services.create_client(manager, {"first_name": f"P{n}", "email": f"p{n}@race.test"})
+        user = account.contacts.get().user
+        order_services.add_hosting(user, account, shop["product"], f"coupon{n}.com", "annual")
+        order_services.apply_coupon(user, order_services.get_open_cart(user, account), "ONCE")
+        people.append((user, account))
+
+    results = burst(PEOPLE, lambda i: order_services.checkout(
+        people[i][0], order_services.get_open_cart(people[i][0], people[i][1]), payment_method_code=shop["bank"].code))
+
+    placed = [r for r in results if not isinstance(r, Exception)]
+    refused = [r for r in results if isinstance(r, Exception)]
+    assert len(placed) == 1, f"{len(placed)} orders used a code that allows one: {refused[:2]}"
+    assert all(isinstance(r, ServiceError) for r in refused), refused
+    from apps.orders.models import CouponRedemption
+
+    assert CouponRedemption.objects.count() == 1
