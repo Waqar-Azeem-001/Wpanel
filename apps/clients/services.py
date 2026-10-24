@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth import password_validation
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.urls import reverse
 from django.utils.encoding import force_bytes
@@ -18,6 +18,7 @@ from apps.accounts.roles import Role, perm
 from apps.audit import services as audit
 from apps.audit.models import AuditEvent
 from apps.core.exceptions import ServiceError
+from apps.core.locks import single_flight
 from apps.notifications import services as notifications
 
 from apps.core import currencies
@@ -134,7 +135,14 @@ def _get_or_create_contact_user(email, first_name="", last_name=""):
         if user.role != Role.CUSTOMER:
             raise ServiceError("Staff accounts cannot be client contacts.", code="staff_contact")
         return user, False
-    user = User.objects.create_user(email=email, password=None, first_name=first_name, last_name=last_name)
+    try:
+        with transaction.atomic():  # a savepoint: losing the race for this address must not poison the surrounding transaction
+            user = User.objects.create_user(email=email, password=None, first_name=first_name, last_name=last_name)
+    except IntegrityError:  # someone made this address in the same instant: use theirs
+        user = User.objects.filter(email__iexact=email).first()
+        if user is None:
+            raise
+        return user, False
     from apps.accounts.services import sync_role_membership
 
     sync_role_membership(user)
@@ -268,8 +276,14 @@ def add_contact(actor, client, *, email, role=ContactRole.TECHNICAL, first_name=
     return contact
 
 
-@transaction.atomic
 def invite_contact(actor, client, *, email, role=ContactRole.TECHNICAL, request=None):
+    """Self-service invite (see ``_invite_contact``). The same person invited twice at once is added once."""
+    with single_flight(f"contact-invite:{client.pk}:{(email or '').strip().lower()}"):
+        return _invite_contact(actor, client, email=email, role=role, request=request)
+
+
+@transaction.atomic
+def _invite_contact(actor, client, *, email, role=ContactRole.TECHNICAL, request=None):
     """
     Self-service counterpart to ``add_contact`` above: a client's own OWNER adds someone else onto the account
     themselves, with being an owner of *this* account as the permission check - never a staff permission, since

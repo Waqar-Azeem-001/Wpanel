@@ -454,9 +454,12 @@ def _push_dns(domain):
 @transaction.atomic
 def add_dns_record(actor, domain, data, *, request=None):
     _require_self_service(actor, domain)
-    record = DnsRecord(domain=domain, **{k: v for k, v in data.items() if k in DNS_FIELDS})
-    record.full_clean()
-    record.save()
+    with single_flight(f"dns-record:{domain.pk}"):  # a double click: the second request finds the first one's record
+        record = DnsRecord(domain=domain, **{k: v for k, v in data.items() if k in DNS_FIELDS})
+        record.full_clean()
+        if DnsRecord.objects.filter(domain=domain, record_type=record.record_type, name=record.name, content=record.content).exists():
+            raise ServiceError("This record already exists.", code="duplicate_record")
+        record.save()
     _push_dns(domain)
     audit.record("domain.dns_record_added", actor=actor, target=domain,
                  metadata={"record_type": record.record_type, "name": record.name}, request=request)
