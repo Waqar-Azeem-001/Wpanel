@@ -171,3 +171,14 @@ def test_approving_and_rejecting_the_same_proof_at_once_ends_one_way_only(manage
     paid = Invoice.objects.get(pk=invoice.pk).amount_paid
     assert (final.status, paid) in (("succeeded", D("100.00")), ("failed", D("0.00")))  # never "failed" with money booked, or "succeeded" with none
     assert integrity.verify_all() == []
+
+
+def test_a_double_clicked_report_a_payment_makes_one_pending_payment(manager, owner, client_obj, bank):
+    invoice = invoicing.issue_invoice(manager, invoicing.create_invoice(
+        manager, client_obj, lines=lines(("Hosting", 1, "100.00"))))
+
+    results, errors = run_in_threads(*[lambda: payments.report_payment(owner, invoice, method=bank)] * 2)
+
+    assert len([r for r in results if r is not None]) == 1
+    assert len(errors) == 1 and getattr(errors[0], "code", "") == "payment_already_reported"
+    assert Transaction.objects.filter(invoice=invoice, status="pending").count() == 1
