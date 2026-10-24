@@ -30,7 +30,7 @@ NATIONAL_PREFIX = {"PK": "92", "IN": "91", "AE": "971", "SA": "966", "GB": "44",
 
 
 def _md5(text):
-    return hashlib.md5(text.encode("utf-8")).hexdigest()  # noqa: S324 - the registrar's own signing scheme
+    return hashlib.md5(text.encode("utf-8"), usedforsecurity=False).hexdigest()  # the registrar's own signing scheme, not our choice of hash
 
 
 def phone_for_registry(phone, country):

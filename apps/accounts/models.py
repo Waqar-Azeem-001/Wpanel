@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from .roles import PORTAL_PERMISSIONS, STAFF_ROLES, Role
@@ -80,6 +81,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         ordering = ["-date_joined"]
+        constraints = [models.UniqueConstraint(Lower("email"), name="accounts_user_email_ci_unique")]  # "A@x.com" and "a@x.com" are one person
 
     def __str__(self):
         return self.email
