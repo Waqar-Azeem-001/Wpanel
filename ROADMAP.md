@@ -26,9 +26,11 @@ The full record, with what is tested and what is proven, is in [PROJECT_OVERVIEW
 | AI Agent | chat on every customer page (knowledge base mode, Claude optional), how-to first, changes with Approve, security code for sensitive changes, live chat with a person, callbacks, analytics, staff knowledge editor |
 | Help centre | 110 articles in 9 topics, search, cards, readable article page, structured data, sitemap, robots |
 | Access control | roles, plus per-person extra permissions and hidden permissions, with the person's menu shown |
-| Operations | CI on PostgreSQL, deploy after green tests (waits for the GitHub secret), deploy and failure notices through WHPanel's own email, a database dump before every deploy (taken by hand, kept on the same server). The nightly encrypted panel backup is built but does NOT work yet: pg_dump is missing in the image, the folder is not a volume and nothing is copied off the server |
+| Operations | CI on PostgreSQL (tests, a separate security scan, concurrency tests that must not skip), a deploy script that takes a database backup, rebuilds, checks, warms up the public pages and tells the team (the CI deploy waits for your approval on a GitHub "production" environment), nightly encrypted full backups (database and uploaded files) with restore from the Storage page, a health panel that is green only when the thing is really running, a public status page, guards against double clicks and simultaneous requests on money and provisioning paths. Waiting for the owner: the off-site bucket (code ready), the restricted deploy keys, the OnlineNIC allow-list entry |
 
 ## Next
+
+**The plan from here is [docs/roadmap-v2.md](docs/roadmap-v2.md)** (open for business, revenue and retention, customer self-service, operating safely). The list below is the older one; the items that are still open are carried into V2.
 
 The detailed plan for the Hostinger-style experience is in [docs/hostinger-parity-plan.md](docs/hostinger-parity-plan.md); its phases 0 to 7 are done.
 
