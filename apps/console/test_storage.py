@@ -27,6 +27,18 @@ def browser(client, user):
     return client
 
 
+def close_download(response):
+    """Release the file a download holds open (Windows will not delete it otherwise). Closing a response outside the request fires ``request_finished``, which would close the database connection the test is still using on PostgreSQL."""
+    from django.core.signals import request_finished
+    from django.db import close_old_connections
+
+    request_finished.disconnect(close_old_connections)
+    try:
+        response.close()
+    finally:
+        request_finished.connect(close_old_connections)
+
+
 def test_the_page_shows_sizes_backups_and_documents_to_a_manager_but_dumps_only_to_a_super_admin(client, staff, folders):
     (folders / "panel" / NAME).write_bytes(b"x" * 2048)
     (folders / "host" / "whpanel-before-test-20261017-1000.sql.gz").write_bytes(b"y" * 100)
@@ -47,7 +59,7 @@ def test_a_backup_can_be_downloaded_and_deleted_and_only_names_in_the_pattern_ar
     admin = browser(client, staff(Role.ADMIN))
     got = admin.get(reverse("console:storage_backup_download", args=["panel", NAME]))
     assert got.status_code == 200 and b"".join(got.streaming_content) == b"data" and "attachment" in got["Content-Disposition"]
-    got.close()
+    close_download(got)
     assert admin.get(reverse("console:storage_backup_download", args=["panel", "notes.txt"])).status_code == 404
     assert admin.get(reverse("console:storage_backup_download", args=["panel", "..%2f..%2fetc%2fpasswd"])).status_code == 404
     admin.post(reverse("console:storage_backups_delete"), {"backups": [f"panel:{NAME}", "panel:notes.txt", "panel:../x"]})
@@ -65,7 +77,7 @@ def test_the_plain_dumps_are_for_a_super_admin_only(client, staff, folders):
     boss = browser(client, staff(Role.SUPER_ADMIN))
     response = boss.get(reverse("console:storage_backup_download", args=["host", dump.name]))
     assert response.status_code == 200
-    response.close()  # release the file (Windows will not delete an open one)
+    close_download(response)  # release the file (Windows will not delete an open one)
     boss.post(reverse("console:storage_backups_delete"), {"backups": [f"host:{dump.name}"]})
     assert not dump.exists()
 
