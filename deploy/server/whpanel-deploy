@@ -1,0 +1,90 @@
+#!/bin/bash
+# whpanel-deploy: put the code waiting in /srv/whpanel.incoming live. Run as root on the panel server, directly or (for the CI) through sudo from whpanel-deploy-entry.
+#
+#   whpanel-deploy [--sha <commit>]
+#
+# What it does, in order: refuses an empty upload; takes a database backup (and stops if it is empty); copies the code over (never .env, the database file or uploaded media);
+# rebuilds and restarts; waits until the panel answers its health check; checks every migration ran; collects the static files; restarts nginx; WARMS UP the six public pages so the
+# first real visitor does not meet cold workers; checks the public address; and tells the team. A failure anywhere stops the run and tells the team too.
+set -euo pipefail
+
+APP="${WHPANEL_DIR:-/srv/whpanel}"
+INCOMING="${WHPANEL_INCOMING:-/srv/whpanel.incoming}"
+BACKUPS="${WHPANEL_BACKUPS:-/srv/backups}"
+SITE_HOST="${WHPANEL_SITE_HOST:-whpanel.myaiwhe.com}"
+LOCAL="${WHPANEL_LOCAL_URL:-http://127.0.0.1:8010}"   # the container nginx, the same door the host nginx uses
+WARM_ROUNDS="${WARM_ROUNDS:-3}"                       # how many times each public page is asked for
+WARM_PARALLEL="${WARM_PARALLEL:-4}"                   # asked at the same moment, so every gunicorn worker meets it, not just one
+PAGES=(/ /hosting/ /domains/ /pricing/ /products/ /status/)
+COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+
+SHA=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --sha) SHA="${2:-}"; shift 2 ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+if [ -n "$SHA" ] && ! [[ "$SHA" =~ ^[0-9a-f]{7,40}$ ]]; then echo "the commit must be 7 to 40 hexadecimal characters" >&2; exit 2; fi
+
+log() { echo "[$(date -u +%H:%M:%S)] $*"; }
+tell_team() {  # $1 = success|failure, $2 = a short sentence. Never stops the run.
+  ( cd "$APP" && $COMPOSE exec -T web python manage.py notify_deploy --tests success --deploy "$1" --sha "$SHA" --message "$2" ) >/dev/null 2>&1 || true
+}
+on_exit() {
+  local rc=$?
+  if [ "$rc" -ne 0 ]; then log "FAILED (exit $rc). The live site may be mid-restart; the backup taken at the start is in $BACKUPS."; tell_team failure "Deploy failed on the server"; fi
+}
+trap on_exit EXIT
+
+asks() { curl -s -o /dev/null -w "%{http_code}" -H "Host: $SITE_HOST" -H "X-Forwarded-Proto: https" "$LOCAL$1" || true; }
+
+[ -f "$INCOMING/manage.py" ] && [ -f "$INCOMING/Dockerfile" ] || { echo "nothing to deploy: $INCOMING has no manage.py and Dockerfile" >&2; exit 1; }
+
+log "1/9 database backup"
+mkdir -p "$BACKUPS"
+DUMP="$BACKUPS/predeploy-$(date +%Y%m%d%H%M%S).dump"
+( cd "$APP" && $COMPOSE exec -T db sh -c 'pg_dump -U ${POSTGRES_USER:-whpanel} ${POSTGRES_DB:-whpanel} -Fc' ) > "$DUMP"
+[ -s "$DUMP" ] || { rm -f "$DUMP"; echo "the backup is empty: stopping before anything changes" >&2; exit 1; }
+log "    saved $DUMP ($(du -h "$DUMP" | cut -f1))"
+
+log "2/9 copying the code (never .env, the database file or media)"
+rsync -a --delete --exclude=.env --exclude='db.sqlite3*' --exclude=media --exclude=staticfiles --exclude=.git "$INCOMING"/ "$APP"/
+
+log "3/9 rebuild and restart"
+cd "$APP"
+$COMPOSE up -d --build --remove-orphans
+
+log "4/9 waiting for the panel to answer"
+for i in $(seq 1 40); do
+  if $COMPOSE exec -T web python -c "import urllib.request as u;r=u.Request('http://127.0.0.1:8000/api/v1/health/',headers={'Host':'$SITE_HOST','X-Forwarded-Proto':'https'});u.urlopen(r,timeout=4)" >/dev/null 2>&1; then break; fi
+  [ "$i" = 40 ] && { echo "the panel did not come up in 2 minutes" >&2; exit 1; }
+  sleep 3
+done
+$COMPOSE exec -T web python manage.py migrate --check >/dev/null 2>&1 || { echo "a migration did not run" >&2; exit 1; }
+
+log "5/9 static files, nginx"
+$COMPOSE exec -T web python manage.py collectstatic --noinput | tail -1
+$COMPOSE restart nginx >/dev/null
+for i in $(seq 1 20); do [ "$(asks /api/v1/health/)" = 200 ] && break; [ "$i" = 20 ] && { echo "nginx does not answer" >&2; exit 1; }; sleep 2; done
+
+log "6/9 warming up the public pages ($WARM_ROUNDS rounds of $WARM_PARALLEL at once)"
+for page in "${PAGES[@]}"; do
+  for round in $(seq 1 "$WARM_ROUNDS"); do
+    for n in $(seq 1 "$WARM_PARALLEL"); do asks "$page" >/dev/null & done
+    wait
+  done
+  log "    $page now answers $(asks "$page")"
+done
+
+log "7/9 checking every public page answers 200"
+for page in "${PAGES[@]}"; do
+  code="$(asks "$page")"; [ "$code" = 200 ] || { echo "$page answered $code" >&2; exit 1; }
+done
+
+log "8/9 the public address"
+curl -fsS "https://$SITE_HOST/api/v1/health/" | grep -q '"status":"ok"' && log "    ok" || log "    WARNING: the public address did not answer ok (Cloudflare or the host nginx); the panel itself is fine"
+
+log "9/9 telling the team"
+tell_team success "Deployed ${SHA:0:12}"
+log "done"
