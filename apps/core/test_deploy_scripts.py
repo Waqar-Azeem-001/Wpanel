@@ -48,7 +48,5 @@ def test_the_deploy_script_refuses_a_bad_option_and_a_bad_commit():
 @pytest.mark.parametrize("name", ["whpanel-deploy", "whpanel-deploy-entry", "whpanel-notify", "whpanel-notify-entry"])
 def test_the_server_scripts_have_unix_line_endings_and_start_with_their_interpreter(name):
     raw = (SERVER / name).read_bytes()
-    assert b"" not in raw, "a carriage return in a script makes the server say: No such file or directory"
-    assert raw.startswith((b"#!/bin/bash
-", b"#!/usr/bin/env python3
-"))
+    assert b"\r" not in raw, "a carriage return in a script makes the server say: No such file or directory"
+    assert raw.startswith((b"#!/bin/bash\n", b"#!/usr/bin/env python3\n"))
