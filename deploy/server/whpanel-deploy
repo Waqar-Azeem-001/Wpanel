@@ -48,6 +48,23 @@ DUMP="$BACKUPS/predeploy-$(date +%Y%m%d%H%M%S).dump"
 [ -s "$DUMP" ] || { rm -f "$DUMP"; echo "the backup is empty: stopping before anything changes" >&2; exit 1; }
 log "    saved $DUMP ($(du -h "$DUMP" | cut -f1))"
 
+# Keep the newest 10 pre-deploy dumps on this server (a daily job in /etc/cron.d does the same when there are no deploys).
+{ ls -t "$BACKUPS"/predeploy-*.dump 2>/dev/null || true; } | tail -n +11 | xargs -r rm -f
+
+# Off the server: encrypted to the owner's PUBLIC key first (this server holds no key that could open it), then stored in the bucket. A failure here warns and the deploy goes on.
+[ -r /etc/whpanel/deploy.env ] && . /etc/whpanel/deploy.env
+if [ -n "${WHPANEL_GPG_RECIPIENT:-}" ]; then
+  if gpg --batch --yes --trust-model always -r "$WHPANEL_GPG_RECIPIENT" -o "$DUMP.gpg" -e "$DUMP" 2>/dev/null \
+     && ( cd "$APP" && $COMPOSE exec -T web python manage.py offsite_upload --file "/app/host_backups/$(basename "$DUMP").gpg" --folder predeploy ) >/dev/null 2>&1; then
+    log "    a copy, encrypted to $WHPANEL_GPG_RECIPIENT, is stored off the server"
+  else
+    log "    WARNING: the off-site copy of the dump did NOT go (gpg or the bucket). The dump is on this server; the deploy goes on."
+  fi
+  rm -f "$DUMP.gpg"
+else
+  log "    no off-site copy yet: WHPANEL_GPG_RECIPIENT is not set in /etc/whpanel/deploy.env"
+fi
+
 log "2/9 copying the code (never .env, the database file or media)"
 rsync -a --delete --exclude=.env --exclude='db.sqlite3*' --exclude=media --exclude=staticfiles --exclude=.git "$INCOMING"/ "$APP"/
 # The upload has been copied: empty the folder and hand it back to the deploy user (when that user exists), so the next upload, made by that user, can replace it.

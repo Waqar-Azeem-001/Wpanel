@@ -1,0 +1,2 @@
+# Keep only the newest 10 pre-deploy database dumps of WHPanel (the deploy script does the same after each deploy). Installed as /etc/cron.d/whpanel-prune-predeploy.
+35 4 * * * root cd /srv/backups && ls -t predeploy-*.dump 2>/dev/null | tail -n +11 | xargs -r rm -f

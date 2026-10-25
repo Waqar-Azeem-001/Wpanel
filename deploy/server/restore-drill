@@ -1,0 +1,119 @@
+#!/bin/bash
+# restore-drill: prove a backup can really be restored, WITHOUT touching the live panel.
+#
+#   restore-drill --bundle /srv/backups/drill/panel-postgresql-20261101T013000Z-full.bak.enc    # a nightly bundle (daily/ or monthly/ from the bucket)
+#   restore-drill --dump   /srv/backups/drill/predeploy-20261101010101.dump                       # a pre-deploy dump, already decrypted by you with your GPG key
+#
+# What it does: starts a throwaway PostgreSQL in its own container with NO network (it cannot reach the live database), restores the backup into it, then counts the rows of
+# every table in the restored copy and in the live database (read-only: the live session is set to read-only) and prints the two side by side. A table with FEWER rows live than in the
+# backup is flagged (something was lost); MORE rows live is normal (the panel kept working after the backup). It removes the throwaway container and its files at the end.
+# Run as root on the panel server (or on any machine that has Docker and a copy of the backup; then pass --no-live to skip the comparison).
+set -euo pipefail
+
+APP="${WHPANEL_DIR:-/srv/whpanel}"
+SHARED="${WHPANEL_BACKUPS:-/srv/backups}"               # mounted into the web container as /app/host_backups
+COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+IMAGE="${DRILL_POSTGRES_IMAGE:-postgres:17}"
+NAME="whpanel-drill-db-$$"
+WORK="$SHARED/drill-work-$$"
+BUNDLE=""; DUMP=""; LIVE=1
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --bundle) BUNDLE="${2:-}"; shift 2 ;;
+    --dump) DUMP="${2:-}"; shift 2 ;;
+    --no-live) LIVE=0; shift ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+{ [ -n "$BUNDLE" ] && [ -z "$DUMP" ]; } || { [ -z "$BUNDLE" ] && [ -n "$DUMP" ]; } || { echo "give exactly one of --bundle or --dump" >&2; exit 2; }
+
+log() { echo "[$(date -u +%H:%M:%S)] $*"; }
+cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; rm -rf "${WORK:?}"; }
+trap cleanup EXIT
+mkdir -p "$WORK"
+
+if [ -n "$BUNDLE" ]; then
+  log "1/5 opening the encrypted bundle (the panel's own key opens it, inside the web container)"
+  case "$BUNDLE" in "$SHARED"/*) ;; *) echo "put the bundle under $SHARED first" >&2; exit 2 ;; esac
+  INSIDE="/app/host_backups/${BUNDLE#"$SHARED"/}"
+  ( cd "$APP" && $COMPOSE exec -T web python - "$INSIDE" "/app/host_backups/$(basename "$WORK")" <<'PY'
+import json, sys, tarfile, tempfile
+from pathlib import Path
+from apps.core import crypto
+
+source, target = Path(sys.argv[1]), Path(sys.argv[2])
+target.mkdir(parents=True, exist_ok=True)
+with tempfile.TemporaryDirectory() as tmp:
+    plain = Path(tmp) / "bundle.tar.gz"
+    crypto.decrypt_file(source, plain)
+    with tarfile.open(plain) as tar:
+        names = tar.getnames()
+        if "database.dump" not in names:
+            raise SystemExit("this bundle has no database.dump (a database other than PostgreSQL?)")
+        tar.extract("database.dump", target)
+        manifest = json.loads(tar.extractfile("manifest.json").read()) if "manifest.json" in names else {}
+files = [n for n in names if n.startswith("files/")]
+print("bundle opened: %d uploaded file(s) inside; manifest: %s" % (len(files), json.dumps(manifest)[:200]))
+PY
+  )
+  DUMP="$WORK/database.dump"
+else
+  [ -f "$DUMP" ] || { echo "$DUMP is not a file" >&2; exit 2; }
+  case "$(head -c 5 "$DUMP")" in PGDMP) ;; *) echo "$DUMP is not a PostgreSQL custom-format dump (decrypt the .gpg first)" >&2; exit 2 ;; esac
+  cp "$DUMP" "$WORK/database.dump"; DUMP="$WORK/database.dump"
+fi
+[ -s "$DUMP" ] || { echo "the database dump is empty" >&2; exit 1; }
+
+log "2/5 starting a throwaway PostgreSQL with no network"
+docker run -d --rm --name "$NAME" --network none -e POSTGRES_PASSWORD=drill -e POSTGRES_DB=drill "$IMAGE" >/dev/null
+for i in $(seq 1 40); do docker exec "$NAME" pg_isready -U postgres -d drill >/dev/null 2>&1 && break; [ "$i" = 40 ] && { echo "the throwaway database did not start" >&2; exit 1; }; sleep 1; done
+sleep 2
+
+log "3/5 restoring into the throwaway database"
+docker cp "$DUMP" "$NAME:/tmp/database.dump"
+docker exec "$NAME" pg_restore -U postgres -d drill --no-owner --no-privileges --exit-on-error /tmp/database.dump
+log "    restored"
+
+count_sql() { local first=1; while read -r t; do [ -z "$t" ] && continue; [ $first = 1 ] || printf ' union all '; first=0; printf "select '%s' as t, count(*) as n from public.\"%s\"" "$t" "$t"; done; }
+
+log "4/5 counting rows in the restored copy"
+docker exec "$NAME" psql -U postgres -d drill -Atqc "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' order by 1" > "$WORK/tables.txt"
+SQL="$(count_sql < "$WORK/tables.txt")"
+docker exec "$NAME" psql -U postgres -d drill -Atq -F'|' -c "$SQL" > "$WORK/backup_counts.txt"
+log "    $(wc -l < "$WORK/tables.txt") tables, $(awk -F'|' '{s+=$2} END {print s}' "$WORK/backup_counts.txt") rows in all"
+
+if [ "$LIVE" = 1 ]; then
+  log "5/5 counting rows in the LIVE database (read-only session) and comparing"
+  ( cd "$APP" && $COMPOSE exec -T -e PGOPTIONS="-c default_transaction_read_only=on" db sh -c 'psql -U ${POSTGRES_USER:-whpanel} -d ${POSTGRES_DB:-whpanel} -Atq -F"|"' <<<"$SQL" ) > "$WORK/live_counts.txt"
+  python3 - "$WORK/backup_counts.txt" "$WORK/live_counts.txt" <<'PY'
+import sys
+def load(path):
+    return {t: int(n) for t, n in (line.rstrip("\n").split("|") for line in open(path) if "|" in line)}
+backup, live = load(sys.argv[1]), load(sys.argv[2])
+same = grew = fewer = missing = 0
+print("%-44s %10s %10s  %s" % ("table", "backup", "live now", ""))
+for table in sorted(backup):
+    b, l = backup[table], live.get(table)
+    if l is None:
+        verdict, missing = "not in live (a table dropped since?)", missing + 1
+    elif l == b:
+        verdict, same = "", same + 1
+    elif l > b:
+        verdict, grew = "+%d since the backup (normal)" % (l - b), grew + 1
+    else:
+        verdict, fewer = "FEWER LIVE: %d rows gone" % (b - l), fewer + 1
+    if verdict:
+        print("%-44s %10d %10s  %s" % (table, b, "-" if l is None else l, verdict))
+print("\n%d tables identical, %d with more rows live (normal), %d with FEWER rows live, %d missing in live." % (same, grew, fewer, missing))
+key = [t for t in ("accounts_user", "clients_client", "billing_invoice", "orders_order") if t in backup]
+print("rows in the restored copy of the key tables: " + ", ".join("%s=%d" % (t, backup[t]) for t in key))
+empty = [t for t in key if backup[t] == 0]
+if empty:
+    print("WARNING: these key tables are EMPTY in the backup: " + ", ".join(empty))
+sys.exit(1 if fewer or missing or empty else 0)
+PY
+else
+  log "5/5 skipping the live comparison (--no-live)"
+  awk -F'|' '$2>0 {print $1, $2}' "$WORK/backup_counts.txt" | sort -k2 -nr | head -12
+fi
+log "drill finished: the restored copy opened and every table could be counted. The throwaway database is removed."
