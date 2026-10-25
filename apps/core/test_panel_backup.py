@@ -28,8 +28,9 @@ def test_a_backup_is_uploaded_with_the_configured_names(settings, tmp_path, monk
     monkeypatch.setattr("boto3.client", lambda *a, **k: Client())
     file = tmp_path / "panel-postgresql-1.bak.enc"
     file.write_bytes(b"x")
-    assert backup_panel.upload_offsite(file) == "whe/panel-postgresql-1.bak.enc"
-    assert calls == [(str(file), "bucket", "whe/panel-postgresql-1.bak.enc")]
+    assert backup_panel.upload_offsite(file) == "whe/daily/panel-postgresql-1.bak.enc"
+    assert calls == [(str(file), "bucket", "whe/daily/panel-postgresql-1.bak.enc")]
+    assert backup_panel.upload_offsite(file, "monthly") == "whe/monthly/panel-postgresql-1.bak.enc"
 
 
 def test_a_failed_upload_is_an_error_that_keeps_the_local_file(settings, tmp_path, monkeypatch):
@@ -102,3 +103,76 @@ def test_the_off_site_copies_beyond_the_newest_few_are_deleted(settings, monkeyp
 def test_the_backup_job_runs_every_night_by_default(settings):
     schedule = settings.CELERY_BEAT_SCHEDULE["panel-database-backup"]["schedule"]
     assert len(schedule.day_of_week) == 7 and str(schedule.hour) == "{1}" and str(schedule.minute) == "{30}"
+
+
+def _fake_bucket(settings, monkeypatch):
+    settings.PANEL_BACKUP_S3_BUCKET, settings.PANEL_BACKUP_S3_ACCESS_KEY, settings.PANEL_BACKUP_S3_SECRET_KEY = "bucket", "key", "secret"
+    settings.PANEL_BACKUP_S3_PREFIX = "whpanel"
+    log = {"put": [], "delete": []}
+
+    class Client:
+        def upload_file(self, path, bucket, key):
+            log["put"].append(key)
+
+        def delete_object(self, **kw):
+            log["delete"].append(kw["Key"])
+
+        def get_paginator(self, name):
+            raise AssertionError("a write-only key cannot list")
+
+    monkeypatch.setattr("boto3.client", lambda *a, **k: Client())
+    return log
+
+
+def _backup(tmp_path, monkeypatch):
+    file = tmp_path / "panel-postgresql-20261101T013000Z-full.bak.enc"
+    file.write_bytes(b"x")
+    monkeypatch.setattr(backup_panel, "make_backup", lambda target, keep: file)
+    monkeypatch.setattr(backup_panel, "verify_backup", lambda path: "ok")
+    return file
+
+
+def test_a_nightly_backup_goes_to_daily_and_on_the_first_of_the_month_also_to_monthly(settings, tmp_path, monkeypatch):
+    from datetime import date
+
+    log = _fake_bucket(settings, monkeypatch)
+    _backup(tmp_path, monkeypatch)
+    _, text = backup_panel.run_backup(today=date(2026, 11, 14))
+    assert log["put"] == ["whpanel/daily/panel-postgresql-20261101T013000Z-full.bak.enc"] and "lifecycle rules" in text
+    log["put"].clear()
+    backup_panel.run_backup(today=date(2026, 12, 1))
+    assert log["put"] == ["whpanel/daily/panel-postgresql-20261101T013000Z-full.bak.enc", "whpanel/monthly/panel-postgresql-20261101T013000Z-full.bak.enc"]
+
+
+def test_the_write_only_key_never_lists_or_deletes_unless_pruning_is_switched_on(settings, tmp_path, monkeypatch):
+    from datetime import date
+
+    log = _fake_bucket(settings, monkeypatch)
+    _backup(tmp_path, monkeypatch)
+    backup_panel.run_backup(today=date(2026, 11, 14))  # a client that refuses to list would fail here if pruning ran
+    assert log["delete"] == []
+
+
+def test_a_predeploy_dump_is_only_sent_off_the_server_once_encrypted(settings, tmp_path, monkeypatch):
+    from django.core.management import call_command
+
+    log = _fake_bucket(settings, monkeypatch)
+    plain = tmp_path / "predeploy-20261101010101.dump"
+    plain.write_bytes(b"PGDMP")
+    with pytest.raises(CommandError, match="encrypted"):
+        call_command("offsite_upload", file=str(plain), folder="predeploy")
+    sealed = tmp_path / "predeploy-20261101010101.dump.gpg"
+    sealed.write_bytes(b"gpg")
+    call_command("offsite_upload", file=str(sealed), folder="predeploy")
+    assert log["put"] == ["whpanel/predeploy/predeploy-20261101010101.dump.gpg"]
+
+
+def test_the_check_command_stores_one_small_note_and_needs_only_the_write_permission(settings, monkeypatch):
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    log = _fake_bucket(settings, monkeypatch)
+    out = StringIO()
+    call_command("offsite_check", stdout=out)
+    assert len(log["put"]) == 1 and log["put"][0].startswith("whpanel/check/check-") and "works" in out.getvalue()

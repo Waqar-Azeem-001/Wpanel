@@ -92,29 +92,35 @@ def offsite_configured():
     return bool(getattr(settings, "PANEL_BACKUP_S3_BUCKET", "") and getattr(settings, "PANEL_BACKUP_S3_ACCESS_KEY", "") and getattr(settings, "PANEL_BACKUP_S3_SECRET_KEY", ""))
 
 
-def upload_offsite(path):
-    """Copy an (already encrypted) backup to S3-compatible storage (Backblaze B2, Wasabi, S3...), away from this server. Raises CommandError on a failure; the local copy stays."""
+def _s3():
     import boto3
+
+    return boto3.client("s3", endpoint_url=settings.PANEL_BACKUP_S3_ENDPOINT or None, aws_access_key_id=settings.PANEL_BACKUP_S3_ACCESS_KEY,
+                        aws_secret_access_key=settings.PANEL_BACKUP_S3_SECRET_KEY, region_name=settings.PANEL_BACKUP_S3_REGION or None)
+
+
+def offsite_key(folder, name):
+    """Where a file lives in the bucket: <prefix>/<folder>/<name>. Folders: daily, monthly (the first of each month), predeploy (encrypted pre-deploy dumps), check."""
+    return f"{(settings.PANEL_BACKUP_S3_PREFIX or 'whpanel').strip('/')}/{folder}/{name}"
+
+
+def upload_offsite(path, folder="daily"):
+    """Copy an (already encrypted) file to S3-compatible storage (Backblaze B2, Wasabi, S3...), away from this server. Raises CommandError on a failure; the local copy stays."""
     from botocore.exceptions import BotoCoreError, ClientError
 
     path = Path(path)
-    client = boto3.client("s3", endpoint_url=settings.PANEL_BACKUP_S3_ENDPOINT or None, aws_access_key_id=settings.PANEL_BACKUP_S3_ACCESS_KEY,
-                          aws_secret_access_key=settings.PANEL_BACKUP_S3_SECRET_KEY, region_name=settings.PANEL_BACKUP_S3_REGION or None)
-    key = f"{(settings.PANEL_BACKUP_S3_PREFIX or 'panel-backups').strip('/')}/{path.name}"
+    key = offsite_key(folder, path.name)
     try:
-        client.upload_file(str(path), settings.PANEL_BACKUP_S3_BUCKET, key)
+        _s3().upload_file(str(path), settings.PANEL_BACKUP_S3_BUCKET, key)
     except (BotoCoreError, ClientError, OSError) as exc:
-        raise CommandError(f"The off-site copy failed ({type(exc).__name__}); the backup is kept on this server.") from exc
+        raise CommandError(f"The off-site copy failed ({type(exc).__name__}); the file is kept on this server.") from exc
     return key
 
 
 def prune_offsite(keep):
-    """Delete the oldest off-site backups beyond the newest ``keep`` (by the time they were stored). Returns how many were deleted."""
-    import boto3
-
-    client = boto3.client("s3", endpoint_url=settings.PANEL_BACKUP_S3_ENDPOINT or None, aws_access_key_id=settings.PANEL_BACKUP_S3_ACCESS_KEY,
-                          aws_secret_access_key=settings.PANEL_BACKUP_S3_SECRET_KEY, region_name=settings.PANEL_BACKUP_S3_REGION or None)
-    prefix = (settings.PANEL_BACKUP_S3_PREFIX or "panel-backups").strip("/") + "/"
+    """Only for a key that is allowed to delete (PANEL_BACKUP_S3_PRUNE=true): delete the oldest ``daily`` files beyond the newest ``keep``. Returns how many were deleted."""
+    client = _s3()
+    prefix = offsite_key("daily", "")
     found = []
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=settings.PANEL_BACKUP_S3_BUCKET, Prefix=prefix):
         found += [o for o in page.get("Contents", []) if o["Key"].endswith(".bak.enc")]
@@ -125,15 +131,22 @@ def prune_offsite(keep):
     return len(old)
 
 
-def run_backup(keep=None):
-    """The whole backup job: make the encrypted file, read it back, copy it off-site when storage is set, delete the oldest beyond ``keep``. Returns (file, short text)."""
+def run_backup(keep=None, today=None):
+    """The whole backup job: make the encrypted file, read it back, copy it off-site when storage is set (into daily/, and also monthly/ on the first of the month), delete the oldest local ones beyond ``keep``. Returns (file, short text)."""
     keep = keep if keep is not None else getattr(settings, "PANEL_BACKUP_KEEP", 4)
     target = make_backup(settings.PANEL_BACKUP_DIR, keep)
     verify_backup(target)  # a backup that cannot be read back is not a backup
-    if offsite_configured():
-        text = f"off-site {upload_offsite(target)}, {prune_offsite(keep)} old ones deleted there"
+    if not offsite_configured():
+        return target, "no off-site storage set"
+    day = (today or timezone.localdate()).day
+    stored = [upload_offsite(target, "daily")]
+    if day == 1:
+        stored.append(upload_offsite(target, "monthly"))
+    text = "off-site " + ", ".join(stored)
+    if getattr(settings, "PANEL_BACKUP_S3_PRUNE", False):
+        text += f", {prune_offsite(getattr(settings, 'PANEL_BACKUP_S3_KEEP_DAILY', 30))} old ones deleted there"
     else:
-        text = "no off-site storage set"
+        text += "; old ones are removed by the bucket's own lifecycle rules"
     return target, text
 
 

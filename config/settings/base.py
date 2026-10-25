@@ -419,7 +419,10 @@ PANEL_BACKUP_S3_ENDPOINT = env("PANEL_BACKUP_S3_ENDPOINT", default="")
 PANEL_BACKUP_S3_REGION = env("PANEL_BACKUP_S3_REGION", default="")
 PANEL_BACKUP_S3_ACCESS_KEY = env("PANEL_BACKUP_S3_ACCESS_KEY", default="")
 PANEL_BACKUP_S3_SECRET_KEY = env("PANEL_BACKUP_S3_SECRET_KEY", default="")
-PANEL_BACKUP_S3_PREFIX = env("PANEL_BACKUP_S3_PREFIX", default="panel-backups")
+PANEL_BACKUP_S3_PREFIX = env("PANEL_BACKUP_S3_PREFIX", default="whpanel")
+# Off: the key on this server may only write; the bucket's lifecycle rules (30 days of daily/, 12 months of monthly/) remove old files, so a server that is broken into cannot erase the off-site copies.
+PANEL_BACKUP_S3_PRUNE = env.bool("PANEL_BACKUP_S3_PRUNE", default=False)
+PANEL_BACKUP_S3_KEEP_DAILY = env.int("PANEL_BACKUP_S3_KEEP_DAILY", default=30)
 # How often the panel's own backup is made (a cron day-of-week: "sun" = weekly, "*" = every night) and how many are kept, here and off-site; the older ones are deleted.
 PANEL_BACKUP_WEEKDAYS = env("PANEL_BACKUP_WEEKDAYS", default="*")
 PANEL_BACKUP_KEEP = env.int("PANEL_BACKUP_KEEP", default=4)
