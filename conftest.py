@@ -1,3 +1,7 @@
+import os
+from pathlib import Path
+from urllib.parse import urlsplit
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -6,6 +10,42 @@ from apps.accounts.models import User
 from apps.accounts.roles import Role
 
 PASSWORD = "Str0ng-Passw0rd!x"
+
+# Settings that only a live deployment has. A developer's own .env never sets these; the live server's does.
+PRODUCTION_ONLY_SETTINGS = ("DJANGO_SECURE_SSL_REDIRECT", "DJANGO_CSRF_TRUSTED_ORIGINS", "DJANGO_HSTS_SECONDS", "DJANGO_ADMIN_URL", "REDIS_PASSWORD",
+                            "PREVIEW_PROXY_KEY", "SENTRY_DSN", "PANEL_BACKUP_S3_BUCKET", "PANEL_BACKUP_S3_ENDPOINT")
+LOCAL_HOSTS = {"", "localhost", "127.0.0.1", "::1", "postgres", "redis"}  # the names CI and a developer's machine use
+OPT_IN = "WHPANEL_TESTS_ALLOW_REMOTE_SERVICES"  # set to 1 only on a throwaway machine whose database and Redis are for testing
+
+
+def production_signs(environ, env_file_text="", settings_module=""):
+    """Why this looks like the live server, as a list of reasons (empty = safe to test). The tests create and delete data, so they must never run against live services."""
+    reasons = []
+    if settings_module and not settings_module.endswith(".test"):
+        reasons.append(f"DJANGO_SETTINGS_MODULE is {settings_module}, not config.settings.test")
+    present = set(environ) | {line.split("=", 1)[0].strip() for line in env_file_text.splitlines() if "=" in line and not line.lstrip().startswith("#")}
+    for name in PRODUCTION_ONLY_SETTINGS:
+        if name in present and (environ.get(name) or name in env_file_text):
+            reasons.append(f"{name} is set (only the live server has it)")
+    if environ.get(OPT_IN) != "1":
+        for name in ("DATABASE_URL", "REDIS_URL"):
+            value = environ.get(name, "")
+            host = (urlsplit(value).hostname or "") if value else ""
+            if value and host not in LOCAL_HOSTS:
+                reasons.append(f"{name} points at {host}, not at this machine")
+    return reasons
+
+
+def pytest_sessionstart(session):
+    """Refuse to start when the environment is the live panel's (its .env, its database, its Redis). Runs before any test database is made."""
+    root = Path(__file__).resolve().parent
+    env_file = root / ".env"
+    text = env_file.read_text(errors="ignore") if env_file.is_file() else ""
+    reasons = production_signs(os.environ, text, os.environ.get("DJANGO_SETTINGS_MODULE", ""))
+    if reasons:
+        lines = ["Refusing to run the tests: this looks like the live server."] + ["  - " + r for r in reasons]
+        lines.append(f"Run them with only the CI's three settings (DATABASE_URL, REDIS_URL, DJANGO_SECRET_KEY), or set {OPT_IN}=1 on a throwaway machine.")
+        raise pytest.UsageError(chr(10).join(lines))
 
 
 @pytest.fixture(autouse=True)

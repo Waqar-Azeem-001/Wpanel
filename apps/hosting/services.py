@@ -341,7 +341,8 @@ def backup_account(actor, account, *, request=None):
         raise ServiceError("This account has no server assigned.", code="no_server_assigned")
     adapter = get_adapter(account.server)
     try:
-        result = adapter.backup_account(account.username)
+        with single_flight(f"hosting-backup:{account.pk}", wait=0):  # a double click must not ask the server for two backups
+            result = adapter.backup_account(account.username)
     except HostingError as exc:
         raise ServiceError(f"Could not request a backup: {exc}", code="adapter_error") from exc
     account.backup_requested_at = timezone.now()

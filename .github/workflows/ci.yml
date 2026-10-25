@@ -6,6 +6,27 @@ on:
   pull_request:
 
 jobs:
+  security:
+    # Separate from the tests so one cannot hide the other: a bandit failure no longer stops the tests from running, and the deploy needs both.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements.txt
+      - name: Known vulnerabilities in dependencies (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
+
+      - name: Static security scan (bandit, high severity only)
+        run: |
+          pip install bandit
+          bandit -q -r apps config -lll -x "*/tests/*,*/test_*.py,apps/*/migrations"
+
   test:
     runs-on: ubuntu-latest
     services:
@@ -66,18 +87,13 @@ jobs:
           SITE_URL: https://portal.example.com  # the deploy check refuses a non-https address
         run: python manage.py check --deploy --settings=config.settings.prod --fail-level ERROR
 
-      - name: Known vulnerabilities in dependencies (pip-audit)
-        run: |
-          pip install pip-audit
-          pip-audit -r requirements.txt
-
-      - name: Static security scan (bandit, high severity only)
-        run: |
-          pip install bandit
-          bandit -q -r apps config -lll -x "*/tests/*,*/test_*.py,apps/*/migrations"
-
       - name: Test suite on PostgreSQL
         run: pytest
+
+      - name: The concurrency tests really ran (none skipped)
+        run: |
+          pytest -rs apps/billing/tests/test_concurrency.py apps/orders/tests/test_concurrency.py apps/affiliates/tests/test_concurrency.py apps/lifecycle/tests/test_concurrency.py apps/renewals/tests/test_concurrency.py | tee concurrency.txt
+          if grep -q "SKIPPED" concurrency.txt; then echo "::error::A concurrency test was skipped: it needs PostgreSQL"; exit 1; fi
 
       - name: Celery worker round trip via Redis
         run: |
@@ -92,7 +108,7 @@ jobs:
   deploy:
     # Runs only for pushes to main, after every check above passed. Needs the repository secret DEPLOY_SSH_KEY
     # (private key whose public half is in the server's authorized_keys); without it the job is skipped, not failed.
-    needs: test
+    needs: [test, security]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency: production-deploy
@@ -153,7 +169,7 @@ jobs:
   notify:
     # Tells the team how the run went, through WHPanel's own email provider (Setup > Email), so no mail account is needed here: it runs `manage.py notify_deploy` inside the live
     # web container over SSH. The message goes to the alert addresses set in WHPanel, or to the Super Admins when none are set. Runs for passed and failed runs alike.
-    needs: [test, deploy]
+    needs: [test, security, deploy]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
@@ -172,7 +188,7 @@ jobs:
         continue-on-error: true
         env:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          TESTS: ${{ needs.test.result }}
+          TESTS: ${{ needs.test.result }}/${{ needs.security.result }}
           DEPLOY: ${{ needs.deploy.outputs.deployed == 'true' && needs.deploy.result || 'NOT deployed - no deploy key set' }}
           SHA: ${{ github.sha }}
           ACTOR: ${{ github.actor }}

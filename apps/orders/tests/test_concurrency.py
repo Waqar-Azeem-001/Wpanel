@@ -283,3 +283,30 @@ def test_a_double_clicked_ticket_reply_is_one_message(owner, client_obj):
 
     assert not [r for r in results if isinstance(r, Exception)], results
     assert TicketMessage.objects.filter(ticket=ticket, body="Any news on this please?").count() == 1
+
+
+def test_a_double_clicked_hosting_backup_asks_the_server_once(manager, client_obj, shop, monkeypatch):
+    from apps.hosting import services as hosting_services
+
+    server = _one_server(shop["product"], manager)
+    adapter_class = type(hosting_services.get_adapter(server))
+    asked = []
+    monkeypatch.setattr(adapter_class, "backup_account", _slow_counter(asked, {"backup_ref": "b-1"}))
+    account = hosting_services.complete_provisioning(manager, hosting_services.request_hosting(manager, client_obj, shop["product"], "bk-twice.com"))
+
+    results = burst(2, lambda i: hosting_services.backup_account(manager, account))
+
+    assert len(asked) == 1, f"the server was asked {len(asked)} times"
+    assert all(not isinstance(r, Exception) or getattr(r, "code", "") == "in_progress" for r in results), results
+
+
+def test_applying_the_whmcs_prices_twice_at_once_ends_with_the_same_prices_and_no_error(manager, shop):
+    from apps.products import services as product_services
+    from apps.products.models import ProductPrice
+
+    choices = [(shop["product"].pk, {"annual": {"cycle": "annual", "price": "55.00", "custom_months": 0, "setup": "0"}})]
+
+    results = burst(2, lambda i: product_services.apply_whmcs_prices(manager, choices))
+
+    assert not [r for r in results if isinstance(r, Exception)], results
+    assert ProductPrice.objects.filter(product=shop["product"], billing_cycle="annual").count() == 1

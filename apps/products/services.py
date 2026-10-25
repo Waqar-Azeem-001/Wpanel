@@ -534,8 +534,16 @@ def whmcs_preview(rows):
     return {"rows": shown, "products": products}
 
 
-@transaction.atomic
 def apply_whmcs_prices(actor, choices, *, request=None):
+    """Write the chosen WHMCS prices (see ``_apply_whmcs_prices``). Two clicks at once: the second waits, then writes the same prices again, which changes nothing."""
+    from apps.core.locks import single_flight
+
+    with single_flight("whmcs-price-import"):  # outside the transaction, so the second one sees the first one's committed prices
+        return _apply_whmcs_prices(actor, choices, request=request)
+
+
+@transaction.atomic
+def _apply_whmcs_prices(actor, choices, *, request=None):
     """
     ``choices`` is ``[(product id, WHMCS prices)]``. Sets (or replaces) the price of each cycle WHMCS offers; a cycle WHMCS does not offer is left as
     it is. Returns the number of prices written. Names, features, status and everything else about a product are never touched.

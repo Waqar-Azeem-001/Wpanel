@@ -540,9 +540,16 @@ def staff_whmcs_import(request):
         messages.success(request, f"{written} price(s) set on {len(choices)} product(s) from WHMCS.")
         return redirect("catalog_staff:product_list")
     if request.method == "POST":
+        from apps.core.locks import single_flight
+
         try:
-            rows, currency, codes = whmcs.fetch_products(request.POST.get("address", ""), request.POST.get("identifier", "").strip(),
-                                                         request.POST.get("secret", ""), request.POST.get("currency", "").strip().upper())
+            with single_flight("whmcs-price-fetch", wait=0):  # a double click must not ask the WHMCS server twice
+                rows, currency, codes = whmcs.fetch_products(request.POST.get("address", ""), request.POST.get("identifier", "").strip(),
+                                                             request.POST.get("secret", ""), request.POST.get("currency", "").strip().upper())
+        except ServiceError as exc:
+            messages.error(request, exc.message)
+            return render(request, "products/staff/whmcs_import.html", {"address": request.POST.get("address", ""),
+                                                                         "identifier": request.POST.get("identifier", "")})
         except whmcs.WhmcsError as exc:
             messages.error(request, str(exc))
             return render(request, "products/staff/whmcs_import.html", {"address": request.POST.get("address", ""),
