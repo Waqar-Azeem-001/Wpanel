@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load ui i18n %}
+{% load ui i18n cache catalogue %}
 {% block title %}{% trans "Search Domains" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
@@ -78,6 +78,7 @@
     <div class="price-filter"><label class="visually-hidden" for="tld-filter">{% trans "Filter extensions" %}</label>
       <input id="tld-filter" class="form-control" type="search" placeholder="{% trans 'Filter, for example .com' %}" data-filter-table="#tld-table" autocomplete="off"></div>
   </div>
+  {% catalogue_version as cv %}{% cache 3600 tld_search_table cv STORE_CURRENCY request.LANGUAGE_CODE %}
   <div class="table-responsive price-table-wrap">
     <table class="table price-table align-middle mb-0" id="tld-table" data-collapsed>
       <thead><tr><th>{% trans "Extension" %}</th><th class="text-end">{% trans "Register" %}</th><th class="text-end">{% trans "Renew" %}</th><th class="text-end">{% trans "Transfer" %}</th><th></th></tr></thead>
@@ -90,6 +91,7 @@
       </tbody>
     </table>
   </div>
+  {% endcache %}
   <p class="small text-secondary mt-2 mb-0" data-filter-empty hidden>{% trans "No extension matches." %}</p>
   {% if tlds|length > 10 %}<p class="text-center mt-3 mb-0"><button type="button" class="btn btn-outline-primary" data-show-all="#tld-table">{% trans "Show all" %} {{ tlds|length }} {% trans "extensions" %}</button></p>{% endif %}
   <p class="small text-secondary mt-3 mb-0" id="dm-transfer">{% trans "Already own a domain elsewhere?" %} <a href="{% url 'orders_customer:cart' %}">{% trans "Transfer it in from your cart" %}</a>.</p>

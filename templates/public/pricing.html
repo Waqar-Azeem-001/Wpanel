@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load ui i18n %}
+{% load ui i18n cache catalogue %}
 {% block title %}{% trans "Pricing" %} · {{ SITE_NAME }}{% endblock %}
 {% block container %}wide flush{% endblock %}
 {% block breadcrumbs %}{% endblock %}
@@ -38,6 +38,7 @@
         <input id="tld-filter" class="form-control" type="search" placeholder="{% trans 'Filter, for example .com' %}" data-filter-table="#tld-table" autocomplete="off"></div>
     </div>
     {% if tlds %}
+    {% catalogue_version as cv %}{% cache 3600 tld_pricing_table cv STORE_CURRENCY request.LANGUAGE_CODE %}
     <div class="table-responsive price-table-wrap">
       <table class="table price-table align-middle mb-0" id="tld-table">
         <thead><tr><th>{% trans "Extension" %}</th><th class="text-end">{% trans "Register" %}</th><th class="text-end">{% trans "Renew" %}</th><th class="text-end">{% trans "Transfer" %}</th><th></th></tr></thead>
@@ -50,6 +51,7 @@
         </tbody>
       </table>
     </div>
+    {% endcache %}
     <p class="small text-secondary mt-2 mb-0" data-filter-empty hidden>{% trans "No extension matches." %}</p>
     {% else %}
     <div class="card"><div class="card-body text-secondary">{% trans "The domain price list is coming soon." %}</div></div>

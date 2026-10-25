@@ -10,8 +10,10 @@ class ProductsConfig(AppConfig):
         from django.db.models.signals import post_delete, post_save
 
         from . import categories
+        from apps.domains.models import TldPricing
+
         from .models import Addon, AddonPrice, Product, ProductPrice, StoreCategory
 
-        for model in (Product, ProductPrice, Addon, AddonPrice, StoreCategory):  # the public store reads a one-minute snapshot of these
+        for model in (Product, ProductPrice, Addon, AddonPrice, StoreCategory, TldPricing):  # the public store reads a one-minute snapshot of these, and the domain price table is a cached fragment
             post_save.connect(categories.forget_snapshot, sender=model, dispatch_uid=f"catalog-snapshot-save-{model.__name__}")
             post_delete.connect(categories.forget_snapshot, sender=model, dispatch_uid=f"catalog-snapshot-delete-{model.__name__}")

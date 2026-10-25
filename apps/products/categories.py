@@ -59,11 +59,29 @@ def _snapshot():
     return found
 
 
+VERSION_KEY = "catalogue.version"
+
+
+def version():
+    """A number that changes whenever the catalogue or the domain price list does. Cached page fragments carry it in their key, so a change is shown at once."""
+    from django.core.cache import cache
+
+    found = cache.get(VERSION_KEY)
+    if found is None:
+        cache.add(VERSION_KEY, 1, None)
+        found = cache.get(VERSION_KEY) or 1
+    return found
+
+
 def forget_snapshot(*args, **kwargs):
-    """Called when a product, price, add-on or category is saved or deleted: the next page reads the new catalogue."""
+    """Called when a product, price, add-on, category or domain price is saved or deleted: the next page reads the new catalogue and builds its fragments again."""
     from django.core.cache import cache
 
     cache.delete(SNAPSHOT_KEY)
+    try:
+        cache.incr(VERSION_KEY)
+    except ValueError:  # nothing has asked for the version yet
+        cache.add(VERSION_KEY, 2, None)
 
 
 def active():
