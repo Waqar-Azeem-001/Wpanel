@@ -39,6 +39,7 @@ def test_a_backup_of_another_kind_of_database_is_refused_before_anything_changes
     backup.write_bytes(crypto.encrypt_bytes(b"PGDMP-fake"))
     monkeypatch.setattr(subprocess, "run", lambda args, **kw: SimpleNamespace(returncode=0, stdout="x", stderr=""))
     monkeypatch.setattr(backup_panel, "make_backup", lambda target, keep: folders / "panel" / "safety.bak.enc")
+    monkeypatch.setattr(backup_panel, "connection", SimpleNamespace(vendor="sqlite", settings_dict={"NAME": ":memory:"}, close=lambda: None))  # this test is about a sqlite panel, whatever database the tests run on
     with pytest.raises(CommandError, match="uses sqlite"):
         backup_panel.restore_backup(backup)
 
