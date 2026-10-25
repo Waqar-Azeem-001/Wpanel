@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""
+whpanel-notify-entry: the forced command (authorized_keys "command=") of the CI *notify* key. This key is separate from the deploy key and can only tell the team how a pipeline
+run went (the live panel emails the alert addresses). It cannot deploy, and it needs no approval, so a failed test run is announced at once.
+
+    ssh notify@server notify --tests success --deploy "waiting for approval" --sha <commit> --actor <name> --message "<text>" --run-url <address>
+
+Installed by root as /usr/local/bin/whpanel-notify-entry (see docs/deploy-setup.md).
+"""
+import os
+import re
+import shlex
+import sys
+
+ALLOWED = {"--tests", "--deploy", "--sha", "--actor", "--message", "--run-url"}
+VALUE = re.compile(r"^[A-Za-z0-9 ._:/#()-]{0,200}$")
+
+
+def refuse(text):
+    print(text, file=sys.stderr)
+    sys.exit(2)
+
+
+try:
+    words = shlex.split(os.environ.get("SSH_ORIGINAL_COMMAND", ""))
+except ValueError:
+    refuse("the command could not be read")
+if not words or words[0] != "notify":
+    refuse("this key may only run: notify --tests .. --deploy .. --sha .. --actor .. --message .. --run-url ..")
+args = words[1:]
+if len(args) % 2:
+    refuse("every option needs a value")
+for flag, value in zip(args[::2], args[1::2]):
+    if flag not in ALLOWED:
+        refuse(f"{flag} is not allowed")
+    if not VALUE.match(value):
+        refuse(f"the value of {flag} has characters that are not allowed")
+os.execv("/usr/bin/sudo", ["sudo", "/usr/local/sbin/whpanel-notify", *args])

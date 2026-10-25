@@ -1,0 +1,5 @@
+#!/bin/bash
+# whpanel-notify: run the panel's own "tell the team" command inside the live web container. Called through sudo by whpanel-notify-entry (arguments already checked there).
+set -euo pipefail
+cd "${WHPANEL_DIR:-/srv/whpanel}"
+exec docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web python manage.py notify_deploy "$@"

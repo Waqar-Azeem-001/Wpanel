@@ -1,0 +1,29 @@
+#!/bin/bash
+# whpanel-deploy-entry: the forced command (authorized_keys "command=") of the CI deploy key. This key can do exactly one thing: send the code as a tar file on stdin and ask for a
+# deploy. It cannot open a shell, copy other files, forward ports or run any other command.
+#
+#   git archive HEAD | ssh deploy@server deploy <commit>
+#
+# Installed by root as /usr/local/bin/whpanel-deploy-entry (see docs/deploy-setup.md).
+set -euo pipefail
+
+INCOMING="${WHPANEL_INCOMING:-/srv/whpanel.incoming}"
+MAX_BYTES=$((200 * 1024 * 1024))
+
+read -r verb sha extra <<<"${SSH_ORIGINAL_COMMAND:-}"
+if [ "${verb:-}" != "deploy" ] || [ -n "${extra:-}" ]; then echo "this key may only run: deploy [commit]" >&2; exit 2; fi
+if [ -n "${sha:-}" ] && ! [[ "$sha" =~ ^[0-9a-f]{7,40}$ ]]; then echo "the commit must be 7 to 40 hexadecimal characters" >&2; exit 2; fi
+
+upload="$(mktemp /var/tmp/whpanel-upload.XXXXXX)"
+trap 'rm -f "$upload"' EXIT
+head -c $((MAX_BYTES + 1)) > "$upload"
+if [ "$(stat -c %s "$upload")" -gt "$MAX_BYTES" ]; then echo "the upload is larger than 200 MB" >&2; exit 2; fi
+
+# Refuse anything that could write outside the folder: absolute paths, "..", links of any kind.
+if tar -tf "$upload" | grep -E '(^/|(^|/)\.\.(/|$))' >/dev/null; then echo "the upload has an unsafe path" >&2; exit 2; fi
+if tar -tvf "$upload" | grep -E '^[lh]' >/dev/null; then echo "the upload has a link; links are not accepted" >&2; exit 2; fi
+
+find "$INCOMING" -mindepth 1 -delete
+tar -xf "$upload" -C "$INCOMING" --no-same-owner --no-same-permissions
+
+exec sudo /usr/local/sbin/whpanel-deploy ${sha:+--sha "$sha"}

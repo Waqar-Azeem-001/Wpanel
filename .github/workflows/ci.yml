@@ -106,18 +106,19 @@ jobs:
         run: cat celery.log || true
 
   deploy:
-    # Runs only for pushes to main, after every check above passed. Needs the repository secret DEPLOY_SSH_KEY
-    # (private key whose public half is in the server's authorized_keys); without it the job is skipped, not failed.
+    # Only after the tests and the security scan passed, only for a push to main, and only after the reviewer on the GitHub "production" environment approves it
+    # (Settings > Environments > production). DEPLOY_SSH_KEY is a secret of that environment, so no job can read it before the approval. The key can do one thing on the
+    # server: send the code and ask for a deploy (see docs/deploy-setup.md). Without the secret the job still runs but changes nothing.
     needs: [test, security]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://whpanel.myaiwhe.com
     concurrency: production-deploy
-    outputs:
-      deployed: ${{ steps.key.outputs.present }}
     env:
       DEPLOY_HOST: 62.238.96.50
-      DEPLOY_USER: root
-      DEPLOY_PATH: /srv/whpanel
+      DEPLOY_USER: deploy
       DEPLOY_URL: https://whpanel.myaiwhe.com
     steps:
       - uses: actions/checkout@v4
@@ -128,7 +129,7 @@ jobs:
         run: |
           if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else
             echo "::warning::DEPLOY_SSH_KEY is not set; the code was NOT deployed to the live server"
-            echo "### NOT DEPLOYED: the repository secret DEPLOY_SSH_KEY is not set, so nothing was sent to the live server." >> "$GITHUB_STEP_SUMMARY"
+            echo "### NOT DEPLOYED: the production environment has no DEPLOY_SSH_KEY secret, so nothing was sent to the live server." >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Prepare SSH
         if: steps.key.outputs.present == 'true'
@@ -139,25 +140,11 @@ jobs:
           printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
           # Pinned host key of the production server (public information); a changed key fails the deploy.
           echo "$DEPLOY_HOST ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgSsuHyuVS7C96DtCNltcTlNddeqfISQHuD9ON2ZfGn" > ~/.ssh/known_hosts
-      - name: Upload code
+      - name: Send the code and deploy (backup, rebuild, migrations, warm-up, all on the server)
         if: steps.key.outputs.present == 'true'
         run: |
-          rsync -az --delete \
-            --exclude '.git' --exclude '.github' --exclude '.env' --exclude '.venv' \
-            --exclude 'db.sqlite3*' --exclude '__pycache__' --exclude 'demo_hosting_files' \
-            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
-            ./ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
-      - name: Build, migrate and restart
-        if: steps.key.outputs.present == 'true'
-        run: |
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd $DEPLOY_PATH && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans && docker compose -f docker-compose.yml -f docker-compose.prod.yml restart nginx && docker image prune -f"
-      - name: Fill the brand settings nobody has chosen yet
-        if: steps.key.outputs.present == 'true'
-        continue-on-error: true
-        run: |
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST"             "cd $DEPLOY_PATH && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web python manage.py seed_webhostera --fill-blank"
-      - name: Health check
+          git archive --format=tar HEAD | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" "deploy ${GITHUB_SHA}"
+      - name: Health check from outside
         if: steps.key.outputs.present == 'true'
         run: |
           for i in $(seq 1 20); do
@@ -167,38 +154,36 @@ jobs:
           echo "::error::Health check failed after deploy"; exit 1
 
   notify:
-    # Tells the team how the run went, through WHPanel's own email provider (Setup > Email), so no mail account is needed here: it runs `manage.py notify_deploy` inside the live
-    # web container over SSH. The message goes to the alert addresses set in WHPanel, or to the Super Admins when none are set. Runs for passed and failed runs alike.
-    needs: [test, security, deploy]
+    # Tells the team, through WHPanel's own email provider, how the checks went. It does NOT wait for the deploy and does NOT use the deploy secret: it has its own key
+    # (NOTIFY_SSH_KEY, a repository secret) that can only send a notice. The deploy script itself announces "deployed" or "failed" from the server when it finishes.
+    needs: [test, security]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       DEPLOY_HOST: 62.238.96.50
-      DEPLOY_USER: root
-      DEPLOY_PATH: /srv/whpanel
+      NOTIFY_USER: notify
     steps:
-      - name: Check for deploy key
+      - name: Check for the notify key
         id: key
         env:
-          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KEY: ${{ secrets.NOTIFY_SSH_KEY }}
         run: |
-          if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "::warning::DEPLOY_SSH_KEY is not set; no notice sent"; fi
+          if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "::warning::NOTIFY_SSH_KEY is not set; no notice sent"; fi
       - name: Send the notice from the live panel
         if: steps.key.outputs.present == 'true'
         continue-on-error: true
         env:
-          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          TESTS: ${{ needs.test.result }}/${{ needs.security.result }}
-          DEPLOY: ${{ needs.deploy.outputs.deployed == 'true' && needs.deploy.result || 'NOT deployed - no deploy key set' }}
+          KEY: ${{ secrets.NOTIFY_SSH_KEY }}
+          TESTS: ${{ (needs.test.result == 'success' && needs.security.result == 'success') && 'success' || 'failure' }}
+          DEPLOY: ${{ (needs.test.result == 'success' && needs.security.result == 'success') && 'waiting for your approval' || 'not started' }}
           SHA: ${{ github.sha }}
           ACTOR: ${{ github.actor }}
           MESSAGE: ${{ github.event.head_commit.message }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KEY" > ~/.ssh/notify_key && chmod 600 ~/.ssh/notify_key
           echo "$DEPLOY_HOST ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMgSsuHyuVS7C96DtCNltcTlNddeqfISQHuD9ON2ZfGn" > ~/.ssh/known_hosts
-          # only plain characters go into the remote command line
+          # only plain characters go into the remote command line (the server checks them again)
           clean() { printf '%s' "$1" | head -n 1 | tr -cd '[:alnum:] ._:/#()-' | cut -c1-"$2"; }
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd $DEPLOY_PATH && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web python manage.py notify_deploy --tests '$(clean "$TESTS" 20)' --deploy '$(clean "$DEPLOY" 20)' --sha '$(clean "$SHA" 40)' --actor '$(clean "$ACTOR" 40)' --message '$(clean "$MESSAGE" 80)' --run-url '$(clean "$RUN_URL" 200)'"
+          ssh -i ~/.ssh/notify_key -o IdentitiesOnly=yes "$NOTIFY_USER@$DEPLOY_HOST"             "notify --tests '$(clean "$TESTS" 20)' --deploy '$(clean "$DEPLOY" 40)' --sha '$(clean "$SHA" 40)' --actor '$(clean "$ACTOR" 40)' --message '$(clean "$MESSAGE" 80)' --run-url '$(clean "$RUN_URL" 200)'"
