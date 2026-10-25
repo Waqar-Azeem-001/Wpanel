@@ -13,8 +13,9 @@
 <div class="container-xxl page-hero-narrow pb-5">
   <section class="card status-overall is-{{ status.overall }}"><div class="card-body d-flex align-items-center gap-3">
     <i class="bi {% if status.overall == 'ok' %}bi-check-circle-fill{% elif status.overall == 'unknown' %}bi-hourglass-split{% else %}bi-exclamation-triangle-fill{% endif %} status-icon" aria-hidden="true"></i>
-    <div><h2 class="h5 mb-0">{{ status.overall_label }}</h2><p class="small text-secondary mb-0">{% trans "Last checked" %} {{ status.checked|date:"j M Y, H:i" }} UTC</p></div>
+    <div><h2 class="h5 mb-0">{{ status.overall_label }}</h2><p class="small text-secondary mb-0">{% if status.age is None %}{% trans "Not checked yet. This page fills in within a minute." %}{% elif status.age < 90 %}{% trans "Last checked" %} {{ status.age }} {% trans "seconds ago" %}{% else %}{% trans "Last checked" %} {% widthratio status.age 60 1 %} {% trans "minutes ago" %}{% endif %}</p></div>
   </div></section>
+  {% if status.stale %}<div class="alert alert-warning mt-3 mb-0" role="alert"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% trans "These figures are old: our monitoring has stopped updating them, so they may not show what is happening now. If something is not working for you, please contact us." %}</div>{% endif %}
   <ul class="list-group mt-3 status-list">
     {% for name, state, label in status.rows %}
     <li class="list-group-item d-flex justify-content-between align-items-center"><span>{{ name }}</span><span class="status-pill is-{{ state }}">{{ label }}</span></li>

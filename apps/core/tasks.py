@@ -60,3 +60,11 @@ def restore_panel_task(name, actor_id):
     audit.record("storage.restored", actor=actor, metadata={"backup": name, "result": text[:300]})
     notifications.notify_team("backup.restored", "view_settings", title="The panel was restored from a backup", body=text[:400], link=reverse("console:storage"))
     return text
+
+
+@shared_task(soft_time_limit=40)
+def refresh_status_task():
+    """Every 50 seconds: look at the portal, hosting servers, email and background jobs and keep the answer for the public status page (see ``apps.core.status``)."""
+    from . import status
+
+    return status.refresh()["overall"]

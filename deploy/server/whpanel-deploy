@@ -68,7 +68,8 @@ $COMPOSE exec -T web python manage.py collectstatic --noinput | tail -1
 $COMPOSE restart nginx >/dev/null
 for i in $(seq 1 20); do [ "$(asks /api/v1/health/)" = 200 ] && break; [ "$i" = 20 ] && { echo "nginx does not answer" >&2; exit 1; }; sleep 2; done
 
-log "6/9 warming up the public pages ($WARM_ROUNDS rounds of $WARM_PARALLEL at once)"
+log "6/9 filling the status page, then warming up the public pages ($WARM_ROUNDS rounds of $WARM_PARALLEL at once)"
+$COMPOSE exec -T web python manage.py refresh_status | tail -1
 for page in "${PAGES[@]}"; do
   for round in $(seq 1 "$WARM_ROUNDS"); do
     for n in $(seq 1 "$WARM_PARALLEL"); do asks "$page" >/dev/null & done

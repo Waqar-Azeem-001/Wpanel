@@ -321,6 +321,7 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.lifecycle.tasks.send_expiry_notices_task",
         "schedule": crontab(hour=8, minute=30),
     },
+    "refresh-public-status": {"task": "apps.core.tasks.refresh_status_task", "schedule": 50.0},
     "poll-domain-transfers": {
         "task": "apps.domains.tasks.poll_transfers_task",
         "schedule": crontab(minute=20),
