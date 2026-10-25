@@ -30,7 +30,7 @@ The full record, with what is tested and what is proven, is in [PROJECT_OVERVIEW
 
 ## Next
 
-**The plan from here is [docs/roadmap-v2.md](docs/roadmap-v2.md)** (open for business, revenue and retention, customer self-service, operating safely). The list below is the older one; the items that are still open are carried into V2.
+**The plan from here is [docs/launch-plan.md](docs/launch-plan.md)** (open for business, revenue and retention, customer self-service, operating safely), launch track A first; the native node follows after it. The list below is the older one; the items that are still open are carried into V2.
 
 The detailed plan for the Hostinger-style experience is in [docs/hostinger-parity-plan.md](docs/hostinger-parity-plan.md); its phases 0 to 7 are done.
 

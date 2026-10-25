@@ -1,6 +1,8 @@
-# Roadmap V2: from "built and tested" to "selling and operating"
+# Launch plan: from "built and tested" to "selling and operating"
 
 Status of this page: **a proposal for the owner to correct.** Nothing here is started. Written 2026-10-25, after the launch-hardening round.
+
+**Order:** this plan, track A first. The master roadmap's "V2" (the first real native node) comes **after** track A is finished; it is not part of this page.
 
 How to read the sizes: **S** = under 2 days of work, **M** = about a week, **L** = 2 to 3 weeks. They are my work only; waiting for an outside party (a bank, a registrar, a messaging provider) is shown separately as *Needs*. "Done when" says how we will both know it is finished, in terms that can be checked on the live site.
 
@@ -18,7 +20,7 @@ How to read the sizes: **S** = under 2 days of work, **M** = about a week, **L**
 4. **No real customer order has gone through the whole chain** on live: sign-up, order, payment, WHM account created, welcome email, ticket, renewal.
 5. **Nobody is watching from outside** (an uptime monitor, error tracking) and the staff two-factor rule is off by choice.
 
-## 2. V2 in one sentence
+## 2. The launch plan in one sentence
 
 *Take the first 100 paying customers without losing a payment, a domain or their data, and make the product worth more than the plain cPanel they could buy anywhere.*
 
