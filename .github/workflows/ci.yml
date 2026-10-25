@@ -10,7 +10,7 @@ jobs:
     # Separate from the tests so one cannot hide the other: a bandit failure no longer stops the tests from running, and the deploy needs both.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -53,7 +53,7 @@ jobs:
       DJANGO_SECRET_KEY: ci-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # the secret scan below reads the whole history
       - name: Secret scan
@@ -121,7 +121,7 @@ jobs:
       DEPLOY_USER: deploy
       DEPLOY_URL: https://whpanel.myaiwhe.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check for deploy key
         id: key
         env:
