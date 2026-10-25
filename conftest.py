@@ -81,3 +81,12 @@ def _empty_cache_between_tests():
     cache.clear()
     yield
     cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def _celery_join_flag_reset():
+    """Tasks run in several threads at once (the concurrency tests) can leave Celery's process-wide "a task may not wait for another" flag set; every test starts with it off."""
+    yield
+    from celery._state import _set_task_join_will_block
+
+    _set_task_join_will_block(False)
