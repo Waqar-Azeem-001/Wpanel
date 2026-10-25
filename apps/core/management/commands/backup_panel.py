@@ -138,6 +138,11 @@ def run_backup(keep=None, today=None):
     verify_backup(target)  # a backup that cannot be read back is not a backup
     if not offsite_configured():
         return target, "no off-site storage set"
+    return target, store_offsite(target, today)
+
+
+def store_offsite(target, today=None):
+    """Send a finished backup to the bucket: daily/, and also monthly/ on the first of the month. Returns a short sentence about what was stored."""
     day = (today or timezone.localdate()).day
     stored = [upload_offsite(target, "daily")]
     if day == 1:
@@ -147,7 +152,7 @@ def run_backup(keep=None, today=None):
         text += f", {prune_offsite(getattr(settings, 'PANEL_BACKUP_S3_KEEP_DAILY', 30))} old ones deleted there"
     else:
         text += "; old ones are removed by the bucket's own lifecycle rules"
-    return target, text
+    return text
 
 
 # --- reading a backup ---------------------------------------------------------------------------------------
@@ -311,6 +316,6 @@ class Command(BaseCommand):
         target = make_backup(options["to"] or getattr(settings, "PANEL_BACKUP_DIR", settings.BASE_DIR / "panel_backups"), keep)
         self.stdout.write(self.style.SUCCESS(f"Backup written to {target} ({verify_backup(target)})"))
         if offsite_configured():
-            self.stdout.write(self.style.SUCCESS(f"Copied off-site: {upload_offsite(target)} ({prune_offsite(keep)} older ones deleted there)"))
+            self.stdout.write(self.style.SUCCESS(f"Copied {store_offsite(target)}"))
         else:
             self.stdout.write(self.style.WARNING("No off-site storage is set (PANEL_BACKUP_S3_*): this backup exists only on this server."))
