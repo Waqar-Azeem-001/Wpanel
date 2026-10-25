@@ -1,2 +1,5 @@
 * text=auto eol=lf
 *.png binary
+# Scripts that run on the Linux server must never get Windows line endings (a "\r" after the interpreter name makes "No such file or directory").
+deploy/server/* text eol=lf
+deploy/host-nginx/* text eol=lf

@@ -50,6 +50,9 @@ log "    saved $DUMP ($(du -h "$DUMP" | cut -f1))"
 
 log "2/9 copying the code (never .env, the database file or media)"
 rsync -a --delete --exclude=.env --exclude='db.sqlite3*' --exclude=media --exclude=staticfiles --exclude=.git "$INCOMING"/ "$APP"/
+# The upload has been copied: empty the folder and hand it back to the deploy user (when that user exists), so the next upload, made by that user, can replace it.
+find "$INCOMING" -mindepth 1 -delete
+if id deploy >/dev/null 2>&1; then chown deploy:deploy "$INCOMING"; chmod 750 "$INCOMING"; fi
 
 log "3/9 rebuild and restart"
 cd "$APP"
