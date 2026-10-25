@@ -20,6 +20,13 @@ CF6="2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 
   echo "}"
 } > /etc/nginx/conf.d/cloudflare.conf
 
+# A second log with the time each request took: $request_time (everything, from the first byte in to the last byte out) and
+# $upstream_response_time (only the panel's own answer), so the server's share of a slow page can be told from Cloudflare's and the network's.
+cat > /etc/nginx/conf.d/whpanel-log.conf <<'EOF'
+log_format whp_timed '$remote_addr [$time_local] "$request" $status $body_bytes_sent '
+                     'rt=$request_time urt=$upstream_response_time cf=$http_cf_ray "$http_user_agent"';
+EOF
+
 cat > /etc/nginx/conf.d/whpanel-limits.conf <<'EOF'
 # Per visitor address. 429 when a limit is passed. Sign-in, registration, reset, codes (30 a minute, a burst of 20: many people can share one address); the domain search; the API's sign-in.
 limit_req_zone $binary_remote_addr zone=whp_auth:10m rate=30r/m;
@@ -45,6 +52,10 @@ server {
 
     # Only Cloudflare may reach this address: a visit straight to the server's own IP is dropped.
     if ($from_cloudflare = 0) { return 444; }
+
+    # The usual log, and a second one with the request times (see whpanel-log.conf). Naming one here replaces the inherited one, so both are listed.
+    access_log /var/log/nginx/access.log;
+    access_log /var/log/nginx/whpanel-timed.log whp_timed;
 
     # Sign-in, registration, password reset and the emailed sign-in code.
     location ~ ^/account/(login|register|password-reset|mfa)/ {
