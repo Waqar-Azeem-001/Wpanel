@@ -36,7 +36,7 @@ if [ -n "$BUNDLE" ]; then
   log "1/5 opening the encrypted bundle (the panel's own key opens it, inside the web container)"
   case "$BUNDLE" in "$SHARED"/*) ;; *) echo "put the bundle under $SHARED first" >&2; exit 2 ;; esac
   INSIDE="/app/host_backups/${BUNDLE#"$SHARED"/}"
-  ( cd "$APP" && $COMPOSE exec -T web python - "$INSIDE" "/app/host_backups/$(basename "$WORK")" <<'PY'
+  ( cd "$APP" && $COMPOSE exec -T -u root web python - "$INSIDE" "/app/host_backups/$(basename "$WORK")" <<'PY'
 import json, sys, tarfile, tempfile
 from pathlib import Path
 from apps.core import crypto
