@@ -451,15 +451,20 @@ def _push_dns(domain):
             raise ServiceError(f"Could not update DNS: {exc}", code="registrar_error") from exc
 
 
-@transaction.atomic
 def add_dns_record(actor, domain, data, *, request=None):
+    """Add a DNS record. Two identical requests at once make one record: the second waits until the first has been committed, then finds it."""
     _require_self_service(actor, domain)
-    with single_flight(f"dns-record:{domain.pk}"):  # a double click: the second request finds the first one's record
-        record = DnsRecord(domain=domain, **{k: v for k, v in data.items() if k in DNS_FIELDS})
-        record.full_clean()
-        if DnsRecord.objects.filter(domain=domain, record_type=record.record_type, name=record.name, content=record.content).exists():
-            raise ServiceError("This record already exists.", code="duplicate_record")
-        record.save()
+    with single_flight(f"dns-record:{domain.pk}"):  # taken outside the transaction below, so the lock is only released after the record is saved for good
+        return _add_dns_record(actor, domain, data, request=request)
+
+
+@transaction.atomic
+def _add_dns_record(actor, domain, data, *, request=None):
+    record = DnsRecord(domain=domain, **{k: v for k, v in data.items() if k in DNS_FIELDS})
+    record.full_clean()
+    if DnsRecord.objects.filter(domain=domain, record_type=record.record_type, name=record.name, content=record.content).exists():
+        raise ServiceError("This record already exists.", code="duplicate_record")
+    record.save()
     _push_dns(domain)
     audit.record("domain.dns_record_added", actor=actor, target=domain,
                  metadata={"record_type": record.record_type, "name": record.name}, request=request)
