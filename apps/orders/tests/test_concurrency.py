@@ -3,7 +3,6 @@
 Needs a real database with row locks, so it only runs on PostgreSQL (the CI and the server); the local SQLite run skips it.
 """
 import threading
-from unittest import mock
 
 import pytest
 from django.db import connection, connections
@@ -116,7 +115,7 @@ def test_a_double_clicked_ticket_is_opened_once(owner, client_obj, manager):
     assert Ticket.objects.filter(subject="Site is down").count() == 1
 
 
-def test_the_transfer_code_hourly_limit_holds_when_asked_for_all_at_once(owner, client_obj, settings):
+def test_the_transfer_code_hourly_limit_holds_when_asked_for_all_at_once(owner, client_obj, settings, monkeypatch):
     from apps.domains import services as domain_services
     from apps.domains.models import Domain, DomainStatus, RegistrarProvider
 
@@ -128,12 +127,11 @@ def test_the_transfer_code_hourly_limit_holds_when_asked_for_all_at_once(owner, 
     owner.save()
     asked = []
 
-    def ask(i):
-        with mock.patch("apps.domains.adapters.onlinenic.OnlineNicAdapter.unlock_domain", lambda *a, **k: None), \
-                mock.patch("apps.domains.adapters.onlinenic.OnlineNicAdapter.get_auth_code", lambda *a, **k: asked.append(i) or "EPP"):
-            return domain_services.get_transfer_code(owner, domain, "Secret-pass-1")
+    # Patched ONCE, before the threads start: patching and un-patching from several threads at the same moment can leave the real method replaced for every later test.
+    monkeypatch.setattr("apps.domains.adapters.onlinenic.OnlineNicAdapter.unlock_domain", lambda *a, **k: None)
+    monkeypatch.setattr("apps.domains.adapters.onlinenic.OnlineNicAdapter.get_auth_code", lambda *a, **k: asked.append(1) or "EPP")
 
-    results = burst(PEOPLE, ask)
+    results = burst(PEOPLE, lambda i: domain_services.get_transfer_code(owner, domain, "Secret-pass-1"))
     assert len(asked) <= domain_services.TRANSFER_CODE_PER_HOUR, f"{len(asked)} codes were handed out"
 
 
