@@ -1,0 +1,29 @@
+# Our own Roundcube (docs/email-platform.md, step 1). Runs on a mail-side host, NOT inside the panel's compose project, with its own small database.
+# Copy this folder to the host, copy .env.example to .env and fill it in, then: docker compose up -d
+# TLS is ended by the host's nginx / Cloudflare in front (proxy to 127.0.0.1:8025), the same pattern as the panel.
+services:
+  roundcube:
+    image: roundcube/roundcubemail:1.6.9-apache
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:80"
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_DES_KEY: ${ROUNDCUBE_DES_KEY:?set ROUNDCUBE_DES_KEY in .env (24+ random characters)}
+      ROUNDCUBEMAIL_DEFAULT_HOST: ssl://${MAIL_SERVER_HOST:?set MAIL_SERVER_HOST in .env}
+      ROUNDCUBEMAIL_DEFAULT_PORT: 993
+      ROUNDCUBEMAIL_SMTP_SERVER: ssl://${MAIL_SERVER_HOST}
+      ROUNDCUBEMAIL_SMTP_PORT: 465
+      ROUNDCUBEMAIL_PRODUCT_NAME: ${WEBMAIL_PRODUCT_NAME:-Webmail}
+      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload
+      ROUNDCUBEMAIL_SKIN: elastic
+      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 25M
+    volumes:
+      - roundcube-db:/var/roundcube/db
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    mem_limit: 512m
+
+volumes:
+  roundcube-db:

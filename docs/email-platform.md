@@ -17,7 +17,7 @@ What gets built
 1. A Roundcube container (own database, its own small Postgres or SQLite volume) on a server of ours. Not on the panel's database.
 2. A DNS name `webmail.<domain>` and an SSL certificate (Let's Encrypt), behind the same Cloudflare/nginx pattern as the panel.
 3. Roundcube points at the cPanel server's IMAP (993) and SMTP submission (465/587) with TLS. No mailbox password is stored by Roundcube.
-4. **Sign in from the panel without typing a password:** the panel gives a one-time token (random, 60 seconds, single use, bound to that one mailbox and the signed-in customer); a small Roundcube plugin exchanges it for a session. Where cPanel cannot give us a password-free IMAP login, the fallback is the customer typing the mailbox password once on `webmail.<domain>` (the normal Roundcube login page). We decide which when we test against the real server.
+4. **Sign-in:** cPanel gives no password-free mail login (checked while building), and the panel never holds mailbox passwords. So the customer types the mailbox password once on our Roundcube page; the panel opens it with the address already filled in. A true one-click sign-in becomes possible in step 2 (our own Dovecot supports a master-user login).
 5. "Open webmail" in the panel goes to our Roundcube; the cPanel one-time link stays as a fallback if ours is down.
 6. A customer can also use `webmail.<their own domain>` later (white label), not in the first version.
 

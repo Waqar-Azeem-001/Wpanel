@@ -26,6 +26,8 @@ SITE_NAME = env("SITE_NAME", default="WHpanel")
 # Customer tools a cPanel/WHM server may offer, switched on one at a time after trying each on a staging server. Empty = none.
 # Values: files, ftp, logs, databases, email, domains, dns, ssl, php, cron, backups, cpanel_access (the transitional Open cPanel button).
 HOSTING_CPANEL_CAPABILITIES = env.list("HOSTING_CPANEL_CAPABILITIES", default=[])
+# Our own Roundcube (docs/email-platform.md, step 1), e.g. https://webmail.example.com. Empty: customers are sent to the hosting server's own webmail instead.
+WEBMAIL_URL = env("WEBMAIL_URL", default="").rstrip("/")
 SITE_URL = env("SITE_URL", default="http://localhost:8000")
 # All catalog prices and orders are in this one currency (multi-currency is a deferred item).
 STORE_CURRENCY = env("STORE_CURRENCY", default="USD")

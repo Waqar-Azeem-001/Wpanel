@@ -1,5 +1,7 @@
 """Email on a cPanel server, through UAPI's ``Email`` module: mailboxes, quotas, passwords, forwarders and automatic replies. Webmail opens the server's own Roundcube through a one-time link; reading mail inside WHPanel is not offered."""
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
+
+from django.conf import settings
 
 from .base import HostingError
 from .capabilities import (AutoresponderInfo, EmailCapability, EmailLimits, ForwarderInfo, MailboxInfo, WebmailAccess)
@@ -107,6 +109,8 @@ class CpanelEmail(CpanelApi, EmailCapability):
     def webmail_access(self, username, address):
         """A one-time sign-in link into the cPanel server's own webmail (Roundcube) for this one mailbox. No password is typed or kept."""
         local, domain = self._mail_domain(username, address)
+        if settings.WEBMAIL_URL.startswith("https://"):  # our own Roundcube: the customer types the mailbox password there (cPanel gives no password-free mail login)
+            return WebmailAccess(kind="external", url=f"{settings.WEBMAIL_URL}/?_user={quote(f'{local}@{domain}')}")
         data = (self._call("create_user_session", {"user": f"{local}@{domain}", "service": "webmaild"}).get("data") or {})
         url = str(data.get("url") or "")
         parts = urlsplit(url)

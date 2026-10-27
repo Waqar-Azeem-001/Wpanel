@@ -510,6 +510,22 @@ def test_webmail_refuses_a_domain_that_is_not_the_accounts_and_a_link_that_is_no
         real.webmail_access(USER, "info@acme.com")
 
 
+@override_settings(WEBMAIL_URL="https://webmail.example.test")
+def test_with_our_own_roundcube_set_the_customer_goes_there_with_the_address_filled_in_and_no_server_session_is_made():
+    real, fake = adapter(EMAIL)
+    access = real.webmail_access(USER, "Info@Acme.com")
+    assert access.kind == "external" and access.url == "https://webmail.example.test/?_user=info%40acme.com"
+    assert not [c for c in fake.calls if c[0] == "create_user_session"]
+    with pytest.raises(HostingError):
+        real.webmail_access(USER, "x@someone-else.com")  # the domain is still checked first
+
+
+@override_settings(WEBMAIL_URL="http://plain.example.test")
+def test_our_roundcube_address_is_used_only_if_it_is_secure():
+    real, fake = adapter({**EMAIL, "create_user_session": {"url": "https://whm.test:2096/cpsess1/login/?session=abc"}})
+    assert real.webmail_access(USER, "info@acme.com").url.startswith("https://whm.test:2096/")
+
+
 def test_reading_and_writing_mail_inside_whpanel_is_honestly_not_offered():
     real, _ = adapter(EMAIL)
     for call in (lambda: real.list_messages(USER, "info@acme.com"),
