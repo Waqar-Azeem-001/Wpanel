@@ -491,9 +491,28 @@ def test_automatic_replies_use_the_documented_fields_and_off_deletes_it():
     assert [a.address for a in real.list_autoresponders(USER)][0] == "info@acme.com"
 
 
+def test_webmail_opens_the_servers_own_webmail_for_that_one_mailbox_with_a_one_time_secure_link():
+    real, fake = adapter({**EMAIL, "create_user_session": {"url": "https://whm.test:2096/cpsess1/login/?session=abc", "expires": 1900000000}})
+    access = real.webmail_access(USER, "Info@Acme.com")
+    assert access.kind == "external" and access.url.startswith("https://whm.test:2096/")
+    assert fake.calls[-1][:2] == ("create_user_session", {"user": "info@acme.com", "service": "webmaild"})
+
+
+def test_webmail_refuses_a_domain_that_is_not_the_accounts_and_a_link_that_is_not_secure():
+    real, fake = adapter({**EMAIL, "create_user_session": {"url": "http://whm.test:2095/plain"}})
+    with pytest.raises(HostingError):
+        real.webmail_access(USER, "x@someone-else.com")
+    assert not [c for c in fake.calls if c[0] == "create_user_session"]  # no sign-in was asked for
+    with pytest.raises(HostingError, match="usable webmail"):
+        real.webmail_access(USER, "info@acme.com")
+    fake.answers["create_user_session"] = {}
+    with pytest.raises(HostingError, match="usable webmail"):
+        real.webmail_access(USER, "info@acme.com")
+
+
 def test_reading_and_writing_mail_inside_whpanel_is_honestly_not_offered():
     real, _ = adapter(EMAIL)
-    for call in (lambda: real.list_messages(USER, "info@acme.com"), lambda: real.webmail_access(USER, "info@acme.com"),
+    for call in (lambda: real.list_messages(USER, "info@acme.com"),
                  lambda: real.send_message(USER, "info@acme.com", "a@b.test", "s", "b"), lambda: real.get_spam_settings(USER),
                  lambda: real.get_mail_routing(USER)):
         with pytest.raises(CapabilityNotSupported):

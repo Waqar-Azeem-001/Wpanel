@@ -1,6 +1,8 @@
-"""Email on a cPanel server, through UAPI's ``Email`` module: mailboxes, quotas, passwords, forwarders and automatic replies. Reading mail inside WHPanel is not offered."""
+"""Email on a cPanel server, through UAPI's ``Email`` module: mailboxes, quotas, passwords, forwarders and automatic replies. Webmail opens the server's own Roundcube through a one-time link; reading mail inside WHPanel is not offered."""
+from urllib.parse import urlsplit
+
 from .base import HostingError
-from .capabilities import (AutoresponderInfo, EmailCapability, EmailLimits, ForwarderInfo, MailboxInfo)
+from .capabilities import (AutoresponderInfo, EmailCapability, EmailLimits, ForwarderInfo, MailboxInfo, WebmailAccess)
 from .cpanel_api import CpanelApi, plan_limit
 
 
@@ -102,6 +104,16 @@ class CpanelEmail(CpanelApi, EmailCapability):
         local, domain = self._mail_domain(username, address)
         self._uapi(username, "Email", "delete_auto_responder", {"email": f"{local}@{domain}"})
 
+    def webmail_access(self, username, address):
+        """A one-time sign-in link into the cPanel server's own webmail (Roundcube) for this one mailbox. No password is typed or kept."""
+        local, domain = self._mail_domain(username, address)
+        data = (self._call("create_user_session", {"user": f"{local}@{domain}", "service": "webmaild"}).get("data") or {})
+        url = str(data.get("url") or "")
+        parts = urlsplit(url)
+        if parts.scheme != "https" or not parts.netloc:
+            raise HostingError("The server did not give a usable webmail sign-in link.")
+        return WebmailAccess(kind="external", url=url)
+
     # --- not offered on cPanel servers yet -----------------------------------------------------------------------------
 
     def get_mail_routing(self, username):
@@ -115,9 +127,6 @@ class CpanelEmail(CpanelApi, EmailCapability):
 
     def set_spam_settings(self, username, settings):
         self._unsupported("Spam settings")
-
-    def webmail_access(self, username, address):
-        self._unsupported("Webmail")
 
     def message_folders(self, username, address):
         self._unsupported("Reading mail")
